@@ -135,11 +135,38 @@ def seed(db: Session):
                            salary=row["salary"], tags=row["tags"],
                            source_url=row["source_url"], status="approved"))
     db.commit()
-    print(f"[seed] админ: {ADMIN_EMAIL} / {ADMIN_PASSWORD}; вакансий импортировано из CSV")
+    print(f"[seed] админ создан: {ADMIN_EMAIL}; вакансии импортированы из CSV")
 
 
 app = FastAPI(title="SpinHire")
 templates = Jinja2Templates(directory=os.path.join(ROOT, "server", "templates"))
+
+# ---------- security middleware ----------
+
+_BLOCKED_PREFIXES = ("/data", "/server", "/.git", "/scripts", "/.claude")
+_BLOCKED_SUFFIXES = (".db", ".py", ".csv", ".sqlite", ".sqlite3", ".md",
+                     ".json", ".lock", ".sh", ".ini", ".cfg")
+_BLOCKED_EXACT = {"/procfile", "/requirements.txt", "/.impeccable.md",
+                  "/.gitignore", "/launch.json"}
+_SECURITY_HEADERS = {
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+}
+
+
+@app.middleware("http")
+async def guard(request: Request, call_next):
+    path = request.url.path.lower()
+    if (path in _BLOCKED_EXACT or path.startswith(_BLOCKED_PREFIXES)
+            or path.endswith(_BLOCKED_SUFFIXES)):
+        # sitemap.xml / robots.txt / og-cover.jpg остаются доступны — не .md/.py/.db
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse("Not found", status_code=404)
+    resp = await call_next(request)
+    for k, v in _SECURITY_HEADERS.items():
+        resp.headers.setdefault(k, v)
+    return resp
 
 
 @app.on_event("startup")
