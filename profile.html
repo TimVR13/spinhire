@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мой профиль — SpinHire</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .dash-layout { display: grid; grid-template-columns: 260px 1fr; gap: var(--sp-6); align-items: start; }
+  .dash-nav { border: 2px solid var(--line); background: var(--surface); position: sticky; top: 92px; }
+  .dash-nav a {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: var(--sp-3) var(--sp-4); text-decoration: none; font-weight: 600; font-size: 0.92rem;
+    color: var(--ink-dim); border-bottom: 1px solid var(--line);
+  }
+  .dash-nav a:last-child { border-bottom: none; }
+  .dash-nav a:hover { color: var(--ink); background: var(--surface-2); }
+  .dash-nav a.active { color: var(--acid); background: var(--bg-deep); }
+  .dash-nav .n { font-size: 0.75rem; background: var(--pink); color: var(--on-pink); padding: 1px 7px; font-weight: 800; }
+  .anon-card {
+    border: 2px solid var(--acid); background: oklch(0.17 0.04 130);
+    padding: var(--sp-5); margin-bottom: var(--sp-5);
+    display: flex; justify-content: space-between; align-items: center; gap: var(--sp-4); flex-wrap: wrap;
+  }
+  .anon-card h3 { font-size: 1rem; margin-bottom: 4px; }
+  .anon-card p { color: var(--ink-dim); font-size: 0.88rem; max-width: 48ch; }
+  .switch { position: relative; width: 64px; height: 32px; flex-shrink: 0; cursor: pointer; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .track { position: absolute; inset: 0; background: var(--bg-deep); border: 2px solid var(--acid); }
+  .switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; background: var(--acid); transition: transform 0.15s cubic-bezier(0.22,1,0.36,1); }
+  .switch input:checked + .track::after { transform: translateX(32px); }
+  .profile-head { display: grid; grid-template-columns: auto 1fr auto; gap: var(--sp-5); align-items: center; border: 2px solid var(--line); background: var(--surface); padding: var(--sp-5); margin-bottom: var(--sp-5); }
+  .avatar { width: 84px; height: 84px; background: var(--pink); color: var(--on-pink); display: grid; place-items: center; font-family: var(--font-display); font-weight: 900; font-size: 1.8rem; border: 2px solid var(--bg-deep); }
+  .profile-head h1 { font-size: 1.5rem; }
+  .profile-head .role-line { color: var(--ink-dim); margin-top: 4px; font-size: 0.92rem; }
+  .completeness { margin-top: var(--sp-3); }
+  .completeness .bar { height: 10px; border: 2px solid var(--line); background: var(--bg-deep); }
+  .completeness .bar i { display: block; height: 100%; width: 80%; background: repeating-linear-gradient(-45deg, var(--acid), var(--acid) 6px, oklch(0.75 0.24 130) 6px, oklch(0.75 0.24 130) 12px); }
+  .completeness span { font-size: 0.75rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
+  .app-row { display: grid; grid-template-columns: 44px 1fr auto; gap: var(--sp-3); align-items: center; padding: var(--sp-4); border: 2px solid var(--line); background: var(--surface); }
+  .app-row + .app-row { margin-top: var(--sp-2); }
+  .app-row h4 { font-size: 0.98rem; }
+  .app-row .meta { color: var(--ink-faint); font-size: 0.82rem; }
+  .status { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; padding: 4px 10px; border: 2px solid; }
+  .status.viewed { color: var(--yellow); border-color: var(--yellow); }
+  .status.invited { color: var(--acid); border-color: var(--acid); background: oklch(0.9 0.26 127 / 0.1); }
+  .status.rejected { color: var(--ink-faint); border-color: var(--line); }
+  .status.applied { color: var(--violet); border-color: var(--violet); }
+  h2.block-title { font-size: 1.2rem; margin: var(--sp-6) 0 var(--sp-4); }
+  @media (max-width: 900px) {
+    .dash-layout { grid-template-columns: 1fr; }
+    .dash-layout > * { min-width: 0; }
+    .dash-nav { position: static; display: grid; grid-template-columns: 1fr 1fr; }
+    .dash-nav a { min-width: 0; overflow-wrap: break-word; }
+    .profile-head { grid-template-columns: auto 1fr; }
+    .profile-head > div { min-width: 0; }
+    .profile-head h1 { font-size: 1.15rem; overflow-wrap: break-word; }
+    .app-row { display: flex; flex-wrap: wrap; }
+    .app-row > div:nth-child(2) { flex: 1 1 60%; min-width: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="index.html" class="logo" aria-label="SpinHire — главная">spin<b>hire</b></a>
+    <nav class="main-nav" aria-label="Основная навигация">
+      <a href="jobs.html">Вакансии</a>
+      <a href="companies.html">Компании</a>
+      <a href="blog.html">Блог</a>
+      <a href="employer.html">Работодателям</a>
+    </nav>
+    <div class="header-actions">
+      <a href="profile.html" class="btn btn-ghost btn-sm">👾 tim_k</a>
+      <a href="post-job.html" class="btn btn-pink btn-sm">Разместить вакансию</a>
+      <button class="nav-burger" aria-label="Меню">☰</button>
+    </div>
+  </div>
+</header>
+
+<main class="container" style="padding-top: var(--sp-6);">
+  <nav class="crumbs" aria-label="Хлебные крошки"><a href="index.html">Главная</a> / Мой профиль</nav>
+
+  <div class="dash-layout">
+    <aside class="dash-nav" aria-label="Меню кабинета">
+      <a href="#" class="active">Профиль и резюме</a>
+      <a href="#applications">Отклики <span class="n">4</span></a>
+      <a href="#" data-toast="Сохранённые вакансии (демо)">Сохранённые <span class="n" style="background: var(--surface-2); color: var(--ink-dim);">6</span></a>
+      <a href="#" data-toast="Алерты (демо)">Алерты о вакансиях</a>
+      <a href="#" data-toast="Сообщения (демо)">Сообщения <span class="n">2</span></a>
+      <a href="#" data-toast="Настройки (демо)">Настройки</a>
+    </aside>
+
+    <section>
+      <!-- ANON MODE -->
+      <div class="anon-card">
+        <div>
+          <h3>🥷 Режим инкогнито включён</h3>
+          <p>Имя и фото скрыты. Рекрутеры видят скиллы, опыт и зарплатные ожидания — и пишут первыми. <b style="color: var(--acid);">Заблокированы: BetOnyx (текущий работодатель)</b>.</p>
+        </div>
+        <label class="switch" aria-label="Переключить инкогнито">
+          <input type="checkbox" checked data-toast="Инкогнито переключён (демо)">
+          <span class="track"></span>
+        </label>
+      </div>
+
+      <!-- PROFILE HEAD -->
+      <div class="profile-head">
+        <div class="avatar" aria-hidden="true">🥷</div>
+        <div>
+          <h1>Анонимный VIP-менеджер</h1>
+          <p class="role-line">VIP-менеджер · 5 лет в iGaming · немецкий C1, английский C1 · Лимассол / готов на Мальту</p>
+          <div class="completeness">
+            <div class="bar"><i></i></div>
+            <span>Профиль 80% — добавьте гео-опыт, будет 100%</span>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" data-toast="Редактирование профиля (демо)">Изменить</button>
+      </div>
+
+      <!-- EXPECTATION -->
+      <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <div>
+          <span class="kicker">Ваша ставка</span>
+          <div class="salary" style="font-size: 1.6rem;">€4 000 <small>net/мес</small></div>
+          <p style="color: var(--ink-dim); font-size: 0.85rem;">Рекрутер должен перебить, чтобы написать · релокация: Мальта, Кипр · ₿ USDT ок</p>
+        </div>
+        <div style="text-align: right;">
+          <div class="salary" style="color: var(--pink); font-size: 1.2rem;">12 просмотров</div>
+          <p style="color: var(--ink-faint); font-size: 0.8rem;">за неделю · 3 интро в ожидании</p>
+        </div>
+      </div>
+
+      <!-- APPLICATIONS -->
+      <h2 class="block-title" id="applications">Отклики</h2>
+      <div class="app-row">
+        <div class="job-card__logo" style="width:44px;height:44px;font-size:1rem;background: var(--pink); color: var(--on-pink);" aria-hidden="true">LO</div>
+        <div>
+          <h4>VIP Team Lead (Скандинавия) — LuckyOrbit</h4>
+          <p class="meta">Отклик 12.08 · Мальта · €4.5–6K</p>
+        </div>
+        <span class="status invited">Интервью →</span>
+      </div>
+      <div class="app-row">
+        <div class="job-card__logo" style="width:44px;height:44px;font-size:1rem;background: var(--surface-2); color: var(--yellow);" aria-hidden="true">GB</div>
+        <div>
+          <h4>CRM / Retention-менеджер — GridBet</h4>
+          <p class="meta">Отклик 10.08 · Бухарест · €2.8–3.8K</p>
+        </div>
+        <span class="status viewed">Просмотрено 👁</span>
+      </div>
+      <div class="app-row">
+        <div class="job-card__logo" style="width:44px;height:44px;font-size:1rem;background: var(--violet); color: white;" aria-hidden="true">NS</div>
+        <div>
+          <h4>Антифрод-аналитик — NeonStake</h4>
+          <p class="meta">Отклик 08.08 · удалёнка · $2.5–3.5K</p>
+        </div>
+        <span class="status applied">Отправлен</span>
+      </div>
+      <div class="app-row" style="opacity: 0.6;">
+        <div class="job-card__logo" style="width:44px;height:44px;font-size:1rem;background: var(--yellow); color: var(--on-yellow);" aria-hidden="true">SL</div>
+        <div>
+          <h4>Гейм-математик — SpinLab Studios</h4>
+          <p class="meta">Отклик 02.08 · удалёнка по ЕС · €5–7K</p>
+        </div>
+        <span class="status rejected">Не в этот раз</span>
+      </div>
+
+      <!-- INTROS -->
+      <h2 class="block-title">Рекрутеры стучатся 🚪</h2>
+      <div class="app-row" style="border-color: var(--acid);">
+        <div class="job-card__logo" style="width:44px;height:44px;font-size:1rem;background: var(--acid); color: var(--on-acid);" aria-hidden="true">RH</div>
+        <div>
+          <h4>Rollhouse Gaming → «Head of VIP, удалёнка, €5.5K+»</h4>
+          <p class="meta">Увидели ваш анонимный профиль · ставка выше вашей</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-acid btn-sm" data-toast="Профиль раскрыт для Rollhouse — чат открыт (демо)">Раскрыться и в чат</button>
+          <button class="btn btn-ghost btn-sm" data-toast="Отказ отправлен анонимно (демо)">Пас</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-bottom" style="border-top: none;">
+      <span>© 2026 SpinHire — играй ответственно, работай громко</span>
+      <a href="index.html" class="logo" style="font-size: 1rem;">spin<b>hire</b></a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/app.js"></script>
+</body>
+</html>

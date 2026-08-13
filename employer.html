@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Кабинет работодателя — SpinHire</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .emp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-6); }
+  .emp-stat { border: 2px solid var(--line); background: var(--surface); padding: var(--sp-4) var(--sp-5); }
+  .emp-stat .num { font-family: var(--font-display); font-weight: 900; font-size: 1.8rem; color: var(--pink); }
+  .emp-stat .lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-faint); font-weight: 700; }
+  .emp-stat .delta { font-size: 0.78rem; color: var(--acid); font-weight: 700; }
+  .listing-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: var(--sp-4); align-items: center; padding: var(--sp-4); border: 2px solid var(--line); background: var(--surface); }
+  .listing-row + .listing-row { margin-top: var(--sp-2); }
+  .listing-row h4 { font-size: 0.98rem; }
+  .listing-row .meta { color: var(--ink-faint); font-size: 0.8rem; }
+  .listing-row .kpi { text-align: center; }
+  .listing-row .kpi b { display: block; font-family: var(--font-display); color: var(--acid); }
+  .listing-row .kpi span { font-size: 0.68rem; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; letter-spacing: 0.08em; }
+  .pipeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-3); }
+  .pipe-col { border: 2px solid var(--line); background: var(--bg-deep); }
+  .pipe-col > h4 {
+    padding: var(--sp-3); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
+    border-bottom: 2px solid var(--line); display: flex; justify-content: space-between;
+  }
+  .pipe-col:nth-child(1) > h4 { color: var(--violet); }
+  .pipe-col:nth-child(2) > h4 { color: var(--yellow); }
+  .pipe-col:nth-child(3) > h4 { color: var(--pink); }
+  .pipe-col:nth-child(4) > h4 { color: var(--acid); }
+  .pipe-col .body { padding: var(--sp-2); display: flex; flex-direction: column; gap: var(--sp-2); min-height: 120px; }
+  .cand {
+    background: var(--surface); border: 2px solid var(--line); padding: var(--sp-3);
+    cursor: grab; font-size: 0.85rem;
+    transition: transform 0.12s, border-color 0.12s;
+  }
+  .cand:hover { border-color: var(--acid); transform: rotate(-1deg); }
+  .cand b { display: block; }
+  .cand span { color: var(--ink-faint); font-size: 0.75rem; }
+  .cand .exp { color: var(--acid); font-weight: 700; }
+  h2.block-title { font-size: 1.2rem; margin: var(--sp-6) 0 var(--sp-4); }
+  @media (max-width: 900px) { .pipeline { grid-template-columns: 1fr 1fr; } .listing-row { display: flex; flex-wrap: wrap; } .listing-row > div:first-child { flex: 1 1 100%; } }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="index.html" class="logo" aria-label="SpinHire — главная">spin<b>hire</b></a>
+    <nav class="main-nav" aria-label="Основная навигация">
+      <a href="jobs.html">Вакансии</a>
+      <a href="companies.html">Компании</a>
+      <a href="blog.html">Блог</a>
+      <a href="employer.html" class="active">Работодателям</a>
+    </nav>
+    <div class="header-actions">
+      <a href="employer.html" class="btn btn-ghost btn-sm" style="border-color: var(--pink); color: var(--pink);">BO BetOnyx</a>
+      <a href="post-job.html" class="btn btn-pink btn-sm">+ Вакансия</a>
+      <button class="nav-burger" aria-label="Меню">☰</button>
+    </div>
+  </div>
+</header>
+
+<main class="container" style="padding-top: var(--sp-6);">
+  <nav class="crumbs" aria-label="Хлебные крошки"><a href="index.html">Главная</a> / Кабинет работодателя</nav>
+
+  <div class="section-head" style="margin-bottom: var(--sp-5);">
+    <div>
+      <span class="kicker pink">Бэк-офис</span>
+      <h1 style="font-size: clamp(1.6rem, 3.4vw, 2.4rem);">BetOnyx — штаб найма</h1>
+    </div>
+    <a href="post-job.html" class="btn btn-pink">+ Разместить вакансию</a>
+  </div>
+
+  <div class="emp-stats">
+    <div class="emp-stat"><div class="num">9</div><div class="lbl">Активных вакансий</div><div class="delta">2 скоро истекают</div></div>
+    <div class="emp-stat"><div class="num">214</div><div class="lbl">Откликов за месяц</div><div class="delta">▲ +38% к июлю</div></div>
+    <div class="emp-stat"><div class="num">4 120</div><div class="lbl">Просмотров вакансий</div><div class="delta">▲ +12%</div></div>
+    <div class="emp-stat"><div class="num">3</div><div class="lbl">Найма через SpinHire</div><div class="delta">в среднем 11 дней до оффера</div></div>
+  </div>
+
+  <h2 class="block-title">Ваши вакансии</h2>
+  <div class="listing-row">
+    <div>
+      <h4>Senior VIP-менеджер (немецкий)</h4>
+      <p class="meta">Опубликована 5 ч назад · Featured ⚡ · закроется через 12 дней</p>
+    </div>
+    <div class="kpi"><b>73</b><span>отклика</span></div>
+    <div class="kpi"><b>1 204</b><span>просмотра</span></div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-ghost btn-sm" data-toast="Поднята в топ (демо)">Поднять ↑</button>
+      <button class="btn btn-ghost btn-sm" data-toast="Редактирование (демо)">Изменить</button>
+    </div>
+  </div>
+  <div class="listing-row">
+    <div>
+      <h4>Трейдер спортивных ставок (live)</h4>
+      <p class="meta">Опубликована 3 дня назад · базовый тариф · закроется через 27 дней</p>
+    </div>
+    <div class="kpi"><b>31</b><span>отклик</span></div>
+    <div class="kpi"><b>640</b><span>просмотров</span></div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-ghost btn-sm" data-toast="Переведена в Featured (демо)">⚡ Продвинуть</button>
+      <button class="btn btn-ghost btn-sm" data-toast="Редактирование (демо)">Изменить</button>
+    </div>
+  </div>
+  <div class="listing-row" style="opacity: 0.55;">
+    <div>
+      <h4>Backend-инженер — движок спортбука</h4>
+      <p class="meta">Черновик — не опубликована</p>
+    </div>
+    <div class="kpi"><b>—</b><span>отклики</span></div>
+    <div class="kpi"><b>—</b><span>просмотры</span></div>
+    <button class="btn btn-acid btn-sm" data-toast="Опубликована (демо)">Опубликовать →</button>
+  </div>
+
+  <h2 class="block-title">Пайплайн — VIP-менеджер (немецкий) <span style="color: var(--ink-faint); font-weight: 400; font-size: 0.85rem;">перетаскивайте кандидатов между этапами</span></h2>
+  <div class="pipeline">
+    <div class="pipe-col">
+      <h4>Новые <span>4</span></h4>
+      <div class="body">
+        <div class="cand"><b>🥷 Аноним #2841</b><span>5 лет VIP · DE C1 · </span><span class="exp">хочет €4K</span></div>
+        <div class="cand"><b>Марта К.</b><span>3 года CRM · DE B2 · </span><span class="exp">хочет €3.2K</span></div>
+        <div class="cand"><b>Йонас В.</b><span>6 лет VIP форекс · DE родной · </span><span class="exp">хочет €4.5K</span></div>
+        <div class="cand"><b>🥷 Аноним #3007</b><span>4 года VIP · DE C2 · </span><span class="exp">хочет €3.8K</span></div>
+      </div>
+    </div>
+    <div class="pipe-col">
+      <h4>Скрининг <span>2</span></h4>
+      <div class="body">
+        <div class="cand"><b>Елена Р.</b><span>Звонок чт 15:00 · DE C1 · </span><span class="exp">хочет €3.6K</span></div>
+        <div class="cand"><b>Давид М.</b><span>Тест языка отправлен · </span><span class="exp">хочет €4.2K</span></div>
+      </div>
+    </div>
+    <div class="pipe-col">
+      <h4>Интервью <span>1</span></h4>
+      <div class="body">
+        <div class="cand"><b>София Т.</b><span>С Head of VIP, пятница · </span><span class="exp">хочет €4K</span></div>
+      </div>
+    </div>
+    <div class="pipe-col">
+      <h4>Оффер <span>1</span></h4>
+      <div class="body">
+        <div class="cand" style="border-color: var(--acid);"><b>Лукас Б. 🎉</b><span>Оффер отправлен 12.08 · </span><span class="exp">договорились на €4.3K</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="block-title">База талантов</h2>
+  <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; border-color: var(--pink);">
+    <div>
+      <b style="font-family: var(--font-display); text-transform: uppercase;">2 417 кандидатов подходят под «VIP + немецкий»</b>
+      <p style="color: var(--ink-dim); font-size: 0.9rem;">Анонимные профили с зарплатными ожиданиями. Вы пишете первыми — они раскрываются, если интересно.</p>
+    </div>
+    <button class="btn btn-pink" data-toast="Поиск по базе — платный тариф (демо)">Искать таланты →</button>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-bottom" style="border-top: none;">
+      <span>© 2026 SpinHire — играй ответственно, работай громко</span>
+      <a href="index.html" class="logo" style="font-size: 1rem;">spin<b>hire</b></a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/app.js"></script>
+</body>
+</html>

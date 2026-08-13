@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /profile
+Disallow: /employer
+Disallow: /post-job
+
+Sitemap: https://spinhire.org/sitemap.xml

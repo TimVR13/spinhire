@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Вакансии iGaming — 1 247 вакансий в гемблинге и беттинге | SpinHire</title>
+<meta name="description" content="Все вакансии iGaming-индустрии: казино, беттинг, геймдев, аффилейты, комплаенс, платежи, саппорт. Фильтры по зарплате, релокации, языкам и лицензиям. Зарплаты открыты.">
+<link rel="canonical" href="https://spinhire.org/jobs">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SpinHire">
+<meta property="og:title" content="Вакансии iGaming — SpinHire">
+<meta property="og:description" content="1 247 вакансий в гемблинге. Фильтры по вертикали, зарплате, релокации и крипто-оплате.">
+<meta property="og:url" content="https://spinhire.org/jobs">
+<meta property="og:image" content="https://spinhire.org/img/og-cover.jpg">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Главная", "item": "https://spinhire.org/" },
+    { "@type": "ListItem", "position": 2, "name": "Вакансии", "item": "https://spinhire.org/jobs" }
+  ]
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .jobs-layout { display: grid; grid-template-columns: 280px 1fr; gap: var(--sp-6); align-items: start; }
+  .filters { position: sticky; top: 92px; display: flex; flex-direction: column; gap: var(--sp-5); }
+  .filter-group { border: 2px solid var(--line); background: var(--surface); padding: var(--sp-4); }
+  .filter-group > h4 {
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.16em;
+    color: var(--acid); margin-bottom: var(--sp-3);
+    display: flex; justify-content: space-between;
+  }
+  .filter-group .check { padding-block: 3px; }
+  .filter-group .count { color: var(--ink-faint); font-size: 0.78rem; margin-left: auto; }
+  .results-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); margin-bottom: var(--sp-4); flex-wrap: wrap; }
+  .results-head h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); }
+  .results-head .sub { color: var(--ink-dim); font-size: 0.9rem; margin-top: 4px; }
+  .results-head .sub b { color: var(--acid); }
+  .sort { display: flex; align-items: center; gap: var(--sp-2); }
+  .sort label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: var(--ink-faint); }
+  .sort .select { width: auto; padding-block: 8px; }
+  .active-filters { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+  .active-filters .tag { display: inline-flex; align-items: center; gap: 6px; }
+  .active-filters .tag button { background: none; border: none; color: inherit; font-weight: 900; padding: 0; }
+  .alert-box {
+    border: 2px dashed var(--acid);
+    padding: var(--sp-4) var(--sp-5);
+    display: flex; align-items: center; gap: var(--sp-4); justify-content: space-between;
+    margin-block: var(--sp-4);
+    background: oklch(0.17 0.04 130);
+    flex-wrap: wrap;
+  }
+  .alert-box b { font-family: var(--font-display); text-transform: uppercase; font-size: 0.9rem; }
+  .alert-box p { color: var(--ink-dim); font-size: 0.85rem; }
+  .alert-box form { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+  .alert-box .input { width: 220px; }
+  @media (max-width: 900px) {
+    .jobs-layout { display: flex; flex-direction: column; }
+    .filters { order: 2; position: static; flex-direction: row; flex-wrap: wrap; }
+    .filter-group { flex: 1 1 240px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="index.html" class="logo" aria-label="SpinHire — главная">spin<b>hire</b></a>
+    <nav class="main-nav" aria-label="Основная навигация">
+      <a href="jobs.html" class="active">Вакансии</a>
+      <a href="companies.html">Компании</a>
+      <a href="blog.html">Блог</a>
+      <a href="employer.html">Работодателям</a>
+    </nav>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" data-auth>Войти</button>
+      <a href="post-job.html" class="btn btn-pink btn-sm">Разместить вакансию</a>
+      <button class="nav-burger" aria-label="Меню">☰</button>
+    </div>
+  </div>
+</header>
+
+<main class="container" style="padding-top: var(--sp-6);">
+  <nav class="crumbs" aria-label="Хлебные крошки"><a href="index.html">Главная</a> / Вакансии</nav>
+
+  <div class="results-head">
+    <div>
+      <h1>Вакансии iGaming — 1 247</h1>
+      <p class="sub">По вашим фильтрам: <b>26</b> · <b>31 новая</b> за сегодня</p>
+    </div>
+    <div class="sort">
+      <label for="sort">Сортировка</label>
+      <select class="select input" id="sort">
+        <option>Сначала новые</option>
+        <option>Зарплата: по убыванию</option>
+        <option>По релевантности</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="active-filters">
+    <span class="tag tag-acid">Операции казино <button aria-label="Убрать фильтр">✕</button></span>
+    <span class="tag tag-acid">Можно удалённо <button aria-label="Убрать фильтр">✕</button></span>
+    <span class="tag tag-acid">от €3 000 <button aria-label="Убрать фильтр">✕</button></span>
+    <a class="tag" href="#" data-toast="Фильтры сброшены (демо)">Сбросить всё</a>
+  </div>
+
+  <div class="jobs-layout">
+    <!-- FILTERS -->
+    <aside class="filters" aria-label="Фильтры">
+      <div class="filter-group">
+        <h4>Вертикаль</h4>
+        <label class="check"><input type="checkbox" checked> Казино <span class="count">512</span></label>
+        <label class="check"><input type="checkbox"> Беттинг <span class="count">296</span></label>
+        <label class="check"><input type="checkbox"> Покер <span class="count">64</span></label>
+        <label class="check"><input type="checkbox"> Crash-игры <span class="count">71</span></label>
+        <label class="check"><input type="checkbox"> Лотереи / бинго <span class="count">38</span></label>
+        <label class="check"><input type="checkbox"> Киберспорт-беттинг <span class="count">45</span></label>
+      </div>
+
+      <div class="filter-group">
+        <h4>Формат работы</h4>
+        <label class="check"><input type="checkbox" checked> Удалёнка (весь мир) <span class="count">218</span></label>
+        <label class="check"><input type="checkbox"> Удалёнка (только ЕС) <span class="count">164</span></label>
+        <label class="check"><input type="checkbox"> Гибрид <span class="count">201</span></label>
+        <label class="check"><input type="checkbox"> Офис <span class="count">395</span></label>
+        <label class="check"><input type="checkbox"> 🛬 С релокацией <span class="count">173</span></label>
+      </div>
+
+      <div class="filter-group">
+        <h4>Зарплата / мес</h4>
+        <div class="field" style="margin-bottom: 8px;">
+          <input class="input" type="number" placeholder="от €3 000" value="3000" aria-label="Зарплата от">
+        </div>
+        <label class="check"><input type="checkbox"> Только с указанной вилкой <span class="count">903</span></label>
+        <label class="check"><input type="checkbox"> ₿ Крипто-оплата (USDT) <span class="count">87</span></label>
+      </div>
+
+      <div class="filter-group">
+        <h4>Уровень</h4>
+        <label class="check"><input type="checkbox"> Junior <span class="count">102</span></label>
+        <label class="check"><input type="checkbox" checked> Middle <span class="count">471</span></label>
+        <label class="check"><input type="checkbox" checked> Senior <span class="count">386</span></label>
+        <label class="check"><input type="checkbox"> Lead / Head <span class="count">118</span></label>
+        <label class="check"><input type="checkbox"> C-level <span class="count">24</span></label>
+      </div>
+
+      <div class="filter-group">
+        <h4>Языки</h4>
+        <label class="check"><input type="checkbox"> Только английский <span class="count">644</span></label>
+        <label class="check"><input type="checkbox"> Немецкий <span class="count">78</span></label>
+        <label class="check"><input type="checkbox"> Испанский <span class="count">64</span></label>
+        <label class="check"><input type="checkbox"> Португальский (BR) <span class="count">57</span></label>
+        <label class="check"><input type="checkbox"> Японский <span class="count">21</span></label>
+      </div>
+
+      <div class="filter-group">
+        <h4>Лицензия работодателя</h4>
+        <label class="check"><input type="checkbox"> MGA (Мальта) <span class="count">204</span></label>
+        <label class="check"><input type="checkbox"> UKGC <span class="count">96</span></label>
+        <label class="check"><input type="checkbox"> Кюрасао <span class="count">187</span></label>
+        <label class="check"><input type="checkbox"> Гибралтар <span class="count">44</span></label>
+        <label class="check"><input type="checkbox"> ✓ Только проверенные <span class="count">341</span></label>
+      </div>
+
+      <button class="btn btn-acid btn-block" data-toast="Фильтры применены (демо)">Применить</button>
+    </aside>
+
+    <!-- RESULTS -->
+    <section aria-label="Результаты поиска">
+      <!-- JOBS:START (генерируется из data/jobs.csv скриптом scripts/build_jobs.py — руками не править) -->
+      <div class="jobs-list">
+        <a class="job-card" href="https://igamingjobs.io/job/senior-crm-and-retention-manager-at-international-igaming-company-1ezj95t" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--acid); color: var(--on-acid);" aria-hidden="true">IО</div>
+          <div>
+            <h3 class="job-card__title">Senior CRM & Retention Manager</h3>
+            <p class="job-card__meta"><b>iGaming-оператор (NDA)</b> · Кипр / Европа · удалёнка</p>
+            <div class="job-card__tags"><span class="tag ">казино</span><span class="tag ">CRM Smartico/Optimove</span><span class="tag tag-yellow">релокация на Кипр</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary">до $3 000</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://igamingjobs.io/job/vip-retention-manager-at-nda-y0bgkc" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--pink); color: var(--on-pink);" aria-hidden="true">IО</div>
+          <div>
+            <h3 class="job-card__title">VIP Retention Manager</h3>
+            <p class="job-card__meta"><b>iGaming-оператор (NDA)</b> · Remote worldwide · удалёнка</p>
+            <div class="job-card__tags"><span class="tag ">VIP</span><span class="tag ">бонусные механики</span><span class="tag ">BI-инструменты</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://igamingjobs.io/job/crm-retention-team-lead-at-pampas-casino-11mclkx" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--yellow); color: var(--on-yellow);" aria-hidden="true">PC</div>
+          <div>
+            <h3 class="job-card__title">CRM Retention Team Lead</h3>
+            <p class="job-card__meta"><b>Pampas Casino</b> · Remote · удалёнка</p>
+            <div class="job-card__tags"><span class="tag ">казино</span><span class="tag ">ретеншн</span><span class="tag ">тимлид</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://igamingjobs.io/job/affiliate-manager-at-megapari-1mqptlf" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--violet); color: white;" aria-hidden="true">ME</div>
+          <div>
+            <h3 class="job-card__title">Affiliate Manager (узбекский рынок)</h3>
+            <p class="job-card__meta"><b>Megapari</b> · Remote · удалёнка</p>
+            <div class="job-card__tags"><span class="tag ">аффилейты</span><span class="tag tag-acid">узбекский</span><span class="tag ">трекинг и постбеки</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">фикс + бонусы</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="alert-box">
+        <div>
+          <b>⚡ Не обновляй страницу. Мы сами напишем.</b>
+          <p>Новые вакансии по этим фильтрам — на почту или в Telegram.</p>
+        </div>
+        <form data-demo="Подписка оформлена — ждите в Telegram (демо)">
+          <input class="input" type="email" placeholder="you@example.com" required aria-label="Email для подписки">
+          <button class="btn btn-acid" type="submit">Подписаться</button>
+        </form>
+      </div>
+      <div class="jobs-list">
+        <a class="job-card" href="https://igamingjobs.io/job/payments-manager-middle-at-multi-brand-it-company-in-igaming-bubur6" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--surface-2); color: var(--acid);" aria-hidden="true">MB</div>
+          <div>
+            <h3 class="job-card__title">Payments Manager (Middle)</h3>
+            <p class="job-card__meta"><b>Multi-brand iGaming IT</b> · Remote · удалёнка</p>
+            <div class="job-card__tags"><span class="tag ">платежи</span><span class="tag ">график 2/2</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://igamingjobs.io/job/account-manager-igaming-at-fintech-company-7ldqm1" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--surface-2); color: var(--pink);" aria-hidden="true">FД</div>
+          <div>
+            <h3 class="job-card__title">Account Manager (iGaming)</h3>
+            <p class="job-card__meta"><b>Fintech для iGaming</b> · Remote · удалёнка</p>
+            <div class="job-card__tags"><span class="tag ">аккаунт-менеджмент</span><span class="tag ">B2B</span><span class="tag ">платежи</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary">до $3 000</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://job-boards.greenhouse.io/betsson/jobs/8096299" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--surface-2); color: var(--yellow);" aria-hidden="true">BG</div>
+          <div>
+            <h3 class="job-card__title">Compliance Officer (шведский)</h3>
+            <p class="job-card__meta"><b>Betsson Group</b> · Мальта · гибрид</p>
+            <div class="job-card__tags"><span class="tag ">комплаенс</span><span class="tag tag-acid">шведский</span><span class="tag ">Spelinspektionen</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://job-boards.greenhouse.io/betsson/jobs/7160552" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--surface-2); color: white;" aria-hidden="true">BG</div>
+          <div>
+            <h3 class="job-card__title">Technical Compliance Officer (Италия)</h3>
+            <p class="job-card__meta"><b>Betsson Group</b> · Мальта · гибрид</p>
+            <div class="job-card__tags"><span class="tag ">комплаенс</span><span class="tag ">рынок ADM</span><span class="tag ">сертификация</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://job-boards.greenhouse.io/betsson/jobs/7929697" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--acid); color: var(--on-acid);" aria-hidden="true">BG</div>
+          <div>
+            <h3 class="job-card__title">Customer Service Agent (немецкий)</h3>
+            <p class="job-card__meta"><b>Betsson Group</b> · Сент-Джулианс, Мальта · гибрид</p>
+            <div class="job-card__tags"><span class="tag ">саппорт</span><span class="tag tag-acid">немецкий C1</span><span class="tag tag-yellow">релокация на Мальту</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">база + бонус</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://job-boards.greenhouse.io/betsson/jobs/8038344" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--pink); color: var(--on-pink);" aria-hidden="true">BG</div>
+          <div>
+            <h3 class="job-card__title">Sportsbook Manager</h3>
+            <p class="job-card__meta"><b>Betsson Group</b> · Мальта · гибрид</p>
+            <div class="job-card__tags"><span class="tag ">спортсбук</span><span class="tag ">операционное управление</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://job-boards.greenhouse.io/betsson/jobs/7535276" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--yellow); color: var(--on-yellow);" aria-hidden="true">BG</div>
+          <div>
+            <h3 class="job-card__title">Data Engineer (Sportsbook Data)</h3>
+            <p class="job-card__meta"><b>Betsson Group</b> · Мальта · гибрид</p>
+            <div class="job-card__tags"><span class="tag ">данные</span><span class="tag ">DWH</span><span class="tag ">спортсбук</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://job-boards.greenhouse.io/betsson/jobs/7972951" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--violet); color: white;" aria-hidden="true">BG</div>
+          <div>
+            <h3 class="job-card__title">Backend .NET Engineer</h3>
+            <p class="job-card__meta"><b>Betsson Group</b> · Малага, Испания · гибрид</p>
+            <div class="job-card__tags"><span class="tag ">разработка</span><span class="tag ">.NET</span><span class="tag ">игровая платформа</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://job-boards.greenhouse.io/betsson/jobs/7774913" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--surface-2); color: var(--acid);" aria-hidden="true">BG</div>
+          <div>
+            <h3 class="job-card__title">AI Engineer</h3>
+            <p class="job-card__meta"><b>Betsson Group</b> · Будапешт, Венгрия · гибрид</p>
+            <div class="job-card__tags"><span class="tag ">AI/ML</span><span class="tag ">данные</span><span class="tag ">казино-продукты</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://www.pentasia.com/careers/reconciliations-manager-europe-malta-39325-29348" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--surface-2); color: var(--pink);" aria-hidden="true">ОЧ</div>
+          <div>
+            <h3 class="job-card__title">Reconciliations Manager</h3>
+            <p class="job-card__meta"><b>оператор (через Pentasia)</b> · Пьета, Мальта · гибрид</p>
+            <div class="job-card__tags"><span class="tag ">платежи и финансы</span><span class="tag ">ACCA/ACA</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary">€55 000/год + бонус</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://www.pentasia.com/careers/sportsbook-operations-senior-manager-gibraltar-united-kingdom-39319-29344" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--surface-2); color: var(--yellow);" aria-hidden="true">ОЧ</div>
+          <div>
+            <h3 class="job-card__title">Sportsbook Operations Senior Manager</h3>
+            <p class="job-card__meta"><b>оператор (через Pentasia)</b> · Лондон / Гибралтар · офис</p>
+            <div class="job-card__tags"><span class="tag ">спортсбук</span><span class="tag ">трейдинг-операции</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://www.pentasia.com/careers/senior-java-engineer-pam-europe-39324-29346" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--surface-2); color: white;" aria-hidden="true">ПЧ</div>
+          <div>
+            <h3 class="job-card__title">Senior Java Engineer (PAM)</h3>
+            <p class="job-card__meta"><b>платформа (через Pentasia)</b> · Европа · удалёнка ЕС</p>
+            <div class="job-card__tags"><span class="tag ">разработка</span><span class="tag ">Java</span><span class="tag ">PAM-платформа</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://www.pentasia.com/careers/vp-marketing-relocation-to-the-bahamas-other-39335-29350" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--acid); color: var(--on-acid);" aria-hidden="true">ОЧ</div>
+          <div>
+            <h3 class="job-card__title">VP of Marketing</h3>
+            <p class="job-card__meta"><b>оператор (через Pentasia)</b> · Нассау, Багамы · офис</p>
+            <div class="job-card__tags"><span class="tag ">executive</span><span class="tag ">маркетинг</span><span class="tag tag-yellow">релокация на Багамы</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://www.pentasia.com/careers/latam-bd-specialist-spanish-speaker-igaming-gambling-industry-latam-39333-29349" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--pink); color: var(--on-pink);" aria-hidden="true">IЧ</div>
+          <div>
+            <h3 class="job-card__title">LATAM BD Specialist (испанский)</h3>
+            <p class="job-card__meta"><b>iGaming (через Pentasia)</b> · LATAM · удалёнка</p>
+            <div class="job-card__tags"><span class="tag ">business development</span><span class="tag tag-acid">испанский</span><span class="tag ">LATAM</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary">€50–60K/год</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://www.pentasia.com/careers/streamer-manager-remote-39323-29347" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--yellow); color: var(--on-yellow);" aria-hidden="true">ОЧ</div>
+          <div>
+            <h3 class="job-card__title">Streamer Manager</h3>
+            <p class="job-card__meta"><b>оператор (через Pentasia)</b> · Remote · удалёнка</p>
+            <div class="job-card__tags"><span class="tag ">казино</span><span class="tag ">стриминг</span><span class="tag ">маркетинг</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary">€45–50K/год</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://careers.softswiss.com/vacancies/payment-account-manager-junior/" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--violet); color: white;" aria-hidden="true">SO</div>
+          <div>
+            <h3 class="job-card__title">Payment Account Manager (Junior)</h3>
+            <p class="job-card__meta"><b>SOFTSWISS</b> · Грузия / Польша / Сербия · офис</p>
+            <div class="job-card__tags"><span class="tag ">платежи</span><span class="tag ">B2B</span><span class="tag ">вход в индустрию</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://careers.softswiss.com/vacancies/head-of-b2b-support-and-operations/" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--surface-2); color: var(--acid);" aria-hidden="true">SO</div>
+          <div>
+            <h3 class="job-card__title">Head of B2B Support and Operations</h3>
+            <p class="job-card__meta"><b>SOFTSWISS</b> · Грузия / Мальта / Польша · гибрид</p>
+            <div class="job-card__tags"><span class="tag ">executive</span><span class="tag ">B2B-саппорт</span><span class="tag ">казино-платформа</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://careers.softswiss.com/vacancies/1c-developer-senior-3/" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--surface-2); color: var(--pink);" aria-hidden="true">SO</div>
+          <div>
+            <h3 class="job-card__title">1C Developer (Senior)</h3>
+            <p class="job-card__meta"><b>SOFTSWISS</b> · Worldwide · удалёнка</p>
+            <div class="job-card__tags"><span class="tag ">разработка</span><span class="tag ">1C</span><span class="tag ">финансы</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://boards.eu.greenhouse.io/gr8tech/jobs/4944017101" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--surface-2); color: var(--yellow);" aria-hidden="true">GT</div>
+          <div>
+            <h3 class="job-card__title">Senior BD Manager (LATAM)</h3>
+            <p class="job-card__meta"><b>GR8 Tech</b> · LATAM / anywhere · удалёнка</p>
+            <div class="job-card__tags"><span class="tag ">business development</span><span class="tag ">спортсбук-платформа</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://djinni.co/jobs/831169-seo-specialist-igaming/" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--surface-2); color: white;" aria-hidden="true">SE</div>
+          <div>
+            <h3 class="job-card__title">SEO Specialist (iGaming)</h3>
+            <p class="job-card__meta"><b>SEOJET</b> · Worldwide · удалёнка</p>
+            <div class="job-card__tags"><span class="tag ">SEO</span><span class="tag ">гемблинг</span><span class="tag tag-acid">русский C1</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary">$1 500–6 000</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://djinni.co/jobs/842903-promo-manager/" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--acid); color: var(--on-acid);" aria-hidden="true">GC</div>
+          <div>
+            <h3 class="job-card__title">Promo Manager</h3>
+            <p class="job-card__meta"><b>Gypsy Collective</b> · ЕС / Украина · удалёнка ЕС</p>
+            <div class="job-card__tags"><span class="tag ">геймификация</span><span class="tag ">CRM и ретеншн</span><span class="tag ">казино</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+        <a class="job-card" href="https://careers.smartrecruiters.com/Evolution" target="_blank" rel="noopener nofollow">
+          <div class="job-card__logo" style="background: var(--pink); color: var(--on-pink);" aria-hidden="true">EV</div>
+          <div>
+            <h3 class="job-card__title">Game Presenter (нидерландский)</h3>
+            <p class="job-card__meta"><b>Evolution</b> · Амстердам → Мальта · офис</p>
+            <div class="job-card__tags"><span class="tag ">лайв-казино</span><span class="tag tag-acid">нидерландский</span><span class="tag tag-yellow">релокация</span></div>
+          </div>
+          <div class="job-card__side">
+            <span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>
+            <button class="save-btn" aria-label="Сохранить вакансию">♡</button>
+            <span class="job-card__age">источник ↗</span>
+          </div>
+        </a>
+      </div>
+      <!-- JOBS:END -->
+
+      <nav class="pagination" aria-label="Страницы">
+        <a href="#" class="current">1</a><a href="#">2</a><a href="#">3</a><a href="#">…</a><a href="#">21</a><a href="#">→</a>
+      </nav>
+    </section>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-bottom" style="border-top: none;">
+      <span>© 2026 SpinHire — играй ответственно, работай громко</span>
+      <a href="index.html" class="logo" style="font-size: 1rem;">spin<b>hire</b></a>
+    </div>
+  </div>
+</footer>
+
+<!-- AUTH MODAL -->
+<div class="modal-backdrop" id="auth-modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Регистрация">
+    <button class="modal__close" aria-label="Закрыть">✕</button>
+    <span class="kicker">Присаживайся к столу</span>
+    <h3 style="margin-top: 8px; font-size: 1.4rem;">Входи в игру</h3>
+    <div class="role-switch">
+      <button class="active" data-role="talent">Ищу работу</button>
+      <button data-role="employer">Нанимаю</button>
+    </div>
+    <form data-demo="Проверьте почту — magic-ссылка отправлена (демо)">
+      <div class="field" style="margin-bottom: 16px;">
+        <label for="auth-email">Email</label>
+        <input class="input" id="auth-email" type="email" placeholder="you@example.com" required>
+      </div>
+      <button class="btn btn-acid btn-block" data-auth-submit type="submit">Создать профиль</button>
+    </form>
+    <div style="display: flex; gap: 8px; margin-top: 14px;">
+      <a href="profile.html" class="btn btn-ghost btn-sm" style="flex: 1;">Кабинет соискателя</a>
+      <a href="employer.html" class="btn btn-ghost btn-sm" style="flex: 1;">Кабинет работодателя</a>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
