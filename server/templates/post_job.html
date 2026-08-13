@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% set active = 'employer' %}
+{% block title %}Разместить вакансию — SpinHire{% endblock %}
+{% block content %}
+  <nav class="crumbs"><a href="/">Главная</a> / Разместить вакансию</nav>
+  <span class="kicker pink">Сдавай карты</span>
+  <h1 style="font-size: clamp(1.6rem, 3.5vw, 2.6rem); margin: 8px 0 24px;">Разместить вакансию</h1>
+
+  {% if posted %}
+    <div class="flash">✓ Вакансия отправлена на модерацию. Обычно проверяем за пару часов — статус виден в <a href="/employer" style="color: inherit; font-weight: 800;">кабинете</a>.</div>
+  {% endif %}
+
+  {% if need_login %}
+    <div class="card" style="border-color: var(--pink); max-width: 560px;">
+      <b style="font-family: var(--font-display); text-transform: uppercase;">Нужен аккаунт работодателя</b>
+      <p style="color: var(--ink-dim); margin: 12px 0 20px;">Вакансии размещают компании. Зарегистрируйтесь как работодатель или войдите.</p>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="/register?role=employer" class="btn btn-pink">Регистрация работодателя →</a>
+        <a href="/login?next=/post-job" class="btn btn-ghost">Войти</a>
+      </div>
+      <p style="color: var(--ink-faint); font-size: 0.8rem; margin-top: 16px;">Тарифы — <a href="/post-job.html#pricing" style="color: var(--acid);">на странице тарифов</a>: дорого и охуенно.</p>
+    </div>
+  {% else %}
+  <form method="post" action="/post-job" class="card" style="display: flex; flex-direction: column; gap: 18px; max-width: 760px;">
+    <div class="field"><label>Название вакансии *</label><input class="input" name="title" required placeholder="например, Senior VIP-менеджер (немецкий)"></div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px;">
+      <div class="field"><label>Направление</label>
+        <select class="select input" name="category">{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select></div>
+      <div class="field"><label>Формат</label>
+        <select class="select input" name="fmt">{% for f in formats %}<option>{{ f }}</option>{% endfor %}</select></div>
+      <div class="field"><label>Локация</label><input class="input" name="location" placeholder="Лимассол / Мальта / удалёнка"></div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 14px;">
+      <div class="field"><label>Зарплата от *</label><input class="input" name="salary_from" type="number" required placeholder="3500"></div>
+      <div class="field"><label>Зарплата до *</label><input class="input" name="salary_to" type="number" required placeholder="4500"></div>
+      <div class="field"><label>Валюта / основа</label>
+        <select class="select input" name="currency"><option>EUR net</option><option>EUR gross</option><option>USD net</option><option>USDT (крипто)</option></select></div>
+    </div>
+    <div class="field"><label>Теги (через запятую)</label><input class="input" name="tags" placeholder="казино, немецкий C1, релокация"></div>
+    <div class="field"><label>Описание</label><textarea class="input" name="description" rows="7" placeholder="Что делать / что нужно / что дадите. Честно — здесь сначала читают зарплату."></textarea></div>
+    <button class="btn btn-pink btn-lg" type="submit">Отправить на модерацию →</button>
+    <p style="color: var(--ink-faint); font-size: 0.8rem;">Без зарплатной вилки не публикуем — правила заведения. Модерация людьми.</p>
+  </form>
+  {% endif %}
+{% endblock %}

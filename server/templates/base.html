@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}SpinHire{% endblock %}</title>
+<meta name="description" content="{% block desc %}SpinHire — джоб-борд iGaming-индустрии{% endblock %}">
+{% block robots %}{% endblock %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .flash { border: 2px solid var(--acid); background: oklch(0.17 0.04 130); padding: 12px 18px; margin-bottom: 20px; font-weight: 600; }
+  .flash.err { border-color: var(--pink); background: oklch(0.2 0.06 350); }
+  .status { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; padding: 4px 10px; border: 2px solid; }
+  .status.new, .status.pending { color: var(--violet); border-color: var(--violet); }
+  .status.viewed { color: var(--yellow); border-color: var(--yellow); }
+  .status.invited, .status.approved { color: var(--acid); border-color: var(--acid); }
+  .status.rejected, .status.archived { color: var(--ink-faint); border-color: var(--line); }
+  table.adm { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  .adm th { background: var(--bg-deep); color: var(--acid); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.1em; text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--line); }
+  .adm td { padding: 9px 12px; border-bottom: 1px solid var(--line); color: var(--ink-dim); vertical-align: middle; }
+  .adm td:first-child { color: var(--ink); font-weight: 600; }
+  .adm .btn { padding: 5px 10px; font-size: 0.7rem; }
+  .adm form { display: inline; }
+  .table-wrap { overflow-x: auto; border: 2px solid var(--line); }
+  {% block style %}{% endblock %}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="/" class="logo" aria-label="SpinHire — главная">spin<b>hire</b></a>
+    <nav class="main-nav" aria-label="Основная навигация">
+      <a href="/jobs" {% if active == 'jobs' %}class="active"{% endif %}>Вакансии</a>
+      <a href="/companies.html">Компании</a>
+      <a href="/blog.html">Блог</a>
+      <a href="/post-job" {% if active == 'employer' %}class="active"{% endif %}>Работодателям</a>
+    </nav>
+    <div class="header-actions">
+      {% if user %}
+        {% if user.role == 'admin' %}<a href="/admin" class="btn btn-ghost btn-sm" style="border-color: var(--yellow); color: var(--yellow);">Админка</a>
+        {% elif user.role == 'employer' %}<a href="/employer" class="btn btn-ghost btn-sm" style="border-color: var(--pink); color: var(--pink);">Кабинет</a>
+        {% else %}<a href="/profile" class="btn btn-ghost btn-sm">👾 {{ user.name or 'Профиль' }}</a>{% endif %}
+        <a href="/logout" class="btn btn-ghost btn-sm" title="Выйти">✕</a>
+      {% else %}
+        <a href="/login" class="btn btn-ghost btn-sm">Войти</a>
+        <a href="/post-job" class="btn btn-pink btn-sm">Разместить вакансию</a>
+      {% endif %}
+      <button class="nav-burger" aria-label="Меню">☰</button>
+    </div>
+  </div>
+</header>
+
+<main class="container" style="padding-top: var(--sp-6); min-height: 60vh;">
+{% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-bottom" style="border-top: none;">
+      <span>© 2026 SpinHire — играй ответственно, работай громко</span>
+      <a href="/" class="logo" style="font-size: 1rem;">spin<b>hire</b></a>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/app.js"></script>
+</body>
+</html>

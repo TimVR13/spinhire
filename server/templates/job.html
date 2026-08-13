@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% set active = 'jobs' %}
+{% block title %}{{ job.title }} — {{ job.company_name }} | SpinHire{% endblock %}
+{% block desc %}{{ job.title }} в {{ job.company_name }}: {{ job.salary }}, {{ job.location }}, {{ job.fmt }}. Откликнуться на SpinHire.{% endblock %}
+{% block style %}
+  .job-hero { border: 2px solid var(--acid); background: var(--surface); box-shadow: 8px 8px 0 oklch(0.08 0.02 305); padding: var(--sp-6); margin-bottom: var(--sp-5); }
+  .job-hero h1 { font-size: clamp(1.4rem, 3vw, 2.2rem); margin-block: var(--sp-3); }
+  .desc-block { color: var(--ink-dim); line-height: 1.7; max-width: 72ch; white-space: pre-line; }
+{% endblock %}
+{% block content %}
+  <nav class="crumbs"><a href="/">Главная</a> / <a href="/jobs">Вакансии</a> / {{ job.title }}</nav>
+
+  {% if request.query_params.get('ok') %}<div class="flash">✓ Отклик отправлен — работодатель увидит его в кабинете.</div>{% endif %}
+
+  <article class="job-hero">
+    <p style="color: var(--ink-dim);"><b style="color: var(--ink);">{{ job.company_name }}</b> · {{ job.location or '—' }} · {{ job.fmt }}</p>
+    <h1>{{ job.title }}</h1>
+    <div class="job-card__tags" style="margin-bottom: var(--sp-4);">
+      {% if job.featured %}<span class="tag tag-hot">⚡ Featured</span>{% endif %}
+      {% if job.category %}<span class="tag">{{ job.category }}</span>{% endif %}
+      {% for t in job.tag_list %}<span class="tag tag-acid">{{ t }}</span>{% endfor %}
+    </div>
+    <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}вилка по запросу{% endif %}</p>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: var(--sp-4); align-items: center;">
+      {% if job.source_url %}
+        <a class="btn btn-acid btn-lg" href="{{ job.source_url }}" target="_blank" rel="noopener nofollow">Откликнуться у источника ↗</a>
+        <span style="color: var(--ink-faint); font-size: 0.82rem;">внешняя вакансия — отклик на стороне работодателя</span>
+      {% elif applied %}
+        <span class="status invited">✓ Вы уже откликнулись</span>
+      {% elif user %}
+        <form method="post" action="/job/{{ job.id }}/apply" style="display: flex; gap: 10px; flex-wrap: wrap; width: 100%;">
+          <input class="input" name="cover" placeholder="Пара слов о себе (необязательно)" style="flex: 1 1 260px;">
+          <button class="btn btn-acid btn-lg" type="submit">Откликнуться →</button>
+        </form>
+      {% else %}
+        <a class="btn btn-acid btn-lg" href="/login?next=/job/{{ job.id }}">Войти и откликнуться →</a>
+      {% endif %}
+      <span style="color: var(--ink-faint); font-size: 0.82rem;">{{ applies }} откл. · {{ job.views }} просмотров</span>
+    </div>
+  </article>
+
+  {% if job.description %}
+  <h2 style="font-size: 1.1rem; color: var(--acid); margin-bottom: 12px;">▮ Описание</h2>
+  <div class="desc-block">{{ job.description }}</div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Регистрация — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+  <div style="max-width: 460px; margin: 40px auto;">
+    <span class="kicker">Входи в игру</span>
+    <h1 style="font-size: 1.8rem; margin-block: 8px 24px;">Регистрация</h1>
+    {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+    <form method="post" action="/register" class="card" style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="role-switch" style="margin: 0;">
+        <button type="button" class="{% if role != 'employer' %}active{% endif %}" onclick="setRole('talent', this)">Ищу работу</button>
+        <button type="button" class="{% if role == 'employer' %}active{% endif %}" onclick="setRole('employer', this)">Нанимаю</button>
+      </div>
+      <input type="hidden" name="role" id="role-input" value="{{ role }}">
+      <div class="field"><label>Имя{% if role == 'employer' %} / контактное лицо{% endif %}</label><input class="input" name="name"></div>
+      <div class="field" id="company-field" {% if role != 'employer' %}style="display:none;"{% endif %}>
+        <label>Название компании</label><input class="input" name="company_name" placeholder="например, BetOnyx Ltd">
+      </div>
+      <div class="field"><label>Email</label><input class="input" type="email" name="email" required></div>
+      <div class="field"><label>Пароль (от 6 символов)</label><input class="input" type="password" name="password" minlength="6" required></div>
+      <button class="btn btn-acid btn-block" type="submit">Создать аккаунт →</button>
+    </form>
+    <p style="margin-top: 16px; color: var(--ink-dim); text-align: center;">Уже есть аккаунт? <a href="/login" style="color: var(--acid);">Войти</a></p>
+  </div>
+  <script>
+    function setRole(r, btn) {
+      document.getElementById('role-input').value = r;
+      document.querySelectorAll('.role-switch button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('company-field').style.display = r === 'employer' ? '' : 'none';
+    }
+  </script>
+{% endblock %}

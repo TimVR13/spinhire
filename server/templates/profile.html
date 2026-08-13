@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Мой профиль — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block style %}
+  .app-row { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-3); align-items: center; padding: var(--sp-4); border: 2px solid var(--line); background: var(--surface); }
+  .app-row + .app-row { margin-top: var(--sp-2); }
+{% endblock %}
+{% block content %}
+  <nav class="crumbs"><a href="/">Главная</a> / Мой профиль</nav>
+  {% if request.query_params.get('ok') %}<div class="flash">✓ Профиль сохранён</div>{% endif %}
+  <span class="kicker">Кабинет соискателя</span>
+  <h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem); margin-block: 8px 24px;">{{ user.name or user.email }}</h1>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: var(--sp-5); align-items: start;">
+    <form method="post" action="/profile" class="card" style="display: flex; flex-direction: column; gap: 14px;">
+      <h2 style="font-size: 1rem; color: var(--acid);">▮ Профиль</h2>
+      <div class="field"><label>Имя</label><input class="input" name="name" value="{{ user.name }}"></div>
+      <div class="field"><label>Кто вы (например, «VIP-менеджер · 5 лет · DE C1»)</label><input class="input" name="headline" value="{{ user.headline }}"></div>
+      <div class="field"><label>Зарплатные ожидания (net/мес)</label><input class="input" name="salary_expect" value="{{ user.salary_expect }}" placeholder="€4 000"></div>
+      <div class="field"><label>Языки</label><input class="input" name="languages" value="{{ user.languages }}" placeholder="английский C1, немецкий B2"></div>
+      <label class="check"><input type="checkbox" name="incognito" {% if user.incognito %}checked{% endif %}> 🥷 Инкогнито: скрывать имя от работодателей</label>
+      <button class="btn btn-acid" type="submit">Сохранить</button>
+    </form>
+
+    <section>
+      <h2 style="font-size: 1rem; color: var(--acid); margin-bottom: 14px;">▮ Мои отклики ({{ apps|length }})</h2>
+      {% for a in apps %}
+      <div class="app-row">
+        <div>
+          <b><a href="/job/{{ a.job.id }}" style="text-decoration: none;">{{ a.job.title }}</a></b>
+          <p style="color: var(--ink-faint); font-size: 0.82rem;">{{ a.job.company_name }} · {{ a.created_at.strftime('%d.%m.%Y') }}</p>
+        </div>
+        <span class="status {{ a.status }}">{{ {'new': 'Отправлен', 'viewed': 'Просмотрен 👁', 'invited': 'Интервью →', 'rejected': 'Не в этот раз'}[a.status] }}</span>
+      </div>
+      {% else %}
+      <div class="card" style="border-style: dashed; color: var(--ink-dim);">Пока ни одного отклика — <a href="/jobs" style="color: var(--acid);">вперёд к вакансиям</a>.</div>
+      {% endfor %}
+    </section>
+  </div>
+{% endblock %}

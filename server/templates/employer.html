@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% set active = 'employer' %}
+{% block title %}Кабинет работодателя — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block style %}
+  .job-block { border: 2px solid var(--line); background: var(--surface); padding: var(--sp-5); margin-bottom: var(--sp-4); }
+  .job-block h3 { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .cand-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .cand-row .who b { color: var(--ink); }
+  .cand-row .who span { color: var(--ink-faint); font-size: 0.82rem; display: block; }
+  .cand-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .cand-actions .btn { padding: 5px 10px; font-size: 0.68rem; }
+{% endblock %}
+{% block content %}
+  <nav class="crumbs"><a href="/">Главная</a> / Кабинет работодателя</nav>
+  <div class="section-head" style="margin-bottom: var(--sp-5);">
+    <div>
+      <span class="kicker pink">Бэк-офис</span>
+      <h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem);">{{ user.company_name or user.name or 'Работодатель' }}</h1>
+    </div>
+    <a href="/post-job" class="btn btn-pink">+ Разместить вакансию</a>
+  </div>
+
+  {% for j in jobs %}
+  <div class="job-block">
+    <h3>
+      <span>{{ j.title }} <span class="status {{ j.status }}">{{ {'pending': 'на модерации', 'approved': 'опубликована', 'rejected': 'отклонена', 'archived': 'в архиве'}[j.status] }}</span></span>
+      <span style="color: var(--ink-faint); font-size: 0.8rem; font-weight: 400;">{{ j.views }} просмотров · {{ j.applications|length }} откликов{% if j.featured %} · ⚡ Featured{% endif %}</span>
+    </h3>
+    {% for a in j.applications %}
+    <div class="cand-row">
+      <div class="who">
+        <b>{% if a.user.incognito %}🥷 Аноним #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</b>
+        <span>{{ a.user.headline or 'профиль не заполнен' }}{% if a.user.salary_expect %} · хочет {{ a.user.salary_expect }}{% endif %}{% if a.cover %} · «{{ a.cover }}»{% endif %}</span>
+      </div>
+      <div class="cand-actions">
+        <span class="status {{ a.status }}">{{ {'new': 'новый', 'viewed': 'просмотрен', 'invited': 'интервью', 'rejected': 'отказ'}[a.status] }}</span>
+        {% for s, label in [('viewed', '👁'), ('invited', 'Интервью'), ('rejected', 'Отказ')] %}
+        <form method="post" action="/employer/app/{{ a.id }}/status"><input type="hidden" name="status" value="{{ s }}"><button class="btn btn-ghost" type="submit">{{ label }}</button></form>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <p style="color: var(--ink-faint); font-size: 0.85rem; margin-top: 8px;">Откликов пока нет.</p>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card" style="border-style: dashed; text-align: center; padding: 48px;">
+    <b style="font-family: var(--font-display); text-transform: uppercase;">Вакансий пока нет</b>
+    <p style="color: var(--ink-dim); margin: 12px 0 20px;">Разместите первую — после модерации она появится в поиске.</p>
+    <a href="/post-job" class="btn btn-pink">Разместить вакансию →</a>
+  </div>
+  {% endfor %}
+{% endblock %}

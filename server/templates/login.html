@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Вход — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+  <div style="max-width: 420px; margin: 40px auto;">
+    <span class="kicker">Присаживайся к столу</span>
+    <h1 style="font-size: 1.8rem; margin-block: 8px 24px;">Вход</h1>
+    {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+    <form method="post" action="/login" class="card" style="display: flex; flex-direction: column; gap: 16px;">
+      <input type="hidden" name="next" value="{{ next }}">
+      <div class="field"><label>Email</label><input class="input" type="email" name="email" required autofocus></div>
+      <div class="field"><label>Пароль</label><input class="input" type="password" name="password" required></div>
+      <button class="btn btn-acid btn-block" type="submit">Войти →</button>
+    </form>
+    <p style="margin-top: 16px; color: var(--ink-dim); text-align: center;">Нет аккаунта?
+      <a href="/register" style="color: var(--acid);">Регистрация соискателя</a> ·
+      <a href="/register?role=employer" style="color: var(--pink);">работодателя</a>
+    </p>
+  </div>
+{% endblock %}

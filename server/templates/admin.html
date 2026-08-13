@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Админка — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block style %}
+  .adm-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-block: var(--sp-4) var(--sp-5); }
+  .adm-tabs a { text-decoration: none; border: 2px solid var(--line); padding: 8px 16px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-dim); }
+  .adm-tabs a.on { background: var(--yellow); color: var(--on-yellow); border-color: var(--yellow); }
+  .adm-tabs a:hover { border-color: var(--yellow); color: var(--yellow); }
+  .adm-tabs a.on:hover { color: var(--on-yellow); }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 12px; margin-bottom: var(--sp-6); }
+  .stat-card { border: 2px solid var(--line); background: var(--surface); padding: 16px 20px; }
+  .stat-card .n { font-family: var(--font-display); font-weight: 900; font-size: 1.7rem; color: var(--yellow); }
+  .stat-card .l { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-faint); font-weight: 700; }
+{% endblock %}
+{% block content %}
+  <nav class="crumbs"><a href="/">Главная</a> / Админка</nav>
+  <span class="kicker" style="color: var(--yellow);">Пит-босс</span>
+  <h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem); margin-top: 8px;">Админка SpinHire</h1>
+
+  <nav class="adm-tabs">
+    <a href="/admin" class="{% if tab == 'dash' %}on{% endif %}">Дашборд</a>
+    <a href="/admin?tab=jobs" class="{% if tab == 'jobs' %}on{% endif %}">Вакансии {% if stats.jobs_pending %}({{ stats.jobs_pending }}!){% endif %}</a>
+    <a href="/admin?tab=users" class="{% if tab == 'users' %}on{% endif %}">Пользователи</a>
+    <a href="/admin?tab=apps" class="{% if tab == 'apps' %}on{% endif %}">Отклики</a>
+  </nav>
+
+  {% if tab == 'dash' %}
+    <div class="stat-grid">
+      <div class="stat-card"><div class="n">{{ stats.jobs_approved }}</div><div class="l">Вакансий live</div></div>
+      <div class="stat-card" {% if stats.jobs_pending %}style="border-color: var(--pink);"{% endif %}><div class="n" {% if stats.jobs_pending %}style="color: var(--pink);"{% endif %}>{{ stats.jobs_pending }}</div><div class="l">На модерации</div></div>
+      <div class="stat-card"><div class="n">{{ stats.users }}</div><div class="l">Пользователей</div></div>
+      <div class="stat-card"><div class="n">{{ stats.employers }}</div><div class="l">Работодателей</div></div>
+      <div class="stat-card"><div class="n">{{ stats.talents }}</div><div class="l">Соискателей</div></div>
+      <div class="stat-card"><div class="n">{{ stats.apps }}</div><div class="l">Откликов</div></div>
+      <div class="stat-card"><div class="n">{{ stats.views }}</div><div class="l">Просмотров вакансий</div></div>
+    </div>
+    <h2 style="font-size: 1.05rem; color: var(--pink); margin-bottom: 12px;">▮ Очередь модерации</h2>
+    {% for j in pending %}
+      <div class="card" style="display: flex; justify-content: space-between; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; border-color: var(--pink);">
+        <div><b>{{ j.title }}</b> — {{ j.company_name }} · {{ j.salary }} <span style="color: var(--ink-faint); font-size: 0.8rem;">{{ j.created_at.strftime('%d.%m %H:%M') }}</span></div>
+        <div style="display: flex; gap: 8px;">
+          <form method="post" action="/admin/job/{{ j.id }}/approve"><button class="btn btn-acid btn-sm">Одобрить</button></form>
+          <form method="post" action="/admin/job/{{ j.id }}/reject"><button class="btn btn-ghost btn-sm">Отклонить</button></form>
+        </div>
+      </div>
+    {% else %}
+      <p style="color: var(--ink-dim);">Очередь пуста — можно спать спокойно. 🎰</p>
+    {% endfor %}
+
+  {% elif tab == 'jobs' %}
+    <div class="table-wrap"><table class="adm">
+      <tr><th>Вакансия</th><th>Компания</th><th>Зарплата</th><th>Статус</th><th>Откл.</th><th>Действия</th></tr>
+      {% for j in jobs %}
+      <tr>
+        <td><a href="/job/{{ j.id }}" style="color: inherit;">{{ j.title }}</a>{% if j.featured %} ⚡{% endif %}{% if j.source_url %} ↗{% endif %}</td>
+        <td>{{ j.company_name }}</td>
+        <td>{{ j.salary }}</td>
+        <td><span class="status {{ j.status }}">{{ j.status }}</span></td>
+        <td>{{ j.applications|length }}</td>
+        <td style="white-space: nowrap;">
+          {% if j.status != 'approved' %}<form method="post" action="/admin/job/{{ j.id }}/approve"><button class="btn btn-acid">OK</button></form>{% endif %}
+          {% if j.status == 'approved' %}<form method="post" action="/admin/job/{{ j.id }}/feature"><button class="btn btn-ghost">{% if j.featured %}−⚡{% else %}+⚡{% endif %}</button></form>
+          <form method="post" action="/admin/job/{{ j.id }}/archive"><button class="btn btn-ghost">Архив</button></form>{% endif %}
+          {% if j.status != 'approved' %}<form method="post" action="/admin/job/{{ j.id }}/reject"><button class="btn btn-ghost">Откл.</button></form>{% endif %}
+          <form method="post" action="/admin/job/{{ j.id }}/delete" onsubmit="return confirm('Удалить вакансию навсегда?')"><button class="btn btn-ghost" style="color: var(--pink);">✕</button></form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table></div>
+
+  {% elif tab == 'users' %}
+    <div class="table-wrap"><table class="adm">
+      <tr><th>Email</th><th>Имя</th><th>Роль</th><th>Компания</th><th>С нами</th><th>Действия</th></tr>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.email }}</td>
+        <td>{{ u.name or '—' }}</td>
+        <td><span class="status {% if u.role == 'admin' %}invited{% elif u.role == 'employer' %}viewed{% else %}new{% endif %}">{{ u.role }}</span></td>
+        <td>{{ u.company_name or '—' }}</td>
+        <td>{{ u.created_at.strftime('%d.%m.%y') }}</td>
+        <td style="white-space: nowrap;">
+          {% if u.role != 'employer' %}<form method="post" action="/admin/user/{{ u.id }}/employer"><button class="btn btn-ghost">→ employer</button></form>{% endif %}
+          {% if u.role != 'talent' %}<form method="post" action="/admin/user/{{ u.id }}/talent"><button class="btn btn-ghost">→ talent</button></form>{% endif %}
+          {% if u.role != 'admin' %}<form method="post" action="/admin/user/{{ u.id }}/admin" onsubmit="return confirm('Дать права админа?')"><button class="btn btn-ghost" style="color: var(--yellow);">→ admin</button></form>{% endif %}
+          <form method="post" action="/admin/user/{{ u.id }}/delete" onsubmit="return confirm('Удалить пользователя и его отклики?')"><button class="btn btn-ghost" style="color: var(--pink);">✕</button></form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table></div>
+
+  {% elif tab == 'apps' %}
+    <div class="table-wrap"><table class="adm">
+      <tr><th>Кандидат</th><th>Вакансия</th><th>Компания</th><th>Статус</th><th>Когда</th></tr>
+      {% for a in apps %}
+      <tr>
+        <td>{% if a.user.incognito %}🥷 #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</td>
+        <td><a href="/job/{{ a.job.id }}" style="color: inherit;">{{ a.job.title }}</a></td>
+        <td>{{ a.job.company_name }}</td>
+        <td><span class="status {{ a.status }}">{{ a.status }}</span></td>
+        <td>{{ a.created_at.strftime('%d.%m %H:%M') }}</td>
+      </tr>
+      {% endfor %}
+    </table></div>
+  {% endif %}
+{% endblock %}
