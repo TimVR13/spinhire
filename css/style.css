@@ -385,6 +385,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 @media (max-width: 520px) {
   .header-actions { gap: var(--sp-2); }
   .header-actions .btn { padding: 7px 10px; font-size: 0.7rem; }
+  .header-actions .btn-pink { display: none; }
   .site-header .container { gap: var(--sp-3); }
   .logo { font-size: 1.05rem; }
   .salary { font-size: 1rem; }

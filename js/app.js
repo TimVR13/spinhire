@@ -85,30 +85,8 @@ if (window.matchMedia('(pointer: fine)').matches) {
   });
 }
 
-// SpinCoins wheel demo
+// SpinCoins counter on fab (games live on games.html)
 (function () {
-  const fab = document.getElementById('wheel-fab');
-  if (!fab) return;
   const counter = document.getElementById('coin-count');
-  const load = () => parseInt(localStorage.getItem('spinCoins') || '0', 10);
-  const save = v => localStorage.setItem('spinCoins', String(v));
-  counter.textContent = load();
-  const prizes = [10, 20, 30, 50, 75, 100, 150, 250];
-  let spinning = false;
-  fab.addEventListener('click', () => {
-    if (spinning) return;
-    spinning = true;
-    fab.style.transition = 'transform 2.2s cubic-bezier(0.12, 0.8, 0.2, 1)';
-    fab.style.transform = `rotate(${1440 + Math.random() * 360}deg)`;
-    setTimeout(() => {
-      const win = prizes[Math.floor(Math.random() * prizes.length)];
-      const total = load() + win;
-      save(total);
-      counter.textContent = total;
-      toast(`🎡 +${win} SpinCoins! Баланс: ${total}. Обмен на мерч — скоро`);
-      fab.style.transition = 'none';
-      fab.style.transform = '';
-      spinning = false;
-    }, 2300);
-  });
+  if (counter) counter.textContent = localStorage.getItem('spinCoins') || '0';
 })();
