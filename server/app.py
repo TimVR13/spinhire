@@ -555,9 +555,8 @@ def job_apply(job_id: int, request: Request, cover: str = Form(""),
     job = db.get(Job, job_id)
     if not job or job.status != "approved":
         raise HTTPException(404)
-    if job.source_url:
-        # внешняя вакансия — отклик только у источника
-        return RedirectResponse(f"/job/{job_id}", status_code=303)
+    # Отклик принимаем и на агрегированные вакансии — как лид: мы передаём его
+    # работодателю и используем как аргумент подключить компанию к SpinHire.
     if not db.query(Application).filter_by(job_id=job_id, user_id=user.id).first():
         db.add(Application(job_id=job_id, user_id=user.id, cover=cover.strip()))
         db.commit()

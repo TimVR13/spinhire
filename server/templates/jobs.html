@@ -31,13 +31,16 @@
   <div class="jobs-list">
     {% for j in jobs %}
     <a class="job-card" href="/job/{{ j.id }}">
-      <div class="job-card__logo" style="background: var(--{{ ['acid','pink','yellow','violet'][loop.index0 % 4] }}); color: var(--bg-deep);" aria-hidden="true">{{ j.initials }}</div>
+      <div class="job-card__logo" style="background: {% if j.logo_url %}var(--surface-2){% else %}var(--{{ ['acid','pink','yellow','violet'][loop.index0 % 4] }}){% endif %}; color: var(--bg-deep); overflow: hidden;" aria-hidden="true">
+        {% if j.logo_url %}<img src="{{ j.logo_url }}" alt="" style="width:34px;height:34px;object-fit:contain" onerror="this.replaceWith(document.createTextNode('{{ j.initials }}'))">{% else %}{{ j.initials }}{% endif %}
+      </div>
       <div>
         <h3 class="job-card__title">{{ j.title }} {% if j.featured %}<span class="tag tag-hot">⚡ Featured</span>{% endif %}</h3>
         <p class="job-card__meta"><b>{{ j.company_name }}</b> · {{ j.location or '—' }} · {{ j.fmt }}</p>
         <div class="job-card__tags">
           {% if j.category %}<span class="tag">{{ j.category }}</span>{% endif %}
           {% for t in j.tag_list %}<span class="tag">{{ t }}</span>{% endfor %}
+          {% if j.source and j.source != 'ручная' %}<span class="tag" style="color: var(--ink-faint);" title="Агрегировано из {{ j.source }}">↗ агрегатор</span>{% endif %}
         </div>
       </div>
       <div class="job-card__side">

@@ -54,21 +54,22 @@
           {% for t in job.tag_list %}<span class="tag tag-acid">{{ t }}</span>{% endfor %}
         </div>
         <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}вилка по запросу{% endif %}</p>
-        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: var(--sp-4); align-items: center;">
-          {% if job.source_url %}
-            <a class="btn btn-acid btn-lg" href="{{ job.source_url }}" target="_blank" rel="noopener nofollow">Откликнуться →</a>
-            <span style="color: var(--ink-faint); font-size: 0.82rem;">Вакансия агрегирована из открытого источника{% if job.source %} · {{ job.source.split(':')[-1]|capitalize }}{% endif %} · отклик подаётся на карьерном портале работодателя</span>
-          {% elif applied %}
-            <span class="status invited">✓ Вы уже откликнулись</span>
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: var(--sp-4);">
+          {% if applied %}
+            <span class="status invited" style="align-self: flex-start;">✓ Вы уже откликнулись{% if job.source_url %} — мы передадим отклик работодателю{% endif %}</span>
           {% elif user and user.role == 'talent' %}
-            <form method="post" action="/job/{{ job.id }}/apply" style="display: flex; gap: 10px; flex-wrap: wrap; width: 100%;">
+            <form method="post" action="/job/{{ job.id }}/apply" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
               <input class="input" name="cover" placeholder="Пара слов о себе (необязательно)" aria-label="Сопроводительное" style="flex: 1 1 260px;">
-              <button class="btn btn-acid btn-lg" type="submit">Откликнуться →</button>
+              <button class="btn btn-acid btn-lg" type="submit">Откликнуться через SpinHire →</button>
             </form>
+            {% if job.source_url %}<span style="color: var(--ink-faint); font-size: 0.82rem;">Мы передадим ваш отклик работодателю. Или можно <a href="{{ job.source_url }}" target="_blank" rel="noopener nofollow" style="color: var(--ink-dim);">открыть первоисточник ↗</a></span>{% endif %}
           {% elif user %}
             <span style="color: var(--ink-faint); font-size: 0.85rem;">Откликаться могут только соискатели.</span>
           {% else %}
-            <a class="btn btn-acid btn-lg" href="/login?next=/job/{{ job.id }}">Войти и откликнуться →</a>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+              <a class="btn btn-acid btn-lg" href="/login?next=/job/{{ job.id }}">Войти и откликнуться →</a>
+              {% if job.source_url %}<a href="{{ job.source_url }}" target="_blank" rel="noopener nofollow" style="color: var(--ink-dim); font-size: 0.85rem;">или у источника ↗</a>{% endif %}
+            </div>
           {% endif %}
           {% if applies %}<span style="color: var(--ink-faint); font-size: 0.82rem;">{{ applies }} откл. · {{ job.views }} просмотров</span>{% endif %}
         </div>
