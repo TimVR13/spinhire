@@ -7,17 +7,27 @@
   .filter-bar { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-block: var(--sp-4) var(--sp-5); align-items: center; }
   .filter-bar .input, .filter-bar .select { width: auto; padding-block: 9px; }
   .filter-bar .input[name=q] { flex: 1 1 220px; }
+  .pager { display: flex; align-items: center; justify-content: center; gap: var(--sp-2); margin-top: var(--sp-6); flex-wrap: wrap; }
+  .pager__nums { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pager__num { min-width: 38px; height: 38px; display: grid; place-items: center; padding: 0 8px; border: 1px solid var(--line-strong); border-radius: 10px; color: var(--ink-dim); font-weight: 700; font-size: 0.9rem; text-decoration: none; }
+  .pager__num:hover { border-color: var(--acid); color: var(--acid); }
+  .pager__num.is-active { background: var(--acid); color: var(--on-acid); border-color: var(--acid); }
+  .pager__gap { align-self: end; color: var(--ink-faint); padding: 0 2px; }
 {% endblock %}
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Вакансии</nav>
   <span class="kicker">Живая база</span>
-  <h1 style="font-size: clamp(1.6rem, 3vw, 2.2rem); margin-top: 8px;">Вакансии iGaming — {{ jobs|length }}{% if q or fmt or cat %} по фильтрам{% endif %}</h1>
+  <h1 style="font-size: clamp(1.6rem, 3vw, 2.2rem); margin-top: 8px;">Вакансии iGaming — {{ found }}{% if q or fmt or cat or loc or salary_only %} по фильтрам{% endif %}</h1>
 
   <form class="filter-bar" method="get" action="/jobs" role="search">
     <input class="input" type="search" name="q" value="{{ q }}" placeholder="Должность, компания, тег…" aria-label="Поиск вакансий">
-    <select class="select input" name="fmt" aria-label="Формат работы">
-      <option value="">Любой формат</option>
+    <select class="select input" name="fmt" aria-label="Формат работы — онлайн, офис, гибрид">
+      <option value="">Онлайн / офис — любой</option>
       {% for f in formats %}<option value="{{ f }}" {% if fmt == f %}selected{% endif %}>{{ f }}</option>{% endfor %}
+    </select>
+    <select class="select input" name="loc" aria-label="Страна и город">
+      <option value="">Любая страна / город</option>
+      {% for l in locations %}<option value="{{ l }}" {% if loc == l %}selected{% endif %}>{{ l }}</option>{% endfor %}
     </select>
     <select class="select input" name="cat" aria-label="Направление">
       <option value="">Все направления</option>
@@ -25,7 +35,7 @@
     </select>
     <label class="check"><input type="checkbox" name="salary_only" value="1" {% if salary_only %}checked{% endif %}> с вилкой</label>
     <button class="btn btn-acid btn-sm" type="submit">Найти</button>
-    {% if q or fmt or cat or salary_only %}<a class="tag" href="/jobs">Сбросить</a>{% endif %}
+    {% if q or fmt or cat or loc or salary_only %}<a class="tag" href="/jobs">Сбросить</a>{% endif %}
   </form>
 
   <div class="jobs-list">
@@ -56,4 +66,20 @@
     </div>
     {% endfor %}
   </div>
+
+  {% if total_pages > 1 %}
+  <nav class="pager" aria-label="Страницы вакансий">
+    {% if page > 1 %}<a class="btn btn-ghost btn-sm" href="/jobs?{{ qs_base }}{% if qs_base %}&{% endif %}page={{ page - 1 }}">← Назад</a>{% endif %}
+    <div class="pager__nums">
+      {% for p in range(1, total_pages + 1) %}
+        {% if p == page %}<span class="pager__num is-active" aria-current="page">{{ p }}</span>
+        {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+          <a class="pager__num" href="/jobs?{{ qs_base }}{% if qs_base %}&{% endif %}page={{ p }}">{{ p }}</a>
+        {% elif p == page - 3 or p == page + 3 %}<span class="pager__gap">…</span>{% endif %}
+      {% endfor %}
+    </div>
+    {% if page < total_pages %}<a class="btn btn-ghost btn-sm" href="/jobs?{{ qs_base }}{% if qs_base %}&{% endif %}page={{ page + 1 }}">Вперёд →</a>{% endif %}
+  </nav>
+  <p style="text-align:center; color: var(--ink-faint); font-size: 0.82rem; margin-top: 12px;">Страница {{ page }} из {{ total_pages }} · показано {{ jobs|length }} из {{ found }}</p>
+  {% endif %}
 {% endblock %}

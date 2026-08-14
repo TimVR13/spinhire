@@ -14,12 +14,14 @@
   --ink-dim: oklch(0.74 0.008 285);
   --ink-faint: oklch(0.63 0.008 285);   /* AA (~5:1) для мелкого текста */
 
-  --acid: oklch(0.86 0.19 128);         /* приглушённый лайм — действия/деньги */
-  --acid-deep: oklch(0.72 0.18 130);
-  --pink: oklch(0.66 0.24 352);         /* magenta — вторичный, редко */
+  --acid: oklch(0.80 0.19 162);         /* неон-изумруд — основное действие (по умолчанию) */
+  --acid-deep: oklch(0.68 0.17 164);
+  --pink: oklch(0.68 0.25 350);         /* неон-магента — громкие CTA / второй акцент */
+  --emerald: oklch(0.80 0.19 162);      /* деньги/успех */
+  --on-emerald: oklch(0.14 0.05 162);
   --violet: oklch(0.7 0.19 300);        /* статус-бейджи */
   --yellow: oklch(0.85 0.15 95);
-  --on-acid: oklch(0.16 0.04 130);
+  --on-acid: oklch(0.14 0.05 162);      /* тёмный текст на неоне */
   --on-pink: oklch(0.98 0.01 350);
   --on-yellow: oklch(0.2 0.05 95);
 
@@ -31,9 +33,13 @@
   --font-body: "Golos Text", sans-serif;
 
   /* мягкие тени вместо жёстких неоновых оффсетов */
-  --shadow-acid: 0 8px 30px oklch(0.86 0.19 128 / 0.14);
-  --shadow-pink: 0 8px 30px oklch(0.66 0.24 352 / 0.16);
+  --shadow-acid: 0 8px 30px oklch(0.80 0.19 162 / 0.22);
+  --shadow-pink: 0 8px 30px oklch(0.68 0.25 350 / 0.20);
   --shadow-dark: 0 10px 30px oklch(0.02 0 0 / 0.5);
+
+  /* island-токены — тёмные секции-шоукейсы, НЕ переворачиваются в светлой теме */
+  --island: oklch(0.11 0.006 285);
+  --island-ink: oklch(0.96 0.005 285);
 
   --container: 1240px;
   --radius: 14px;
@@ -430,48 +436,81 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
    Светлая тема (переключатель — плавающая кнопка, app.js)
    ============================================================ */
 :root[data-theme="light"] {
-  --bg: oklch(0.975 0.003 285);
+  --bg: oklch(0.975 0.004 285);
   --bg-deep: oklch(0.93 0.004 285);
   --surface: oklch(1 0 0);
-  --surface-2: oklch(0.96 0.004 285);
-  --line: oklch(0.9 0.006 285);
-  --line-strong: oklch(0.76 0.008 285);
-  --ink: oklch(0.22 0.01 285);
-  --ink-dim: oklch(0.42 0.01 285);
-  --ink-faint: oklch(0.5 0.01 285);
-  --acid: oklch(0.56 0.16 142);          /* тёмно-зелёный — читается как текст на светлом */
-  --acid-deep: oklch(0.5 0.15 142);
+  --surface-2: oklch(0.965 0.004 285);
+  --line: oklch(0.89 0.006 285);
+  --line-strong: oklch(0.74 0.008 285);
+  --ink: oklch(0.21 0.01 285);
+  --ink-dim: oklch(0.40 0.01 285);
+  --ink-faint: oklch(0.48 0.012 285);
+  --acid: oklch(0.52 0.15 162);          /* акцент, читается как текст на светлом */
+  --acid-deep: oklch(0.44 0.13 164);
+  --emerald: oklch(0.52 0.14 162);
   --pink: oklch(0.55 0.24 352);
   --violet: oklch(0.5 0.2 300);
   --yellow: oklch(0.62 0.14 80);
   --on-acid: oklch(0.99 0 0);
   --on-pink: oklch(0.99 0 0);
-  --shadow-dark: 0 8px 24px oklch(0.4 0.02 285 / 0.12);
-  --shadow-acid: 0 8px 24px oklch(0.56 0.16 142 / 0.18);
-  --shadow-pink: 0 8px 24px oklch(0.55 0.24 352 / 0.18);
+  --shadow-dark: 0 8px 24px oklch(0.45 0.02 285 / 0.10);
+  --shadow-acid: 0 8px 24px oklch(0.52 0.15 162 / 0.18);
+  --shadow-pink: 0 8px 24px oklch(0.55 0.24 352 / 0.16);
 }
 /* кнопки: яркая заливка с тёмным текстом даже на светлой теме */
-:root[data-theme="light"] .btn-acid { background: oklch(0.82 0.19 130); color: oklch(0.2 0.05 130); }
+:root[data-theme="light"] .btn-acid { background: var(--acid); color: #fff; }
 :root[data-theme="light"] .btn-pink { background: oklch(0.62 0.26 352); color: #fff; }
-:root[data-theme="light"] .logo b { color: oklch(0.56 0.17 142); }
-:root[data-theme="light"] .tag-acid { background: oklch(0.56 0.16 142 / 0.1); }
+:root[data-theme="light"] .logo b { color: var(--acid-deep); }
+:root[data-theme="light"] .tag-acid { background: color-mix(in oklch, var(--acid) 14%, transparent); }
 :root[data-theme="light"] .tag-hot { background: oklch(0.62 0.26 352); color: #fff; }
-:root[data-theme="light"] .cat-ico { background: oklch(0.56 0.16 142 / 0.1); }
+:root[data-theme="light"] .cat-ico { background: color-mix(in oklch, var(--acid) 14%, transparent); }
 /* герой — всегда тёмный шоукейс-баннер (в нём 3D-картинка): текст светлый */
 :root[data-theme="light"] .hero { color: oklch(0.96 0.005 285); }
 :root[data-theme="light"] .hero h1 { color: oklch(0.97 0.005 285); }
-:root[data-theme="light"] .hero h1 em { color: oklch(0.85 0.2 130); }
+:root[data-theme="light"] .hero h1 em { color: oklch(0.72 0.24 350); }
 :root[data-theme="light"] .hero .lead { color: oklch(0.82 0.006 285); }
 :root[data-theme="light"] .hero .stat-block { background: oklch(0.15 0.008 285 / 0.72); }
-:root[data-theme="light"] .hero .stat-block .num { color: oklch(0.85 0.2 130); }
+:root[data-theme="light"] .hero .stat-block .num { color: var(--acid); }
 :root[data-theme="light"] .desc-block { color: var(--ink); }
+/* cta-баннер — светлый розовый, тёмный текст */
+:root[data-theme="light"] .cta-banner { background: oklch(0.96 0.035 352); border-color: oklch(0.84 0.09 352); box-shadow: var(--shadow-pink); }
+:root[data-theme="light"] .cta-banner h2 { color: var(--ink); }
+:root[data-theme="light"] .cta-banner h2 em { color: oklch(0.5 0.22 352); }
+:root[data-theme="light"] .cta-banner p { color: var(--ink-dim); }
+/* флеш-сообщения */
+:root[data-theme="light"] .flash { background: oklch(0.95 0.05 142); border-color: oklch(0.68 0.12 142); color: oklch(0.30 0.09 142); }
+:root[data-theme="light"] .flash.err { background: oklch(0.96 0.035 352); border-color: var(--pink); color: oklch(0.38 0.16 352); }
+/* island-секции остаются тёмными — текст светлый */
+:root[data-theme="light"] .games-head, :root[data-theme="light"] .co-hero, :root[data-theme="light"] .company-hero { color: var(--island-ink); }
+:root[data-theme="light"] .games-head h1, :root[data-theme="light"] .co-hero h1 { color: var(--island-ink); }
+:root[data-theme="light"] .co-hero .sub { color: oklch(0.82 0.006 285); }
+:root[data-theme="light"] .kicker, :root[data-theme="light"] .link-more, :root[data-theme="light"] .side-card h3 { color: var(--acid-deep); }
 
-/* плавающий переключатель темы */
+/* переключатель темы — живёт в футере, не мозолит глаза */
 .theme-toggle {
-  position: fixed; left: var(--sp-4); bottom: var(--sp-4); z-index: 90;
-  width: 46px; height: 46px; border-radius: 50%;
-  border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink);
-  font-size: 1.2rem; display: grid; place-items: center; cursor: pointer;
-  box-shadow: var(--shadow-dark);
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--line-strong); background: transparent; color: var(--ink-dim);
+  font-size: 1rem; display: grid; place-items: center; cursor: pointer;
+  opacity: 0.65; transition: opacity 0.15s, border-color 0.15s;
 }
-.theme-toggle:hover { border-color: var(--acid); }
+.theme-toggle:hover { border-color: var(--acid); color: var(--ink); opacity: 1; }
+/* запасной вариант, если у страницы нет футера */
+.theme-toggle--float {
+  position: fixed; left: var(--sp-4); bottom: var(--sp-4); z-index: 90;
+  width: 46px; height: 46px; background: var(--surface); box-shadow: var(--shadow-dark); opacity: 1;
+}
+
+/* живой выбор акцентной гаммы */
+.accent-switch { position: fixed; right: 16px; bottom: 16px; z-index: 95; }
+.accent-switch__btn { width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line-strong);
+  background: var(--surface); color: #fff; font-size: 1.25rem; cursor: pointer; box-shadow: var(--shadow-dark); }
+.accent-switch__btn:hover { border-color: var(--acid); }
+.accent-switch__menu { position: absolute; right: 0; bottom: 56px; background: var(--surface);
+  border: 1px solid var(--line-strong); border-radius: 12px; padding: 10px; min-width: 176px;
+  box-shadow: var(--shadow-dark); display: flex; flex-direction: column; gap: 3px; }
+.accent-switch__menu[hidden] { display: none; }
+.accent-switch__menu b { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-faint); padding: 2px 6px 6px; }
+.accent-switch__menu button { display: flex; align-items: center; gap: 10px; background: none; border: none;
+  color: var(--ink); font: inherit; font-size: 0.9rem; font-weight: 600; padding: 7px 8px; border-radius: 8px; cursor: pointer; text-align: left; }
+.accent-switch__menu button:hover { background: var(--surface-2); }
+.accent-switch__menu i { width: 16px; height: 16px; border-radius: 50%; flex: 0 0 auto; box-shadow: 0 0 8px currentColor; }

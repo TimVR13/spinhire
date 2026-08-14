@@ -179,8 +179,9 @@ PLANS = {
     "single": ("Одна вакансия", 199, "Размещение вакансии на 30 дней"),
     "featured": ("Featured ⚡", 399, "Топ поиска + главная, 60 дней"),
     "pack5": ("Пакет 5 вакансий", 799, "5 размещений по 30 дней"),
-    "cv10": ("10 контактов из базы", 149, "Открытие 10 контактов резюме"),
-    "cv50": ("50 контактов из базы", 499, "Открытие 50 контактов резюме"),
+    "cv10": ("10 контактов из базы", 69, "Открытие 10 контактов резюме (€6.9/контакт)"),
+    "cv40": ("40 контактов из базы", 199, "Открытие 40 контактов резюме (€4.98/контакт)"),
+    "cvunlim": ("База резюме — безлимит / мес", 349, "Безлимитные контакты на 30 дней"),
     "hunt": ("Подбор под ключ", 1999, "Шорт-лист под роль за 7 дней"),
 }
 
@@ -199,14 +200,16 @@ class Order(Base):
     user = relationship("User")
 
 
-# известные домены iGaming-компаний → для логотипа (favicon) и ссылки на сайт
+# курируемый список доменов iGaming-компаний → лого показываем ТОЛЬКО отсюда
+# (у случайных доменов фавикон-сервис отдаёт уродский placeholder — лучше чистые буквы)
 COMPANY_DOMAINS = {
     "betsson group": "betssongroup.com", "betsson": "betssongroup.com",
     "kaizen gaming": "kaizengaming.com", "kaizen gaming (betano)": "kaizengaming.com",
     "genius sports": "geniussports.com", "softswiss": "softswiss.com",
     "evolution": "evolution.com", "pentasia": "pentasia.com", "gr8 tech": "gr8.tech",
-    "megapari": "megapari.com", "betviro.com": "betviro.com", "genesis": "gen.tech",
-    "owox": "owox.com", "seojet": "seojet.net",
+    "megapari": "megapari.com", "genesis": "gen.tech", "owox": "owox.com",
+    "everymatrix": "everymatrix.com", "n-ix": "n-ix.com", "trinetix": "trinetix.com",
+    "parimatch tech": "parimatch.tech", "growe": "growe.com", "boldplay": "boldplay.com",
 }
 
 
@@ -214,10 +217,11 @@ def company_domain(name: str) -> str:
     n = (name or "").lower().strip()
     if n in COMPANY_DOMAINS:
         return COMPANY_DOMAINS[n]
-    # компания вида "xxx.com" — сама себе домен
-    import re as _re
-    m = _re.search(r"([a-z0-9-]+\.(?:com|net|io|tech|agency|games|bet))", n)
-    return m.group(1) if m else ""
+    # частичное совпадение по ключевому слову бренда
+    for key, dom in COMPANY_DOMAINS.items():
+        if key in n or n in key:
+            return dom
+    return ""
 
 
 def db_session():
@@ -422,14 +426,21 @@ def r5(): return RedirectResponse("/jobs")
 
 # ---------- public: jobs ----------
 
+JOBS_PER_PAGE = 100
+
+
 @app.get("/jobs", response_class=HTMLResponse)
 def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
-              salary_only: int = 0, db: Session = Depends(db_session)):
-    qs = db.query(Job).filter(Job.status == "approved")
+              loc: str = "", salary_only: int = 0, page: int = 1,
+              db: Session = Depends(db_session)):
+    base = db.query(Job).filter(Job.status == "approved")
+    qs = base
     if fmt:
         qs = qs.filter(Job.fmt == fmt)
     if cat:
         qs = qs.filter(Job.category == cat)
+    if loc:
+        qs = qs.filter(Job.location == loc)
     jobs = qs.order_by(Job.featured.desc(), Job.created_at.desc()).all()
     if q:
         # регистронезависимо, включая кириллицу (SQLite LIKE не сворачивает регистр не-ASCII)
@@ -438,9 +449,26 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
                 if ql in f"{j.title} {j.company_name} {j.tags} {j.location}".lower()]
     if salary_only:
         jobs = [j for j in jobs if j.has_salary]
-    return render(request, db, "jobs.html", jobs=jobs, q=q, fmt=fmt, cat=cat,
-                  salary_only=salary_only, formats=FORMATS, categories=CATEGORIES,
-                  total=db.query(Job).filter(Job.status == "approved").count())
+
+    # список локаций для выпадающего фильтра (страна/город)
+    locations = sorted({j.location for j in base.all() if j.location})
+
+    # пагинация по 100 на страницу
+    found = len(jobs)
+    total_pages = max(1, (found + JOBS_PER_PAGE - 1) // JOBS_PER_PAGE)
+    page = max(1, min(page, total_pages))
+    page_jobs = jobs[(page - 1) * JOBS_PER_PAGE: page * JOBS_PER_PAGE]
+
+    from urllib.parse import urlencode
+    active = {k: v for k, v in (("q", q), ("fmt", fmt), ("cat", cat),
+              ("loc", loc), ("salary_only", salary_only or "")) if v}
+    qs_base = urlencode(active)
+
+    return render(request, db, "jobs.html", jobs=page_jobs, q=q, fmt=fmt, cat=cat,
+                  loc=loc, salary_only=salary_only, formats=FORMATS, categories=CATEGORIES,
+                  locations=locations, page=page, total_pages=total_pages, found=found,
+                  qs_base=qs_base,
+                  total=base.count())
 
 
 @app.get("/api/featured-jobs")
