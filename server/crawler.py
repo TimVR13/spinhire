@@ -68,11 +68,13 @@ def _clean_html(raw):
 
 def _fmt_from(location, content):
     loc = (location or "").lower()
-    text = (content or "").lower()
-    if "remote" in loc or "удал" in loc:
-        return "удалёнка ЕС" if ("eu" in loc or "europe" in text) else "удалёнка"
-    if "hybrid" in text or "гибрид" in loc:
+    head = (content or "")[:600].lower()  # формат обычно указан в начале
+    if "remote" in loc or "удал" in loc or "fully remote" in head or "100% remote" in head or "remote-first" in head:
+        return "удалёнка ЕС" if ("eu" in loc or "europe" in loc or "europe" in head) else "удалёнка"
+    if "hybrid" in loc or "гибрид" in loc or "hybrid" in head:
         return "гибрид"
+    if "remote" in head:
+        return "гибрид"  # упоминается remote, но не в локации — вероятно гибрид
     return "офис"
 
 
@@ -102,12 +104,11 @@ def detect_lang(title, content):
 def _tags_from(title, content, lang=""):
     text = f"{title} {content}".lower()
     pool = [
-        ("релокация", ("relocat", "relocation", "work permit", "visa", "переезд")),
-        ("удалёнка", ("remote", "remote-first")), ("VIP", ("vip ", "vip-")),
-        ("AML/KYC", ("aml", "kyc")), ("аффилейты", ("affiliate", "affil")),
-        ("CRM", ("crm", "retention")), ("спортсбук", ("sportsbook", "trading")),
-        ("Unity", ("unity",)), ("Java", ("java ",)), (".NET", (".net", "c#")),
-        ("SQL/BI", ("sql", "power bi", "tableau")),
+        ("релокация", ("relocat", "relocation", "work permit", "visa sponsor", "переезд")),
+        ("VIP", ("vip ", "vip-")), ("AML/KYC", ("aml", "kyc")),
+        ("аффилейты", ("affiliate", "affil")), ("CRM", ("crm", "retention")),
+        ("спортсбук", ("sportsbook",)), ("Unity", ("unity",)), ("Java", ("java ",)),
+        (".NET", (".net", "c# ")), ("SQL/BI", ("sql", "power bi", "tableau")),
     ]
     out = []
     if lang:

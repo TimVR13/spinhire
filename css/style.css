@@ -242,7 +242,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   white-space: nowrap;
 }
 .salary small { color: var(--ink-faint); font-weight: 600; font-size: 0.7em; }
-.job-card__age { color: var(--ink-faint); font-size: 0.78rem; }
+.job-card__age { color: var(--ink-dim); font-size: 0.8rem; }
 
 .save-btn {
   background: none; border: 2px solid var(--line-strong); color: var(--ink-dim);

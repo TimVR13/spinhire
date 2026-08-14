@@ -157,22 +157,37 @@ def db_session():
         db.close()
 
 
+# порядок важен: специфичные роли — раньше общих, топ-менеджмент и финансы — до «разработки»
 _CAT_RULES = [
-    ("Комплаенс и AML", ("compl", "aml", "kyc", "комплаенс", "антифрод", "fraud")),
-    ("Платежи и антифрод", ("payment", "psp", "платеж", "reconcil", "treasury")),
-    ("Аффилейты и медиабаинг", ("affili", "аффил", "media buy", "медиабай", "seo", "promo", "streamer", "influenc")),
-    ("Разработка игр", ("developer", "engineer", "разработ", "java", ".net", "backend", "frontend",
-                        "математик", "devops", "qa", "unity", "ai engineer", "1c")),
-    ("Беттинг и трейдинг", ("trader", "трейдер", "sportsbook", "спортбук", "odds", "беттинг")),
-    ("Саппорт (языки)", ("support", "саппорт", "customer service", "presenter", "агент")),
-    ("Данные и BI", ("data ", "data eng", "bi ", "analyt", "аналит")),
-    ("Маркетинг и CRM", ("crm", "retention", "ретеншн", "vip", "marketing", "маркетинг", "brand")),
-    ("Топ-менеджмент", ("head of", "vp ", "chief", "director", "c-level", "директор", "руковод")),
+    ("Топ-менеджмент", ("head of", "vp of", "chief", "c-level", "cto", "ceo", "cfo", "coo",
+                        "country manager", "managing director", "director of", "директор", "руковод")),
+    ("Комплаенс и AML", ("compliance", "aml", "kyc", "комплаенс", "anti-money", "responsible gambl",
+                         "regulatory", "mlro", "лиценз")),
+    ("Платежи и антифрод", ("payment", "psp", "платеж", "reconcil", "treasury", "fraud", "антифрод",
+                           "chargeback", "acquiring", "финанс", "accountant", "бухгалтер", "finance")),
+    ("Данные и BI", ("data engineer", "data analyst", "data scientist", "bi ", "business intelligence",
+                     "analytics", "аналитик данных", "big data", "etl")),
+    ("Разработка игр", ("software engineer", "developer", "разработчик", "java ", "python ", ".net",
+                        "c# ", "backend", "frontend", "full stack", "devops", "qa engineer", "unity",
+                        "game math", "гейм-математик", "мат-модел", "sdet", "programmer")),
+    ("Беттинг и трейдинг", ("trader", "трейдер", "sportsbook", "спортбук", "odds", "беттинг", "betting")),
+    ("Аффилейты и медиабаинг", ("affiliate", "аффил", "media buy", "медиабай", "seo ", "user acquisition",
+                               "streamer", "influenc", "ppc", "aso")),
+    ("Саппорт (языки)", ("customer support", "customer service", "support agent", "саппорт",
+                        "presenter", "live dealer", "customer care", "поддержк")),
+    ("Маркетинг и CRM", ("crm", "retention", "ретеншн", "vip", "marketing", "маркетинг", "brand",
+                        "content", "social media", "email")),
 ]
 
 
 def guess_category(title: str, tags: str) -> str:
-    text = f"{title} {tags}".lower()
+    t = (title or "").lower()
+    tg = (tags or "").lower()
+    # заголовок весомее тегов
+    for cat, keys in _CAT_RULES:
+        if any(k in t for k in keys):
+            return cat
+    text = f"{t} {tg}"
     for cat, keys in _CAT_RULES:
         if any(k in text for k in keys):
             return cat
@@ -343,6 +358,21 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
     return render(request, db, "jobs.html", jobs=jobs, q=q, fmt=fmt, cat=cat,
                   salary_only=salary_only, formats=FORMATS, categories=CATEGORIES,
                   total=db.query(Job).filter(Job.status == "approved").count())
+
+
+@app.get("/api/featured-jobs")
+def api_featured(db: Session = Depends(db_session)):
+    """Реальные вакансии для блока «Вакансии дня» на главной (внутренние ссылки /job/{id})."""
+    from fastapi.responses import JSONResponse
+    jobs = (db.query(Job).filter(Job.status == "approved")
+            .order_by(Job.featured.desc(), Job.created_at.desc()).limit(30).all())
+    # приоритет — с зарплатой, потом свежие; берём 6
+    jobs.sort(key=lambda j: (not j.has_salary,))
+    out = [{"id": j.id, "title": j.title, "company": j.company_name,
+            "location": j.location or "—", "fmt": j.fmt,
+            "salary": j.salary if j.has_salary else "по запросу",
+            "cat": j.category, "initials": j.initials} for j in jobs[:6]]
+    return JSONResponse(out)
 
 
 @app.get("/job/{job_id}", response_class=HTMLResponse)
