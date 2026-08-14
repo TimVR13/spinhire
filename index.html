@@ -142,6 +142,25 @@
   .company-tile b { display: block; font-size: 1rem; }
   .company-tile span { color: var(--ink-faint); font-size: 0.8rem; }
 
+  /* игровая зона на главной */
+  .game-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-4); }
+  @media (max-width: 760px) { .game-cards { grid-template-columns: 1fr; } }
+  .game-card { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
+    background: var(--surface); text-decoration: none; color: inherit; transition: transform .15s, border-color .15s, box-shadow .15s; }
+  .game-card:hover { transform: translateY(-3px); border-color: var(--acid); box-shadow: 0 0 26px color-mix(in oklch, var(--acid) 32%, transparent); }
+  .game-card__img { height: 156px; background-size: cover; background-position: center; position: relative; }
+  .game-card__img::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 45%, oklch(0.10 0.006 285 / 0.85)); }
+  .game-card__body { padding: var(--sp-4); }
+  .game-card__body b { display: block; font-size: 1.05rem; margin-bottom: 4px; }
+  .game-card__body span { color: var(--ink-dim); font-size: 0.86rem; }
+  /* iGaming в цифрах */
+  .facts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
+  @media (max-width: 760px) { .facts-grid { grid-template-columns: 1fr; } }
+  .fact { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: var(--sp-5); }
+  .fact b { font-family: var(--font-display); font-weight: 900; font-size: 1.5rem; color: var(--acid); display: block; margin-bottom: 6px; }
+  .fact:nth-child(2n) b { color: var(--pink); }
+  .fact span { color: var(--ink-dim); font-size: 0.9rem; }
+
   /* слот-промо «Однорукий бандит» на главной */
   .slot-promo { display: grid; grid-template-columns: 1.05fr 1fr; gap: var(--sp-6); align-items: center;
     border: 1px solid var(--line); border-radius: 20px; padding: clamp(20px, 4vw, 44px);
@@ -347,6 +366,48 @@
     </div>
   </section>
 
+  <!-- ИГРОВАЯ ЗОНА -->
+  <section class="section" style="padding-top: 0;">
+    <div class="container">
+      <div class="section-head">
+        <div><span class="kicker pink">Перекур между откликами</span><h2>Игровая зона на SpinCoins</h2></div>
+        <a class="link-more" href="games.html">Играть →</a>
+      </div>
+      <div class="game-cards">
+        <a class="game-card" href="games.html"><div class="game-card__img" style="background-image:url('img/asset-roulette.jpg')"></div><div class="game-card__body"><b>🎯 Рулетка</b><span>Ставь на число и цвет, крути живое колесо — до ×36</span></div></a>
+        <a class="game-card" href="games.html"><div class="game-card__img" style="background-image:url('img/asset-slot-cabinet.jpg')"></div><div class="game-card__body"><b>🎰 Однорукий бандит</b><span>Слот 3×3, три в ряд — джекпот SpinCoins</span></div></a>
+        <a class="game-card" href="games.html"><div class="game-card__img" style="background-image:url('img/asset-cards.jpg')"></div><div class="game-card__body"><b>🃏 Двадцать одно</b><span>Блэкджек-стол с дилером, добор до 17</span></div></a>
+      </div>
+      <p style="color: var(--ink-faint); font-size: 0.85rem; margin-top: 14px;">SpinCoins — виртуальные баллы: зарабатывай на откликах и в играх, меняй на мерч. Не азартная игра на деньги.</p>
+    </div>
+  </section>
+
+  <!-- КАЛЕНДАРЬ СОБЫТИЙ (наверху — это крутая штука) -->
+  <section class="section" style="padding-top: 0;">
+    <div class="container">
+      <div class="section-head">
+        <div><span class="kicker">Куда идти нетворкать</span><h2>Календарь событий iGaming</h2></div>
+        <a class="link-more" href="events.html">Весь календарь →</a>
+      </div>
+      <div class="events-grid" id="events-grid"></div>
+    </div>
+  </section>
+
+  <!-- iGAMING В ЦИФРАХ -->
+  <section class="section" style="padding-top: 0;">
+    <div class="container">
+      <div class="section-head"><div><span class="kicker">Индустрия в цифрах</span><h2>iGaming — это большие деньги</h2></div></div>
+      <div class="facts-grid">
+        <div class="fact"><b>$100B+</b><span>объём онлайн-гемблинга к 2027 году</span></div>
+        <div class="fact"><b>×2–3</b><span>зарплаты выше обычного IT и маркетинга</span></div>
+        <div class="fact"><b>Мальта · Кипр · Тбилиси</b><span>главные хабы релокации с визой</span></div>
+        <div class="fact"><b>40%+</b><span>вакансий — удалёнка или гибрид</span></div>
+        <div class="fact"><b>₿ USDT</b><span>всё больше компаний платят в крипте</span></div>
+        <div class="fact"><b>Английский B2</b><span>достаточно для старта в большинстве ролей</span></div>
+      </div>
+    </div>
+  </section>
+
   <!-- SALARIES -->
   <section class="section" id="salaries" style="padding-top: 0;">
     <div class="container">
@@ -459,19 +520,6 @@
     </div>
   </section>
 
-  <!-- КАЛЕНДАРЬ СОБЫТИЙ iGAMING -->
-  <section class="section" id="events" style="padding-top: 0;">
-    <div class="container">
-      <div class="section-head">
-        <div>
-          <span class="kicker">Куда идти нетворкать</span>
-          <h2>Календарь событий iGaming</h2>
-        </div>
-        <a class="link-more" href="#events">Весь календарь →</a>
-      </div>
-      <div class="events-grid" id="events-grid"></div>
-    </div>
-  </section>
 </main>
 
 <footer class="site-footer">

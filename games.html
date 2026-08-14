@@ -56,15 +56,17 @@
   .games-grid { display: flex; flex-direction: column; gap: var(--sp-6); margin-top: var(--sp-6); }
   .game { border: 1px solid var(--island-line); border-radius: 20px; padding: var(--sp-6) var(--sp-6) var(--sp-7); color: var(--island-ink);
     background: linear-gradient(var(--island-2), var(--island)); }
-  .game__head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: var(--sp-5); }
+  .game__head { display: flex; justify-content: center; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: var(--sp-5); text-align: center; }
+  .game__how { text-align: center; color: var(--island-dim); font-size: 0.92rem; max-width: 60ch; margin: -8px auto var(--sp-5); }
+  .game__how b { color: var(--island-ink); }
   .game__head h2 { font-size: 1.5rem; color: var(--island-ink); display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   .game__head .odds { font-size: 0.7rem; color: var(--island-faint); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; }
-  .result { font-size: 0.95rem; color: var(--island-dim); min-height: 1.4em; margin-top: var(--sp-4); }
+  .result { font-size: 0.95rem; color: var(--island-dim); min-height: 1.4em; margin-top: var(--sp-4); text-align: center; }
   .result b { color: var(--acid); }
   .result .lose { color: var(--pink); font-weight: 700; }
   .result .big { font-family: var(--font-display); font-weight: 900; }
 
-  .controls { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; margin-top: var(--sp-4); }
+  .controls { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; justify-content: center; margin-top: var(--sp-4); }
   .bet-select { display: flex; gap: 6px; }
   .bet-select .cap { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--island-faint); font-weight: 800; align-self: center; margin-right: 4px; }
   .bet-select button {
@@ -80,7 +82,7 @@
   .win-flash { animation: winFlash .7s ease-out 2; }
 
   /* ===== SLOT MACHINE (3×3) ===== */
-  .slot__stage { display: grid; place-items: center;
+  .slot__stage { display: flex; justify-content: center; align-items: center;
     background: radial-gradient(120% 120% at 50% 0%, oklch(0.17 0.02 300) 0%, var(--island) 72%);
     border: 1px solid var(--island-line); border-radius: 16px; padding: var(--sp-6); position: relative; overflow: hidden; }
   .slot__cabinet { display: flex; align-items: center; gap: var(--sp-5); }
@@ -255,6 +257,7 @@
         <div class="game__head">
           <h2>🎰 Однорукий бандит <span class="odds">линия по центру · три в ряд ×20 · пара ×2</span></h2>
         </div>
+        <p class="game__how">Выбери <b>ставку</b> и дёрни рычаг. Барабаны крутятся — считается <b>средняя линия</b>: три одинаковых символа дают джекпот <b>×20</b>, пара — <b>×2</b>.</p>
         <div class="slot__stage" id="sl-stage">
           <div class="slot__cabinet">
             <div class="slot__reels" id="sl-reels">
@@ -281,6 +284,7 @@
         <div class="game__head">
           <h2>🎯 Рулетка <span class="odds">число ×36 · цвет/чёт ×2 · дюжина ×3</span></h2>
         </div>
+        <p class="game__how">Выбери фишку, поставь на <b>число, цвет</b>, чёт/нечёт или дюжину — и крути колесо. Угадал число — <b>×36</b>, цвет или чёт/нечёт — <b>×2</b>, дюжину — <b>×3</b>.</p>
         <div class="roul__wrap">
           <div class="roul__wheelbox">
             <div class="roulette" id="roulette">
@@ -323,6 +327,7 @@
         <div class="game__head">
           <h2>🃏 Двадцать одно <span class="odds">дилер тянет до 17 · блэкджек ×2.5 · победа ×2</span></h2>
         </div>
+        <p class="game__how">Набери больше очков, чем дилер, но <b>не больше 21</b>. «Ещё» — взять карту, «Хватит» — остановиться. Дилер добирает до 17, <b>блэкджек</b> (21 с двух карт) — ×2.5.</p>
         <div class="bj-table">
           <div class="bj-side">
             <span class="bj-label">Дилер <span class="bj-score" id="bj-dscore"></span></span>
