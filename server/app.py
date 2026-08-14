@@ -5,8 +5,15 @@
 Сид:     при пустой базе создаёт админа и импортирует data/jobs.csv
 """
 import csv
+import hashlib
+import json
 import os
-from datetime import datetime
+import secrets
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
@@ -37,6 +44,15 @@ SECRET = os.environ.get("SPINHIRE_SECRET", "spinhire-dev-secret-change-me")
 ADMIN_EMAIL = os.environ.get("SPINHIRE_ADMIN_EMAIL", "admin@spinhire.org")
 ADMIN_PASSWORD = os.environ.get("SPINHIRE_ADMIN_PASSWORD", "spinhire-boss-2026")
 
+# ---- внешние интеграции (секреты только из окружения; пустые дефолты для локали) ----
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+RESEND_FROM = os.environ.get("RESEND_FROM", "")
+BASE_URL = os.environ.get("BASE_URL", "").rstrip("/")
+# Подтверждение почты включается автоматически, когда настроен Resend.
+REQUIRE_VERIFY = bool(RESEND_API_KEY)
+
 engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
 Base = declarative_base()
@@ -62,6 +78,10 @@ class User(Base):
     incognito = Column(Boolean, default=True)
     coins = Column(Integer, default=0)              # SpinCoins на аккаунте
     last_spin = Column(DateTime, nullable=True)     # последний ежедневный фриспин
+    verified = Column(Integer, default=1)           # 0 — ждём подтверждения почты; старые = 1
+    otp_hash = Column(String, default="")           # хэш текущего кода подтверждения
+    otp_expires = Column(String, default="")        # ISO-время истечения кода
+    otp_attempts = Column(Integer, default=0)       # попыток ввода текущего кода
     created_at = Column(DateTime, default=datetime.utcnow)
     jobs = relationship("Job", back_populates="owner")
     applications = relationship("Application", back_populates="user")
@@ -290,6 +310,19 @@ def migrate(db: Session):
         db.execute(text("ALTER TABLE users ADD COLUMN coins INTEGER DEFAULT 0"))
     if "last_spin" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN last_spin DATETIME"))
+    # верификация почты: verified DEFAULT 1 — существующие пользователи остаются рабочими
+    for _sql in (
+        "ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 1",
+        "ALTER TABLE users ADD COLUMN otp_hash VARCHAR DEFAULT ''",
+        "ALTER TABLE users ADD COLUMN otp_expires VARCHAR DEFAULT ''",
+        "ALTER TABLE users ADD COLUMN otp_attempts INTEGER DEFAULT 0",
+    ):
+        col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
+        if col not in ucols:
+            try:
+                db.execute(text(_sql))
+            except Exception as e:  # noqa: BLE001 — колонка уже есть / гонка миграций
+                print(f"[migrate] {col}: {type(e).__name__}")
     db.commit()
     # сид событий iGaming, если таблица пуста
     if db.query(Event).count() == 0:
@@ -408,6 +441,91 @@ def safe_next(url: str, default: str = "/profile") -> str:
     if url and url.startswith("/") and not url.startswith("//"):
         return url
     return default
+
+
+def dest_for(user: User) -> str:
+    """Куда вести пользователя после входа в зависимости от роли."""
+    if user.role == "admin":
+        return "/admin"
+    if user.role == "employer":
+        return "/employer"
+    return "/profile"
+
+
+# ---------- outbound HTTP (stdlib urllib; httpx не установлен) ----------
+
+def _http_post(url: str, *, data: bytes, headers: dict, timeout: int = 12):
+    """POST → (status, body_text). Бросает только на транспортных сбоях."""
+    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.status, resp.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8", "replace")
+
+
+def _http_get(url: str, *, headers: dict, timeout: int = 12):
+    req = urllib.request.Request(url, headers=headers, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.status, resp.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8", "replace")
+
+
+def resend_send(to: str, subject: str, html: str) -> bool:
+    """Отправка письма через Resend. True при 2xx, иначе False. Никогда не бросает."""
+    if not RESEND_API_KEY:
+        return False
+    try:
+        body = json.dumps({"from": RESEND_FROM, "to": [to],
+                           "subject": subject, "html": html}).encode("utf-8")
+        status, _ = _http_post(
+            "https://api.resend.com/emails", data=body,
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}",
+                     "Content-Type": "application/json"})
+        if 200 <= status < 300:
+            return True
+        print(f"[resend] send failed: status={status}")
+        return False
+    except Exception as e:  # noqa: BLE001 — сеть/таймаут; не роняем запрос
+        print(f"[resend] send error: {type(e).__name__}")
+        return False
+
+
+# ---------- email verification (OTP) ----------
+
+_otp_last_send: dict = {}   # email -> unix ts последней отправки (мягкий рейт-лимит)
+_OTP_TTL_MIN = 10
+_OTP_MAX_ATTEMPTS = 5
+_OTP_RESEND_COOLDOWN = 30   # сек
+
+
+def _hash_otp(email: str, code: str) -> str:
+    return hashlib.sha256(f"{SECRET}:{email.strip().lower()}:{code}".encode()).hexdigest()
+
+
+def issue_otp(user: User, db: Session) -> str:
+    """Сгенерировать 6-значный код, сохранить хэш+срок на пользователе, вернуть код."""
+    code = f"{secrets.randbelow(1000000):06d}"
+    user.otp_hash = _hash_otp(user.email, code)
+    user.otp_expires = (datetime.utcnow() + timedelta(minutes=_OTP_TTL_MIN)).isoformat()
+    user.otp_attempts = 0
+    db.commit()
+    return code
+
+
+def send_otp(user: User, code: str) -> bool:
+    html = (
+        '<div style="font-family:Arial,Helvetica,sans-serif;color:#111">'
+        '<p>Здравствуйте!</p>'
+        '<p>Ваш код подтверждения регистрации на <b>SpinHire</b>:</p>'
+        f'<p style="font-size:32px;font-weight:700;letter-spacing:6px">{code}</p>'
+        f'<p style="color:#666">Код действует {_OTP_TTL_MIN} минут. '
+        'Если вы не регистрировались на SpinHire — просто проигнорируйте это письмо.</p>'
+        '</div>'
+    )
+    return resend_send(user.email, f"Ваш код подтверждения SpinHire: {code}", html)
 
 
 # ---------- redirects from static pages ----------
@@ -604,7 +722,13 @@ def login(request: Request, email: str = Form(...), password: str = Form(...),
     u = db.query(User).filter(func.lower(User.email) == email.strip().lower()).first()
     if not u or not check_pw(password, u.password_hash):
         return render(request, db, "login.html", next=next, error="Неверная почта или пароль")
-    dest = "/admin" if u.role == "admin" else ("/employer" if u.role == "employer" else safe_next(next))
+    # почта не подтверждена (и Resend настроен) — отправляем код и ведём на /verify
+    if REQUIRE_VERIFY and not u.verified:
+        code = issue_otp(u, db)
+        send_otp(u, code)
+        _otp_last_send[u.email] = time.time()
+        return RedirectResponse(f"/verify?email={urllib.parse.quote(u.email)}", status_code=303)
+    dest = safe_next(next) if u.role not in ("admin", "employer") else dest_for(u)
     return set_session(RedirectResponse(dest, status_code=303), u)
 
 
@@ -626,6 +750,21 @@ def register(request: Request, email: str = Form(...), password: str = Form(...)
              name=name.strip(), role=role, company_name=company_name.strip())
     db.add(u)
     db.commit()
+    # подтверждение почты: только если Resend настроен
+    if REQUIRE_VERIFY:
+        u.verified = 0
+        db.commit()
+        code = issue_otp(u, db)
+        if send_otp(u, code):
+            _otp_last_send[u.email] = time.time()
+            return RedirectResponse(f"/verify?email={urllib.parse.quote(u.email)}",
+                                    status_code=303)
+        # письмо не ушло (напр. домен Resend ещё не подтверждён) — не блокируем вход
+        print("[verify] OTP send failed on register — auto-verifying user")
+        u.verified = 1
+        u.otp_hash = ""
+        u.otp_expires = ""
+        db.commit()
     dest = "/employer" if role == "employer" else "/profile"
     return set_session(RedirectResponse(dest, status_code=303), u)
 
@@ -635,6 +774,157 @@ def logout():
     resp = RedirectResponse("/", status_code=303)
     resp.delete_cookie("sh_session")
     return resp
+
+
+# ---------- Google OAuth ----------
+
+@app.get("/auth/google")
+def auth_google():
+    if not GOOGLE_CLIENT_ID:
+        return RedirectResponse("/login?e=google_off", status_code=307)
+    state = secrets.token_urlsafe(24)
+    params = urllib.parse.urlencode({
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": BASE_URL + "/auth/google/callback",
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "access_type": "online",
+        "prompt": "select_account",
+    })
+    resp = RedirectResponse(
+        f"https://accounts.google.com/o/oauth2/v2/auth?{params}", status_code=307)
+    # состояние — в подписанной короткоживущей куке (тот же signer)
+    resp.set_cookie("sh_oauth", signer.dumps({"state": state}),
+                    max_age=600, httponly=True, samesite="lax")
+    return resp
+
+
+@app.get("/auth/google/callback")
+def auth_google_callback(request: Request, code: str = "", state: str = "",
+                         db: Session = Depends(db_session)):
+    fail = RedirectResponse("/login?e=google_fail", status_code=303)
+    try:
+        raw = request.cookies.get("sh_oauth")
+        if not raw or not code or not state:
+            return fail
+        try:
+            saved = signer.loads(raw).get("state")
+        except BadSignature:
+            return fail
+        if not saved or not secrets.compare_digest(str(saved), str(state)):
+            return fail
+
+        # обмен кода на access_token
+        token_body = urllib.parse.urlencode({
+            "code": code,
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uri": BASE_URL + "/auth/google/callback",
+            "grant_type": "authorization_code",
+        }).encode("utf-8")
+        status, body = _http_post(
+            "https://oauth2.googleapis.com/token", data=token_body,
+            headers={"Content-Type": "application/x-www-form-urlencoded"})
+        if not (200 <= status < 300):
+            print(f"[google] token exchange failed: status={status}")
+            return fail
+        access_token = json.loads(body).get("access_token")
+        if not access_token:
+            return fail
+
+        # профиль
+        status, body = _http_get(
+            "https://openidconnect.googleapis.com/v1/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"})
+        if not (200 <= status < 300):
+            print(f"[google] userinfo failed: status={status}")
+            return fail
+        info = json.loads(body)
+        email = (info.get("email") or "").strip().lower()
+        if not email:
+            return fail
+        name = (info.get("name") or "").strip()
+
+        u = db.query(User).filter(func.lower(User.email) == email).first()
+        if not u:
+            u = User(email=email, password_hash=hash_pw(secrets.token_urlsafe(24)),
+                     name=name, role="talent", verified=1)
+            db.add(u)
+            db.commit()
+        elif not u.verified:
+            # вход через Google подтверждает владение почтой
+            u.verified = 1
+            u.otp_hash = ""
+            u.otp_expires = ""
+            db.commit()
+
+        resp = set_session(RedirectResponse(dest_for(u), status_code=303), u)
+        resp.delete_cookie("sh_oauth")
+        return resp
+    except Exception as e:  # noqa: BLE001 — любой сбой ведёт на /login, не 500
+        print(f"[google] callback error: {type(e).__name__}")
+        return fail
+
+
+# ---------- email verification ----------
+
+@app.get("/verify", response_class=HTMLResponse)
+def verify_page(request: Request, email: str = "", sent: int = 0,
+                db: Session = Depends(db_session)):
+    return render(request, db, "verify.html", email=email.strip().lower(),
+                  error="", sent=bool(sent))
+
+
+@app.post("/verify")
+def verify(request: Request, email: str = Form(...), code: str = Form(...),
+           db: Session = Depends(db_session)):
+    em = email.strip().lower()
+    u = db.query(User).filter(func.lower(User.email) == em).first()
+
+    def fail(msg):
+        return render(request, db, "verify.html", email=em, error=msg, sent=False)
+
+    if not u:
+        return fail("Пользователь не найден. Зарегистрируйтесь заново.")
+    if u.verified:
+        return set_session(RedirectResponse(dest_for(u), status_code=303), u)
+    if not u.otp_hash or not u.otp_expires:
+        return fail("Код не запрашивался. Отправьте новый код.")
+    try:
+        expires = datetime.fromisoformat(u.otp_expires)
+    except (ValueError, TypeError):
+        return fail("Код повреждён. Отправьте новый код.")
+    if datetime.utcnow() > expires:
+        return fail("Код истёк. Отправьте новый код.")
+    if (u.otp_attempts or 0) >= _OTP_MAX_ATTEMPTS:
+        return fail("Слишком много попыток. Отправьте новый код.")
+
+    u.otp_attempts = (u.otp_attempts or 0) + 1
+    db.commit()
+    if not secrets.compare_digest(u.otp_hash, _hash_otp(u.email, code.strip())):
+        return fail("Неверный код. Проверьте и попробуйте ещё раз.")
+
+    u.verified = 1
+    u.otp_hash = ""
+    u.otp_expires = ""
+    u.otp_attempts = 0
+    db.commit()
+    return set_session(RedirectResponse(dest_for(u), status_code=303), u)
+
+
+@app.get("/verify/resend")
+def verify_resend(email: str = "", db: Session = Depends(db_session)):
+    em = email.strip().lower()
+    u = db.query(User).filter(func.lower(User.email) == em).first()
+    if u and not u.verified and REQUIRE_VERIFY:
+        now = time.time()
+        if now - _otp_last_send.get(em, 0) >= _OTP_RESEND_COOLDOWN:
+            code = issue_otp(u, db)
+            if send_otp(u, code):
+                _otp_last_send[em] = now
+    return RedirectResponse(
+        f"/verify?email={urllib.parse.quote(em)}&sent=1", status_code=303)
 
 
 # ---------- talent cabinet ----------

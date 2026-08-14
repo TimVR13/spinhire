@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Подтверждение почты — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+  <div style="max-width: 420px; margin: 40px auto;">
+    <span class="kicker">Почти в игре</span>
+    <h1 style="font-size: 1.8rem; margin-block: 8px 12px;">Подтвердите почту</h1>
+    <p style="color: var(--ink-dim); margin-bottom: 24px;">
+      Мы отправили 6-значный код на{% if email %} <b>{{ email }}</b>{% else %} вашу почту{% endif %}.
+      Введите его ниже.
+    </p>
+    {% if sent %}<div class="flash">Новый код отправлен. Проверьте почту (и папку «Спам»).</div>{% endif %}
+    {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+    <form method="post" action="/verify" class="card" style="display: flex; flex-direction: column; gap: 16px;">
+      <input type="hidden" name="email" value="{{ email }}">
+      <div class="field">
+        <label for="verify-code">Код из письма</label>
+        <input class="input" id="verify-code" name="code" inputmode="numeric" autocomplete="one-time-code"
+               pattern="[0-9]*" maxlength="6" placeholder="000000" required autofocus
+               style="letter-spacing: 0.4em; font-size: 1.3rem; text-align: center;">
+      </div>
+      <button class="btn btn-acid btn-block" type="submit">Подтвердить →</button>
+    </form>
+    <p style="margin-top: 16px; color: var(--ink-dim); text-align: center;">
+      Не пришёл код?
+      <a href="/verify/resend?email={{ email | urlencode }}" style="color: var(--acid);">Отправить код повторно</a>
+    </p>
+  </div>
+{% endblock %}
