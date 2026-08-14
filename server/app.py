@@ -76,7 +76,9 @@ class Job(Base):
     salary = Column(String, default="по запросу")
     tags = Column(String, default="")  # comma-separated
     description = Column(Text, default="")
-    source_url = Column(String, default="")  # внешняя вакансия-агрегат
+    source_url = Column(String, default="")  # ссылка на первоисточник
+    source = Column(String, default="")       # провенанс: '', 'greenhouse:betsson', 'csv'…
+    ext_id = Column(String, default="")       # id вакансии в источнике — для дедупликации
     status = Column(String, default="pending")  # pending | approved | rejected | archived
     featured = Column(Boolean, default=False)
     views = Column(Integer, default=0)
@@ -176,22 +178,33 @@ def guess_category(title: str, tags: str) -> str:
 
 
 def seed(db: Session):
-    if db.query(User).count():
+    if db.query(User).first():
         return
-    admin = User(email=ADMIN_EMAIL, password_hash=hash_pw(ADMIN_PASSWORD),
-                 name="Админ", role="admin")
-    db.add(admin)
-    csv_path = os.path.join(ROOT, "data", "jobs.csv")
-    if os.path.exists(csv_path):
-        with open(csv_path, encoding="utf-8") as f:
-            for row in csv.DictReader(f, delimiter=";"):
-                db.add(Job(title=row["title"].strip(), company_name=row["company"],
-                           location=row["location"], fmt=row["format"],
-                           salary=row["salary"], tags=row["tags"],
-                           category=guess_category(row["title"], row["tags"]),
-                           source_url=row["source_url"], status="approved"))
+    db.add(User(email=ADMIN_EMAIL, password_hash=hash_pw(ADMIN_PASSWORD),
+                name="Админ", role="admin"))
     db.commit()
-    print(f"[seed] админ создан: {ADMIN_EMAIL}; вакансии импортированы из CSV")
+    print(f"[seed] админ создан: {ADMIN_EMAIL}")
+
+
+def migrate(db: Session):
+    """Лёгкая миграция: добавить недостающие колонки в существующую БД."""
+    from sqlalchemy import text
+    cols = {r[1] for r in db.execute(text("PRAGMA table_info(jobs)")).fetchall()}
+    for name in ("source", "ext_id"):
+        if name not in cols:
+            db.execute(text(f"ALTER TABLE jobs ADD COLUMN {name} VARCHAR DEFAULT ''"))
+    db.commit()
+
+
+def purge_thin_external(db: Session):
+    """Удалить старые тонкие внешние заглушки (source_url без описания и без source)."""
+    n = (db.query(Job)
+         .filter(Job.source_url != "", (Job.source == "") | (Job.source.is_(None)),
+                 (Job.description == "") | (Job.description.is_(None)))
+         .delete(synchronize_session=False))
+    if n:
+        db.commit()
+        print(f"[purge] удалено тонких внешних заглушек: {n}")
 
 
 def backfill_categories(db: Session):
@@ -241,7 +254,16 @@ def _startup():
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
         seed(db)
+        migrate(db)
+        purge_thin_external(db)
         backfill_categories(db)
+        # первичный сбор клонов, если вакансий ещё нет (best-effort, не валит старт)
+        if db.query(Job).count() == 0:
+            try:
+                from server import crawler
+                crawler.run(db, Job, guess_category)
+            except Exception as e:
+                print(f"[startup] первичный crawl не удался: {str(e)[:120]}")
 
 
 # ---------- auth helpers ----------
@@ -514,6 +536,18 @@ def need_admin(request: Request, db: Session) -> User:
     if not user or user.role != "admin":
         raise HTTPException(403, "Только для админов")
     return user
+
+
+@app.post("/admin/crawl")
+def admin_crawl(request: Request, db: Session = Depends(db_session)):
+    need_admin(request, db)
+    try:
+        from server import crawler
+        res = crawler.run(db, Job, guess_category)
+        msg = f"Собрано {res['collected']}, добавлено {res['added']}, обновлено {res['updated']}"
+    except Exception as e:
+        msg = f"Ошибка краулера: {str(e)[:150]}"
+    return RedirectResponse(f"/admin?tab=jobs&crawl={msg}", status_code=303)
 
 
 @app.get("/admin", response_class=HTMLResponse)

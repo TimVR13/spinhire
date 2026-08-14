@@ -36,8 +36,8 @@
         <h3 class="job-card__title">{{ j.title }} {% if j.featured %}<span class="tag tag-hot">⚡ Featured</span>{% endif %}</h3>
         <p class="job-card__meta"><b>{{ j.company_name }}</b> · {{ j.location or '—' }} · {{ j.fmt }}</p>
         <div class="job-card__tags">
+          {% if j.category %}<span class="tag">{{ j.category }}</span>{% endif %}
           {% for t in j.tag_list %}<span class="tag">{{ t }}</span>{% endfor %}
-          {% if j.source_url %}<span class="tag tag-acid">внешняя ↗</span>{% endif %}
         </div>
       </div>
       <div class="job-card__side">

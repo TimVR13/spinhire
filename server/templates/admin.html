@@ -34,6 +34,16 @@
       <div class="stat-card"><div class="n">{{ stats.apps }}</div><div class="l">Откликов</div></div>
       <div class="stat-card"><div class="n">{{ stats.views }}</div><div class="l">Просмотров вакансий</div></div>
     </div>
+
+    <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: var(--sp-6); border-color: var(--acid);">
+      <div>
+        <b style="font-family: var(--font-display); text-transform: uppercase;">🕷 Краулер вакансий</b>
+        <p style="color: var(--ink-dim); font-size: 0.88rem;">Собирает клоны вакансий с публичных источников (Greenhouse и др.) в нашу базу — с полным описанием и ссылкой на первоисточник.</p>
+      </div>
+      <form method="post" action="/admin/crawl"><button class="btn btn-acid" type="submit">Запустить сбор →</button></form>
+    </div>
+    {% if request.query_params.get('crawl') %}<div class="flash">🕷 {{ request.query_params.get('crawl') }}</div>{% endif %}
+
     <h2 style="font-size: 1.05rem; color: var(--pink); margin-bottom: 12px;">▮ Очередь модерации</h2>
     {% for j in pending %}
       <div class="card" style="display: flex; justify-content: space-between; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; border-color: var(--pink);">

@@ -53,8 +53,8 @@
         <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}вилка по запросу{% endif %}</p>
         <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: var(--sp-4); align-items: center;">
           {% if job.source_url %}
-            <a class="btn btn-acid btn-lg" href="{{ job.source_url }}" target="_blank" rel="noopener nofollow">Откликнуться у источника ↗</a>
-            <span style="color: var(--ink-faint); font-size: 0.82rem;">внешняя вакансия — отклик на стороне работодателя</span>
+            <a class="btn btn-acid btn-lg" href="{{ job.source_url }}" target="_blank" rel="noopener nofollow">Откликнуться →</a>
+            <span style="color: var(--ink-faint); font-size: 0.82rem;">Вакансия агрегирована из открытого источника{% if job.source %} · {{ job.source.split(':')[-1]|capitalize }}{% endif %} · отклик подаётся на карьерном портале работодателя</span>
           {% elif applied %}
             <span class="status invited">✓ Вы уже откликнулись</span>
           {% elif user and user.role == 'talent' %}
