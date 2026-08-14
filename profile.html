@@ -23,7 +23,7 @@
   .dash-nav a.active { color: var(--acid); background: var(--bg-deep); }
   .dash-nav .n { font-size: 0.75rem; background: var(--pink); color: var(--on-pink); padding: 1px 7px; font-weight: 800; }
   .anon-card {
-    border: 2px solid var(--acid); background: oklch(0.17 0.04 130);
+    border: 1px solid var(--line-strong); background: oklch(0.17 0.04 130);
     padding: var(--sp-5); margin-bottom: var(--sp-5);
     display: flex; justify-content: space-between; align-items: center; gap: var(--sp-4); flex-wrap: wrap;
   }
@@ -31,7 +31,7 @@
   .anon-card p { color: var(--ink-dim); font-size: 0.88rem; max-width: 48ch; }
   .switch { position: relative; width: 64px; height: 32px; flex-shrink: 0; cursor: pointer; }
   .switch input { opacity: 0; width: 0; height: 0; }
-  .switch .track { position: absolute; inset: 0; background: var(--bg-deep); border: 2px solid var(--acid); }
+  .switch .track { position: absolute; inset: 0; background: var(--bg-deep); border: 1px solid var(--line-strong); }
   .switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; background: var(--acid); transition: transform 0.15s cubic-bezier(0.22,1,0.36,1); }
   .switch input:checked + .track::after { transform: translateX(32px); }
   .profile-head { display: grid; grid-template-columns: auto 1fr auto; gap: var(--sp-5); align-items: center; border: 2px solid var(--line); background: var(--surface); padding: var(--sp-5); margin-bottom: var(--sp-5); }

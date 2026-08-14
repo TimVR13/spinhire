@@ -55,24 +55,22 @@
     padding-block: var(--sp-8) var(--sp-8);
     position: relative;
     overflow: hidden;
-    border-bottom: 2px solid var(--line);
+    border-bottom: 1px solid var(--line);
     background:
-      radial-gradient(ellipse 60% 50% at 85% 10%, oklch(0.68 0.29 350 / 0.14), transparent),
-      radial-gradient(ellipse 50% 60% at 10% 90%, oklch(0.9 0.26 127 / 0.1), transparent),
-      linear-gradient(oklch(0.13 0.02 305 / 0.72), oklch(0.14 0.02 305 / 0.96)),
+      linear-gradient(oklch(0.09 0.005 285 / 0.82), oklch(0.11 0.006 285 / 0.94)),
       url('img/strip-hero.jpg') center / cover no-repeat,
       var(--bg);
   }
   .hero__grid { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: var(--sp-7); align-items: center; }
   .hero h1 em { font-style: normal; color: var(--acid); }
   .hero h1 .strike { position: relative; white-space: nowrap; }
-  .hero h1 .strike::after { content: ""; position: absolute; left: -2%; right: -2%; top: 52%; height: 0.12em; background: var(--pink); transform: rotate(-2deg); }
+  .hero h1 .strike::after { content: ""; position: absolute; left: -2%; right: -2%; top: 52%; height: 0.12em; background: var(--pink);  }
   .hero .lead { margin-block: var(--sp-5); }
 
   .search-bar {
     display: grid; grid-template-columns: 1.4fr 1fr auto;
-    border: 2px solid var(--acid);
-    box-shadow: 6px 6px 0 oklch(0.08 0.02 305);
+    border: 1px solid var(--line-strong);
+    box-shadow: 0 10px 30px oklch(0.02 0 0 / 0.5);
     background: var(--bg-deep);
   }
   .search-bar .input { border: none; background: transparent; padding: 16px 18px; }
@@ -87,44 +85,44 @@
 
   .hero-stats { display: flex; flex-direction: column; gap: var(--sp-4); }
   .stat-block {
-    border: 2px solid var(--line); background: var(--surface);
+    border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
     padding: var(--sp-4) var(--sp-5);
     display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-4);
   }
-  .stat-block:nth-child(2) { transform: rotate(1deg); border-color: var(--pink); }
-  .stat-block:nth-child(3) { transform: rotate(-1.2deg); }
+  .stat-block:nth-child(2) {  }
+  .stat-block:nth-child(3) {  }
   .stat-block .num { font-family: var(--font-display); font-weight: 900; font-size: 2rem; color: var(--acid); font-variant-numeric: tabular-nums; }
   .stat-block:nth-child(2) .num { color: var(--pink); }
   .stat-block .lbl { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; color: var(--ink-dim); text-align: right; }
 
   .cat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--sp-3); }
   .cat-card {
-    border: 2px solid var(--line); background: var(--surface);
-    padding: var(--sp-4) var(--sp-5);
-    text-decoration: none;
-    display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3);
-    transition: transform 0.12s cubic-bezier(0.22,1,0.36,1), box-shadow 0.12s cubic-bezier(0.22,1,0.36,1), border-color 0.12s;
+    border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+    padding: var(--sp-4); text-decoration: none;
+    display: flex; align-items: center; gap: var(--sp-3);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s;
   }
-  .cat-card:hover { border-color: var(--pink); transform: translate(-2px,-2px); box-shadow: 4px 4px 0 var(--pink); }
-  .cat-card b { font-weight: 700; font-size: 0.98rem; }
-  .cat-card .count { font-family: var(--font-display); font-weight: 800; color: var(--acid); font-size: 0.9rem; }
+  .cat-card:hover { border-color: var(--line-strong); transform: translateY(-2px); box-shadow: 0 10px 30px oklch(0.02 0 0 / 0.5); }
+  .cat-card img { width: 44px; height: 44px; border-radius: 9px; flex-shrink: 0; }
+  .cat-card b { font-weight: 600; font-size: 0.95rem; flex: 1; }
+  .cat-card .count { font-family: var(--font-display); font-weight: 800; color: var(--ink-dim); font-size: 0.85rem; }
 
   .jobs-list { display: flex; flex-direction: column; gap: var(--sp-3); }
 
   .company-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-3); }
   .company-tile {
-    border: 2px solid var(--line); background: var(--surface);
+    border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
     padding: var(--sp-5);
     text-decoration: none; text-align: left;
     transition: transform 0.12s cubic-bezier(0.22,1,0.36,1), border-color 0.12s, box-shadow 0.12s;
   }
-  .company-tile:hover { border-color: var(--acid); transform: translate(-2px,-2px); box-shadow: 4px 4px 0 var(--acid); }
+  .company-tile:hover { border-color: var(--line-strong); transform: translate(-2px,-2px); box-shadow: 0 10px 30px oklch(0.02 0 0 / 0.5); }
   .company-tile .job-card__logo { margin-bottom: var(--sp-3); }
   .company-tile b { display: block; font-size: 1rem; }
   .company-tile span { color: var(--ink-faint); font-size: 0.8rem; }
 
   .how-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-5); }
-  .how-col { border: 2px solid var(--line); padding: var(--sp-6); background: var(--surface); }
+  .how-col { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-6); background: var(--surface); }
   .how-col.employer { border-color: var(--pink); }
   .how-col h3 { font-size: 1.3rem; margin-bottom: var(--sp-5); }
   .how-col.employer h3 { color: var(--pink); }
@@ -144,15 +142,15 @@
   .how-col .btn { margin-top: var(--sp-5); }
 
   .salary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-3); }
-  .salary-tile { border: 2px solid var(--line); padding: var(--sp-4) var(--sp-5); background: var(--bg-deep); }
+  .salary-tile { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-4) var(--sp-5); background: var(--bg-deep); }
   .salary-tile .role { font-weight: 700; font-size: 0.9rem; display: block; margin-bottom: var(--sp-1); }
   .salary-tile .range { font-family: var(--font-display); font-weight: 800; color: var(--yellow); font-size: 1.05rem; white-space: nowrap; }
   .salary-tile .geo { color: var(--ink-faint); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; }
 
   .cta-banner {
-    border: 2px solid var(--pink);
+    border: 1px solid var(--line-strong);
     background: oklch(0.2 0.06 350);
-    box-shadow: 8px 8px 0 var(--pink);
+    box-shadow: 0 10px 30px oklch(0.02 0 0 / 0.5);
     padding: var(--sp-7);
     display: grid; grid-template-columns: 1.4fr auto; gap: var(--sp-6); align-items: center;
   }
@@ -257,18 +255,18 @@
         <a class="link-more" href="jobs.html">Все вакансии →</a>
       </div>
       <nav class="cat-grid" aria-label="Категории вакансий">
-        <a class="cat-card" href="jobs.html"><b>🎰 Операции казино</b><span class="count">→</span></a>
-        <a class="cat-card" href="jobs.html"><b>⚽ Беттинг и трейдинг</b><span class="count">→</span></a>
-        <a class="cat-card" href="jobs.html"><b>🕹 Разработка игр</b><span class="count">→</span></a>
-        <a class="cat-card" href="jobs.html"><b>📣 Аффилейты и медиабаинг</b><span class="count">→</span></a>
-        <a class="cat-card" href="jobs.html"><b>🛡 Комплаенс и AML</b><span class="count">→</span></a>
-        <a class="cat-card" href="jobs.html"><b>💳 Платежи и антифрод</b><span class="count">→</span></a>
-        <a class="cat-card" href="jobs.html"><b>🎧 Саппорт (языки)</b><span class="count">→</span></a>
-        <a class="cat-card" href="jobs.html"><b>📈 Маркетинг и CRM</b><span class="count">→</span></a>
-        <a class="cat-card" href="jobs.html"><b>📊 Данные и BI</b><span class="count">→</span></a>
-        <a class="cat-card" href="jobs.html"><b>🎨 Дизайн и креатив</b><span class="count">→</span></a>
-        <a class="cat-card" href="jobs.html"><b>🧑‍💼 HR и рекрутинг</b><span class="count">→</span></a>
-        <a class="cat-card" href="jobs.html"><b>👑 Топ-менеджмент</b><span class="count">→</span></a>
+        <a class="cat-card" href="jobs.html"><img src="img/ico-casino.jpg" alt="" loading="lazy"><b>Операции казино</b><span class="count">→</span></a>
+        <a class="cat-card" href="jobs.html"><img src="img/ico-sportsbook.jpg" alt="" loading="lazy"><b>Беттинг и трейдинг</b><span class="count">→</span></a>
+        <a class="cat-card" href="jobs.html"><img src="img/ico-gamedev.jpg" alt="" loading="lazy"><b>Разработка игр</b><span class="count">→</span></a>
+        <a class="cat-card" href="jobs.html"><img src="img/ico-affiliates.jpg" alt="" loading="lazy"><b>Аффилейты и медиабаинг</b><span class="count">→</span></a>
+        <a class="cat-card" href="jobs.html"><img src="img/ico-compliance.jpg" alt="" loading="lazy"><b>Комплаенс и AML</b><span class="count">→</span></a>
+        <a class="cat-card" href="jobs.html"><img src="img/ico-payments.jpg" alt="" loading="lazy"><b>Платежи и антифрод</b><span class="count">→</span></a>
+        <a class="cat-card" href="jobs.html"><img src="img/ico-support.jpg" alt="" loading="lazy"><b>Саппорт (языки)</b><span class="count">→</span></a>
+        <a class="cat-card" href="jobs.html"><img src="img/ico-marketing.jpg" alt="" loading="lazy"><b>Маркетинг и CRM</b><span class="count">→</span></a>
+        <a class="cat-card" href="jobs.html"><img src="img/ico-data.jpg" alt="" loading="lazy"><b>Данные и BI</b><span class="count">→</span></a>
+        <a class="cat-card" href="jobs.html"><img src="img/ico-marketing.jpg" alt="" loading="lazy"><b>Дизайн и креатив</b><span class="count">→</span></a>
+        <a class="cat-card" href="jobs.html"><img src="img/ico-support.jpg" alt="" loading="lazy"><b>HR и рекрутинг</b><span class="count">→</span></a>
+        <a class="cat-card" href="jobs.html"><img src="img/ico-exec.jpg" alt="" loading="lazy"><b>Топ-менеджмент</b><span class="count">→</span></a>
       </nav>
     </div>
   </section>

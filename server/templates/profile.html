@@ -8,8 +8,27 @@
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Мой профиль</nav>
   {% if request.query_params.get('ok') %}<div class="flash">✓ Профиль сохранён</div>{% endif %}
+  {% set sp = request.query_params.get('spin') %}
+  {% if sp and sp not in ('wait',) %}<div class="flash">🎡 Ежедневный фриспин: <b>+{{ sp }} SpinCoins</b>! Заходи завтра за следующим.</div>{% endif %}
+  {% if sp == 'wait' %}<div class="flash err">Сегодня уже крутили — фриспин обновляется раз в сутки.</div>{% endif %}
   <span class="kicker">Кабинет соискателя</span>
   <h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem); margin-block: 8px 24px;">{{ user.name or user.email }}</h1>
+
+  <!-- Ежедневный фриспин на аккаунте -->
+  <div class="card" style="display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-5);">
+    <div style="display: flex; align-items: center; gap: var(--sp-4);">
+      <img src="/img/asset-chips.jpg" alt="" width="56" height="56" style="border-radius: 10px;">
+      <div>
+        <b style="font-family: var(--font-display); text-transform: uppercase;">{{ user.coins or 0 }} SpinCoins</b>
+        <p style="color: var(--ink-dim); font-size: 0.88rem;">Ежедневный фриспин + игры в <a href="/games.html" style="color: var(--acid);">Игровой зоне</a>. Копи на мерч.</p>
+      </div>
+    </div>
+    {% if spin_ready %}
+      <form method="post" action="/profile/spin"><button class="btn btn-acid" type="submit">🎡 Крутить фриспин</button></form>
+    {% else %}
+      <span class="btn btn-ghost" style="pointer-events: none; opacity: 0.6;">Фриспин будет завтра ⏳</span>
+    {% endif %}
+  </div>
 
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: var(--sp-5); align-items: start;">
     <form method="post" action="/profile" class="card" style="display: flex; flex-direction: column; gap: 14px;">

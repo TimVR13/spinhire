@@ -3,24 +3,24 @@
    ============================================================ */
 
 :root {
-  /* palette — violet-tinted darks, acid accents */
-  --bg: oklch(0.14 0.02 305);
-  --bg-deep: oklch(0.11 0.02 305);
-  --surface: oklch(0.18 0.025 305);
-  --surface-2: oklch(0.22 0.03 305);
-  --line: oklch(0.32 0.03 305);
-  --line-strong: oklch(0.5 0.03 305);   /* границы контролов — WCAG 1.4.11 (3:1) */
-  --ink: oklch(0.95 0.01 300);
-  --ink-dim: oklch(0.72 0.02 300);
-  --ink-faint: oklch(0.63 0.02 300);    /* поднято до AA (~5:1) для мелкого текста */
+  /* palette — premium near-black, restrained accent (неон живёт в 3D-картинках, не в интерфейсе) */
+  --bg: oklch(0.11 0.006 285);
+  --bg-deep: oklch(0.08 0.005 285);
+  --surface: oklch(0.15 0.008 285);
+  --surface-2: oklch(0.19 0.01 285);
+  --line: oklch(0.27 0.008 285);
+  --line-strong: oklch(0.46 0.01 285);  /* границы контролов — WCAG 1.4.11 (3:1) */
+  --ink: oklch(0.96 0.005 285);
+  --ink-dim: oklch(0.74 0.008 285);
+  --ink-faint: oklch(0.63 0.008 285);   /* AA (~5:1) для мелкого текста */
 
-  --acid: oklch(0.9 0.26 127);          /* lime — primary action / money */
-  --acid-deep: oklch(0.75 0.24 130);
-  --pink: oklch(0.68 0.29 350);         /* magenta — secondary, employer side */
-  --violet: oklch(0.7 0.22 300);        /* поднято для контраста статус-бейджей */
-  --yellow: oklch(0.87 0.17 95);        /* warning-sign yellow — badges */
-  --on-acid: oklch(0.17 0.05 130);
-  --on-pink: oklch(0.18 0.05 350);      /* тёмный текст на фуксии — AA (5.4:1) */
+  --acid: oklch(0.86 0.19 128);         /* приглушённый лайм — действия/деньги */
+  --acid-deep: oklch(0.72 0.18 130);
+  --pink: oklch(0.66 0.24 352);         /* magenta — вторичный, редко */
+  --violet: oklch(0.7 0.19 300);        /* статус-бейджи */
+  --yellow: oklch(0.85 0.15 95);
+  --on-acid: oklch(0.16 0.04 130);
+  --on-pink: oklch(0.98 0.01 350);
   --on-yellow: oklch(0.2 0.05 95);
 
   /* spacing (4pt) */
@@ -30,11 +30,13 @@
   --font-display: "Unbounded", sans-serif;
   --font-body: "Golos Text", sans-serif;
 
-  --shadow-acid: 5px 5px 0 var(--acid);
-  --shadow-pink: 5px 5px 0 var(--pink);
-  --shadow-dark: 5px 5px 0 oklch(0.08 0.02 305);
+  /* мягкие тени вместо жёстких неоновых оффсетов */
+  --shadow-acid: 0 8px 30px oklch(0.86 0.19 128 / 0.14);
+  --shadow-pink: 0 8px 30px oklch(0.66 0.24 352 / 0.16);
+  --shadow-dark: 0 10px 30px oklch(0.02 0 0 / 0.5);
 
   --container: 1240px;
+  --radius: 14px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -98,19 +100,19 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 
 /* ---------- ticker ---------- */
 .ticker {
-  background: var(--acid);
-  color: var(--on-acid);
+  background: var(--bg-deep);
+  color: var(--ink-dim);
   overflow: hidden;
   white-space: nowrap;
-  border-bottom: 2px solid var(--bg-deep);
-  font-weight: 700;
-  font-size: 0.8rem;
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
-.ticker__track { display: inline-block; padding-block: 6px; animation: ticker 36s linear infinite; }
+.ticker__track { display: inline-block; padding-block: 8px; animation: ticker 44s linear infinite; }
 .ticker__track span { margin-inline: var(--sp-5); }
-.ticker__track b { background: var(--bg-deep); color: var(--acid); padding: 1px 7px; margin-left: 6px; }
+.ticker__track b { color: var(--acid); padding: 1px 4px; margin-left: 6px; }
 @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) {
   .ticker__track { animation: none; }
@@ -156,26 +158,27 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
   font-weight: 700; font-size: 0.95rem;
-  text-decoration: none; text-transform: uppercase; letter-spacing: 0.04em;
+  text-decoration: none; text-transform: uppercase; letter-spacing: 0.03em;
   padding: 12px 22px;
-  border: 2px solid var(--bg-deep);
-  transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.12s cubic-bezier(0.22, 1, 0.36, 1);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease, border-color 0.15s;
 }
 .btn-acid {
   background: var(--acid); color: var(--on-acid);
-  box-shadow: var(--shadow-dark);
+  box-shadow: var(--shadow-acid);
 }
-.btn-acid:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 oklch(0.08 0.02 305); }
-.btn-acid:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 oklch(0.08 0.02 305); }
-.btn-pink { background: var(--pink); color: var(--on-pink); box-shadow: var(--shadow-dark); }
-.btn-pink:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 oklch(0.08 0.02 305); }
+.btn-acid:hover { transform: translateY(-1px); filter: brightness(1.06); }
+.btn-acid:active { transform: translateY(0); }
+.btn-pink { background: var(--pink); color: var(--on-pink); box-shadow: var(--shadow-pink); }
+.btn-pink:hover { transform: translateY(-1px); filter: brightness(1.06); }
 .btn-ghost {
   background: transparent; color: var(--ink);
-  border-color: var(--line);
+  border-color: var(--line-strong);
 }
 .btn-ghost:hover { border-color: var(--acid); color: var(--acid); }
 .btn-sm { padding: 8px 14px; font-size: 0.8rem; min-height: 40px; }
-.btn-lg { padding: 16px 30px; font-size: 1.05rem; }
+.btn-lg { padding: 15px 28px; font-size: 1.02rem; }
 .btn-block { width: 100%; }
 
 /* ---------- tags / badges ---------- */
@@ -183,46 +186,49 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   display: inline-block;
   font-size: 0.72rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.05em;
-  padding: 3px 9px;
-  border: 1.5px solid var(--line);
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
   color: var(--ink-dim);
-  background: var(--bg-deep);
+  background: var(--surface-2);
 }
-.tag-acid { border-color: var(--acid); color: var(--acid); }
-.tag-pink { border-color: var(--pink); color: var(--pink); }
-.tag-yellow { background: var(--yellow); color: var(--on-yellow); border-color: var(--yellow); }
-.tag-hot { background: var(--pink); color: var(--on-pink); border-color: var(--pink); transform: rotate(-2deg); }
+.tag-acid { border-color: transparent; color: var(--acid); background: oklch(0.86 0.19 128 / 0.1); }
+.tag-pink { border-color: transparent; color: var(--pink); background: oklch(0.66 0.24 352 / 0.12); }
+.tag-yellow { background: oklch(0.85 0.15 95 / 0.12); color: var(--yellow); border-color: transparent; }
+.tag-hot { background: var(--pink); color: var(--on-pink); border-color: transparent; }
 
 /* ---------- cards ---------- */
 .card {
   background: var(--surface);
-  border: 2px solid var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   padding: var(--sp-5);
 }
 
 /* job card */
 .job-card {
   background: var(--surface);
-  border: 2px solid var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   padding: var(--sp-5);
   display: grid;
   grid-template-columns: 56px 1fr auto;
   gap: var(--sp-4);
   align-items: start;
   text-decoration: none;
-  transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.12s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.12s;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s;
   position: relative;
 }
 .job-card:hover {
-  border-color: var(--acid);
-  transform: translate(-3px, -3px);
-  box-shadow: var(--shadow-acid);
+  border-color: var(--line-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-dark);
 }
 .job-card__logo {
   width: 56px; height: 56px;
   display: grid; place-items: center;
   font-family: var(--font-display); font-weight: 900; font-size: 1.3rem;
-  border: 2px solid var(--bg-deep);
+  border-radius: 10px;
 }
 .job-card__title { margin-bottom: 2px; }
 .job-card__title a { text-decoration: none; }
@@ -253,9 +259,10 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 }
 .input, .select, textarea.input {
   background: var(--bg-deep);
-  border: 2px solid var(--line-strong);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
   color: var(--ink);
-  padding: 11px 14px;
+  padding: 12px 14px;
   width: 100%;
 }
 .input:focus, .select:focus, textarea.input:focus {

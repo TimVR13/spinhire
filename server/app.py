@@ -60,6 +60,8 @@ class User(Base):
     salary_expect = Column(String, default="")
     languages = Column(String, default="")
     incognito = Column(Boolean, default=True)
+    coins = Column(Integer, default=0)              # SpinCoins на аккаунте
+    last_spin = Column(DateTime, nullable=True)     # последний ежедневный фриспин
     created_at = Column(DateTime, default=datetime.utcnow)
     jobs = relationship("Job", back_populates="owner")
     applications = relationship("Application", back_populates="user")
@@ -193,6 +195,11 @@ def migrate(db: Session):
     for name in ("source", "ext_id"):
         if name not in cols:
             db.execute(text(f"ALTER TABLE jobs ADD COLUMN {name} VARCHAR DEFAULT ''"))
+    ucols = {r[1] for r in db.execute(text("PRAGMA table_info(users)")).fetchall()}
+    if "coins" not in ucols:
+        db.execute(text("ALTER TABLE users ADD COLUMN coins INTEGER DEFAULT 0"))
+    if "last_spin" not in ucols:
+        db.execute(text("ALTER TABLE users ADD COLUMN last_spin DATETIME"))
     db.commit()
 
 
@@ -253,8 +260,8 @@ def _startup():
     os.makedirs(os.path.join(ROOT, "data"), exist_ok=True)
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
-        seed(db)
         migrate(db)
+        seed(db)
         purge_thin_external(db)
         backfill_categories(db)
         # первичный сбор клонов, если вакансий ещё нет (best-effort, не валит старт)
@@ -434,7 +441,26 @@ def profile(request: Request, db: Session = Depends(db_session)):
         return RedirectResponse("/admin")
     apps = (db.query(Application).filter_by(user_id=user.id)
             .order_by(Application.created_at.desc()).all())
-    return render(request, db, "profile.html", apps=apps)
+    spin_ready = (user.last_spin is None
+                  or (datetime.utcnow() - user.last_spin).total_seconds() > 20 * 3600)
+    return render(request, db, "profile.html", apps=apps, spin_ready=spin_ready)
+
+
+@app.post("/profile/spin")
+def profile_spin(request: Request, db: Session = Depends(db_session)):
+    import random
+    user = get_user(request, db)
+    if not user or user.role != "talent":
+        return login_redirect("/profile")
+    if user.last_spin and (datetime.utcnow() - user.last_spin).total_seconds() < 20 * 3600:
+        return RedirectResponse("/profile?spin=wait", status_code=303)
+    # взвешенный выигрыш: чаще мелочь, редко крупно (мерч специально долгий)
+    prize = random.choices([10, 20, 30, 50, 100, 200],
+                           weights=[34, 27, 18, 12, 7, 2])[0]
+    user.coins = (user.coins or 0) + prize
+    user.last_spin = datetime.utcnow()
+    db.commit()
+    return RedirectResponse(f"/profile?spin={prize}", status_code=303)
 
 
 @app.post("/profile")

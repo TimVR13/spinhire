@@ -22,7 +22,7 @@
     background: linear-gradient(oklch(0.13 0.02 305 / 0.75), oklch(0.14 0.02 305 / 0.95)), url('img/og-cover.jpg') center / cover no-repeat, var(--bg); }
   .wallet {
     display: inline-flex; align-items: center; gap: var(--sp-3);
-    border: 2px solid var(--acid); background: var(--bg-deep);
+    border: 1px solid var(--line-strong); background: var(--bg-deep);
     padding: 10px 18px; margin-top: var(--sp-4);
   }
   .wallet .amt { font-family: var(--font-display); font-weight: 900; font-size: 1.5rem; color: var(--acid); }
@@ -68,7 +68,22 @@
   .merch-item b { display: block; margin-bottom: 4px; }
   .merch-item .cost { color: var(--yellow); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--sp-3); display: block; }
 
-  .legal-note { border: 2px dashed var(--line); padding: var(--sp-4) var(--sp-5); margin-top: var(--sp-7); color: var(--ink-faint); font-size: 0.82rem; max-width: 75ch; }
+  .legal-note { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-4) var(--sp-5); margin-top: var(--sp-7); color: var(--ink-faint); font-size: 0.82rem; max-width: 75ch; }
+  .stage-img { background-size: cover; background-position: center; }
+
+  /* --- slot machine --- */
+  .slot { border: 1px solid var(--line-strong); border-radius: var(--radius); background:
+     linear-gradient(oklch(0.1 0.006 285 / 0.9), oklch(0.08 0.005 285 / 0.95)), url('img/asset-slot-cabinet.jpg') center/cover no-repeat, var(--surface);
+     padding: var(--sp-6); margin-top: var(--sp-6); }
+  .slot__head h2 { font-size: 1.3rem; display: flex; gap: var(--sp-3); align-items: baseline; flex-wrap: wrap; }
+  .slot__head .odds { font-size: 0.72rem; color: var(--ink-faint); letter-spacing: 0.1em; text-transform: uppercase; }
+  .slot__body { display: flex; flex-direction: column; align-items: center; gap: var(--sp-5); margin-top: var(--sp-5); }
+  .slot__reels { display: flex; gap: var(--sp-3); padding: var(--sp-3); background: var(--bg-deep); border: 1px solid var(--line-strong); border-radius: 12px; }
+  .reel { width: 96px; height: 96px; overflow: hidden; border-radius: 8px; background: var(--surface); position: relative; }
+  .reel__strip { display: flex; flex-direction: column; }
+  .reel__strip img { width: 96px; height: 96px; object-fit: cover; display: block; }
+  .slot__controls { display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap; justify-content: center; }
+  @media (max-width: 520px) { .reel { width: 80px; height: 80px; } .reel__strip img { width: 80px; height: 80px; } }
 </style>
 </head>
 <body>
@@ -105,6 +120,28 @@
   </div>
 
   <div class="container">
+
+    <!-- SLOT MACHINE (однорукий бандит) -->
+    <section class="slot" aria-label="Слот-машина">
+      <div class="slot__head">
+        <h2>🎰 Однорукий бандит <span class="odds">три в ряд ×20 · две ⭐ ×3</span></h2>
+        <p class="result" id="sl-result">Ставь и дёргай рычаг. Три одинаковых — джекпот.</p>
+      </div>
+      <div class="slot__body">
+        <div class="slot__reels" id="sl-reels">
+          <div class="reel"><div class="reel__strip" id="reel0"></div></div>
+          <div class="reel"><div class="reel__strip" id="reel1"></div></div>
+          <div class="reel"><div class="reel__strip" id="reel2"></div></div>
+        </div>
+        <div class="slot__controls">
+          <div class="bet-select" data-game="sl">
+            <button class="on" data-amt="10">10</button><button data-amt="50">50</button><button data-amt="100">100</button>
+          </div>
+          <button class="btn btn-acid btn-lg" id="sl-spin">Дёрнуть рычаг 🎰</button>
+        </div>
+      </div>
+    </section>
+
     <div class="games-grid">
 
       <!-- WHEEL -->
@@ -120,7 +157,7 @@
       <!-- ROULETTE -->
       <section class="game" aria-label="Рулетка">
         <h2>🎯 Рулетка <span class="odds">красное/чёрное ×2 · зеро ×14</span></h2>
-        <div class="stage"><span id="ru-wheel">⚫</span></div>
+        <div class="stage stage-img" style="background-image: linear-gradient(oklch(0.08 0.005 285 / 0.55), oklch(0.08 0.005 285 / 0.75)), url('img/asset-roulette.jpg');"><span id="ru-wheel">⚫</span></div>
         <p class="result" id="ru-result">Ставь на цвет и крути.</p>
         <div class="controls">
           <div class="bet-select" data-game="ru">
@@ -136,7 +173,7 @@
       <!-- DICE -->
       <section class="game" aria-label="Кости">
         <h2>🎲 Кости <span class="odds">твой ролл против заведения · ×2</span></h2>
-        <div class="stage"><span id="dc-view">🎲 🎲 &nbsp;vs&nbsp; 🎲 🎲</span></div>
+        <div class="stage stage-img" style="background-image: linear-gradient(oklch(0.08 0.005 285 / 0.55), oklch(0.08 0.005 285 / 0.78)), url('img/asset-dice.jpg');"><span id="dc-view" style="font-size: 1.4rem;">🎲 🎲 vs 🎲 🎲</span></div>
         <p class="result" id="dc-result">Больше очков — забираешь удвоенную ставку.</p>
         <div class="controls">
           <div class="bet-select" data-game="dc">
@@ -149,7 +186,7 @@
       <!-- BLACKJACK -->
       <section class="game" aria-label="21">
         <h2>🃏 Двадцать одно <span class="odds">дилер тянет до 17 · ×2</span></h2>
-        <div class="stage" style="font-size: 1rem; gap: 8px; display: grid;">
+        <div class="stage stage-img" style="font-size: 1rem; gap: 8px; display: grid; background-image: linear-gradient(oklch(0.08 0.005 285 / 0.72), oklch(0.08 0.005 285 / 0.85)), url('img/asset-cards.jpg');">
           <div><span class="bj-label">Дилер</span><span class="bj-hand" id="bj-dealer">🂠 🂠</span></div>
           <div><span class="bj-label">Ты</span><span class="bj-hand" id="bj-player">🂠 🂠</span></div>
         </div>
@@ -199,7 +236,54 @@
     add(d) { this.set(Math.max(0, this.get() + d)); },
   };
   W.set(W.get());
-  const bets = { ru: 10, dc: 10, bj: 10 };
+  const bets = { ru: 10, dc: 10, bj: 10, sl: 10 };
+
+  // --- SLOT MACHINE ---
+  const SYMS = ['seven', 'cherry', 'bell', 'diamond', 'crown', 'horseshoe', 'star', 'bar'];
+  const PAY = { seven: 20, diamond: 15, crown: 12, bar: 10, bell: 8, horseshoe: 6, cherry: 5, star: 20 };
+  const slImg = s => `img/sym-${s}.jpg`;
+  function buildStrip(el, finalSym) {
+    const seq = [];
+    for (let i = 0; i < 24; i++) seq.push(SYMS[Math.floor(Math.random() * SYMS.length)]);
+    seq.push(finalSym);
+    el.innerHTML = seq.map(s => `<img src="${slImg(s)}" alt="${s}">`).join('');
+    return seq.length;
+  }
+  const slBtn = document.getElementById('sl-spin'), slRes = document.getElementById('sl-result');
+  const reels = [document.getElementById('reel0'), document.getElementById('reel1'), document.getElementById('reel2')];
+  reels.forEach(r => { r.innerHTML = `<img src="${slImg('seven')}" alt="">`; });
+  let slSpinning = false;
+  if (slBtn) slBtn.addEventListener('click', () => {
+    if (slSpinning) return;
+    const bet = bets.sl;
+    if (W.get() < bet) { slRes.innerHTML = '<span class="lose">Не хватает SC — забери бонус за визит.</span>'; return; }
+    W.add(-bet); slSpinning = true; slBtn.disabled = true;
+    const result = reels.map(() => SYMS[Math.floor(Math.random() * SYMS.length)]);
+    const cell = window.matchMedia('(max-width:520px)').matches ? 80 : 96;
+    reels.forEach((r, i) => {
+      const n = buildStrip(r, result[i]);
+      r.style.transition = 'none';
+      r.style.transform = 'translateY(0)';
+      void r.offsetWidth;
+      r.style.transition = `transform ${1.8 + i * 0.4}s cubic-bezier(0.15, 0.85, 0.15, 1)`;
+      r.style.transform = `translateY(-${(n - 1) * cell}px)`;
+    });
+    setTimeout(() => {
+      const [a, b, c] = result;
+      let win = 0, msg;
+      if (a === b && b === c) { win = bet * (PAY[a] || 10); msg = `🎰 ДЖЕКПОТ! Три в ряд — <b>+${win} SC</b>`; }
+      else {
+        const stars = result.filter(s => s === 'star').length;
+        const pairs = a === b || b === c || a === c;
+        if (stars >= 2) { win = bet * 3; msg = `Две ⭐ — <b>+${win} SC</b>`; }
+        else if (pairs) { win = bet * 2; msg = `Пара — <b>+${win} SC</b>`; }
+        else { msg = `<span class="lose">Мимо. −${bet} SC</span>`; }
+      }
+      if (win) W.add(win);
+      slRes.innerHTML = msg;
+      slSpinning = false; slBtn.disabled = false;
+    }, 2900);
+  });
   document.querySelectorAll('.bet-select[data-game]').forEach(sel => {
     sel.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
       sel.querySelectorAll('button').forEach(x => x.classList.remove('on'));
