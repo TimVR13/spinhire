@@ -327,12 +327,12 @@ def migrate(db: Session):
     # сид событий iGaming, если таблица пуста
     if db.query(Event).count() == 0:
         for e in [
-            ("SBC Summit 2026", "🇵🇹 Лиссабон, Португалия", "2026-09-02", "2026-09-04", "https://sbcevents.com"),
-            ("iGB L!VE", "🇬🇧 Лондон, Великобритания", "2026-09-23", "2026-09-25", "https://igblive.com"),
-            ("SiGMA Europe (Malta Week)", "🇲🇹 Мальта", "2026-11-10", "2026-11-13", "https://sigma.world"),
-            ("SBC Summit Latinoamérica", "🇧🇷 Сан-Паулу, Бразилия", "2026-12-02", "2026-12-04", "https://sbcevents.com"),
-            ("ICE Barcelona", "🇪🇸 Барселона, Испания", "2027-01-20", "2027-01-22", "https://icegaming.com"),
-            ("SiGMA Eurasia", "🇦🇪 Дубай, ОАЭ", "2027-02-25", "2027-02-27", "https://sigma.world"),
+            ("SBC Summit Lisbon", "🇵🇹 Лиссабон, Португалия", "2026-09-29", "2026-10-01", "https://sbcevents.com/sbc-summit/"),
+            ("SiGMA World Rome ★", "🇮🇹 Рим, Италия", "2026-11-02", "2026-11-05", "https://sigma.world/"),
+            ("SiGMA Central Europe", "🇮🇹 Милан, Италия", "2026-11-23", "2026-11-26", "https://sigma.world/"),
+            ("ICE Barcelona", "🇪🇸 Барселона, Испания", "2027-01-18", "2027-01-20", "https://www.icegaming.com/"),
+            ("SiGMA Europe (Malta)", "🇲🇹 Мальта", "2027-05-03", "2027-05-05", "https://sigma.world/"),
+            ("SBC Summit Lisbon", "🇵🇹 Лиссабон, Португалия", "2027-09-21", "2027-09-23", "https://sbcevents.com/"),
         ]:
             db.add(Event(title=e[0], city=e[1], date_from=e[2], date_to=e[3], url=e[4]))
         db.commit()

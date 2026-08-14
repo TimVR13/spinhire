@@ -622,43 +622,38 @@
   const grid = document.getElementById('events-grid');
   if (!grid) return;
   const fallback = [
-    { d: '2', mon: 'сен', y: '2026', t: 'SBC Summit 2026', city: '🇵🇹 Лиссабон', dt: '2026-09-02', end: '2026-09-04' },
-    { d: '10', mon: 'ноя', y: '2026', t: 'SiGMA Europe (Malta Week)', city: '🇲🇹 Мальта', dt: '2026-11-10', end: '2026-11-13' },
-    { d: '20', mon: 'янв', y: '2027', t: 'ICE Barcelona', city: '🇪🇸 Барселона', dt: '2027-01-20', end: '2027-01-22' },
+    { d: '29', mon: 'сен', y: '2026', t: 'SBC Summit Lisbon', city: '🇵🇹 Лиссабон, Португалия', dt: '2026-09-29', end: '2026-10-01' },
+    { d: '2',  mon: 'ноя', y: '2026', t: 'SiGMA World Rome ★', city: '🇮🇹 Рим, Италия', dt: '2026-11-02', end: '2026-11-05' },
+    { d: '23', mon: 'ноя', y: '2026', t: 'SiGMA Central Europe', city: '🇮🇹 Милан, Италия', dt: '2026-11-23', end: '2026-11-26' },
+    { d: '18', mon: 'янв', y: '2027', t: 'ICE Barcelona', city: '🇪🇸 Барселона, Испания', dt: '2027-01-18', end: '2027-01-20' },
+    { d: '3',  mon: 'мая', y: '2027', t: 'SiGMA Europe (Malta)', city: '🇲🇹 Мальта', dt: '2027-05-03', end: '2027-05-05' },
+    { d: '21', mon: 'сен', y: '2027', t: 'SBC Summit Lisbon', city: '🇵🇹 Лиссабон, Португалия', dt: '2027-09-21', end: '2027-09-23' },
   ];
-  function ics(e) {
-    const d = (e.dt||'').replace(/-/g, ''), end = (e.end || e.dt || '').replace(/-/g, '');
-    const body = ['BEGIN:VCALENDAR','VERSION:2.0','BEGIN:VEVENT',
-      `DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${end}`,
-      `SUMMARY:${e.t}`, `LOCATION:${(e.city||'').replace(/^[^\wА-Яа-я]+/, '')}`,
-      'END:VEVENT','END:VCALENDAR'].join('\r\n');
-    return 'data:text/calendar;charset=utf-8,' + encodeURIComponent(body);
-  }
+  function promoCode(t){ let h=0; for(const c of (t||'')) h=(h*31+c.charCodeAt(0))>>>0; return 'SPINHIRE-'+h.toString(36).toUpperCase().slice(0,5); }
   function render(events) {
-    const saved = JSON.parse(localStorage.getItem('savedEvents') || '[]');
     grid.innerHTML = events.map((e, i) => `
       <div class="event-card">
         <span class="ev-date">${e.d} <span class="mon">${e.mon} ${e.y}</span></span>
         <h3>${e.t}</h3>
         <p class="ev-place">${e.city || ''}</p>
         <div class="ev-actions">
-          <button class="ev-btn save-ev ${saved.includes(e.t) ? 'saved' : ''}" data-i="${i}">${saved.includes(e.t) ? '★ В закладках' : '☆ В закладки'}</button>
-          <a class="ev-btn" href="${ics(e)}" download="${e.t}.ics">📅 В календарь</a>
+          <button class="ev-btn promo-ev" data-i="${i}" style="border-color: var(--acid); color: var(--acid);">🎟 Взять промо</button>
           <button class="ev-btn share-ev" data-i="${i}">↗ Поделиться</button>
         </div>
+        <p class="ev-promo" data-p="${i}" hidden style="margin-top:8px;font-size:0.82rem;color:var(--ink-dim);"></p>
       </div>`).join('');
-    grid.querySelectorAll('.save-ev').forEach(b => b.addEventListener('click', () => {
-      const e = events[+b.dataset.i]; const s = JSON.parse(localStorage.getItem('savedEvents') || '[]');
-      const idx = s.indexOf(e.t);
-      if (idx >= 0) { s.splice(idx, 1); b.classList.remove('saved'); b.textContent = '☆ В закладки'; }
-      else { s.push(e.t); b.classList.add('saved'); b.textContent = '★ В закладках'; }
-      localStorage.setItem('savedEvents', JSON.stringify(s));
+    grid.querySelectorAll('.promo-ev').forEach(b => b.addEventListener('click', () => {
+      const e = events[+b.dataset.i], code = promoCode(e.t);
+      const p = grid.querySelector(`[data-p="${b.dataset.i}"]`);
+      p.hidden = false; p.innerHTML = `Промокод <b style="color:var(--acid)">${code}</b> — −10% на билет`;
+      try { navigator.clipboard.writeText(code); if (window.toast) toast('Промокод скопирован'); } catch (_) {}
+      b.textContent = '✓ Промо взято';
     }));
     grid.querySelectorAll('.share-ev').forEach(b => b.addEventListener('click', async () => {
       const e = events[+b.dataset.i];
       const text = `${e.t} — ${e.city}, ${e.d} ${e.mon} ${e.y}. Событие iGaming на SpinHire`;
       if (navigator.share) { try { await navigator.share({ title: e.t, text }); } catch (_) {} }
-      else { try { await navigator.clipboard.writeText(text + ' — https://spinhire.io/#events'); if (window.toast) toast('Ссылка скопирована'); } catch (_) {} }
+      else { try { await navigator.clipboard.writeText(text + ' — https://spinhire.io/events.html'); if (window.toast) toast('Ссылка скопирована'); } catch (_) {} }
     }));
   }
   fetch('/api/events').then(r => r.ok ? r.json() : null).then(ev => render(ev && ev.length ? ev : fallback)).catch(() => render(fallback));
