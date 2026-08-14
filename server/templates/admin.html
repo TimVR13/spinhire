@@ -22,6 +22,7 @@
     <a href="/admin?tab=jobs" class="{% if tab == 'jobs' %}on{% endif %}">Вакансии {% if stats.jobs_pending %}({{ stats.jobs_pending }}!){% endif %}</a>
     <a href="/admin?tab=users" class="{% if tab == 'users' %}on{% endif %}">Пользователи</a>
     <a href="/admin?tab=apps" class="{% if tab == 'apps' %}on{% endif %}">Отклики</a>
+    <a href="/admin?tab=sources" class="{% if tab == 'sources' %}on{% endif %}">🕷 Источники</a>
   </nav>
 
   {% if tab == 'dash' %}
@@ -58,11 +59,23 @@
     {% endfor %}
 
   {% elif tab == 'jobs' %}
+    <form method="get" action="/admin" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: var(--sp-4);">
+      <input type="hidden" name="tab" value="jobs">
+      <input class="input" name="q" value="{{ q }}" placeholder="Поиск: название, компания, источник…" style="flex: 1 1 240px;">
+      <select class="select input" name="st" style="width: auto;">
+        <option value="">Все статусы</option>
+        {% for s in ['pending','approved','rejected','archived'] %}<option value="{{ s }}" {% if st == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-acid btn-sm" type="submit">Найти</button>
+      {% if q or st %}<a class="btn btn-ghost btn-sm" href="/admin?tab=jobs">Сброс</a>{% endif %}
+    </form>
+    <p style="color: var(--ink-faint); font-size: 0.82rem; margin-bottom: 10px;">Показано {{ jobs|length }} (макс. 200)</p>
     <div class="table-wrap"><table class="adm">
-      <tr><th>Вакансия</th><th>Компания</th><th>Зарплата</th><th>Статус</th><th>Откл.</th><th>Действия</th></tr>
+      <tr><th>Вакансия</th><th>Источник</th><th>Компания</th><th>Зарплата</th><th>Статус</th><th>Откл.</th><th>Действия</th></tr>
       {% for j in jobs %}
       <tr>
-        <td><a href="/job/{{ j.id }}" style="color: inherit;">{{ j.title }}</a>{% if j.featured %} ⚡{% endif %}{% if j.source_url %} ↗{% endif %}</td>
+        <td><a href="/job/{{ j.id }}" style="color: inherit;">{{ j.title }}</a>{% if j.featured %} ⚡{% endif %}</td>
+        <td style="font-size: 0.78rem; color: var(--ink-faint);">{{ j.source or 'ручная' }}</td>
         <td>{{ j.company_name }}</td>
         <td>{{ j.salary }}</td>
         <td><span class="status {{ j.status }}">{{ j.status }}</span></td>
@@ -111,5 +124,30 @@
       </tr>
       {% endfor %}
     </table></div>
+
+  {% elif tab == 'sources' %}
+    <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: var(--sp-5); border-color: var(--acid);">
+      <div>
+        <b style="font-family: var(--font-display); text-transform: uppercase;">🕷 Краулеры вакансий</b>
+        <p style="color: var(--ink-dim); font-size: 0.88rem;">Настроенные источники сбора iGaming-вакансий. Автосбор каждые 6 часов + кнопка справа.</p>
+      </div>
+      <form method="post" action="/admin/crawl"><button class="btn btn-acid" type="submit">Запустить сбор сейчас →</button></form>
+    </div>
+    {% if request.query_params.get('crawl') %}<div class="flash">🕷 {{ request.query_params.get('crawl') }}</div>{% endif %}
+    <div class="table-wrap"><table class="adm">
+      <tr><th>Источник</th><th>Тип</th><th>Статус</th><th>Собрано</th><th>Как подключено / план</th></tr>
+      {% for s in sources %}
+      <tr>
+        <td><b>{{ s.name }}</b><br><span style="font-size: 0.72rem; color: var(--ink-faint);">{{ s.key }}</span></td>
+        <td style="font-size: 0.82rem;">{{ s.type }}</td>
+        <td><span class="status {% if s.status in ('работает','подключён') %}approved{% else %}pending{% endif %}">{{ s.status }}</span></td>
+        <td style="font-family: var(--font-display); color: var(--acid);">{{ source_counts.get(s.key, 0) }}</td>
+        <td style="font-size: 0.82rem; color: var(--ink-dim); max-width: 360px; white-space: normal;">{{ s.note }}</td>
+      </tr>
+      {% endfor %}
+    </table></div>
+    <p style="color: var(--ink-faint); font-size: 0.82rem; margin-top: var(--sp-4); max-width: 80ch;">
+      <b>Как расширять:</b> Greenhouse-борды добавляются одним токеном (десятки iGaming-компаний). Djinni — по JobPosting-разметке (Украина, фильтр gambling). hh.ru/hh.ua — публичный API api.hh.ru (зарплата+город), но из облака отдаёт 403: нужен зарегистрированный app-токен или запуск с разрешённого IP — готов подключить по вашему решению. work.ua/robota.ua — парсинг листингов, в планах.
+    </p>
   {% endif %}
 {% endblock %}

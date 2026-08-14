@@ -621,12 +621,27 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         "views": db.query(func.sum(Job.views)).scalar() or 0,
     }
     if tab == "jobs":
-        ctx["jobs"] = db.query(Job).order_by(
-            (Job.status == "pending").desc(), Job.created_at.desc()).all()
+        q = (request.query_params.get("q") or "").strip().lower()
+        st = request.query_params.get("st") or ""
+        jobs = db.query(Job).order_by((Job.status == "pending").desc(),
+                                      Job.created_at.desc()).all()
+        if st:
+            jobs = [j for j in jobs if j.status == st]
+        if q:
+            jobs = [j for j in jobs if q in f"{j.title} {j.company_name} {j.source}".lower()]
+        ctx["jobs"] = jobs[:200]
+        ctx["q"], ctx["st"] = q, st
     elif tab == "users":
         ctx["users"] = db.query(User).order_by(User.created_at.desc()).all()
     elif tab == "apps":
         ctx["apps"] = db.query(Application).order_by(Application.created_at.desc()).all()
+    elif tab == "sources":
+        from server import crawler
+        from collections import Counter
+        counts = Counter(j.source or "внутренние/ручные"
+                         for j in db.query(Job).filter(Job.status == "approved").all())
+        ctx["sources"] = crawler.SOURCE_REGISTRY
+        ctx["source_counts"] = dict(counts)
     else:
         ctx["pending"] = db.query(Job).filter(Job.status == "pending") \
             .order_by(Job.created_at.desc()).limit(10).all()

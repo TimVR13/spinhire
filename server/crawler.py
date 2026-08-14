@@ -33,6 +33,30 @@ GREENHOUSE_BOARDS = {
     "geniussports": "Genius Sports",
 }
 
+# Источники с JobPosting JSON-LD на странице листинга (url: (имя, source-ключ))
+JSONLD_LISTINGS = {
+    "https://djinni.co/jobs/?company_type=gambling":
+        ("Djinni · gambling (UA)", "djinni"),
+}
+
+# Реестр источников для отображения в админке (что настроено и статус)
+SOURCE_REGISTRY = [
+    {"key": "greenhouse:betsson", "name": "Betsson Group", "type": "Greenhouse API",
+     "status": "работает", "note": "Публичный JSON API, полное описание вакансии"},
+    {"key": "greenhouse:kaizengaming", "name": "Kaizen Gaming (Betano)", "type": "Greenhouse API",
+     "status": "работает", "note": "Публичный JSON API"},
+    {"key": "greenhouse:geniussports", "name": "Genius Sports", "type": "Greenhouse API",
+     "status": "работает", "note": "Публичный JSON API"},
+    {"key": "djinni", "name": "Djinni · gambling (Украина)", "type": "JSON-LD парсер",
+     "status": "подключён", "note": "15 вакансий/страница из JobPosting-разметки; зарплата/город в HTML (не в JSON-LD)"},
+    {"key": "hh.ru", "name": "HeadHunter (hh.ru / hh.ua)", "type": "Публичный API — требует настройки",
+     "status": "не подключён", "note": "api.hh.ru бесплатный (зарплата+город+работодатель), но из облака отдаёт 403 — нужен зарегистрированный app-токен ИЛИ запуск с разрешённого IP. Покрывает RU/UA/СНГ. Готов подключить."},
+    {"key": "work.ua", "name": "work.ua", "type": "JobPosting-разметка — в планах",
+     "status": "не подключён", "note": "Нет публичного API; на страницах есть JobPosting schema — парсим листинг HTML. Agressive anti-bot."},
+    {"key": "robota.ua", "name": "robota.ua", "type": "в планах",
+     "status": "не подключён", "note": "Украинский борд; есть внутренний API. Готов исследовать."},
+]
+
 UA = "SpinHireBot/1.0 (+https://spinhire.org; job aggregation)"
 TIMEOUT = 25
 MAX_PER_BOARD = 40           # не выкачиваем борд целиком — берём свежие
@@ -43,6 +67,61 @@ def _fetch(url):
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
     with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
         return r.read().decode("utf-8", "replace")
+
+
+def _fetch_html(url):
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                      "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml"})
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        return r.read().decode("utf-8", "replace")
+
+
+def crawl_jsonld(url, source):
+    """Собрать вакансии из JobPosting JSON-LD на странице листинга (Djinni и др.)."""
+    import json as _json
+    page = _fetch_html(url)
+    blocks = re.findall(r'<script type="application/ld\+json">(.*?)</script>', page, re.S)
+    out = []
+    for b in blocks:
+        try:
+            d = _json.loads(b)
+        except Exception:
+            continue
+        items = d if isinstance(d, list) else [d]
+        for it in items:
+            if not isinstance(it, dict) or it.get("@type") != "JobPosting":
+                continue
+            title = (it.get("title") or "").strip()
+            if not title:
+                continue
+            org = it.get("hiringOrganization") or {}
+            company = (org.get("name") if isinstance(org, dict) else "") or "iGaming-компания"
+            desc = _clean_html(it.get("description", ""))
+            u = it.get("url", "")
+            m = re.search(r"(\d+)", u.rsplit("/", 1)[-1])
+            ext = m.group(1) if m else u[-24:]
+            loc = ""
+            jl = it.get("jobLocation")
+            if isinstance(jl, list):
+                jl = jl[0] if jl else None
+            if isinstance(jl, dict):
+                addr = jl.get("address") or {}
+                if isinstance(addr, dict):
+                    loc = addr.get("addressLocality", "") or ""
+            if not isinstance(loc, str):
+                loc = ""
+            if it.get("jobLocationType") == "TELECOMMUTE":
+                loc = loc or "Remote"
+            lang = detect_lang(title, desc)
+            out.append({
+                "title": title, "company_name": company, "location": loc,
+                "fmt": _fmt_from(loc, desc), "tags": _tags_from(title, desc, lang),
+                "description": desc, "source_url": u, "source": source,
+                "ext_id": str(ext), "salary": "по запросу",
+            })
+    return out
 
 
 def _clean_html(raw):
@@ -156,9 +235,16 @@ def collect():
         try:
             got = crawl_greenhouse(board, company)
             items.extend(got)
-            print(f"[crawl] {board}: +{len(got)}")
+            print(f"[crawl] greenhouse:{board}: +{len(got)}")
         except Exception as e:
-            print(f"[crawl] {board} FAILED: {str(e)[:120]}")
+            print(f"[crawl] greenhouse:{board} FAILED: {str(e)[:120]}")
+    for url, (name, source) in JSONLD_LISTINGS.items():
+        try:
+            got = crawl_jsonld(url, source)
+            items.extend(got)
+            print(f"[crawl] {source}: +{len(got)}")
+        except Exception as e:
+            print(f"[crawl] {source} FAILED: {str(e)[:120]}")
     return items
 
 
