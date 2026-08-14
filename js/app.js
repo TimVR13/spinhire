@@ -44,6 +44,24 @@ document.addEventListener('DOMContentLoaded', () => {
       const submit = modal.querySelector('[data-auth-submit]');
       if (submit) submit.textContent = b.dataset.role === 'employer' ? 'Начать нанимать' : 'Создать профиль';
     }));
+    // подключаем модалку к настоящей регистрации/логину (была демо-заглушка)
+    const authForm = modal.querySelector('form');
+    if (authForm) {
+      authForm.removeAttribute('data-demo');
+      authForm.addEventListener('submit', ev => {
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        const active = modal.querySelector('.role-switch button.active');
+        const role = active ? active.dataset.role : 'talent';
+        window.location.href = '/register?role=' + role;
+      }, true);
+      if (!modal.querySelector('.auth-login-link')) {
+        const p = document.createElement('p');
+        p.className = 'auth-login-link';
+        p.style.cssText = 'margin-top:14px;font-size:0.85rem;color:var(--ink-dim);text-align:center';
+        p.innerHTML = 'Уже есть аккаунт? <a href="/login" style="color:var(--acid);font-weight:800">Войти</a>';
+        authForm.insertAdjacentElement('afterend', p);
+      }
+    }
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
       if (e.key === 'Tab' && modal.classList.contains('open')) {
