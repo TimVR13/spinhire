@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+  <div style="text-align: center; padding: 8vh 0;">
+    <div style="font-family: var(--font-display); font-weight: 900; font-size: clamp(4rem, 18vw, 9rem); color: var(--acid); line-height: 1; text-shadow: 6px 6px 0 var(--pink);">{{ code }}</div>
+    <h1 style="font-size: clamp(1.4rem, 4vw, 2.2rem); margin: var(--sp-4) 0 var(--sp-3);">{{ title }}</h1>
+    <p style="color: var(--ink-dim); max-width: 44ch; margin: 0 auto var(--sp-5);">{{ sub }}</p>
+    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+      <a href="/jobs" class="btn btn-acid">К вакансиям →</a>
+      <a href="/" class="btn btn-ghost">На главную</a>
+    </div>
+  </div>
+{% endblock %}

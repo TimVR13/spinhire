@@ -1,46 +1,118 @@
 {% extends "base.html" %}
 {% set active = 'jobs' %}
 {% block title %}{{ job.title }} — {{ job.company_name }} | SpinHire{% endblock %}
-{% block desc %}{{ job.title }} в {{ job.company_name }}: {{ job.salary }}, {{ job.location }}, {{ job.fmt }}. Откликнуться на SpinHire.{% endblock %}
+{% block desc %}{{ job.title }} в {{ job.company_name }}: {{ job.salary }}, {{ job.location }}, {{ job.fmt }}. iGaming-вакансия на SpinHire.{% endblock %}
+{% block robots %}<link rel="canonical" href="https://spinhire.org/job/{{ job.id }}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="{{ job.title }} — {{ job.company_name }}">
+<meta property="og:description" content="{{ job.salary }} · {{ job.location }} · {{ job.fmt }}">
+<meta property="og:url" content="https://spinhire.org/job/{{ job.id }}">
+<meta property="og:image" content="https://spinhire.org/img/og-cover.jpg">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "JobPosting",
+  "title": {{ job.title|tojson }},
+  "description": {{ (job.description or (job.title ~ ' — ' ~ job.company_name ~ '. ' ~ job.tags))|tojson }},
+  "datePosted": "{{ job.created_at.strftime('%Y-%m-%d') }}",
+  "hiringOrganization": { "@type": "Organization", "name": {{ job.company_name|tojson }} },
+  {% if job.fmt in ('удалёнка', 'удалёнка ЕС') %}"jobLocationType": "TELECOMMUTE",{% endif %}
+  {% if job.location %}"jobLocation": { "@type": "Place", "address": { "@type": "PostalAddress", "addressLocality": {{ job.location|tojson }} } },{% endif %}
+  {% if job.has_salary and job.sal_min %}"baseSalary": { "@type": "MonetaryAmount", "currency": "{{ job.sal_currency }}", "value": { "@type": "QuantitativeValue", "minValue": {{ job.sal_min }}, "maxValue": {{ job.sal_max }}, "unitText": "MONTH" } },{% endif %}
+  "employmentType": "FULL_TIME",
+  "identifier": { "@type": "PropertyValue", "name": "SpinHire", "value": "{{ job.id }}" }
+}
+</script>{% endblock %}
 {% block style %}
+  .job-layout { display: grid; grid-template-columns: 1fr 300px; gap: var(--sp-6); align-items: start; }
   .job-hero { border: 2px solid var(--acid); background: var(--surface); box-shadow: 8px 8px 0 oklch(0.08 0.02 305); padding: var(--sp-6); margin-bottom: var(--sp-5); }
-  .job-hero h1 { font-size: clamp(1.4rem, 3vw, 2.2rem); margin-block: var(--sp-3); }
+  .job-hero h1 { font-size: clamp(1.4rem, 3vw, 2.2rem); margin-block: var(--sp-3); overflow-wrap: anywhere; }
   .desc-block { color: var(--ink-dim); line-height: 1.7; max-width: 72ch; white-space: pre-line; }
+  .side-card { border: 2px solid var(--line-strong); background: var(--surface); padding: var(--sp-5); margin-bottom: var(--sp-4); }
+  .side-card h3 { font-size: 0.9rem; color: var(--acid); margin-bottom: var(--sp-3); }
+  .side-card dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 0.88rem; }
+  .side-card dt { color: var(--ink-faint); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.1em; font-weight: 700; padding-top: 2px; }
+  .side-card dd { color: var(--ink); font-weight: 600; }
+  @media (max-width: 900px) { .job-layout { grid-template-columns: 1fr; } }
 {% endblock %}
 {% block content %}
-  <nav class="crumbs"><a href="/">Главная</a> / <a href="/jobs">Вакансии</a> / {{ job.title }}</nav>
+  <nav class="crumbs" aria-label="Хлебные крошки"><a href="/">Главная</a> / <a href="/jobs">Вакансии</a> / {{ job.title }}</nav>
 
   {% if request.query_params.get('ok') %}<div class="flash">✓ Отклик отправлен — работодатель увидит его в кабинете.</div>{% endif %}
 
-  <article class="job-hero">
-    <p style="color: var(--ink-dim);"><b style="color: var(--ink);">{{ job.company_name }}</b> · {{ job.location or '—' }} · {{ job.fmt }}</p>
-    <h1>{{ job.title }}</h1>
-    <div class="job-card__tags" style="margin-bottom: var(--sp-4);">
-      {% if job.featured %}<span class="tag tag-hot">⚡ Featured</span>{% endif %}
-      {% if job.category %}<span class="tag">{{ job.category }}</span>{% endif %}
-      {% for t in job.tag_list %}<span class="tag tag-acid">{{ t }}</span>{% endfor %}
-    </div>
-    <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}вилка по запросу{% endif %}</p>
-    <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: var(--sp-4); align-items: center;">
-      {% if job.source_url %}
-        <a class="btn btn-acid btn-lg" href="{{ job.source_url }}" target="_blank" rel="noopener nofollow">Откликнуться у источника ↗</a>
-        <span style="color: var(--ink-faint); font-size: 0.82rem;">внешняя вакансия — отклик на стороне работодателя</span>
-      {% elif applied %}
-        <span class="status invited">✓ Вы уже откликнулись</span>
-      {% elif user %}
-        <form method="post" action="/job/{{ job.id }}/apply" style="display: flex; gap: 10px; flex-wrap: wrap; width: 100%;">
-          <input class="input" name="cover" placeholder="Пара слов о себе (необязательно)" style="flex: 1 1 260px;">
-          <button class="btn btn-acid btn-lg" type="submit">Откликнуться →</button>
-        </form>
-      {% else %}
-        <a class="btn btn-acid btn-lg" href="/login?next=/job/{{ job.id }}">Войти и откликнуться →</a>
-      {% endif %}
-      <span style="color: var(--ink-faint); font-size: 0.82rem;">{{ applies }} откл. · {{ job.views }} просмотров</span>
-    </div>
-  </article>
+  <div class="job-layout">
+    <div>
+      <article class="job-hero">
+        <p style="color: var(--ink-dim);"><b style="color: var(--ink);">{{ job.company_name }}</b> · {{ job.location or '—' }} · {{ job.fmt }}</p>
+        <h1>{{ job.title }}</h1>
+        <div class="job-card__tags" style="margin-bottom: var(--sp-4);">
+          {% if job.featured %}<span class="tag tag-hot">⚡ Featured</span>{% endif %}
+          {% if job.category %}<span class="tag">{{ job.category }}</span>{% endif %}
+          {% for t in job.tag_list %}<span class="tag tag-acid">{{ t }}</span>{% endfor %}
+        </div>
+        <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}вилка по запросу{% endif %}</p>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: var(--sp-4); align-items: center;">
+          {% if job.source_url %}
+            <a class="btn btn-acid btn-lg" href="{{ job.source_url }}" target="_blank" rel="noopener nofollow">Откликнуться у источника ↗</a>
+            <span style="color: var(--ink-faint); font-size: 0.82rem;">внешняя вакансия — отклик на стороне работодателя</span>
+          {% elif applied %}
+            <span class="status invited">✓ Вы уже откликнулись</span>
+          {% elif user and user.role == 'talent' %}
+            <form method="post" action="/job/{{ job.id }}/apply" style="display: flex; gap: 10px; flex-wrap: wrap; width: 100%;">
+              <input class="input" name="cover" placeholder="Пара слов о себе (необязательно)" aria-label="Сопроводительное" style="flex: 1 1 260px;">
+              <button class="btn btn-acid btn-lg" type="submit">Откликнуться →</button>
+            </form>
+          {% elif user %}
+            <span style="color: var(--ink-faint); font-size: 0.85rem;">Откликаться могут только соискатели.</span>
+          {% else %}
+            <a class="btn btn-acid btn-lg" href="/login?next=/job/{{ job.id }}">Войти и откликнуться →</a>
+          {% endif %}
+          {% if applies %}<span style="color: var(--ink-faint); font-size: 0.82rem;">{{ applies }} откл. · {{ job.views }} просмотров</span>{% endif %}
+        </div>
+      </article>
 
-  {% if job.description %}
-  <h2 style="font-size: 1.1rem; color: var(--acid); margin-bottom: 12px;">▮ Описание</h2>
-  <div class="desc-block">{{ job.description }}</div>
-  {% endif %}
+      {% if job.description %}
+        <h2 style="font-size: 1.1rem; color: var(--acid); margin-bottom: 12px;">▮ Описание</h2>
+        <div class="desc-block">{{ job.description }}</div>
+      {% else %}
+        <div class="desc-block" style="color: var(--ink-faint);">Работодатель не добавил подробное описание. Основное — в тегах и условиях выше{% if job.source_url %}, полный текст — у источника{% endif %}.</div>
+      {% endif %}
+
+      {% if similar %}
+      <h2 style="font-size: 1.1rem; color: var(--acid); margin: var(--sp-6) 0 12px;">▮ Похожие вакансии</h2>
+      <div class="jobs-list" style="display: flex; flex-direction: column; gap: 12px;">
+        {% for s in similar %}
+        <a class="job-card" href="/job/{{ s.id }}">
+          <div class="job-card__logo" style="background: var(--surface-2); color: var(--acid);" aria-hidden="true">{{ s.initials }}</div>
+          <div>
+            <h3 class="job-card__title">{{ s.title }}</h3>
+            <p class="job-card__meta"><b>{{ s.company_name }}</b> · {{ s.location or '—' }} · {{ s.fmt }}</p>
+          </div>
+          <div class="job-card__side">
+            {% if s.has_salary %}<span class="salary">{{ s.salary }}</span>{% else %}<span class="salary" style="color: var(--ink-faint); font-size: 0.85rem;">по запросу</span>{% endif %}
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <aside>
+      <div class="side-card">
+        <h3>О вакансии</h3>
+        <dl>
+          <dt>Компания</dt><dd>{{ job.company_name }}</dd>
+          {% if job.category %}<dt>Направление</dt><dd>{{ job.category }}</dd>{% endif %}
+          <dt>Формат</dt><dd>{{ job.fmt }}</dd>
+          {% if job.location %}<dt>Локация</dt><dd>{{ job.location }}</dd>{% endif %}
+          <dt>Зарплата</dt><dd>{% if job.has_salary %}{{ job.salary }}{% else %}по запросу{% endif %}</dd>
+          <dt>Размещена</dt><dd>{{ job.created_at.strftime('%d.%m.%Y') }}</dd>
+        </dl>
+      </div>
+      <div class="side-card" style="border-style: dashed;">
+        <h3 style="color: var(--yellow);">⚠ Будь начеку</h3>
+        <p style="font-size: 0.85rem; color: var(--ink-dim);">Настоящие работодатели никогда не просят депозит или документы до оффера. Заметили странное — жалуйтесь.</p>
+      </div>
+    </aside>
+  </div>
 {% endblock %}

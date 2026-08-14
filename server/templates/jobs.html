@@ -13,13 +13,13 @@
   <span class="kicker">Живая база</span>
   <h1 style="font-size: clamp(1.6rem, 3vw, 2.2rem); margin-top: 8px;">Вакансии iGaming — {{ jobs|length }}{% if q or fmt or cat %} по фильтрам{% endif %}</h1>
 
-  <form class="filter-bar" method="get" action="/jobs">
-    <input class="input" type="search" name="q" value="{{ q }}" placeholder="Должность, компания, тег…">
-    <select class="select input" name="fmt">
+  <form class="filter-bar" method="get" action="/jobs" role="search">
+    <input class="input" type="search" name="q" value="{{ q }}" placeholder="Должность, компания, тег…" aria-label="Поиск вакансий">
+    <select class="select input" name="fmt" aria-label="Формат работы">
       <option value="">Любой формат</option>
       {% for f in formats %}<option value="{{ f }}" {% if fmt == f %}selected{% endif %}>{{ f }}</option>{% endfor %}
     </select>
-    <select class="select input" name="cat">
+    <select class="select input" name="cat" aria-label="Направление">
       <option value="">Все направления</option>
       {% for c in categories %}<option value="{{ c }}" {% if cat == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
     </select>

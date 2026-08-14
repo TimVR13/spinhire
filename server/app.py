@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import bcrypt as _bcrypt
 from itsdangerous import BadSignature, URLSafeSerializer
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
 def hash_pw(pw: str) -> str:
@@ -93,11 +94,43 @@ class Job(Base):
         return any(c.isdigit() for c in (self.salary or ""))
 
     @property
+    def _sal_nums(self):
+        import re as _re
+        nums = [int(n.replace(" ", "")) for n in _re.findall(r"\d[\d ]*", self.salary or "")]
+        return [n for n in nums if n > 0]
+
+    @property
+    def sal_min(self):
+        n = self._sal_nums
+        return min(n) if n else None
+
+    @property
+    def sal_max(self):
+        n = self._sal_nums
+        return max(n) if n else None
+
+    @property
+    def sal_currency(self):
+        s = self.salary or ""
+        if "USDT" in s:
+            return "USDT"
+        if "$" in s:
+            return "USD"
+        return "EUR"
+
+    @property
     def initials(self):
-        words = [w for w in self.company_name.replace("(", " ").split() if w[:1].isalnum()]
+        import re as _re
+        stop = {"оператор", "через", "для", "компания", "nda", "и", "the", "via",
+                "под", "igaming", "оператора", "group", "ltd", "inc", "tech"}
+        words = [w for w in _re.findall(r"[A-Za-zА-Яа-яЁё0-9]+", self.company_name)
+                 if w.lower() not in stop]
         if not words:
-            return "??"
-        return (words[0][0] + (words[1][0] if len(words) > 1 else words[0][1:2] or "•")).upper()
+            words = _re.findall(r"[A-Za-zА-Яа-яЁё0-9]+", self.company_name)
+        if not words:
+            return "SH"
+        w = words[0]
+        return (w[:2] if len(w) >= 2 else w[0]).upper()
 
 
 class Application(Base):
@@ -120,6 +153,28 @@ def db_session():
         db.close()
 
 
+_CAT_RULES = [
+    ("Комплаенс и AML", ("compl", "aml", "kyc", "комплаенс", "антифрод", "fraud")),
+    ("Платежи и антифрод", ("payment", "psp", "платеж", "reconcil", "treasury")),
+    ("Аффилейты и медиабаинг", ("affili", "аффил", "media buy", "медиабай", "seo", "promo", "streamer", "influenc")),
+    ("Разработка игр", ("developer", "engineer", "разработ", "java", ".net", "backend", "frontend",
+                        "математик", "devops", "qa", "unity", "ai engineer", "1c")),
+    ("Беттинг и трейдинг", ("trader", "трейдер", "sportsbook", "спортбук", "odds", "беттинг")),
+    ("Саппорт (языки)", ("support", "саппорт", "customer service", "presenter", "агент")),
+    ("Данные и BI", ("data ", "data eng", "bi ", "analyt", "аналит")),
+    ("Маркетинг и CRM", ("crm", "retention", "ретеншн", "vip", "marketing", "маркетинг", "brand")),
+    ("Топ-менеджмент", ("head of", "vp ", "chief", "director", "c-level", "директор", "руковод")),
+]
+
+
+def guess_category(title: str, tags: str) -> str:
+    text = f"{title} {tags}".lower()
+    for cat, keys in _CAT_RULES:
+        if any(k in text for k in keys):
+            return cat
+    return "Операции казино"
+
+
 def seed(db: Session):
     if db.query(User).count():
         return
@@ -130,12 +185,23 @@ def seed(db: Session):
     if os.path.exists(csv_path):
         with open(csv_path, encoding="utf-8") as f:
             for row in csv.DictReader(f, delimiter=";"):
-                db.add(Job(title=row["title"], company_name=row["company"],
+                db.add(Job(title=row["title"].strip(), company_name=row["company"],
                            location=row["location"], fmt=row["format"],
                            salary=row["salary"], tags=row["tags"],
+                           category=guess_category(row["title"], row["tags"]),
                            source_url=row["source_url"], status="approved"))
     db.commit()
     print(f"[seed] админ создан: {ADMIN_EMAIL}; вакансии импортированы из CSV")
+
+
+def backfill_categories(db: Session):
+    """Проставить категорию вакансиям, у которых её нет (для уже засиженных БД)."""
+    changed = 0
+    for j in db.query(Job).filter((Job.category == "") | (Job.category.is_(None))).all():
+        j.category = guess_category(j.title, j.tags)
+        changed += 1
+    if changed:
+        db.commit()
 
 
 app = FastAPI(title="SpinHire")
@@ -175,6 +241,7 @@ def _startup():
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
         seed(db)
+        backfill_categories(db)
 
 
 # ---------- auth helpers ----------
@@ -205,6 +272,13 @@ def set_session(resp, user: User):
     return resp
 
 
+def safe_next(url: str, default: str = "/profile") -> str:
+    """Только внутренние пути — защита от open redirect."""
+    if url and url.startswith("/") and not url.startswith("//"):
+        return url
+    return default
+
+
 # ---------- redirects from static pages ----------
 
 @app.get("/jobs.html")
@@ -225,14 +299,16 @@ def r5(): return RedirectResponse("/jobs")
 def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
               salary_only: int = 0, db: Session = Depends(db_session)):
     qs = db.query(Job).filter(Job.status == "approved")
-    if q:
-        like = f"%{q}%"
-        qs = qs.filter(or_(Job.title.ilike(like), Job.company_name.ilike(like), Job.tags.ilike(like)))
     if fmt:
         qs = qs.filter(Job.fmt == fmt)
     if cat:
         qs = qs.filter(Job.category == cat)
     jobs = qs.order_by(Job.featured.desc(), Job.created_at.desc()).all()
+    if q:
+        # регистронезависимо, включая кириллицу (SQLite LIKE не сворачивает регистр не-ASCII)
+        ql = q.strip().lower()
+        jobs = [j for j in jobs
+                if ql in f"{j.title} {j.company_name} {j.tags} {j.location}".lower()]
     if salary_only:
         jobs = [j for j in jobs if j.has_salary]
     return render(request, db, "jobs.html", jobs=jobs, q=q, fmt=fmt, cat=cat,
@@ -249,8 +325,11 @@ def job_detail(job_id: int, request: Request, db: Session = Depends(db_session))
     db.commit()
     user = get_user(request, db)
     applied = bool(user and db.query(Application).filter_by(job_id=job.id, user_id=user.id).first())
+    similar = (db.query(Job).filter(Job.status == "approved", Job.id != job.id,
+                                    Job.category == job.category)
+               .order_by(Job.featured.desc(), Job.created_at.desc()).limit(3).all())
     return render(request, db, "job.html", job=job, applied=applied,
-                  applies=len(job.applications))
+                  applies=len(job.applications), similar=similar)
 
 
 @app.post("/job/{job_id}/apply")
@@ -259,11 +338,17 @@ def job_apply(job_id: int, request: Request, cover: str = Form(""),
     user = get_user(request, db)
     if not user:
         return login_redirect(f"/job/{job_id}")
+    if user.role != "talent":
+        # работодателю/админу откликаться нельзя
+        return RedirectResponse(f"/job/{job_id}", status_code=303)
     job = db.get(Job, job_id)
-    if not job:
+    if not job or job.status != "approved":
         raise HTTPException(404)
+    if job.source_url:
+        # внешняя вакансия — отклик только у источника
+        return RedirectResponse(f"/job/{job_id}", status_code=303)
     if not db.query(Application).filter_by(job_id=job_id, user_id=user.id).first():
-        db.add(Application(job_id=job_id, user_id=user.id, cover=cover))
+        db.add(Application(job_id=job_id, user_id=user.id, cover=cover.strip()))
         db.commit()
     return RedirectResponse(f"/job/{job_id}?ok=1", status_code=303)
 
@@ -281,7 +366,7 @@ def login(request: Request, email: str = Form(...), password: str = Form(...),
     u = db.query(User).filter(func.lower(User.email) == email.strip().lower()).first()
     if not u or not check_pw(password, u.password_hash):
         return render(request, db, "login.html", next=next, error="Неверная почта или пароль")
-    dest = "/admin" if u.role == "admin" else ("/employer" if u.role == "employer" else next or "/profile")
+    dest = "/admin" if u.role == "admin" else ("/employer" if u.role == "employer" else safe_next(next))
     return set_session(RedirectResponse(dest, status_code=303), u)
 
 
@@ -368,7 +453,7 @@ def app_status(app_id: int, request: Request, status: str = Form(...),
     if status in ("new", "viewed", "invited", "rejected"):
         a.status = status
         db.commit()
-    return RedirectResponse(request.headers.get("referer") or "/employer", status_code=303)
+    return RedirectResponse("/employer", status_code=303)
 
 
 @app.get("/post-job", response_class=HTMLResponse)
@@ -387,14 +472,34 @@ def post_job(request: Request, title: str = Form(...), category: str = Form(""),
     user = get_user(request, db)
     if not user or user.role == "talent":
         return login_redirect("/post-job")
-    salary = f"€{salary_from}–{salary_to} {currency.split()[1] if ' ' in currency else ''}".strip() \
-        if salary_from and salary_to else "по запросу"
-    if currency.startswith("USD"):
-        salary = salary.replace("€", "$")
+
+    def err(msg):
+        return render(request, db, "post_job.html", categories=CATEGORIES, formats=FORMATS,
+                      posted=False, need_login=False, error=msg)
+
+    # правила заведения: без корректной зарплатной вилки не публикуем
+    try:
+        s_from, s_to = int(salary_from), int(salary_to)
+    except (TypeError, ValueError):
+        return err("Укажите зарплатную вилку числами — без вилки не публикуем.")
+    if s_from <= 0 or s_to <= 0:
+        return err("Зарплата должна быть больше нуля.")
+    if s_from > s_to:
+        return err("«Зарплата от» не может быть больше «до».")
+    if not title.strip():
+        return err("Укажите название вакансии.")
+
+    unit = currency.split()[1] if " " in currency else ""
     if currency.startswith("USDT"):
-        salary = f"{salary_from}–{salary_to} USDT"
-    db.add(Job(title=title.strip(), company_name=user.company_name or user.name or user.email,
-               category=category, location=location.strip(), fmt=fmt, salary=salary,
+        salary = f"{s_from}–{s_to} USDT"
+    elif currency.startswith("USD"):
+        salary = f"${s_from}–{s_to} {unit}".strip()
+    else:
+        salary = f"€{s_from}–{s_to} {unit}".strip()
+    db.add(Job(title=title.strip(),
+               company_name=user.company_name or user.name or user.email,
+               category=category or guess_category(title, tags),
+               location=location.strip(), fmt=fmt, salary=salary,
                tags=tags.strip(), description=description.strip(),
                owner_id=user.id, status="pending"))
     db.commit()
@@ -455,7 +560,11 @@ def admin_job(job_id: int, action: str, request: Request, db: Session = Depends(
     elif action == "delete":
         db.delete(job)
     db.commit()
-    return RedirectResponse(request.headers.get("referer") or "/admin?tab=jobs", status_code=303)
+    ref = request.headers.get("referer") or ""
+    dest = "/admin?tab=jobs"
+    if "tab=" in ref and ref.startswith(("http://165", "http://127", "http://localhost", "/")):
+        dest = ref
+    return RedirectResponse(dest, status_code=303)
 
 
 @app.post("/admin/user/{user_id}/{action}")
@@ -472,6 +581,54 @@ def admin_user(user_id: int, action: str, request: Request, db: Session = Depend
         u.role = action
     db.commit()
     return RedirectResponse("/admin?tab=users", status_code=303)
+
+
+# ---------- sitemap (динамический, включает живые вакансии) ----------
+
+@app.get("/sitemap.xml")
+def sitemap(db: Session = Depends(db_session)):
+    from fastapi.responses import Response
+    base = "https://spinhire.org"
+    static = [("", "1.0"), ("jobs", "0.9"), ("companies.html", "0.8"), ("blog.html", "0.8"),
+              ("post-job", "0.5"), ("games.html", "0.5"),
+              ("jobs-malta.html", "0.8"), ("jobs-cyprus.html", "0.8"), ("jobs-remote.html", "0.8"),
+              ("jobs-vip-manager.html", "0.8"), ("jobs-affiliate.html", "0.8"), ("jobs-aml.html", "0.8"),
+              ("jobs-crypto.html", "0.8"), ("jobs-warsaw.html", "0.8"), ("jobs-tbilisi.html", "0.8"),
+              ("jobs-gamedev.html", "0.8"),
+              ("post-salaries-igaming-2026.html", "0.7"), ("post-relocation-malta.html", "0.7"),
+              ("post-vip-manager.html", "0.7"), ("post-limassol-vs-warsaw.html", "0.7"),
+              ("post-compliance-career.html", "0.7"), ("post-crypto-salary.html", "0.7"),
+              ("privacy.html", "0.3"), ("terms.html", "0.3"), ("game-rules.html", "0.3")]
+    rows = [f"  <url><loc>{base}/{p}</loc><priority>{pr}</priority></url>" for p, pr in static]
+    for j in db.query(Job).filter(Job.status == "approved").all():
+        rows.append(f'  <url><loc>{base}/job/{j.id}</loc>'
+                    f'<lastmod>{j.created_at.strftime("%Y-%m-%d")}</lastmod>'
+                    f'<priority>0.6</priority></url>')
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+           + "\n".join(rows) + "\n</urlset>\n")
+    return Response(xml, media_type="application/xml")
+
+
+# ---------- branded error pages ----------
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exc(request: Request, exc: StarletteHTTPException):
+    if exc.status_code in (404, 403, 401, 500):
+        with SessionLocal() as db:
+            titles = {404: "Стол не найден", 403: "Только для своих",
+                      401: "Нужен вход", 500: "Заведение прилегло"}
+            subs = {404: "Такой страницы нет или вакансию уже закрыли.",
+                    403: "У вас нет доступа к этому разделу.",
+                    401: "Войдите, чтобы продолжить.",
+                    500: "Что-то сломалось на нашей стороне. Уже чиним."}
+            resp = templates.TemplateResponse(request, "error.html", {
+                "code": exc.status_code, "title": titles.get(exc.status_code, "Ошибка"),
+                "sub": subs.get(exc.status_code, ""), "user": None},
+                status_code=exc.status_code)
+            return resp
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(str(exc.detail), status_code=exc.status_code)
 
 
 # ---------- static site (последним — перекрывается роутами выше) ----------

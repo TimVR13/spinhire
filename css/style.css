@@ -9,17 +9,18 @@
   --surface: oklch(0.18 0.025 305);
   --surface-2: oklch(0.22 0.03 305);
   --line: oklch(0.32 0.03 305);
+  --line-strong: oklch(0.5 0.03 305);   /* границы контролов — WCAG 1.4.11 (3:1) */
   --ink: oklch(0.95 0.01 300);
   --ink-dim: oklch(0.72 0.02 300);
-  --ink-faint: oklch(0.55 0.02 300);
+  --ink-faint: oklch(0.63 0.02 300);    /* поднято до AA (~5:1) для мелкого текста */
 
   --acid: oklch(0.9 0.26 127);          /* lime — primary action / money */
   --acid-deep: oklch(0.75 0.24 130);
   --pink: oklch(0.68 0.29 350);         /* magenta — secondary, employer side */
-  --violet: oklch(0.62 0.24 300);
+  --violet: oklch(0.7 0.22 300);        /* поднято для контраста статус-бейджей */
   --yellow: oklch(0.87 0.17 95);        /* warning-sign yellow — badges */
   --on-acid: oklch(0.17 0.05 130);
-  --on-pink: oklch(0.98 0.01 350);
+  --on-pink: oklch(0.18 0.05 350);      /* тёмный текст на фуксии — AA (5.4:1) */
   --on-yellow: oklch(0.2 0.05 95);
 
   /* spacing (4pt) */
@@ -37,6 +38,15 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* доступный фокус клавиатуры — в духе брутализма */
+:focus-visible { outline: 3px solid var(--acid); outline-offset: 2px; }
+
+/* skip-link */
+.skip-link { position: absolute; left: -999px; top: 0; z-index: 200; background: var(--acid); color: var(--on-acid); font-weight: 800; padding: 10px 16px; }
+.skip-link:focus { left: 8px; top: 8px; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 html { scroll-behavior: smooth; }
 
@@ -135,6 +145,8 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 }
 .main-nav a:hover { color: var(--ink); border-bottom-color: var(--pink); }
 .main-nav a.active { color: var(--acid); border-bottom-color: var(--acid); }
+.nav-cta-mobile { display: none; }
+@media (max-width: 900px) { .nav-cta-mobile { display: block !important; } }
 
 .header-actions { display: flex; gap: var(--sp-3); align-items: center; }
 
@@ -162,7 +174,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   border-color: var(--line);
 }
 .btn-ghost:hover { border-color: var(--acid); color: var(--acid); }
-.btn-sm { padding: 8px 14px; font-size: 0.8rem; }
+.btn-sm { padding: 8px 14px; font-size: 0.8rem; min-height: 40px; }
 .btn-lg { padding: 16px 30px; font-size: 1.05rem; }
 .btn-block { width: 100%; }
 
@@ -227,8 +239,8 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 .job-card__age { color: var(--ink-faint); font-size: 0.78rem; }
 
 .save-btn {
-  background: none; border: 2px solid var(--line); color: var(--ink-dim);
-  width: 36px; height: 36px; font-size: 1rem; line-height: 1;
+  background: none; border: 2px solid var(--line-strong); color: var(--ink-dim);
+  width: 44px; height: 44px; font-size: 1rem; line-height: 1;
 }
 .save-btn:hover, .save-btn.saved { border-color: var(--pink); color: var(--pink); }
 
@@ -241,7 +253,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 }
 .input, .select, textarea.input {
   background: var(--bg-deep);
-  border: 2px solid var(--line);
+  border: 2px solid var(--line-strong);
   color: var(--ink);
   padding: 11px 14px;
   width: 100%;
@@ -301,8 +313,9 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   position: relative;
 }
 .modal__close {
-  position: absolute; top: var(--sp-3); right: var(--sp-3);
+  position: absolute; top: var(--sp-2); right: var(--sp-2);
   background: none; border: none; color: var(--ink-dim); font-size: 1.4rem;
+  width: 44px; height: 44px;
 }
 .modal__close:hover { color: var(--pink); }
 .role-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-block: var(--sp-5); border: 2px solid var(--line); }
@@ -372,8 +385,8 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
     flex-direction: column; gap: 0; padding: var(--sp-3) var(--sp-5) var(--sp-5);
   }
   .main-nav.open { display: flex; }
-  .main-nav a { padding: 12px 0; border-bottom: 1px solid var(--line); }
-  .nav-burger { display: block; margin-left: auto; }
+  .main-nav a { padding: 14px 0; border-bottom: 1px solid var(--line); min-height: 44px; }
+  .nav-burger { display: block; margin-left: auto; width: 44px; height: 44px; }
   .site-footer .footer-grid { grid-template-columns: 1fr 1fr; }
   .job-card { grid-template-columns: 44px 1fr; }
   .job-card > * { min-width: 0; }
@@ -384,8 +397,8 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 
 @media (max-width: 520px) {
   .header-actions { gap: var(--sp-2); }
-  .header-actions .btn { padding: 7px 10px; font-size: 0.7rem; }
-  .header-actions .btn-pink { display: none; }
+  .header-actions .btn { padding: 9px 11px; font-size: 0.72rem; min-height: 40px; }
+  .header-actions .btn-pink { display: none; }  /* дублируется пунктом в бургер-меню */
   .site-header .container { gap: var(--sp-3); }
   .logo { font-size: 1.05rem; }
   .salary { font-size: 1rem; }

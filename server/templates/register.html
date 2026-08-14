@@ -12,12 +12,12 @@
         <button type="button" class="{% if role == 'employer' %}active{% endif %}" onclick="setRole('employer', this)">Нанимаю</button>
       </div>
       <input type="hidden" name="role" id="role-input" value="{{ role }}">
-      <div class="field"><label>Имя{% if role == 'employer' %} / контактное лицо{% endif %}</label><input class="input" name="name"></div>
+      <div class="field"><label for="reg-name">Имя{% if role == 'employer' %} / контактное лицо{% endif %}</label><input class="input" id="reg-name" name="name" autocomplete="name"></div>
       <div class="field" id="company-field" {% if role != 'employer' %}style="display:none;"{% endif %}>
-        <label>Название компании</label><input class="input" name="company_name" placeholder="например, BetOnyx Ltd">
+        <label for="reg-company">Название компании</label><input class="input" id="reg-company" name="company_name" autocomplete="organization" placeholder="например, BetOnyx Ltd">
       </div>
-      <div class="field"><label>Email</label><input class="input" type="email" name="email" required></div>
-      <div class="field"><label>Пароль (от 6 символов)</label><input class="input" type="password" name="password" minlength="6" required></div>
+      <div class="field"><label for="reg-email">Email</label><input class="input" id="reg-email" type="email" name="email" autocomplete="email" required></div>
+      <div class="field"><label for="reg-pw">Пароль (от 6 символов)</label><input class="input" id="reg-pw" type="password" name="password" autocomplete="new-password" minlength="6" required></div>
       <button class="btn btn-acid btn-block" type="submit">Создать аккаунт →</button>
     </form>
     <p style="margin-top: 16px; color: var(--ink-dim); text-align: center;">Уже есть аккаунт? <a href="/login" style="color: var(--acid);">Войти</a></p>

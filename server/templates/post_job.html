@@ -9,6 +9,7 @@
   {% if posted %}
     <div class="flash">✓ Вакансия отправлена на модерацию. Обычно проверяем за пару часов — статус виден в <a href="/employer" style="color: inherit; font-weight: 800;">кабинете</a>.</div>
   {% endif %}
+  {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
 
   {% if need_login %}
     <div class="card" style="border-color: var(--pink); max-width: 560px;">
