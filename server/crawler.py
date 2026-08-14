@@ -46,14 +46,22 @@ def _fetch(url):
 
 
 def _clean_html(raw):
-    """HTML описания → чистый текст (клонируем контент, не верстку источника)."""
-    s = html.unescape(raw or "")
+    """HTML описания → чистый читаемый текст (клонируем контент, не верстку источника)."""
+    s = raw or ""
+    # Greenhouse отдаёт дважды-закодированный HTML (&amp;lt;p&amp;gt;&amp;nbsp;) — декодируем 2 раза
+    s = html.unescape(html.unescape(s))
     s = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", "", s)
-    s = re.sub(r"(?i)<\s*(br|/p|/div|/li|/h[1-6])\s*>", "\n", s)
+    s = re.sub(r"(?i)<\s*(br|/p|/div|/li|/h[1-6]|/tr)\s*/?>", "\n", s)
     s = re.sub(r"(?i)<\s*li[^>]*>", "• ", s)
     s = re.sub(r"(?i)<\s*h[1-6][^>]*>", "\n\n", s)
     s = re.sub(r"<[^>]+>", "", s)
-    s = re.sub(r"[ \t]+", " ", s)
+    s = s.replace("\xa0", " ")                 # неразрывный пробел → обычный
+    s = re.sub(r"[ \t]{2,}", " ", s)
+    s = re.sub(r"[ \t]+\n", "\n", s)
+    # выкинуть пустые/мусорные строки (одни пробелы, точки, буллеты без текста)
+    lines = [ln.strip() for ln in s.split("\n")]
+    lines = [ln for ln in lines if ln and ln not in ("•", "·", "-", ".")]
+    s = "\n".join(lines)
     s = re.sub(r"\n{3,}", "\n\n", s).strip()
     return s[:DESC_LIMIT]
 
@@ -68,20 +76,44 @@ def _fmt_from(location, content):
     return "офис"
 
 
-def _tags_from(title, content):
+_LANGS = [
+    ("немецкий", ("german", "deutsch", "немецк")), ("испанский", ("spanish", "español", "испанск")),
+    ("португальский", ("portuguese", "português", "португальск")), ("итальянский", ("italian", "итальянск")),
+    ("французский", ("french", "français", "французск")), ("турецкий", ("turkish", "турецк")),
+    ("финский", ("finnish", "финск")), ("шведский", ("swedish", "шведск")),
+    ("японский", ("japanese", "японск")), ("греческий", ("greek", "греческ")),
+    ("польский", ("polish", "польск")), ("нидерландский", ("dutch", "нидерланд")),
+    ("украинский", ("ukrainian", "українськ", "украинск")), ("русский", ("russian", "русск")),
+    ("английский", ("english", "английск")),
+]
+
+
+def detect_lang(title, content):
+    """Основной требуемый язык вакансии (или English по умолчанию)."""
+    text = f"{title} {content}".lower()
+    for label, keys in _LANGS:
+        if any(k in text for k in keys) and label != "английский":
+            return label
+    if any(k in text for k in ("english", "английск")):
+        return "английский"
+    return ""
+
+
+def _tags_from(title, content, lang=""):
     text = f"{title} {content}".lower()
     pool = [
-        ("немецкий", ("german", "немецк")), ("английский", ("english",)),
-        ("релокация", ("relocat", "relocation", "visa", "переезд")),
-        ("удалёнка", ("remote",)), ("Unity", ("unity",)), ("Java", ("java ",)),
-        (".NET", (".net", "c#")), ("SQL/BI", ("sql", "power bi", "tableau")),
-        ("AML/KYC", ("aml", "kyc", "compliance")), ("VIP", ("vip",)),
-        ("аффилейты", ("affiliate", "affil")), ("CRM", ("crm", "retention")),
-        ("спортсбук", ("sportsbook", "trading")),
+        ("релокация", ("relocat", "relocation", "work permit", "visa", "переезд")),
+        ("удалёнка", ("remote", "remote-first")), ("VIP", ("vip ", "vip-")),
+        ("AML/KYC", ("aml", "kyc")), ("аффилейты", ("affiliate", "affil")),
+        ("CRM", ("crm", "retention")), ("спортсбук", ("sportsbook", "trading")),
+        ("Unity", ("unity",)), ("Java", ("java ",)), (".NET", (".net", "c#")),
+        ("SQL/BI", ("sql", "power bi", "tableau")),
     ]
     out = []
+    if lang:
+        out.append(lang)
     for label, keys in pool:
-        if any(k in text for k in keys):
+        if any(k in text for k in keys) and label not in out:
             out.append(label)
         if len(out) >= 3:
             break
@@ -100,12 +132,13 @@ def crawl_greenhouse(board, company):
         title = (j.get("title") or "").strip()
         if not title:
             continue
+        lang = detect_lang(title, content)
         out.append({
             "title": title,
             "company_name": company,
             "location": loc,
             "fmt": _fmt_from(loc, content),
-            "tags": _tags_from(title, content),
+            "tags": _tags_from(title, content, lang),
             "description": content,
             "source_url": j.get("absolute_url", ""),
             "source": f"greenhouse:{board}",
