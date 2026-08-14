@@ -22,6 +22,8 @@
     <a href="/admin?tab=jobs" class="{% if tab == 'jobs' %}on{% endif %}">Вакансии {% if stats.jobs_pending %}({{ stats.jobs_pending }}!){% endif %}</a>
     <a href="/admin?tab=users" class="{% if tab == 'users' %}on{% endif %}">Пользователи</a>
     <a href="/admin?tab=apps" class="{% if tab == 'apps' %}on{% endif %}">Отклики</a>
+    <a href="/admin?tab=orders" class="{% if tab == 'orders' %}on{% endif %}">💳 Заказы {% if orders_pending %}({{ orders_pending }}!){% endif %}</a>
+    <a href="/admin?tab=events" class="{% if tab == 'events' %}on{% endif %}">📅 События</a>
     <a href="/admin?tab=sources" class="{% if tab == 'sources' %}on{% endif %}">🕷 Источники</a>
   </nav>
 
@@ -85,6 +87,7 @@
           {% if j.status == 'approved' %}<form method="post" action="/admin/job/{{ j.id }}/feature"><button class="btn btn-ghost">{% if j.featured %}−⚡{% else %}+⚡{% endif %}</button></form>
           <form method="post" action="/admin/job/{{ j.id }}/archive"><button class="btn btn-ghost">Архив</button></form>{% endif %}
           {% if j.status != 'approved' %}<form method="post" action="/admin/job/{{ j.id }}/reject"><button class="btn btn-ghost">Откл.</button></form>{% endif %}
+          <a class="btn btn-ghost" href="/admin/job/{{ j.id }}/edit">✎</a>
           <form method="post" action="/admin/job/{{ j.id }}/delete" onsubmit="return confirm('Удалить вакансию навсегда?')"><button class="btn btn-ghost" style="color: var(--pink);">✕</button></form>
         </td>
       </tr>
@@ -121,6 +124,61 @@
         <td>{{ a.job.company_name }}</td>
         <td><span class="status {{ a.status }}">{{ a.status }}</span></td>
         <td>{{ a.created_at.strftime('%d.%m %H:%M') }}</td>
+      </tr>
+      {% endfor %}
+    </table></div>
+
+  {% elif tab == 'orders' %}
+    <div class="stat-grid" style="margin-bottom: var(--sp-5);">
+      <div class="stat-card"><div class="n">€{{ revenue }}</div><div class="l">Выручка (оплачено)</div></div>
+      <div class="stat-card" {% if orders_pending %}style="border-color: var(--pink);"{% endif %}><div class="n">{{ orders_pending }}</div><div class="l">Ждут оплаты</div></div>
+      <div class="stat-card"><div class="n">{{ orders|length }}</div><div class="l">Всего заказов</div></div>
+    </div>
+    <div class="table-wrap"><table class="adm">
+      <tr><th>#</th><th>Тариф</th><th>Клиент</th><th>Сумма</th><th>Метод</th><th>Статус</th><th>Когда</th><th>Действия</th></tr>
+      {% for o in orders %}
+      <tr>
+        <td>{{ o.id }}</td>
+        <td>{{ o.plan_name }}</td>
+        <td>{{ o.user.company_name or o.user.email if o.user else '—' }}</td>
+        <td>€{{ o.amount }}</td>
+        <td style="font-size: 0.8rem;">{{ o.method }}</td>
+        <td><span class="status {% if o.status == 'paid' %}approved{% elif o.status == 'cancelled' %}rejected{% else %}pending{% endif %}">{{ o.status }}</span></td>
+        <td style="font-size: 0.8rem;">{{ o.created_at.strftime('%d.%m %H:%M') }}</td>
+        <td style="white-space: nowrap;">
+          {% if o.status == 'pending' %}
+          <form method="post" action="/admin/order/{{ o.id }}/paid"><button class="btn btn-acid">Оплачен</button></form>
+          <form method="post" action="/admin/order/{{ o.id }}/cancel"><button class="btn btn-ghost">Отмена</button></form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}<tr><td colspan="8" style="color: var(--ink-dim);">Заказов пока нет.</td></tr>{% endfor %}
+    </table></div>
+
+  {% elif tab == 'events' %}
+    <div class="card" style="margin-bottom: var(--sp-5); border-color: var(--acid);">
+      <b style="font-family: var(--font-display); text-transform: uppercase;">📅 Добавить событие</b>
+      <form method="post" action="/admin/event/add" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,160px),1fr)); gap: 10px; margin-top: 12px; align-items: end;">
+        <div class="field"><label>Название *</label><input class="input" name="title" required></div>
+        <div class="field"><label>Город / страна</label><input class="input" name="city" placeholder="🇲🇹 Мальта"></div>
+        <div class="field"><label>Дата с *</label><input class="input" name="date_from" type="date" required></div>
+        <div class="field"><label>Дата по</label><input class="input" name="date_to" type="date"></div>
+        <div class="field"><label>Ссылка</label><input class="input" name="url" placeholder="https://"></div>
+        <button class="btn btn-acid" type="submit">Добавить</button>
+      </form>
+    </div>
+    <div class="table-wrap"><table class="adm">
+      <tr><th>Событие</th><th>Город</th><th>Даты</th><th>Статус</th><th>Действия</th></tr>
+      {% for e in events %}
+      <tr>
+        <td><b>{{ e.title }}</b>{% if e.url %} <a href="{{ e.url }}" target="_blank" rel="noopener" style="color: var(--acid);">↗</a>{% endif %}</td>
+        <td>{{ e.city }}</td>
+        <td style="font-size: 0.82rem;">{{ e.date_from }}{% if e.date_to %} — {{ e.date_to }}{% endif %}</td>
+        <td><span class="status {% if e.active %}approved{% else %}archived{% endif %}">{{ 'активно' if e.active else 'скрыто' }}</span></td>
+        <td style="white-space: nowrap;">
+          <form method="post" action="/admin/event/{{ e.id }}/toggle"><button class="btn btn-ghost">{{ 'Скрыть' if e.active else 'Показать' }}</button></form>
+          <form method="post" action="/admin/event/{{ e.id }}/delete" onsubmit="return confirm('Удалить событие?')"><button class="btn btn-ghost" style="color: var(--pink);">✕</button></form>
+        </td>
       </tr>
       {% endfor %}
     </table></div>

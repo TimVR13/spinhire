@@ -15,10 +15,14 @@
   <section id="pricing" style="margin-bottom: var(--sp-7);">
     <span class="kicker">Дорого и по делу · без возвратов</span>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--sp-3); margin-top: var(--sp-4);">
-      <div class="card"><b style="font-family: var(--font-display);">Одна вакансия</b><div class="salary" style="font-size: 1.6rem; margin: 6px 0;">€199</div><span style="color: var(--ink-faint); font-size: 0.82rem;">30 дней · поиск + мини-ATS</span></div>
-      <div class="card" style="border-color: var(--acid);"><b style="font-family: var(--font-display);">Featured ⚡</b><div class="salary" style="font-size: 1.6rem; margin: 6px 0;">€399</div><span style="color: var(--ink-faint); font-size: 0.82rem;">60 дней · топ + Telegram-бласт</span></div>
-      <div class="card"><b style="font-family: var(--font-display);">Контакты резюме</b><div class="salary" style="font-size: 1.6rem; margin: 6px 0;">€149+</div><span style="color: var(--ink-faint); font-size: 0.82rem;">от 10 контактов из базы</span></div>
-      <div class="card" style="border-color: var(--pink);"><b style="font-family: var(--font-display);">Подбор под ключ</b><div class="salary" style="font-size: 1.6rem; margin: 6px 0; color: var(--pink);">€1 999</div><span style="color: var(--ink-faint); font-size: 0.82rem;">за роль · или VIP-поиск «Обсудить»</span></div>
+      <div class="card"><b style="font-family: var(--font-display);">Одна вакансия</b><div class="salary" style="font-size: 1.6rem; margin: 6px 0;">€199</div><span style="color: var(--ink-faint); font-size: 0.82rem;">30 дней · поиск + мини-ATS</span>
+        <form method="post" action="/checkout/single" style="margin-top: 10px;"><button class="btn btn-ghost btn-sm btn-block" type="submit">Купить</button></form></div>
+      <div class="card" style="border-color: var(--acid);"><b style="font-family: var(--font-display);">Featured ⚡</b><div class="salary" style="font-size: 1.6rem; margin: 6px 0;">€399</div><span style="color: var(--ink-faint); font-size: 0.82rem;">60 дней · топ + Telegram-бласт</span>
+        <form method="post" action="/checkout/featured" style="margin-top: 10px;"><button class="btn btn-acid btn-sm btn-block" type="submit">Взять Featured</button></form></div>
+      <div class="card"><b style="font-family: var(--font-display);">Контакты резюме</b><div class="salary" style="font-size: 1.6rem; margin: 6px 0;">€149+</div><span style="color: var(--ink-faint); font-size: 0.82rem;">от 10 контактов из базы</span>
+        <form method="post" action="/checkout/cv10" style="margin-top: 10px;"><button class="btn btn-ghost btn-sm btn-block" type="submit">Купить 10</button></form></div>
+      <div class="card" style="border-color: var(--pink);"><b style="font-family: var(--font-display);">Подбор под ключ</b><div class="salary" style="font-size: 1.6rem; margin: 6px 0; color: var(--pink);">€1 999</div><span style="color: var(--ink-faint); font-size: 0.82rem;">за роль</span>
+        <form method="post" action="/checkout/hunt" style="margin-top: 10px;"><button class="btn btn-pink btn-sm btn-block" type="submit">Заказать</button></form></div>
     </div>
   </section>
 

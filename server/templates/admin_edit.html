@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Редактирование вакансии — Админка{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+  <nav class="crumbs"><a href="/admin?tab=jobs">← Вакансии</a> / Редактирование</nav>
+  <h1 style="font-size: 1.6rem; margin: 8px 0 24px;">✎ {{ job.title }}</h1>
+  <form method="post" action="/admin/job/{{ job.id }}/edit" class="card" style="display: flex; flex-direction: column; gap: 16px; max-width: 760px;">
+    <div class="field"><label>Название</label><input class="input" name="title" value="{{ job.title }}" required></div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,220px),1fr)); gap: 14px;">
+      <div class="field"><label>Компания</label><input class="input" name="company_name" value="{{ job.company_name }}"></div>
+      <div class="field"><label>Направление</label>
+        <select class="select input" name="category">{% for c in categories %}<option {% if job.category == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
+      <div class="field"><label>Формат</label>
+        <select class="select input" name="fmt">{% for f in formats %}<option {% if job.fmt == f %}selected{% endif %}>{{ f }}</option>{% endfor %}</select></div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+      <div class="field"><label>Локация</label><input class="input" name="location" value="{{ job.location }}"></div>
+      <div class="field"><label>Зарплата (текст)</label><input class="input" name="salary" value="{{ job.salary }}" placeholder="€3–5K/мес net"></div>
+    </div>
+    <div class="field"><label>Теги (через запятую)</label><input class="input" name="tags" value="{{ job.tags }}"></div>
+    <div class="field"><label>Описание</label><textarea class="input" name="description" rows="10">{{ job.description }}</textarea></div>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn btn-acid" type="submit">Сохранить</button>
+      <a class="btn btn-ghost" href="/admin?tab=jobs">Отмена</a>
+      <a class="btn btn-ghost" href="/job/{{ job.id }}" target="_blank">Открыть ↗</a>
+    </div>
+  </form>
+{% endblock %}

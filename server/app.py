@@ -149,6 +149,42 @@ class Application(Base):
     user = relationship("User", back_populates="applications")
 
 
+class Event(Base):
+    __tablename__ = "events"
+    id = Column(Integer, primary_key=True)
+    title = Column(String, nullable=False)
+    city = Column(String, default="")
+    date_from = Column(String, default="")   # YYYY-MM-DD
+    date_to = Column(String, default="")
+    url = Column(String, default="")
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+PLANS = {
+    "single": ("Одна вакансия", 199, "Размещение вакансии на 30 дней"),
+    "featured": ("Featured ⚡", 399, "Топ поиска + главная, 60 дней"),
+    "pack5": ("Пакет 5 вакансий", 799, "5 размещений по 30 дней"),
+    "cv10": ("10 контактов из базы", 149, "Открытие 10 контактов резюме"),
+    "cv50": ("50 контактов из базы", 499, "Открытие 50 контактов резюме"),
+    "hunt": ("Подбор под ключ", 1999, "Шорт-лист под роль за 7 дней"),
+}
+
+
+class Order(Base):
+    __tablename__ = "orders"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    plan = Column(String, default="")        # ключ из PLANS
+    plan_name = Column(String, default="")
+    amount = Column(Integer, default=0)      # в EUR
+    status = Column(String, default="pending")  # pending | paid | cancelled
+    job_id = Column(Integer, ForeignKey("jobs.id"), nullable=True)
+    method = Column(String, default="invoice")  # invoice | card
+    created_at = Column(DateTime, default=datetime.utcnow)
+    user = relationship("User")
+
+
 def db_session():
     db = SessionLocal()
     try:
@@ -216,6 +252,18 @@ def migrate(db: Session):
     if "last_spin" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN last_spin DATETIME"))
     db.commit()
+    # сид событий iGaming, если таблица пуста
+    if db.query(Event).count() == 0:
+        for e in [
+            ("SBC Summit 2026", "🇵🇹 Лиссабон, Португалия", "2026-09-02", "2026-09-04", "https://sbcevents.com"),
+            ("iGB L!VE", "🇬🇧 Лондон, Великобритания", "2026-09-23", "2026-09-25", "https://igblive.com"),
+            ("SiGMA Europe (Malta Week)", "🇲🇹 Мальта", "2026-11-10", "2026-11-13", "https://sigma.world"),
+            ("SBC Summit Latinoamérica", "🇧🇷 Сан-Паулу, Бразилия", "2026-12-02", "2026-12-04", "https://sbcevents.com"),
+            ("ICE Barcelona", "🇪🇸 Барселона, Испания", "2027-01-20", "2027-01-22", "https://icegaming.com"),
+            ("SiGMA Eurasia", "🇦🇪 Дубай, ОАЭ", "2027-02-25", "2027-02-27", "https://sigma.world"),
+        ]:
+            db.add(Event(title=e[0], city=e[1], date_from=e[2], date_to=e[3], url=e[4]))
+        db.commit()
 
 
 def purge_thin_external(db: Session):
@@ -373,6 +421,61 @@ def api_featured(db: Session = Depends(db_session)):
             "salary": j.salary if j.has_salary else "по запросу",
             "cat": j.category, "initials": j.initials} for j in jobs[:6]]
     return JSONResponse(out)
+
+
+@app.get("/api/events")
+def api_events(db: Session = Depends(db_session)):
+    from fastapi.responses import JSONResponse
+    evs = db.query(Event).filter(Event.active == True).order_by(Event.date_from).all()  # noqa: E712
+    mon = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
+    out = []
+    for e in evs:
+        try:
+            y, m, d = e.date_from.split("-")
+            dd, mm, yy = str(int(d)), mon[int(m) - 1], y
+        except Exception:
+            dd, mm, yy = "", "", ""
+        out.append({"t": e.title, "city": e.city, "d": dd, "mon": mm, "y": yy,
+                    "dt": e.date_from, "end": e.date_to or e.date_from, "url": e.url})
+    return JSONResponse(out)
+
+
+# ---------- billing / оплата ----------
+
+@app.post("/checkout/{plan}")
+def checkout_create(plan: str, request: Request, job_id: int = Form(None),
+                    db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    if not user:
+        return login_redirect(f"/post-job")
+    if plan not in PLANS:
+        raise HTTPException(404)
+    name, amount, _ = PLANS[plan]
+    o = Order(user_id=user.id, plan=plan, plan_name=name, amount=amount,
+              job_id=job_id, status="pending")
+    db.add(o)
+    db.commit()
+    return RedirectResponse(f"/checkout/order/{o.id}", status_code=303)
+
+
+@app.get("/checkout/order/{order_id}", response_class=HTMLResponse)
+def checkout_view(order_id: int, request: Request, db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    o = db.get(Order, order_id)
+    if not user or not o or (o.user_id != user.id and user.role != "admin"):
+        raise HTTPException(403)
+    return render(request, db, "checkout.html", order=o, plans=PLANS)
+
+
+@app.post("/checkout/order/{order_id}/invoice")
+def checkout_invoice(order_id: int, request: Request, db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    o = db.get(Order, order_id)
+    if not user or not o or o.user_id != user.id:
+        raise HTTPException(403)
+    o.method = "invoice"
+    db.commit()
+    return RedirectResponse(f"/checkout/order/{order_id}?sent=1", status_code=303)
 
 
 @app.get("/job/{job_id}", response_class=HTMLResponse)
@@ -642,10 +745,91 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
                          for j in db.query(Job).filter(Job.status == "approved").all())
         ctx["sources"] = crawler.SOURCE_REGISTRY
         ctx["source_counts"] = dict(counts)
+    elif tab == "events":
+        ctx["events"] = db.query(Event).order_by(Event.date_from).all()
+    elif tab == "orders":
+        ctx["orders"] = db.query(Order).order_by(Order.created_at.desc()).all()
+        ctx["orders_pending"] = db.query(Order).filter(Order.status == "pending").count()
+        ctx["revenue"] = db.query(func.sum(Order.amount)).filter(Order.status == "paid").scalar() or 0
     else:
         ctx["pending"] = db.query(Job).filter(Job.status == "pending") \
             .order_by(Job.created_at.desc()).limit(10).all()
+        ctx["orders_pending"] = db.query(Order).filter(Order.status == "pending").count()
     return render(request, db, "admin.html", **ctx)
+
+
+# редактирование вакансии
+@app.get("/admin/job/{job_id}/edit", response_class=HTMLResponse)
+def admin_job_edit(job_id: int, request: Request, db: Session = Depends(db_session)):
+    need_admin(request, db)
+    job = db.get(Job, job_id)
+    if not job:
+        raise HTTPException(404)
+    return render(request, db, "admin_edit.html", job=job, categories=CATEGORIES, formats=FORMATS)
+
+
+@app.post("/admin/job/{job_id}/edit")
+def admin_job_save(job_id: int, request: Request, title: str = Form(...),
+                   company_name: str = Form(""), category: str = Form(""),
+                   location: str = Form(""), fmt: str = Form("удалёнка"),
+                   salary: str = Form(""), tags: str = Form(""),
+                   description: str = Form(""), db: Session = Depends(db_session)):
+    need_admin(request, db)
+    job = db.get(Job, job_id)
+    if not job:
+        raise HTTPException(404)
+    job.title, job.company_name = title.strip(), company_name.strip()
+    job.category, job.location, job.fmt = category, location.strip(), fmt
+    job.salary = salary.strip() or "по запросу"
+    job.tags, job.description = tags.strip(), description.strip()
+    db.commit()
+    return RedirectResponse("/admin?tab=jobs", status_code=303)
+
+
+# события — CRUD
+@app.post("/admin/event/add")
+def admin_event_add(request: Request, title: str = Form(...), city: str = Form(""),
+                    date_from: str = Form(""), date_to: str = Form(""), url: str = Form(""),
+                    db: Session = Depends(db_session)):
+    need_admin(request, db)
+    if title.strip() and date_from.strip():
+        db.add(Event(title=title.strip(), city=city.strip(), date_from=date_from.strip(),
+                     date_to=date_to.strip(), url=url.strip()))
+        db.commit()
+    return RedirectResponse("/admin?tab=events", status_code=303)
+
+
+@app.post("/admin/event/{ev_id}/{action}")
+def admin_event_action(ev_id: int, action: str, request: Request, db: Session = Depends(db_session)):
+    need_admin(request, db)
+    e = db.get(Event, ev_id)
+    if e:
+        if action == "toggle":
+            e.active = not e.active
+        elif action == "delete":
+            db.delete(e)
+        db.commit()
+    return RedirectResponse("/admin?tab=events", status_code=303)
+
+
+# заказы — админ отмечает оплату
+@app.post("/admin/order/{order_id}/{action}")
+def admin_order_action(order_id: int, action: str, request: Request, db: Session = Depends(db_session)):
+    need_admin(request, db)
+    o = db.get(Order, order_id)
+    if o:
+        if action == "paid":
+            o.status = "paid"
+            # применяем плюшку: featured-план поднимает вакансию
+            if o.plan == "featured" and o.job_id:
+                job = db.get(Job, o.job_id)
+                if job:
+                    job.featured = True
+                    job.status = "approved"
+        elif action == "cancel":
+            o.status = "cancelled"
+        db.commit()
+    return RedirectResponse("/admin?tab=orders", status_code=303)
 
 
 @app.post("/admin/job/{job_id}/{action}")

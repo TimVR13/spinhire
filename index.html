@@ -539,51 +539,51 @@
   }).catch(() => { box.innerHTML = '<p style="padding:16px;"><a href="/jobs" style="color: var(--acid);">Все вакансии →</a></p>'; });
 })();
 
-// Календарь событий iGaming (реальные отраслевые конференции)
+// Календарь событий iGaming — из /api/events (управляется в админке), с фолбэком
 (function () {
   const grid = document.getElementById('events-grid');
   if (!grid) return;
-  const events = [
-    { d: '2', mon: 'сен', y: 2026, t: 'SBC Summit 2026', place: '🇵🇹 Лиссабон, Португалия', dt: '2026-09-02', end: '2026-09-04' },
-    { d: '23', mon: 'сен', y: 2026, t: 'iGB L!VE', place: '🇬🇧 Лондон, Великобритания', dt: '2026-09-23', end: '2026-09-25' },
-    { d: '10', mon: 'ноя', y: 2026, t: 'SiGMA Europe (Malta Week)', place: '🇲🇹 Мальта', dt: '2026-11-10', end: '2026-11-13' },
-    { d: '2', mon: 'дек', y: 2026, t: 'SBC Summit Latinoamérica', place: '🇧🇷 Сан-Паулу, Бразилия', dt: '2026-12-02', end: '2026-12-04' },
-    { d: '20', mon: 'янв', y: 2027, t: 'ICE Barcelona', place: '🇪🇸 Барселона, Испания', dt: '2027-01-20', end: '2027-01-22' },
-    { d: '25', mon: 'фев', y: 2027, t: 'SiGMA Eurasia', place: '🇦🇪 Дубай, ОАЭ', dt: '2027-02-25', end: '2027-02-27' },
+  const fallback = [
+    { d: '2', mon: 'сен', y: '2026', t: 'SBC Summit 2026', city: '🇵🇹 Лиссабон', dt: '2026-09-02', end: '2026-09-04' },
+    { d: '10', mon: 'ноя', y: '2026', t: 'SiGMA Europe (Malta Week)', city: '🇲🇹 Мальта', dt: '2026-11-10', end: '2026-11-13' },
+    { d: '20', mon: 'янв', y: '2027', t: 'ICE Barcelona', city: '🇪🇸 Барселона', dt: '2027-01-20', end: '2027-01-22' },
   ];
-  const saved = JSON.parse(localStorage.getItem('savedEvents') || '[]');
   function ics(e) {
-    const d = e.dt.replace(/-/g, ''), end = (e.end || e.dt).replace(/-/g, '');
+    const d = (e.dt||'').replace(/-/g, ''), end = (e.end || e.dt || '').replace(/-/g, '');
     const body = ['BEGIN:VCALENDAR','VERSION:2.0','BEGIN:VEVENT',
       `DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${end}`,
-      `SUMMARY:${e.t}`, `LOCATION:${e.place.replace(/^[^\w]+/, '')}`,
+      `SUMMARY:${e.t}`, `LOCATION:${(e.city||'').replace(/^[^\wА-Яа-я]+/, '')}`,
       'END:VEVENT','END:VCALENDAR'].join('\r\n');
     return 'data:text/calendar;charset=utf-8,' + encodeURIComponent(body);
   }
-  grid.innerHTML = events.map((e, i) => `
-    <div class="event-card">
-      <span class="ev-date">${e.d} <span class="mon">${e.mon} ${e.y}</span></span>
-      <h3>${e.t}</h3>
-      <p class="ev-place">${e.place}</p>
-      <div class="ev-actions">
-        <button class="ev-btn save-ev ${saved.includes(e.t) ? 'saved' : ''}" data-i="${i}">${saved.includes(e.t) ? '★ В закладках' : '☆ В закладки'}</button>
-        <a class="ev-btn" href="${ics(e)}" download="${e.t}.ics">📅 В календарь</a>
-        <button class="ev-btn share-ev" data-i="${i}">↗ Поделиться</button>
-      </div>
-    </div>`).join('');
-  grid.querySelectorAll('.save-ev').forEach(b => b.addEventListener('click', () => {
-    const e = events[+b.dataset.i]; const s = JSON.parse(localStorage.getItem('savedEvents') || '[]');
-    const idx = s.indexOf(e.t);
-    if (idx >= 0) { s.splice(idx, 1); b.classList.remove('saved'); b.textContent = '☆ В закладки'; }
-    else { s.push(e.t); b.classList.add('saved'); b.textContent = '★ В закладках'; }
-    localStorage.setItem('savedEvents', JSON.stringify(s));
-  }));
-  grid.querySelectorAll('.share-ev').forEach(b => b.addEventListener('click', async () => {
-    const e = events[+b.dataset.i];
-    const text = `${e.t} — ${e.place}, ${e.d} ${e.mon} ${e.y}. Событие iGaming на SpinHire`;
-    if (navigator.share) { try { await navigator.share({ title: e.t, text }); } catch (_) {} }
-    else { try { await navigator.clipboard.writeText(text + ' — https://spinhire.org/#events'); if (window.toast) toast('Ссылка на событие скопирована'); } catch (_) {} }
-  }));
+  function render(events) {
+    const saved = JSON.parse(localStorage.getItem('savedEvents') || '[]');
+    grid.innerHTML = events.map((e, i) => `
+      <div class="event-card">
+        <span class="ev-date">${e.d} <span class="mon">${e.mon} ${e.y}</span></span>
+        <h3>${e.t}</h3>
+        <p class="ev-place">${e.city || ''}</p>
+        <div class="ev-actions">
+          <button class="ev-btn save-ev ${saved.includes(e.t) ? 'saved' : ''}" data-i="${i}">${saved.includes(e.t) ? '★ В закладках' : '☆ В закладки'}</button>
+          <a class="ev-btn" href="${ics(e)}" download="${e.t}.ics">📅 В календарь</a>
+          <button class="ev-btn share-ev" data-i="${i}">↗ Поделиться</button>
+        </div>
+      </div>`).join('');
+    grid.querySelectorAll('.save-ev').forEach(b => b.addEventListener('click', () => {
+      const e = events[+b.dataset.i]; const s = JSON.parse(localStorage.getItem('savedEvents') || '[]');
+      const idx = s.indexOf(e.t);
+      if (idx >= 0) { s.splice(idx, 1); b.classList.remove('saved'); b.textContent = '☆ В закладки'; }
+      else { s.push(e.t); b.classList.add('saved'); b.textContent = '★ В закладках'; }
+      localStorage.setItem('savedEvents', JSON.stringify(s));
+    }));
+    grid.querySelectorAll('.share-ev').forEach(b => b.addEventListener('click', async () => {
+      const e = events[+b.dataset.i];
+      const text = `${e.t} — ${e.city}, ${e.d} ${e.mon} ${e.y}. Событие iGaming на SpinHire`;
+      if (navigator.share) { try { await navigator.share({ title: e.t, text }); } catch (_) {} }
+      else { try { await navigator.clipboard.writeText(text + ' — https://spinhire.org/#events'); if (window.toast) toast('Ссылка скопирована'); } catch (_) {} }
+    }));
+  }
+  fetch('/api/events').then(r => r.ok ? r.json() : null).then(ev => render(ev && ev.length ? ev : fallback)).catch(() => render(fallback));
 })();
 </script>
 <script src="js/app.js"></script>

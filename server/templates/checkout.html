@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Оплата заказа #{{ order.id }} — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+  <nav class="crumbs"><a href="/post-job">← Тарифы</a> / Оплата</nav>
+  <div style="max-width: 560px; margin: 20px auto;">
+    <span class="kicker">Заказ #{{ order.id }}</span>
+    <h1 style="font-size: 1.8rem; margin: 8px 0 20px;">Оплата</h1>
+
+    {% if request.query_params.get('sent') %}
+      <div class="flash">✓ Счёт формируется. Мы пришлём реквизиты на вашу почту, после оплаты активируем услугу. Статус — в <a href="/employer" style="color:inherit;font-weight:800;">кабинете</a>.</div>
+    {% endif %}
+
+    <div class="card" style="margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <div><b style="font-family: var(--font-display); font-size: 1.1rem;">{{ order.plan_name }}</b>
+          <p style="color: var(--ink-dim); font-size: 0.9rem;">{{ plans[order.plan][2] if order.plan in plans else '' }}</p></div>
+        <div class="salary" style="font-size: 1.6rem;">€{{ order.amount }}</div>
+      </div>
+      <p style="margin-top: 12px; font-size: 0.85rem;">Статус: <span class="status {% if order.status=='paid' %}approved{% elif order.status=='cancelled' %}rejected{% else %}pending{% endif %}">{{ order.status }}</span></p>
+    </div>
+
+    {% if order.status == 'pending' %}
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <form method="post" action="/checkout/order/{{ order.id }}/invoice">
+        <button class="btn btn-acid btn-block btn-lg" type="submit">Оплатить по счёту (инвойс) →</button>
+      </form>
+      <button class="btn btn-ghost btn-block" disabled style="opacity: 0.6;">Оплата картой — скоро</button>
+      <p style="color: var(--ink-faint); font-size: 0.8rem; text-align: center;">iGaming — high-risk сфера: оплату картой подключаем через специализированный PSP. Пока — счёт на юрлицо/крипта. После оплаты услуга активируется вручную (обычно за пару часов).</p>
+    </div>
+    {% elif order.status == 'paid' %}
+      <div class="flash">✓ Оплачено. Услуга активна. Спасибо!</div>
+    {% endif %}
+  </div>
+{% endblock %}
