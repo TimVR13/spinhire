@@ -43,6 +43,9 @@
   .chips .tag:hover { border-color: var(--pink); color: var(--pink); }
   .chips .tag.on { background: var(--pink); color: var(--on-pink); border-color: var(--pink); }
   @media (max-width: 900px) { .form-row { grid-template-columns: 1fr; } }
+  .plan { text-align: left; }
+  .lead { margin-inline: auto; }
+  .price-group > .sub { margin-inline: auto; }
 </style>
 </head>
 <body>
@@ -64,7 +67,7 @@
   </div>
 </header>
 
-<main class="container" style="padding-top: var(--sp-6);">
+<main class="container" style="padding-top: var(--sp-6); text-align: center;">
   <nav class="crumbs" aria-label="Хлебные крошки"><a href="index.html">Главная</a> / <a href="employer.html">Работодателям</a> / Тарифы</nav>
   <span class="kicker pink">Дорого и по делу</span>
   <h1 style="font-size: clamp(1.7rem, 4vw, 2.8rem); margin: 8px 0 12px;">Тарифы для работодателей</h1>
@@ -76,7 +79,7 @@
     <p class="sub">Вакансия висит в поиске и категориях, отклики падают в мини-ATS. Модерация людьми ~2 часа, лицензию проверяем при первом размещении.</p>
     <div class="plans-grid">
       <div class="plan">
-        <h3>Одна вакансия</h3>
+        <h3>Стандарт</h3>
         <p class="for-what">Разовая позиция</p>
         <div class="price">€199 <span>/ 30 дней</span></div>
         <ul>
@@ -192,95 +195,16 @@
     </div>
   </section>
 
-  <!-- ФОРМА -->
-  <section class="price-group">
-    <h2 style="font-size: 1.3rem; margin-bottom: 8px;">Форма вакансии</h2>
-    <p class="sub" style="margin-bottom: 24px;">Оплата после модерации. Без зарплатной вилки не публикуем — правила заведения.</p>
-    <form class="form-card" data-demo="Вакансия отправлена на модерацию — счёт придёт на email (демо)">
-      <div>
-        <h2>01 — Роль</h2>
-        <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">
-          <div class="field">
-            <label for="jt">Название вакансии *</label>
-            <input class="input" id="jt" placeholder="например, Senior VIP-менеджер (немецкий)" required>
-          </div>
-          <div class="form-row">
-            <div class="field">
-              <label for="cat">Направление *</label>
-              <select class="select input" id="cat"><option>Операции казино</option><option>Беттинг и трейдинг</option><option>Разработка игр</option><option>Аффилейты и медиабаинг</option><option>Комплаенс и AML</option><option>Платежи и антифрод</option><option>Саппорт (языки)</option><option>Маркетинг и CRM</option><option>Данные и BI</option><option>Топ-менеджмент</option></select>
-            </div>
-            <div class="field">
-              <label for="sen">Уровень *</label>
-              <select class="select input" id="sen"><option>Junior</option><option>Middle</option><option selected>Senior</option><option>Lead / Head</option><option>C-level</option></select>
-            </div>
-          </div>
-          <div class="field">
-            <label>Вертикали</label>
-            <div class="chips">
-              <span class="tag on">Казино</span><span class="tag on">Беттинг</span><span class="tag">Покер</span><span class="tag">Crash-игры</span><span class="tag">Киберспорт</span><span class="tag">Лотереи</span>
-            </div>
-          </div>
-        </div>
+  <!-- CTA: размещение в кабинете -->
+  <section class="price-group" style="text-align: center;">
+    <div class="card" style="max-width: 620px; margin: 0 auto;">
+      <h2 style="font-size: 1.3rem; margin-bottom: 8px;">Готовы разместить вакансию?</h2>
+      <p class="sub" style="margin: 0 auto 22px;">Зарегистрируйтесь как работодатель — форма размещения и мини-ATS откроются в кабинете. Оплата после модерации, без зарплатной вилки не публикуем.</p>
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <a href="employer.html" class="btn btn-pink btn-lg">Кабинет работодателя →</a>
+        <a href="#pricing" class="btn btn-ghost">К тарифам</a>
       </div>
-      <div>
-        <h2>02 — Деньги</h2>
-        <div class="form-row" style="margin-top: 16px;">
-          <div class="field">
-            <label for="s1">Зарплата от *</label>
-            <input class="input" id="s1" type="number" placeholder="3500" required>
-          </div>
-          <div class="field">
-            <label for="s2">Зарплата до *</label>
-            <input class="input" id="s2" type="number" placeholder="4500" required>
-          </div>
-        </div>
-        <div class="form-row" style="margin-top: 16px;">
-          <div class="field">
-            <label for="cur">Валюта / основа</label>
-            <select class="select input" id="cur"><option>EUR net</option><option>EUR gross</option><option>USD net</option><option>USDT (крипто)</option></select>
-          </div>
-          <div class="field">
-            <label>Дополнительно</label>
-            <div class="chips">
-              <span class="tag on">Квартальный бонус</span><span class="tag">Rev share</span><span class="tag">13-я зарплата</span><span class="tag">₿ Крипта ок</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div>
-        <h2>03 — Локация и формат</h2>
-        <div class="form-row" style="margin-top: 16px;">
-          <div class="field">
-            <label for="loc">Локация</label>
-            <select class="select input" id="loc"><option>Лимассол, Кипр</option><option>Мальта</option><option>Варшава</option><option>Тбилиси</option><option>Бухарест</option><option>Удалёнка</option></select>
-          </div>
-          <div class="field">
-            <label for="fmt">Формат работы</label>
-            <select class="select input" id="fmt"><option>Офис</option><option selected>Гибрид</option><option>Удалёнка по ЕС</option><option>Удалёнка (весь мир)</option></select>
-          </div>
-        </div>
-        <div class="field" style="margin-top: 16px;">
-          <label>Важные плюшки</label>
-          <div class="chips">
-            <span class="tag on">🛬 Релокационный пакет</span><span class="tag on">Виза за счёт компании</span><span class="tag">Жильё на 1-й месяц</span><span class="tag">Медстраховка</span>
-          </div>
-        </div>
-        <div class="field" style="margin-top: 16px;">
-          <label>Требуемые языки</label>
-          <div class="chips">
-            <span class="tag on">Немецкий C1</span><span class="tag on">Английский B2</span><span class="tag">+ Добавить язык</span>
-          </div>
-        </div>
-      </div>
-      <div>
-        <h2>04 — Описание</h2>
-        <div class="field" style="margin-top: 16px;">
-          <label for="desc">Что делать / что нужно / что дадите</label>
-          <textarea class="input" id="desc" rows="6" placeholder="Пишите честно. Здесь сначала читают зарплату, а воду не читают вообще."></textarea>
-        </div>
-      </div>
-      <button class="btn btn-pink btn-lg" type="submit">Отправить на модерацию →</button>
-    </form>
+    </div>
   </section>
 </main>
 
