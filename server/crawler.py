@@ -120,6 +120,8 @@ def crawl_jsonld(url, source):
                 "fmt": _fmt_from(loc, desc), "tags": _tags_from(title, desc, lang),
                 "description": desc, "source_url": u, "source": source,
                 "ext_id": str(ext), "salary": "по запросу",
+                "posted_at": (it.get("datePosted") or "")[:10],
+                "deadline": (it.get("validThrough") or "")[:10],
             })
     return out
 
@@ -200,6 +202,34 @@ def _tags_from(title, content, lang=""):
     return ", ".join(out)
 
 
+def _best_location(j):
+    """Город + страна: приоритет offices[].location (полный адрес), потом location.name, потом metadata Country."""
+    offices = j.get("offices") or []
+    if offices and isinstance(offices, list):
+        full = (offices[0] or {}).get("location") or (offices[0] or {}).get("name") or ""
+        if full:
+            # "Santiago, Santiago Metropolitan Region, Chile" → "Santiago, Chile"
+            parts = [p.strip() for p in full.split(",") if p.strip()]
+            if len(parts) >= 3:
+                return f"{parts[0]}, {parts[-1]}"
+            return full
+    loc = (j.get("location") or {}).get("name", "")
+    if loc:
+        return loc
+    for meta in (j.get("metadata") or []):
+        if isinstance(meta, dict) and meta.get("name") == "Country":
+            v = meta.get("value")
+            return ", ".join(v) if isinstance(v, list) else str(v or "")
+    return ""
+
+
+def _dept_category(j):
+    depts = j.get("departments") or []
+    if depts and isinstance(depts, list):
+        return (depts[0] or {}).get("name", "")
+    return ""
+
+
 def crawl_greenhouse(board, company):
     """Вернуть список dict-вакансий с полным описанием из Greenhouse API."""
     listing = json.loads(_fetch(
@@ -207,23 +237,26 @@ def crawl_greenhouse(board, company):
     jobs = listing.get("jobs", [])[:MAX_PER_BOARD]
     out = []
     for j in jobs:
-        loc = (j.get("location") or {}).get("name", "")
+        loc = _best_location(j)
         content = _clean_html(j.get("content", ""))
         title = (j.get("title") or "").strip()
         if not title:
             continue
         lang = detect_lang(title, content)
+        dept = _dept_category(j)
         out.append({
             "title": title,
-            "company_name": company,
+            "company_name": (j.get("company_name") or company).strip(),
             "location": loc,
             "fmt": _fmt_from(loc, content),
-            "tags": _tags_from(title, content, lang),
+            "tags": _tags_from(f"{title} {dept}", content, lang),
             "description": content,
             "source_url": j.get("absolute_url", ""),
             "source": f"greenhouse:{board}",
             "ext_id": str(j.get("id", "")),
             "salary": "по запросу",  # greenhouse редко отдаёт вилку явно
+            "posted_at": (j.get("first_published") or j.get("updated_at") or "")[:10],
+            "deadline": (j.get("application_deadline") or "")[:10] if j.get("application_deadline") else "",
         })
     return out
 
@@ -265,6 +298,8 @@ def upsert(db, Job, guess_category, items, approve=True):
             row.location, row.fmt = it["location"], it["fmt"]
             row.tags, row.description = it["tags"], it["description"]
             row.source_url, row.category = it["source_url"], cat
+            row.posted_at = it.get("posted_at", "") or row.posted_at
+            row.deadline = it.get("deadline", "") or row.deadline
             if row.status in ("archived", "rejected"):
                 row.status = "approved" if approve else "pending"
             updated += 1
@@ -274,6 +309,7 @@ def upsert(db, Job, guess_category, items, approve=True):
                        tags=it["tags"], description=it["description"],
                        source_url=it["source_url"], source=it["source"],
                        ext_id=it["ext_id"], category=cat,
+                       posted_at=it.get("posted_at", ""), deadline=it.get("deadline", ""),
                        status="approved" if approve else "pending"))
             added += 1
     db.commit()

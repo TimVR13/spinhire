@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% set active = 'jobs' %}
+{% block title %}{{ company }} — вакансии компании | SpinHire{% endblock %}
+{% block desc %}{{ company }}: {{ jobs|length }} открытых iGaming-вакансий на SpinHire. {{ locations|join(', ') }}.{% endblock %}
+{% block robots %}<link rel="canonical" href="https://spinhire.org/company/{{ jobs[0].company_slug }}">{% endblock %}
+{% block style %}
+  .co-head { display: flex; align-items: center; gap: var(--sp-4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: var(--sp-6); margin-bottom: var(--sp-5); flex-wrap: wrap; }
+  .co-logo { width: 72px; height: 72px; border-radius: 14px; background: var(--bg-deep); display: grid; place-items: center; overflow: hidden; flex-shrink: 0; border: 1px solid var(--line); }
+  .co-logo img { width: 48px; height: 48px; object-fit: contain; }
+  .co-logo b { font-family: var(--font-display); font-weight: 900; font-size: 1.5rem; color: var(--acid); }
+  .co-head h1 { font-size: clamp(1.4rem, 3vw, 2rem); }
+  .co-head .meta { color: var(--ink-dim); font-size: 0.92rem; margin-top: 4px; }
+  .jobs-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+{% endblock %}
+{% block content %}
+  <nav class="crumbs"><a href="/">Главная</a> / <a href="/companies.html">Компании</a> / {{ company }}</nav>
+  <div class="co-head">
+    <div class="co-logo">
+      {% if logo %}<img src="{{ logo }}" alt="{{ company }}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><b style="display:none">{{ jobs[0].initials }}</b>
+      {% else %}<b>{{ jobs[0].initials }}</b>{% endif %}
+    </div>
+    <div style="flex: 1; min-width: 200px;">
+      <h1>{{ company }}</h1>
+      <p class="meta">{{ jobs|length }} открытых вакансий{% if locations %} · {{ locations|join(' · ') }}{% endif %}</p>
+    </div>
+    {% if domain %}<a class="btn btn-ghost" href="https://{{ domain }}" target="_blank" rel="noopener nofollow">Сайт компании ↗</a>{% endif %}
+  </div>
+
+  <h2 style="font-size: 1.1rem; color: var(--acid); margin-bottom: 14px;">▮ Вакансии {{ company }}</h2>
+  <div class="jobs-list">
+    {% for j in jobs %}
+    <a class="job-card" href="/job/{{ j.id }}">
+      <div class="job-card__logo" style="background: var(--surface-2); overflow: hidden;" aria-hidden="true">
+        {% if j.logo_url %}<img src="{{ j.logo_url }}" alt="" style="width:32px;height:32px;object-fit:contain" onerror="this.replaceWith(document.createTextNode('{{ j.initials }}'))">{% else %}<span style="color: var(--acid);">{{ j.initials }}</span>{% endif %}
+      </div>
+      <div>
+        <h3 class="job-card__title">{{ j.title }}</h3>
+        <p class="job-card__meta">{{ j.location or '—' }} · {{ j.fmt }}{% if j.posted_at %} · {{ j.posted_at }}{% endif %}</p>
+        <div class="job-card__tags">{% if j.category %}<span class="tag">{{ j.category }}</span>{% endif %}{% for t in j.tag_list %}<span class="tag">{{ t }}</span>{% endfor %}</div>
+      </div>
+      <div class="job-card__side">
+        {% if j.has_salary %}<span class="salary">{{ j.salary }}</span>{% else %}<span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>{% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+{% endblock %}

@@ -81,6 +81,8 @@ class Job(Base):
     source_url = Column(String, default="")  # ссылка на первоисточник
     source = Column(String, default="")       # провенанс: '', 'greenhouse:betsson', 'csv'…
     ext_id = Column(String, default="")       # id вакансии в источнике — для дедупликации
+    posted_at = Column(String, default="")    # реальная дата публикации в источнике (YYYY-MM-DD)
+    deadline = Column(String, default="")     # дедлайн приёма (YYYY-MM-DD)
     status = Column(String, default="pending")  # pending | approved | rejected | archived
     featured = Column(Boolean, default=False)
     views = Column(Integer, default=0)
@@ -121,6 +123,18 @@ class Job(Base):
         if "$" in s:
             return "USD"
         return "EUR"
+
+    @property
+    def logo_url(self):
+        """Фото/логотип компании через favicon-сервис по домену (если известен)."""
+        dom = company_domain(self.company_name)
+        return f"https://icons.duckduckgo.com/ip3/{dom}.ico" if dom else ""
+
+    @property
+    def company_slug(self):
+        import re as _re
+        s = _re.sub(r"[^a-zа-я0-9]+", "-", (self.company_name or "").lower()).strip("-")
+        return s or "company"
 
     @property
     def initials(self):
@@ -185,6 +199,27 @@ class Order(Base):
     user = relationship("User")
 
 
+# известные домены iGaming-компаний → для логотипа (favicon) и ссылки на сайт
+COMPANY_DOMAINS = {
+    "betsson group": "betssongroup.com", "betsson": "betssongroup.com",
+    "kaizen gaming": "kaizengaming.com", "kaizen gaming (betano)": "kaizengaming.com",
+    "genius sports": "geniussports.com", "softswiss": "softswiss.com",
+    "evolution": "evolution.com", "pentasia": "pentasia.com", "gr8 tech": "gr8.tech",
+    "megapari": "megapari.com", "betviro.com": "betviro.com", "genesis": "gen.tech",
+    "owox": "owox.com", "seojet": "seojet.net",
+}
+
+
+def company_domain(name: str) -> str:
+    n = (name or "").lower().strip()
+    if n in COMPANY_DOMAINS:
+        return COMPANY_DOMAINS[n]
+    # компания вида "xxx.com" — сама себе домен
+    import re as _re
+    m = _re.search(r"([a-z0-9-]+\.(?:com|net|io|tech|agency|games|bet))", n)
+    return m.group(1) if m else ""
+
+
 def db_session():
     db = SessionLocal()
     try:
@@ -243,7 +278,7 @@ def migrate(db: Session):
     """Лёгкая миграция: добавить недостающие колонки в существующую БД."""
     from sqlalchemy import text
     cols = {r[1] for r in db.execute(text("PRAGMA table_info(jobs)")).fetchall()}
-    for name in ("source", "ext_id"):
+    for name in ("source", "ext_id", "posted_at", "deadline"):
         if name not in cols:
             db.execute(text(f"ALTER TABLE jobs ADD COLUMN {name} VARCHAR DEFAULT ''"))
     ucols = {r[1] for r in db.execute(text("PRAGMA table_info(users)")).fetchall()}
@@ -421,6 +456,20 @@ def api_featured(db: Session = Depends(db_session)):
             "salary": j.salary if j.has_salary else "по запросу",
             "cat": j.category, "initials": j.initials} for j in jobs[:6]]
     return JSONResponse(out)
+
+
+@app.get("/company/{slug}", response_class=HTMLResponse)
+def company_page(slug: str, request: Request, db: Session = Depends(db_session)):
+    jobs = db.query(Job).filter(Job.status == "approved").all()
+    matched = [j for j in jobs if j.company_slug == slug]
+    if not matched:
+        raise HTTPException(404)
+    company = matched[0].company_name
+    dom = company_domain(company)
+    matched.sort(key=lambda j: j.created_at, reverse=True)
+    locs = sorted({j.location for j in matched if j.location})
+    return render(request, db, "company.html", company=company, jobs=matched,
+                  domain=dom, logo=matched[0].logo_url, locations=locs[:6])
 
 
 @app.get("/api/events")

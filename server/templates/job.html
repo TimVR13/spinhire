@@ -14,10 +14,11 @@
   "@type": "JobPosting",
   "title": {{ job.title|tojson }},
   "description": {{ (job.description or (job.title ~ ' — ' ~ job.company_name ~ '. ' ~ job.tags))|tojson }},
-  "datePosted": "{{ job.created_at.strftime('%Y-%m-%d') }}",
-  "hiringOrganization": { "@type": "Organization", "name": {{ job.company_name|tojson }} },
+  "datePosted": "{{ job.posted_at or job.created_at.strftime('%Y-%m-%d') }}",
+  {% if job.deadline %}"validThrough": "{{ job.deadline }}",{% endif %}
+  "hiringOrganization": { "@type": "Organization", "name": {{ job.company_name|tojson }}{% if job.source_url %}, "sameAs": {{ job.source_url|tojson }}{% endif %} },
   {% if job.fmt in ('удалёнка', 'удалёнка ЕС') %}"jobLocationType": "TELECOMMUTE",{% endif %}
-  {% if job.location %}"jobLocation": { "@type": "Place", "address": { "@type": "PostalAddress", "addressLocality": {{ job.location|tojson }} } },{% endif %}
+  {% if job.location %}"jobLocation": { "@type": "Place", "address": { "@type": "PostalAddress", "addressLocality": {{ job.location.split(',')[0].strip()|tojson }}{% if ',' in job.location %}, "addressCountry": {{ job.location.split(',')[-1].strip()|tojson }}{% endif %} } },{% endif %}
   {% if job.has_salary and job.sal_min %}"baseSalary": { "@type": "MonetaryAmount", "currency": "{{ job.sal_currency }}", "value": { "@type": "QuantitativeValue", "minValue": {{ job.sal_min }}, "maxValue": {{ job.sal_max }}, "unitText": "MONTH" } },{% endif %}
   "employmentType": "FULL_TIME",
   "identifier": { "@type": "PropertyValue", "name": "SpinHire", "value": "{{ job.id }}" }
@@ -43,7 +44,9 @@
   <div class="job-layout">
     <div>
       <article class="job-hero">
-        <p style="color: var(--ink-dim);"><b style="color: var(--ink);">{{ job.company_name }}</b> · {{ job.location or '—' }} · {{ job.fmt }}</p>
+        <p style="color: var(--ink-dim); display: flex; align-items: center; gap: 10px;">
+          {% if job.logo_url %}<img src="{{ job.logo_url }}" alt="" width="28" height="28" style="border-radius: 6px; object-fit: contain;" onerror="this.style.display='none'">{% endif %}
+          <a href="/company/{{ job.company_slug }}" style="color: var(--ink); font-weight: 700; text-decoration: none;">{{ job.company_name }}</a> · {{ job.location or '—' }} · {{ job.fmt }}</p>
         <h1>{{ job.title }}</h1>
         <div class="job-card__tags" style="margin-bottom: var(--sp-4);">
           {% if job.featured %}<span class="tag tag-hot">⚡ Featured</span>{% endif %}
@@ -101,12 +104,13 @@
       <div class="side-card">
         <h3>О вакансии</h3>
         <dl>
-          <dt>Компания</dt><dd>{{ job.company_name }}</dd>
+          <dt>Компания</dt><dd><a href="/company/{{ job.company_slug }}" style="color: var(--acid);">{{ job.company_name }}</a></dd>
           {% if job.category %}<dt>Направление</dt><dd>{{ job.category }}</dd>{% endif %}
           <dt>Формат</dt><dd>{{ job.fmt }}</dd>
           {% if job.location %}<dt>Локация</dt><dd>{{ job.location }}</dd>{% endif %}
           <dt>Зарплата</dt><dd>{% if job.has_salary %}{{ job.salary }}{% else %}по запросу{% endif %}</dd>
-          <dt>Размещена</dt><dd>{{ job.created_at.strftime('%d.%m.%Y') }}</dd>
+          <dt>Размещена</dt><dd>{% if job.posted_at %}{{ job.posted_at }}{% else %}{{ job.created_at.strftime('%d.%m.%Y') }}{% endif %}</dd>
+          {% if job.deadline %}<dt>Дедлайн</dt><dd>{{ job.deadline }}</dd>{% endif %}
         </dl>
       </div>
       <div class="side-card" style="border-style: dashed;">
