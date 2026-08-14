@@ -117,3 +117,27 @@ if (window.matchMedia('(pointer: fine)').matches &&
   const counter = document.getElementById('coin-count');
   if (counter) counter.textContent = localStorage.getItem('spinCoins') || '0';
 })();
+
+// Переключатель светлой/тёмной темы (на всех страницах)
+(function () {
+  const saved = localStorage.getItem('theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  function apply(t) {
+    if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('theme', t);
+    if (btn) btn.textContent = t === 'light' ? '🌙' : '☀️';
+    if (btn) btn.setAttribute('aria-label', t === 'light' ? 'Тёмная тема' : 'Светлая тема');
+  }
+  const btn = document.createElement('button');
+  btn.className = 'theme-toggle';
+  btn.type = 'button';
+  document.addEventListener('DOMContentLoaded', () => {
+    document.body.appendChild(btn);
+    apply(localStorage.getItem('theme') || 'dark');
+    btn.addEventListener('click', () => {
+      const cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+      apply(cur === 'light' ? 'dark' : 'light');
+    });
+  });
+})();

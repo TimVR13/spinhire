@@ -425,3 +425,53 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 
 /* 3d tilt */
 .job-card, .co-card, .company-tile, .post-card { transform-style: preserve-3d; will-change: transform; }
+
+/* ============================================================
+   Светлая тема (переключатель — плавающая кнопка, app.js)
+   ============================================================ */
+:root[data-theme="light"] {
+  --bg: oklch(0.975 0.003 285);
+  --bg-deep: oklch(0.93 0.004 285);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.96 0.004 285);
+  --line: oklch(0.9 0.006 285);
+  --line-strong: oklch(0.76 0.008 285);
+  --ink: oklch(0.22 0.01 285);
+  --ink-dim: oklch(0.42 0.01 285);
+  --ink-faint: oklch(0.5 0.01 285);
+  --acid: oklch(0.56 0.16 142);          /* тёмно-зелёный — читается как текст на светлом */
+  --acid-deep: oklch(0.5 0.15 142);
+  --pink: oklch(0.55 0.24 352);
+  --violet: oklch(0.5 0.2 300);
+  --yellow: oklch(0.62 0.14 80);
+  --on-acid: oklch(0.99 0 0);
+  --on-pink: oklch(0.99 0 0);
+  --shadow-dark: 0 8px 24px oklch(0.4 0.02 285 / 0.12);
+  --shadow-acid: 0 8px 24px oklch(0.56 0.16 142 / 0.18);
+  --shadow-pink: 0 8px 24px oklch(0.55 0.24 352 / 0.18);
+}
+/* кнопки: яркая заливка с тёмным текстом даже на светлой теме */
+:root[data-theme="light"] .btn-acid { background: oklch(0.82 0.19 130); color: oklch(0.2 0.05 130); }
+:root[data-theme="light"] .btn-pink { background: oklch(0.62 0.26 352); color: #fff; }
+:root[data-theme="light"] .logo b { color: oklch(0.56 0.17 142); }
+:root[data-theme="light"] .tag-acid { background: oklch(0.56 0.16 142 / 0.1); }
+:root[data-theme="light"] .tag-hot { background: oklch(0.62 0.26 352); color: #fff; }
+:root[data-theme="light"] .cat-ico { background: oklch(0.56 0.16 142 / 0.1); }
+/* герой — всегда тёмный шоукейс-баннер (в нём 3D-картинка): текст светлый */
+:root[data-theme="light"] .hero { color: oklch(0.96 0.005 285); }
+:root[data-theme="light"] .hero h1 { color: oklch(0.97 0.005 285); }
+:root[data-theme="light"] .hero h1 em { color: oklch(0.85 0.2 130); }
+:root[data-theme="light"] .hero .lead { color: oklch(0.82 0.006 285); }
+:root[data-theme="light"] .hero .stat-block { background: oklch(0.15 0.008 285 / 0.72); }
+:root[data-theme="light"] .hero .stat-block .num { color: oklch(0.85 0.2 130); }
+:root[data-theme="light"] .desc-block { color: var(--ink); }
+
+/* плавающий переключатель темы */
+.theme-toggle {
+  position: fixed; left: var(--sp-4); bottom: var(--sp-4); z-index: 90;
+  width: 46px; height: 46px; border-radius: 50%;
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink);
+  font-size: 1.2rem; display: grid; place-items: center; cursor: pointer;
+  box-shadow: var(--shadow-dark);
+}
+.theme-toggle:hover { border-color: var(--acid); }
