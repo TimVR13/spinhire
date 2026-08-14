@@ -57,11 +57,20 @@
     overflow: hidden;
     border-bottom: 1px solid var(--line);
     background:
-      linear-gradient(oklch(0.09 0.005 285 / 0.82), oklch(0.11 0.006 285 / 0.94)),
-      url('img/strip-hero.jpg') center / cover no-repeat,
+      linear-gradient(90deg, var(--bg) 34%, oklch(0.11 0.006 285 / 0.55) 62%, oklch(0.11 0.006 285 / 0.15) 100%),
+      radial-gradient(ellipse 45% 60% at 78% 48%, oklch(0.86 0.19 128 / 0.1), transparent 62%),
+      url('img/hero-3d.jpg') right center / auto 108% no-repeat,
       var(--bg);
   }
-  .hero__grid { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: var(--sp-7); align-items: center; }
+  @media (max-width: 900px) {
+    .hero { background:
+      linear-gradient(oklch(0.1 0.006 285 / 0.86), oklch(0.11 0.006 285 / 0.94)),
+      radial-gradient(ellipse 70% 40% at 80% 12%, oklch(0.86 0.19 128 / 0.1), transparent 60%),
+      url('img/hero-3d.jpg') 120% -8% / 70% auto no-repeat,
+      var(--bg); }
+  }
+  .hero__grid { display: block; max-width: 640px; }
+  .hero__grid > div:first-child { min-height: clamp(260px, 34vw, 420px); }
   .hero h1 em { font-style: normal; color: var(--acid); }
   .hero h1 .strike { position: relative; white-space: nowrap; }
   .hero h1 .strike::after { content: ""; position: absolute; left: -2%; right: -2%; top: 52%; height: 0.12em; background: var(--pink);  }
@@ -83,17 +92,19 @@
   .hero-hints a { text-decoration: none; }
   .hero-hints a:hover { border-color: var(--acid); color: var(--acid); }
 
-  .hero-stats { display: flex; flex-direction: column; gap: var(--sp-4); }
+  .hero-stats { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-6); }
   .stat-block {
-    border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+    border: 1px solid var(--line); border-radius: var(--radius); background: oklch(0.15 0.008 285 / 0.72);
+    backdrop-filter: blur(6px);
     padding: var(--sp-4) var(--sp-5);
-    display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-4);
+    display: flex; flex-direction: column; gap: 2px; min-width: 140px;
   }
   .stat-block:nth-child(2) {  }
   .stat-block:nth-child(3) {  }
   .stat-block .num { font-family: var(--font-display); font-weight: 900; font-size: 2rem; color: var(--acid); font-variant-numeric: tabular-nums; }
   .stat-block:nth-child(2) .num { color: var(--pink); }
-  .stat-block .lbl { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; color: var(--ink-dim); text-align: right; }
+  .stat-block .lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: var(--ink-dim); }
+  .stat-block .lbl br { display: none; }
 
   .cat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--sp-3); }
   .cat-card {
@@ -254,9 +265,9 @@
       </div>
 
       <div class="hero-stats" aria-label="Статистика платформы">
-        <div class="stat-block rise rise-2"><span class="num">26</span><span class="lbl">живых<br>вакансий</span></div>
-        <div class="stat-block rise rise-3"><span class="num">10</span><span class="lbl">компаний<br>нанимают</span></div>
-        <div class="stat-block rise rise-4"><span class="num">€4.2K</span><span class="lbl">медианная<br>зарплата</span></div>
+        <div class="stat-block rise rise-2"><span class="num">120+</span><span class="lbl">живых вакансий</span></div>
+        <div class="stat-block rise rise-3"><span class="num">15+</span><span class="lbl">компаний нанимают</span></div>
+        <div class="stat-block rise rise-4"><span class="num">€4.2K</span><span class="lbl">медианная зарплата</span></div>
       </div>
     </div>
   </section>
