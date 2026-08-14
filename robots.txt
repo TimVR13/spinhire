@@ -4,4 +4,4 @@ Disallow: /profile
 Disallow: /employer
 Disallow: /post-job
 
-Sitemap: https://spinhire.org/sitemap.xml
+Sitemap: https://spinhire.io/sitemap.xml

@@ -2,7 +2,7 @@
 {% set active = 'jobs' %}
 {% block title %}{{ company }} — вакансии компании | SpinHire{% endblock %}
 {% block desc %}{{ company }}: {{ jobs|length }} открытых iGaming-вакансий на SpinHire. {{ locations|join(', ') }}.{% endblock %}
-{% block robots %}<link rel="canonical" href="https://spinhire.org/company/{{ jobs[0].company_slug }}">{% endblock %}
+{% block robots %}<link rel="canonical" href="https://spinhire.io/company/{{ jobs[0].company_slug }}">{% endblock %}
 {% block style %}
   .co-head { display: flex; align-items: center; gap: var(--sp-4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: var(--sp-6); margin-bottom: var(--sp-5); flex-wrap: wrap; }
   .co-logo { width: 72px; height: 72px; border-radius: 14px; background: var(--bg-deep); display: grid; place-items: center; overflow: hidden; flex-shrink: 0; border: 1px solid var(--line); }

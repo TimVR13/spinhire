@@ -6,16 +6,16 @@
 <title>SpinHire — работа в iGaming: вакансии в гемблинге, беттинге и казино</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="description" content="Самый дерзкий джоб-борд iGaming-индустрии. живые вакансии: казино, беттинг, геймдев, аффилейты, комплаенс, платежи. Зарплаты открыты, релокация и крипто-оплата отмечены.">
-<link rel="canonical" href="https://spinhire.org/">
-<link rel="alternate" hreflang="ru" href="https://spinhire.org/">
-<link rel="alternate" hreflang="en" href="https://spinhire.org/en/">
-<link rel="alternate" hreflang="x-default" href="https://spinhire.org/">
+<link rel="canonical" href="https://spinhire.io/">
+<link rel="alternate" hreflang="ru" href="https://spinhire.io/">
+<link rel="alternate" hreflang="en" href="https://spinhire.io/en/">
+<link rel="alternate" hreflang="x-default" href="https://spinhire.io/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="SpinHire">
 <meta property="og:title" content="SpinHire — работа в iGaming">
 <meta property="og:description" content="живые вакансии в гемблинге и беттинге. Зарплаты открыты. Релокация, удалёнка, крипто-оплата.">
-<meta property="og:url" content="https://spinhire.org/">
-<meta property="og:image" content="https://spinhire.org/img/og-cover.jpg">
+<meta property="og:url" content="https://spinhire.io/">
+<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
 <meta property="og:locale" content="ru_RU">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">
@@ -24,23 +24,23 @@
   "@graph": [
     {
       "@type": "WebSite",
-      "@id": "https://spinhire.org/#website",
-      "url": "https://spinhire.org/",
+      "@id": "https://spinhire.io/#website",
+      "url": "https://spinhire.io/",
       "name": "SpinHire",
       "description": "Джоб-борд iGaming-индустрии: вакансии в гемблинге, беттинге и казино",
       "inLanguage": "ru",
       "potentialAction": {
         "@type": "SearchAction",
-        "target": { "@type": "EntryPoint", "urlTemplate": "https://spinhire.org/jobs?q={search_term_string}" },
+        "target": { "@type": "EntryPoint", "urlTemplate": "https://spinhire.io/jobs?q={search_term_string}" },
         "query-input": "required name=search_term_string"
       }
     },
     {
       "@type": "Organization",
-      "@id": "https://spinhire.org/#org",
+      "@id": "https://spinhire.io/#org",
       "name": "SpinHire",
-      "url": "https://spinhire.org/",
-      "logo": "https://spinhire.org/img/logo.jpg",
+      "url": "https://spinhire.io/",
+      "logo": "https://spinhire.io/img/logo.jpg",
       "sameAs": ["https://t.me/spinhire", "https://www.linkedin.com/company/spinhire"]
     }
   ]
@@ -504,7 +504,7 @@
         <h4>О проекте</h4>
         <ul>
           <li><a href="about.html">О нас</a></li>
-          <li><a href="mailto:hello@spinhire.org">Контакты</a></li>
+          <li><a href="mailto:hello@spinhire.io">Контакты</a></li>
           <li><a href="https://t.me/spinhire" target="_blank" rel="noopener">Telegram-канал</a></li>
           <li><a href="privacy.html">Конфиденциальность</a></li>
           <li><a href="terms.html">Условия</a></li>
@@ -610,7 +610,7 @@
       const e = events[+b.dataset.i];
       const text = `${e.t} — ${e.city}, ${e.d} ${e.mon} ${e.y}. Событие iGaming на SpinHire`;
       if (navigator.share) { try { await navigator.share({ title: e.t, text }); } catch (_) {} }
-      else { try { await navigator.clipboard.writeText(text + ' — https://spinhire.org/#events'); if (window.toast) toast('Ссылка скопирована'); } catch (_) {} }
+      else { try { await navigator.clipboard.writeText(text + ' — https://spinhire.io/#events'); if (window.toast) toast('Ссылка скопирована'); } catch (_) {} }
     }));
   }
   fetch('/api/events').then(r => r.ok ? r.json() : null).then(ev => render(ev && ev.length ? ev : fallback)).catch(() => render(fallback));

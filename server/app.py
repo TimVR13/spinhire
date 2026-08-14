@@ -41,7 +41,7 @@ from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(ROOT, "data", "spinhire.db")
 SECRET = os.environ.get("SPINHIRE_SECRET", "spinhire-dev-secret-change-me")
-ADMIN_EMAIL = os.environ.get("SPINHIRE_ADMIN_EMAIL", "admin@spinhire.org")
+ADMIN_EMAIL = os.environ.get("SPINHIRE_ADMIN_EMAIL", "admin@spinhire.io")
 ADMIN_PASSWORD = os.environ.get("SPINHIRE_ADMIN_PASSWORD", "spinhire-boss-2026")
 
 # ---- внешние интеграции (секреты только из окружения; пустые дефолты для локали) ----
@@ -1243,7 +1243,7 @@ def admin_user(user_id: int, action: str, request: Request, db: Session = Depend
 @app.get("/sitemap.xml")
 def sitemap(db: Session = Depends(db_session)):
     from fastapi.responses import Response
-    base = "https://spinhire.org"
+    base = "https://spinhire.io"
     static = [("", "1.0"), ("jobs", "0.9"), ("companies.html", "0.8"), ("blog.html", "0.8"),
               ("post-job", "0.5"), ("games.html", "0.5"),
               ("jobs-malta.html", "0.8"), ("jobs-cyprus.html", "0.8"), ("jobs-remote.html", "0.8"),

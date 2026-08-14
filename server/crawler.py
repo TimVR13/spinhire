@@ -57,7 +57,7 @@ SOURCE_REGISTRY = [
      "status": "не подключён", "note": "Украинский борд; есть внутренний API. Готов исследовать."},
 ]
 
-UA = "SpinHireBot/1.0 (+https://spinhire.org; job aggregation)"
+UA = "SpinHireBot/1.0 (+https://spinhire.io; job aggregation)"
 TIMEOUT = 25
 MAX_PER_BOARD = 40           # не выкачиваем борд целиком — берём свежие
 DESC_LIMIT = 6000            # ограничиваем длину описания

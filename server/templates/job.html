@@ -2,12 +2,12 @@
 {% set active = 'jobs' %}
 {% block title %}{{ job.title }} — {{ job.company_name }} | SpinHire{% endblock %}
 {% block desc %}{{ job.title }} в {{ job.company_name }}: {{ job.salary }}, {{ job.location }}, {{ job.fmt }}. iGaming-вакансия на SpinHire.{% endblock %}
-{% block robots %}<link rel="canonical" href="https://spinhire.org/job/{{ job.id }}">
+{% block robots %}<link rel="canonical" href="https://spinhire.io/job/{{ job.id }}">
 <meta property="og:type" content="article">
 <meta property="og:title" content="{{ job.title }} — {{ job.company_name }}">
 <meta property="og:description" content="{{ job.salary }} · {{ job.location }} · {{ job.fmt }}">
-<meta property="og:url" content="https://spinhire.org/job/{{ job.id }}">
-<meta property="og:image" content="https://spinhire.org/img/og-cover.jpg">
+<meta property="og:url" content="https://spinhire.io/job/{{ job.id }}">
+<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
