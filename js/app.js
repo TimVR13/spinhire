@@ -166,42 +166,4 @@ if (window.matchMedia('(pointer: fine)').matches &&
   });
 })();
 
-// Живой выбор акцентной гаммы (пробуем цвета из 8 палитр прямо на сайте)
-(function () {
-  const PRESETS = [
-    { id: 'emerald', name: 'Изумруд',  dot: '#00e39a', acid: 'oklch(0.80 0.19 162)', deep: 'oklch(0.68 0.17 164)', on: 'oklch(0.14 0.05 162)' },
-    { id: 'cyan',    name: 'Циан',     dot: '#22e0ff', acid: 'oklch(0.84 0.16 205)', deep: 'oklch(0.72 0.15 210)', on: 'oklch(0.14 0.04 220)' },
-    { id: 'blue',    name: 'Электрик', dot: '#4d7bff', acid: 'oklch(0.70 0.19 250)', deep: 'oklch(0.60 0.18 255)', on: '#ffffff' },
-    { id: 'violet',  name: 'Фиолет',   dot: '#a855ff', acid: 'oklch(0.68 0.22 300)', deep: 'oklch(0.58 0.20 302)', on: '#ffffff' },
-    { id: 'magenta', name: 'Магента',  dot: '#ff2d9c', acid: 'oklch(0.70 0.25 350)', deep: 'oklch(0.60 0.23 352)', on: '#ffffff' },
-    { id: 'gold',    name: 'Золото',   dot: '#ffb020', acid: 'oklch(0.84 0.16 90)',  deep: 'oklch(0.74 0.15 88)',  on: 'oklch(0.20 0.05 90)' },
-    { id: 'aqua',    name: 'Аква',     dot: '#2af0d4', acid: 'oklch(0.85 0.15 178)', deep: 'oklch(0.74 0.14 180)', on: 'oklch(0.15 0.05 178)' },
-    { id: 'ruby',    name: 'Рубин',    dot: '#ff3b5c', acid: 'oklch(0.63 0.24 20)',  deep: 'oklch(0.54 0.22 22)',  on: '#ffffff' },
-  ];
-  function apply(id) {
-    const p = PRESETS.find(x => x.id === id) || PRESETS[0];
-    const r = document.documentElement.style;
-    r.setProperty('--acid', p.acid);
-    r.setProperty('--acid-deep', p.deep);
-    r.setProperty('--on-acid', p.on);
-    r.setProperty('--emerald', p.acid);
-    r.setProperty('--on-emerald', p.on);
-    r.setProperty('--shadow-acid', '0 8px 30px ' + p.acid.replace(')', ' / 0.22)'));
-    localStorage.setItem('accent', p.id);
-  }
-  const saved = localStorage.getItem('accent');
-  if (saved) apply(saved);
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const wrap = document.createElement('div'); wrap.className = 'accent-switch';
-    const btn = document.createElement('button'); btn.className = 'accent-switch__btn'; btn.type = 'button';
-    btn.textContent = '🎨'; btn.setAttribute('aria-label', 'Цветовая гамма');
-    const menu = document.createElement('div'); menu.className = 'accent-switch__menu'; menu.hidden = true;
-    menu.innerHTML = '<b>Цвет акцента</b>' + PRESETS.map(p =>
-      '<button data-acc="' + p.id + '"><i style="background:' + p.dot + '"></i>' + p.name + '</button>').join('');
-    wrap.append(menu, btn); document.body.appendChild(wrap);
-    btn.addEventListener('click', () => { menu.hidden = !menu.hidden; });
-    menu.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; apply(b.dataset.acc); menu.hidden = true; });
-    document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) menu.hidden = true; });
-  });
-})();
+// (переключатель палитры удалён — фиксированная зелёная гамма)
