@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% set active = 'resumes' %}
+{% block title %}{{ resume.title }} — {{ resume.public_code }} | SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex,follow">{% endblock %}
+{% block style %}
+  .resume-layout { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(300px,.65fr); gap:var(--sp-6); align-items:start; }
+  .resume-main { border-top:3px solid var(--acid); padding-top:var(--sp-5); }
+  .resume-main h1 { font-size:clamp(1.8rem,4vw,3.5rem); line-height:1; max-width:850px; }
+  .resume-facts { display:flex; flex-wrap:wrap; gap:8px; margin:20px 0 34px; }
+  .resume-fact { border:1px solid var(--line); padding:8px 12px; color:var(--ink-dim); }
+  .resume-section { padding:28px 0; border-top:1px solid var(--line); }
+  .resume-section h2 { color:var(--acid); font-size:.9rem; margin-bottom:14px; }
+  .cv-skills { display:flex; flex-wrap:wrap; gap:8px; }
+  .contact-panel { position:sticky; top:110px; border:2px solid var(--line); background:var(--surface); padding:var(--sp-5); }
+  .contact-panel.unlocked { border-color:var(--acid); }
+  .locked-lines { margin:20px 0; display:grid; gap:8px; }
+  .locked-lines span { display:block; height:12px; background:var(--line); }
+  .locked-lines span:nth-child(2){width:72%}.locked-lines span:nth-child(3){width:84%}
+  .plan-actions { display:grid; gap:8px; margin-top:16px; }
+  .plan-actions form,.plan-actions button { width:100%; }
+  @media(max-width:850px){.resume-layout{grid-template-columns:1fr}.contact-panel{position:static}}
+{% endblock %}
+{% block content %}
+  <nav class="crumbs"><a href="/">Главная</a> / <a href="/resumes">Резюме</a> / {{ resume.public_code }}</nav>
+  {% if request.query_params.get('unlocked') %}<div class="flash">Контакты открыты. Повторный просмотр этого CV больше не списывает доступ.</div>{% endif %}
+  <div class="resume-layout">
+    <article class="resume-main">
+      <span class="kicker">{{ resume.public_code }} · анонимный профиль</span>
+      <h1>{{ resume.title }}</h1>
+      <div class="resume-facts">
+        <span class="resume-fact">{{ resume.experience_years }} лет опыта</span>
+        <span class="resume-fact">{{ resume.location or 'Локация скрыта' }}</span>
+        <span class="resume-fact">{{ resume.desired_format }}</span>
+        {% if resume.salary_expect %}<span class="resume-fact">Ожидания {{ resume.salary_expect }}</span>{% endif %}
+      </div>
+      <section class="resume-section"><h2>О специалисте</h2><p style="white-space:pre-line;line-height:1.75;max-width:72ch;">{{ resume.about }}</p></section>
+      <section class="resume-section"><h2>Навыки</h2><div class="cv-skills">{% for skill in resume.skill_list %}<span class="resume-fact">{{ skill }}</span>{% endfor %}</div></section>
+      {% if resume.languages %}<section class="resume-section"><h2>Языки</h2><p>{{ resume.languages }}</p></section>{% endif %}
+    </article>
+
+    <aside class="contact-panel {% if unlocked %}unlocked{% endif %}">
+      {% if unlocked %}
+        <span class="kicker">Контакты открыты</span>
+        <h2 style="margin:10px 0 20px;">Связаться с кандидатом</h2>
+        <p><b>Email</b><br><a style="color:var(--acid);" href="mailto:{{ resume.contact_email }}">{{ resume.contact_email }}</a></p>
+        {% if resume.contact_telegram %}<p style="margin-top:14px;"><b>Telegram</b><br>{{ resume.contact_telegram }}</p>{% endif %}
+      {% else %}
+        <span class="kicker pink">Контакты закрыты</span>
+        <h2 style="margin:10px 0 8px;">Имя и способы связи скрыты</h2>
+        <p style="color:var(--ink-dim);">Один оплаченный доступ открывает контакты навсегда для вашего аккаунта.</p>
+        <div class="locked-lines" aria-hidden="true"><span></span><span></span><span></span></div>
+        {% if user and user.role == 'employer' and (user.cv_credits or 0) > 0 %}
+          <form method="post" action="/resume/{{ resume.id }}/unlock"><button class="btn btn-acid" style="width:100%;">Открыть контакт · осталось {{ user.cv_credits }}</button></form>
+        {% elif user and user.role == 'employer' %}
+          <div class="plan-actions">
+            <form method="post" action="/checkout/cv10"><button class="btn btn-acid">10 контактов · €69</button></form>
+            <form method="post" action="/checkout/cv40"><button class="btn btn-ghost">40 контактов · €199</button></form>
+            <form method="post" action="/checkout/cvunlim"><button class="btn btn-ghost">Безлимит на месяц · €349</button></form>
+          </div>
+        {% elif user %}
+          <p style="color:var(--ink-dim);margin-top:16px;">Открытие контактов доступно аккаунтам работодателей.</p>
+        {% else %}
+          <a href="/login?next=/resume/{{ resume.id }}" class="btn btn-acid" style="width:100%;margin-top:16px;">Войти как работодатель</a>
+        {% endif %}
+      {% endif %}
+    </aside>
+  </div>
+{% endblock %}

@@ -79,6 +79,8 @@ class User(Base):
     salary_expect = Column(String, default="")
     languages = Column(String, default="")
     incognito = Column(Boolean, default=True)
+    cv_credits = Column(Integer, default=0)         # оплаченные открытия контактов
+    cv_access_until = Column(String, default="")   # ISO-дата безлимитного доступа
     coins = Column(Integer, default=0)              # SpinCoins на аккаунте
     last_spin = Column(DateTime, nullable=True)     # последний ежедневный фриспин
     verified = Column(Integer, default=1)           # 0 — ждём подтверждения почты; старые = 1
@@ -187,6 +189,43 @@ class Application(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     job = relationship("Job", back_populates="applications")
     user = relationship("User", back_populates="applications")
+
+
+class Resume(Base):
+    __tablename__ = "resumes"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    title = Column(String, default="")
+    location = Column(String, default="")
+    experience_years = Column(Integer, default=0)
+    skills = Column(Text, default="")
+    about = Column(Text, default="")
+    desired_format = Column(String, default="удалёнка")
+    salary_expect = Column(String, default="")
+    languages = Column(String, default="")
+    contact_email = Column(String, default="")
+    contact_telegram = Column(String, default="")
+    published = Column(Boolean, default=False)
+    consent_at = Column(String, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+    user = relationship("User")
+
+    @property
+    def public_code(self):
+        return f"CV-{self.id:06d}"
+
+    @property
+    def skill_list(self):
+        return [s.strip() for s in self.skills.split(",") if s.strip()][:8]
+
+
+class ResumeUnlock(Base):
+    __tablename__ = "resume_unlocks"
+    id = Column(Integer, primary_key=True)
+    employer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class Event(Base):
@@ -322,6 +361,10 @@ def migrate(db: Session):
         db.execute(text("ALTER TABLE users ADD COLUMN coins INTEGER DEFAULT 0"))
     if "last_spin" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN last_spin DATETIME"))
+    if "cv_credits" not in ucols:
+        db.execute(text("ALTER TABLE users ADD COLUMN cv_credits INTEGER DEFAULT 0"))
+    if "cv_access_until" not in ucols:
+        db.execute(text("ALTER TABLE users ADD COLUMN cv_access_until VARCHAR DEFAULT ''"))
     # верификация почты: verified DEFAULT 1 — существующие пользователи остаются рабочими
     for _sql in (
         "ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 1",
@@ -671,6 +714,8 @@ def checkout_create(plan: str, request: Request, job_id: int = Form(None),
         return login_redirect(f"/post-job")
     if plan not in PLANS:
         raise HTTPException(404)
+    if plan.startswith("cv") and user.role not in ("employer", "admin"):
+        raise HTTPException(403)
     name, amount, _ = PLANS[plan]
     o = Order(user_id=user.id, plan=plan, plan_name=name, amount=amount,
               job_id=job_id, status="pending")
@@ -955,6 +1000,83 @@ def verify_resend(email: str = "", db: Session = Depends(db_session)):
 
 # ---------- talent cabinet ----------
 
+def resume_contact_access(user: User, resume: Resume, db: Session) -> bool:
+    """Контакты никогда не попадают в ответ без владельца, админа или оплаченного доступа."""
+    if not user:
+        return False
+    if user.id == resume.user_id or user.role == "admin":
+        return True
+    if user.role != "employer":
+        return False
+    if user.cv_access_until:
+        try:
+            if datetime.fromisoformat(user.cv_access_until) > datetime.utcnow():
+                return True
+        except ValueError:
+            pass
+    return db.query(ResumeUnlock).filter_by(
+        employer_id=user.id, resume_id=resume.id).first() is not None
+
+
+def anonymize_resume_text(value: str) -> str:
+    """Убрать случайно вставленные контакты из публичной части CV."""
+    import re
+    text = value.strip()
+    text = re.sub(r"(?i)\b[\w.+-]+@[\w.-]+\.[a-z]{2,}\b", "[контакт скрыт]", text)
+    text = re.sub(r"(?i)https?://\S+|(?:www\.)\S+", "[ссылка скрыта]", text)
+    text = re.sub(r"(?<!\w)@[A-Za-z0-9_]{4,}", "[контакт скрыт]", text)
+    text = re.sub(r"(?<!\w)\+?\d[\d\s().-]{8,}\d", "[телефон скрыт]", text)
+    return text
+
+
+@app.get("/resumes", response_class=HTMLResponse)
+def resumes(request: Request, q: str = "", location: str = "", fmt: str = "",
+            db: Session = Depends(db_session)):
+    query = db.query(Resume).filter(Resume.published == True)  # noqa: E712
+    if q.strip():
+        needle = f"%{q.strip()}%"
+        query = query.filter(or_(Resume.title.ilike(needle), Resume.skills.ilike(needle),
+                                 Resume.about.ilike(needle), Resume.languages.ilike(needle)))
+    if location.strip():
+        query = query.filter(Resume.location.ilike(f"%{location.strip()}%"))
+    if fmt.strip():
+        query = query.filter(Resume.desired_format == fmt.strip())
+    rows = query.order_by(Resume.updated_at.desc()).all()
+    return render(request, db, "resumes.html", resumes=rows, q=q, location=location,
+                  fmt=fmt, formats=FORMATS, active="resumes")
+
+
+@app.get("/resume/{resume_id}", response_class=HTMLResponse)
+def resume_detail(resume_id: int, request: Request, db: Session = Depends(db_session)):
+    row = db.get(Resume, resume_id)
+    user = get_user(request, db)
+    if not row or (not row.published and (not user or user.id != row.user_id) and
+                   (not user or user.role != "admin")):
+        raise HTTPException(404)
+    unlocked = resume_contact_access(user, row, db)
+    return render(request, db, "resume.html", resume=row, unlocked=unlocked,
+                  active="resumes")
+
+
+@app.post("/resume/{resume_id}/unlock")
+def resume_unlock(resume_id: int, request: Request, db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    if not user:
+        return login_redirect(f"/resume/{resume_id}")
+    if user.role != "employer":
+        raise HTTPException(403)
+    row = db.get(Resume, resume_id)
+    if not row or not row.published:
+        raise HTTPException(404)
+    if resume_contact_access(user, row, db):
+        return RedirectResponse(f"/resume/{resume_id}?unlocked=1", status_code=303)
+    if (user.cv_credits or 0) < 1:
+        return RedirectResponse(f"/resume/{resume_id}?need_plan=1", status_code=303)
+    user.cv_credits -= 1
+    db.add(ResumeUnlock(employer_id=user.id, resume_id=row.id))
+    db.commit()
+    return RedirectResponse(f"/resume/{resume_id}?unlocked=1", status_code=303)
+
 @app.get("/profile", response_class=HTMLResponse)
 def profile(request: Request, db: Session = Depends(db_session)):
     user = get_user(request, db)
@@ -968,7 +1090,9 @@ def profile(request: Request, db: Session = Depends(db_session)):
             .order_by(Application.created_at.desc()).all())
     spin_ready = (user.last_spin is None
                   or (datetime.utcnow() - user.last_spin).total_seconds() > 20 * 3600)
-    return render(request, db, "profile.html", apps=apps, spin_ready=spin_ready)
+    resume = db.query(Resume).filter_by(user_id=user.id).first()
+    return render(request, db, "profile.html", apps=apps, spin_ready=spin_ready,
+                  resume=resume, formats=FORMATS)
 
 
 @app.post("/profile/spin")
@@ -1000,6 +1124,44 @@ def profile_save(request: Request, name: str = Form(""), headline: str = Form(""
     user.incognito = bool(incognito)
     db.commit()
     return RedirectResponse("/profile?ok=1", status_code=303)
+
+
+@app.post("/profile/resume")
+def profile_resume_save(request: Request, title: str = Form(""), location: str = Form(""),
+                        experience_years: int = Form(0), skills: str = Form(""),
+                        about: str = Form(""), desired_format: str = Form("удалёнка"),
+                        salary_expect: str = Form(""), languages: str = Form(""),
+                        contact_email: str = Form(""), contact_telegram: str = Form(""),
+                        publish: str = Form(None), consent: str = Form(None),
+                        db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    if not user or user.role != "talent":
+        return login_redirect("/profile#cv")
+    row = db.query(Resume).filter_by(user_id=user.id).first()
+    if not row:
+        row = Resume(user_id=user.id)
+        db.add(row)
+    wants_publish = bool(publish)
+    if wants_publish and (not consent or not title.strip() or not about.strip()):
+        return RedirectResponse("/profile?cv_error=1#cv", status_code=303)
+    row.title = title.strip()
+    row.location = location.strip()
+    row.experience_years = max(0, min(int(experience_years or 0), 60))
+    row.skills = anonymize_resume_text(skills)
+    row.about = anonymize_resume_text(about)
+    row.desired_format = desired_format if desired_format in FORMATS else "удалёнка"
+    row.salary_expect = salary_expect.strip()
+    row.languages = languages.strip()
+    row.contact_email = contact_email.strip() or user.email
+    row.contact_telegram = contact_telegram.strip()
+    row.published = wants_publish
+    row.consent_at = datetime.utcnow().isoformat() + "Z" if wants_publish else row.consent_at
+    row.updated_at = datetime.utcnow()
+    user.headline = row.title
+    user.salary_expect = row.salary_expect
+    user.languages = row.languages
+    db.commit()
+    return RedirectResponse("/profile?cv_ok=1#cv", status_code=303)
 
 
 # ---------- employer cabinet ----------
@@ -1230,6 +1392,7 @@ def admin_order_action(order_id: int, action: str, request: Request, db: Session
     o = db.get(Order, order_id)
     if o:
         if action == "paid":
+            already_paid = o.status == "paid"
             o.status = "paid"
             # применяем плюшку: featured-план поднимает вакансию
             if o.plan == "featured" and o.job_id:
@@ -1237,6 +1400,12 @@ def admin_order_action(order_id: int, action: str, request: Request, db: Session
                 if job:
                     job.featured = True
                     job.status = "approved"
+            if not already_paid and o.user and o.plan == "cv10":
+                o.user.cv_credits = (o.user.cv_credits or 0) + 10
+            elif not already_paid and o.user and o.plan == "cv40":
+                o.user.cv_credits = (o.user.cv_credits or 0) + 40
+            elif not already_paid and o.user and o.plan == "cvunlim":
+                o.user.cv_access_until = (datetime.utcnow() + timedelta(days=30)).isoformat()
         elif action == "cancel":
             o.status = "cancelled"
         db.commit()
@@ -1276,6 +1445,11 @@ def admin_user(user_id: int, action: str, request: Request, db: Session = Depend
     if action == "delete":
         db.query(Application).filter_by(user_id=u.id).delete()
         db.query(Job).filter_by(owner_id=u.id).update({"owner_id": None})
+        owned_resume = db.query(Resume).filter_by(user_id=u.id).first()
+        if owned_resume:
+            db.query(ResumeUnlock).filter_by(resume_id=owned_resume.id).delete()
+            db.delete(owned_resume)
+        db.query(ResumeUnlock).filter_by(employer_id=u.id).delete()
         db.delete(u)
     elif action in ("talent", "employer", "admin"):
         u.role = action
@@ -1289,7 +1463,7 @@ def admin_user(user_id: int, action: str, request: Request, db: Session = Depend
 def sitemap(db: Session = Depends(db_session)):
     from fastapi.responses import Response
     base = "https://spinhire.io"
-    static = [("", "1.0"), ("jobs", "0.9"), ("companies.html", "0.8"), ("blog.html", "0.8"),
+    static = [("", "1.0"), ("jobs", "0.9"), ("resumes", "0.8"), ("companies.html", "0.8"), ("blog.html", "0.8"),
               ("post-job", "0.5"), ("games.html", "0.5"),
               ("jobs-malta.html", "0.8"), ("jobs-cyprus.html", "0.8"), ("jobs-remote.html", "0.8"),
               ("jobs-vip-manager.html", "0.8"), ("jobs-affiliate.html", "0.8"), ("jobs-aml.html", "0.8"),

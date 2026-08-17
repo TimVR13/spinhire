@@ -18,7 +18,10 @@
       <span class="kicker pink">Бэк-офис</span>
       <h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem);">{{ user.company_name or user.name or 'Работодатель' }}</h1>
     </div>
-    <a href="/post-job" class="btn btn-pink">+ Разместить вакансию</a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="/resumes" class="btn btn-acid">Резюме · {{ user.cv_credits or 0 }} открытий</a>
+      <a href="/post-job" class="btn btn-pink">+ Разместить вакансию</a>
+    </div>
   </div>
 
   {% for j in jobs %}

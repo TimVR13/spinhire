@@ -1,6 +1,28 @@
 // iHiring.org — shared prototype behavior
 
 document.addEventListener('DOMContentLoaded', () => {
+  // CV marketplace entry points for legacy static pages that share this script.
+  const sharedNav = document.querySelector('.main-nav');
+  if (sharedNav && !sharedNav.querySelector('a[href="/resumes"], a[href="resumes"]')) {
+    const jobsLink = sharedNav.querySelector('a[href$="jobs.html"], a[href="/jobs"]');
+    const resumesLink = document.createElement('a');
+    resumesLink.href = '/resumes';
+    resumesLink.textContent = 'Резюме';
+    if (window.location.pathname === '/resumes') resumesLink.classList.add('active');
+    if (jobsLink) jobsLink.insertAdjacentElement('afterend', resumesLink);
+    else sharedNav.prepend(resumesLink);
+  }
+  const sharedActions = document.querySelector('.header-actions');
+  if (sharedActions && !sharedActions.querySelector('a[href*="profile#cv"]')) {
+    const cvLink = document.createElement('a');
+    cvLink.href = '/profile#cv';
+    cvLink.className = 'btn btn-acid btn-sm';
+    cvLink.textContent = 'Добавить CV';
+    const vacancyLink = sharedActions.querySelector('a[href*="post-job"]');
+    if (vacancyLink) sharedActions.insertBefore(cvLink, vacancyLink);
+    else sharedActions.prepend(cvLink);
+  }
+
   // mobile nav
   const burger = document.querySelector('.nav-burger');
   const nav = document.querySelector('.main-nav');

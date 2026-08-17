@@ -4,10 +4,16 @@
 {% block style %}
   .app-row { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-3); align-items: center; padding: var(--sp-4); border: 2px solid var(--line); background: var(--surface); }
   .app-row + .app-row { margin-top: var(--sp-2); }
+  .cv-editor { border-top: 3px solid var(--acid); margin-bottom: var(--sp-6); }
+  .cv-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+  .cv-grid .wide { grid-column:1/-1; }
+  @media(max-width:700px){.cv-grid{grid-template-columns:1fr}.cv-grid .wide{grid-column:auto}}
 {% endblock %}
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Мой профиль</nav>
   {% if request.query_params.get('ok') %}<div class="flash">✓ Профиль сохранён</div>{% endif %}
+  {% if request.query_params.get('cv_ok') %}<div class="flash">CV сохранено{% if resume and resume.published %} и опубликовано анонимно{% endif %}.</div>{% endif %}
+  {% if request.query_params.get('cv_error') %}<div class="flash err">Чтобы опубликовать CV, заполните роль и описание и подтвердите согласие.</div>{% endif %}
   {% set sp = request.query_params.get('spin') %}
   {% if sp and sp not in ('wait',) %}<div class="flash">🎡 Ежедневный фриспин: <b>+{{ sp }} SpinCoins</b>! Заходи завтра за следующим.</div>{% endif %}
   {% if sp == 'wait' %}<div class="flash err">Сегодня уже крутили — фриспин обновляется раз в сутки.</div>{% endif %}
@@ -29,6 +35,29 @@
       <span class="btn btn-ghost" style="pointer-events: none; opacity: 0.6;">Фриспин будет завтра ⏳</span>
     {% endif %}
   </div>
+
+  <section id="cv" class="card cv-editor">
+    <div class="section-head" style="margin-bottom:20px;">
+      <div><span class="kicker">Анонимная база</span><h2 style="font-size:clamp(1.3rem,3vw,2rem);">{{ 'Редактировать CV' if resume else 'Добавить CV' }}</h2></div>
+      {% if resume and resume.published %}<a href="/resume/{{ resume.id }}" class="btn btn-ghost">Посмотреть публикацию</a>{% endif %}
+    </div>
+    <p style="color:var(--ink-dim);max-width:70ch;margin-bottom:20px;">Работодатели увидят опыт, навыки и ожидания. Имя, email и Telegram останутся закрытыми до оплаченного открытия контакта.</p>
+    <form method="post" action="/profile/resume" class="cv-grid">
+      <div class="field wide"><label>Желаемая роль</label><input class="input" name="title" value="{{ resume.title if resume else user.headline }}" placeholder="CRM Manager · iGaming" required></div>
+      <div class="field"><label>Локация</label><input class="input" name="location" value="{{ resume.location if resume else '' }}" placeholder="Варшава, Польша"></div>
+      <div class="field"><label>Опыт в годах</label><input class="input" type="number" min="0" max="60" name="experience_years" value="{{ resume.experience_years if resume else 0 }}"></div>
+      <div class="field"><label>Формат работы</label><select class="input" name="desired_format">{% for f in formats %}<option value="{{ f }}" {% if resume and resume.desired_format==f %}selected{% endif %}>{{ f }}</option>{% endfor %}</select></div>
+      <div class="field"><label>Зарплатные ожидания</label><input class="input" name="salary_expect" value="{{ resume.salary_expect if resume else user.salary_expect }}" placeholder="€4 000 net"></div>
+      <div class="field wide"><label>Навыки через запятую</label><input class="input" name="skills" value="{{ resume.skills if resume else '' }}" placeholder="CRM, retention, VIP, sportsbook, English C1"></div>
+      <div class="field wide"><label>Опыт и результаты</label><textarea class="input" name="about" rows="7" placeholder="Опишите опыт без имени, названий закрытых проектов и других данных, которые могут раскрыть личность." required>{{ resume.about if resume else '' }}</textarea></div>
+      <div class="field"><label>Языки</label><input class="input" name="languages" value="{{ resume.languages if resume else user.languages }}" placeholder="English C1, Polish B1"></div>
+      <div class="field"><label>Email для работодателей</label><input class="input" type="email" name="contact_email" value="{{ resume.contact_email if resume else user.email }}" required></div>
+      <div class="field wide"><label>Telegram</label><input class="input" name="contact_telegram" value="{{ resume.contact_telegram if resume else '' }}" placeholder="@username"></div>
+      <label class="check wide"><input type="checkbox" name="publish" {% if resume and resume.published %}checked{% endif %}> Показывать CV в анонимной базе</label>
+      <label class="check wide"><input type="checkbox" name="consent" {% if resume and resume.consent_at %}checked{% endif %}> Я разрешаю публиковать обезличенную информацию и передавать мои контакты работодателям после оплаченного открытия.</label>
+      <button class="btn btn-acid wide" type="submit">Сохранить CV</button>
+    </form>
+  </section>
 
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: var(--sp-5); align-items: start;">
     <form method="post" action="/profile" class="card" style="display: flex; flex-direction: column; gap: 14px;">

@@ -44,11 +44,13 @@
     <a href="/" class="logo" aria-label="SpinHire — главная"><img class="logo__mark" src="/img/spinhire-slot.svg" alt="" width="42" height="32">spin<b>hire</b></a>
     <nav class="main-nav" aria-label="Основная навигация">
       <a href="/jobs" {% if active == 'jobs' %}class="active"{% endif %}>Вакансии</a>
+      <a href="/resumes" {% if active == 'resumes' %}class="active"{% endif %}>Резюме</a>
       <a href="/companies.html">Компании</a>
       <a href="/blog.html">Блог</a>
       <a href="/games.html">Игровая</a>
       <a href="/post-job" {% if active == 'employer' %}class="active"{% endif %}>Работодателям</a>
       <a href="/post-job" class="nav-cta-mobile" style="color: var(--pink); font-weight: 700;">+ Разместить вакансию</a>
+      <a href="/profile#cv" class="nav-cta-mobile" style="color: var(--acid); font-weight: 700;">+ Добавить CV</a>
     </nav>
     <div class="header-actions">
       {% if user %}
@@ -58,6 +60,7 @@
         <a href="/logout" class="btn btn-ghost btn-sm" title="Выйти">✕</a>
       {% else %}
         <a href="/login" class="btn btn-ghost btn-sm">Войти</a>
+        <a href="/profile#cv" class="btn btn-acid btn-sm">Добавить CV</a>
         <a href="/post-job" class="btn btn-pink btn-sm">Разместить вакансию</a>
       {% endif %}
       <button class="nav-burger" aria-label="Открыть меню"><span aria-hidden="true">☰</span></button>
@@ -80,6 +83,8 @@
         <h4>Кандидатам</h4>
         <ul>
           <li><a href="/jobs">Вакансии</a></li>
+          <li><a href="/resumes">Анонимные резюме</a></li>
+          <li><a href="/profile#cv">Добавить CV</a></li>
           <li><a href="/profile">Мой профиль</a></li>
           <li><a href="/#salaries">Гид по зарплатам</a></li>
           <li><a href="/games.html">🎡 Игровая зона</a></li>
@@ -92,7 +97,7 @@
           <li><a href="/post-job">Разместить вакансию</a></li>
           <li><a href="/employer">Кабинет работодателя</a></li>
           <li><a href="/post-job#pricing">Тарифы</a></li>
-          <li><a href="/post-job#pricing">База резюме</a></li>
+          <li><a href="/resumes">База резюме</a></li>
         </ul>
       </div>
       <div>
