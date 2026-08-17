@@ -37,6 +37,11 @@
     <div class="dash-cell"><span>Открыли CV</span><b>{{ resume_unlocks }}</b></div>
   </section>
 
+  {% if notifications %}<section id="notifications" style="margin-bottom:var(--sp-6);">
+    <div class="section-head"><div><span class="kicker pink">Сигналы</span><h2 style="font-size:1.2rem;margin-top:6px;">Уведомления</h2></div>{% if notifications|selectattr('read_at','equalto','')|list|length %}<form method="post" action="/profile/notifications/read"><button class="btn btn-ghost btn-sm">Отметить прочитанными</button></form>{% endif %}</div>
+    <div style="border-top:2px solid var(--line);">{% for notice in notifications %}<a href="{{ notice.link or '/profile' }}" style="display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:14px;padding:14px 0;border-bottom:1px solid var(--line);text-decoration:none;{% if not notice.read_at %}color:var(--ink);{% else %}color:var(--ink-dim);{% endif %}"><span class="status {{ 'new' if not notice.read_at else 'draft' }}">{{ 'новое' if not notice.read_at else 'прочитано' }}</span><span><b>{{ notice.title }}</b><small style="display:block;color:var(--ink-faint);margin-top:4px;">{{ notice.body }}</small></span><time style="color:var(--ink-faint);font-size:.75rem;">{{ notice.created_at.strftime('%d.%m') }}</time></a>{% endfor %}</div>
+  </section>{% endif %}
+
   <!-- Ежедневный фриспин на аккаунте -->
   <div class="card" style="display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-5);">
     <div style="display: flex; align-items: center; gap: var(--sp-4);">

@@ -1,13 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Редактирование вакансии — Админка{% endblock %}
+{% block title %}Редактирование вакансии — SpinHire{% endblock %}
 {% block robots %}<meta name="robots" content="noindex">{% endblock %}
 {% block content %}
-  <nav class="crumbs"><a href="/admin?tab=jobs">← Вакансии</a> / Редактирование</nav>
+  <nav class="crumbs"><a href="{{ '/employer' if employer_mode else '/admin?tab=jobs' }}">← Вакансии</a> / Редактирование</nav>
+  {% if request.query_params.get('error') %}<div class="flash err">Заполните название, описание и зарплатную вилку.</div>{% endif %}
   <h1 style="font-size: 1.6rem; margin: 8px 0 24px;">✎ {{ job.title }}</h1>
-  <form method="post" action="/admin/job/{{ job.id }}/edit" class="card" style="display: flex; flex-direction: column; gap: 16px; max-width: 760px;">
+  <form method="post" action="{{ '/employer/job/' ~ job.id ~ '/edit' if employer_mode else '/admin/job/' ~ job.id ~ '/edit' }}" class="card" style="display: flex; flex-direction: column; gap: 16px; max-width: 760px;">
     <div class="field"><label>Название</label><input class="input" name="title" value="{{ job.title }}" required></div>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,220px),1fr)); gap: 14px;">
-      <div class="field"><label>Компания</label><input class="input" name="company_name" value="{{ job.company_name }}"></div>
+      {% if not employer_mode %}<div class="field"><label>Компания</label><input class="input" name="company_name" value="{{ job.company_name }}"></div>{% endif %}
       <div class="field"><label>Направление</label>
         <select class="select input" name="category">{% for c in categories %}<option {% if job.category == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
       <div class="field"><label>Формат</label>
@@ -21,7 +22,7 @@
     <div class="field"><label>Описание</label><textarea class="input" name="description" rows="10">{{ job.description }}</textarea></div>
     <div style="display: flex; gap: 10px;">
       <button class="btn btn-acid" type="submit">Сохранить</button>
-      <a class="btn btn-ghost" href="/admin?tab=jobs">Отмена</a>
+      <a class="btn btn-ghost" href="{{ '/employer' if employer_mode else '/admin?tab=jobs' }}">Отмена</a>
       <a class="btn btn-ghost" href="/job/{{ job.id }}" target="_blank">Открыть ↗</a>
     </div>
   </form>

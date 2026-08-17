@@ -6,6 +6,7 @@
 """
 import csv
 import hashlib
+import html
 import json
 import os
 import re
@@ -264,6 +265,18 @@ class ResumeCreditLedger(Base):
     delta = Column(Integer, default=0)
     balance_after = Column(Integer, default=0)
     action = Column(String, default="")  # purchase | unlock | unlimited
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    kind = Column(String, default="info")
+    title = Column(String, default="")
+    body = Column(Text, default="")
+    link = Column(String, default="")
+    read_at = Column(String, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -1115,6 +1128,12 @@ def resume_contact_access(user: User, resume: Resume, db: Session) -> bool:
         employer_id=user.id, resume_id=resume.id).first() is not None
 
 
+def add_notification(db: Session, user_id: int, kind: str, title: str,
+                     body: str = "", link: str = ""):
+    db.add(Notification(user_id=user_id, kind=kind, title=title[:180],
+                        body=body[:1000], link=link[:500]))
+
+
 def anonymize_resume_text(value: str) -> str:
     """Убрать случайно вставленные контакты из публичной части CV."""
     import re
@@ -1243,10 +1262,25 @@ def profile(request: Request, db: Session = Depends(db_session)):
     recommendations = (db.query(Job).filter(Job.status == "approved", Job.category == category,
                                              ~Job.id.in_(applied_job_ids) if applied_job_ids else True)
                        .order_by(Job.featured.desc(), Job.created_at.desc()).limit(4).all())
+    notifications = (db.query(Notification).filter_by(user_id=user.id)
+                     .order_by(Notification.created_at.desc()).limit(20).all())
     return render(request, db, "profile.html", apps=apps, spin_ready=spin_ready,
                   resume=resume, resume_unlocks=resume_unlocks, formats=FORMATS,
                   profile_progress=profile_progress, app_counts=app_counts,
-                  recommendations=recommendations)
+                  recommendations=recommendations, notifications=notifications)
+
+
+@app.post("/profile/notifications/read")
+def notifications_read(request: Request, db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    if not user:
+        return login_redirect("/profile")
+    now = datetime.utcnow().isoformat() + "Z"
+    db.query(Notification).filter(Notification.user_id == user.id,
+                                  Notification.read_at == "").update(
+        {Notification.read_at: now}, synchronize_session=False)
+    db.commit()
+    return RedirectResponse("/profile#notifications", status_code=303)
 
 
 @app.post("/profile/spin")
@@ -1426,9 +1460,21 @@ def app_status(app_id: int, request: Request, status: str = Form(...),
     a = db.get(Application, app_id)
     if not user or not a or (a.job.owner_id != user.id and user.role != "admin"):
         raise HTTPException(403)
-    if status in ("new", "viewed", "invited", "offer", "hired", "rejected"):
+    if status in ("new", "viewed", "invited", "offer", "hired", "rejected") and status != a.status:
         a.status = status
+        labels = {"viewed": "Отклик просмотрен", "invited": "Приглашение на интервью",
+                  "offer": "Вам сделали оффер", "hired": "Вы приняты",
+                  "rejected": "Статус отклика обновлён", "new": "Отклик возвращён в новые"}
+        add_notification(db, a.user_id, "application", labels[status],
+                         f"{a.job.company_name}: {a.job.title}", f"/job/{a.job_id}")
         db.commit()
+        if status in ("invited", "offer", "hired"):
+            safe_label = html.escape(labels[status])
+            safe_company = html.escape(a.job.company_name or "")
+            safe_title = html.escape(a.job.title or "")
+            resend_send(a.user.email, f"SpinHire — {labels[status]}",
+                        f"<p><b>{safe_label}</b></p><p>{safe_company}: {safe_title}</p>"
+                        f'<p><a href="{BASE_URL or "https://spinhire.io"}/profile">Открыть кабинет</a></p>')
     return RedirectResponse("/employer", status_code=303)
 
 
@@ -1443,6 +1489,60 @@ def app_note(app_id: int, request: Request, note: str = Form(""),
     application.employer_note = note.strip()[:2000]
     db.commit()
     return RedirectResponse(f"/employer#application-{app_id}", status_code=303)
+
+
+def employer_job_or_404(job_id: int, user: User, db: Session) -> Job:
+    job = db.get(Job, job_id)
+    if not job or (job.owner_id != user.id and user.role != "admin"):
+        raise HTTPException(404)
+    return job
+
+
+@app.get("/employer/job/{job_id}/edit", response_class=HTMLResponse)
+def employer_job_edit(job_id: int, request: Request, db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    if not user or user.role not in ("employer", "admin"):
+        raise HTTPException(403)
+    job = employer_job_or_404(job_id, user, db)
+    return render(request, db, "admin_edit.html", job=job, categories=CATEGORIES,
+                  formats=FORMATS, employer_mode=True)
+
+
+@app.post("/employer/job/{job_id}/edit")
+def employer_job_save(job_id: int, request: Request, title: str = Form(...),
+                      category: str = Form(""), location: str = Form(""),
+                      fmt: str = Form("удалёнка"), salary: str = Form(""),
+                      tags: str = Form(""), description: str = Form(""),
+                      db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    if not user or user.role not in ("employer", "admin"):
+        raise HTTPException(403)
+    job = employer_job_or_404(job_id, user, db)
+    if not title.strip() or not description.strip() or not any(char.isdigit() for char in salary):
+        return RedirectResponse(f"/employer/job/{job_id}/edit?error=1", status_code=303)
+    job.title = title.strip()[:240]
+    job.category = category if category in CATEGORIES else guess_category(title, tags)
+    job.location = location.strip()[:180]
+    job.fmt = fmt if fmt in FORMATS else "удалёнка"
+    job.salary = salary.strip()[:180]
+    job.tags = tags.strip()[:1000]
+    job.description = description.strip()
+    if job.status == "approved":
+        job.status = "pending"
+    db.commit()
+    return RedirectResponse("/employer?job_saved=1", status_code=303)
+
+
+@app.post("/employer/job/{job_id}/archive")
+def employer_job_archive(job_id: int, request: Request, db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    if not user or user.role not in ("employer", "admin"):
+        raise HTTPException(403)
+    job = employer_job_or_404(job_id, user, db)
+    job.status = "archived"
+    job.closed_at = datetime.utcnow().date().isoformat()
+    db.commit()
+    return RedirectResponse("/employer?job_archived=1", status_code=303)
 
 
 @app.get("/post-job", response_class=HTMLResponse)
@@ -1602,14 +1702,21 @@ def admin_resume_action(resume_id: int, action: str, request: Request,
         row.status = "approved"
         row.published = True
         row.moderation_note = ""
+        add_notification(db, row.user_id, "resume", "CV опубликован",
+                         "Ваш анонимный профиль появился в базе работодателей.",
+                         f"/resume/{row.id}")
     elif action == "reject":
         row.status = "rejected"
         row.published = False
         row.moderation_note = moderation_note.strip() or "Уберите данные, раскрывающие личность, и уточните опыт."
+        add_notification(db, row.user_id, "resume", "CV нужно доработать",
+                         row.moderation_note, "/profile#cv")
     elif action == "pause":
         row.status = "paused"
         row.published = False
         row.moderation_note = moderation_note.strip()
+        add_notification(db, row.user_id, "resume", "Публикация CV приостановлена",
+                         row.moderation_note, "/profile#cv")
     else:
         raise HTTPException(400)
     row.updated_at = datetime.utcnow()

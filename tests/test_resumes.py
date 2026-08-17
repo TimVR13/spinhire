@@ -3,7 +3,7 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from server.app import (Application, Base, CV_UPLOAD_DIR, Job, Resume, ResumeUnlock, SessionLocal, User,
+from server.app import (Application, Base, CV_UPLOAD_DIR, Job, Notification, Resume, ResumeUnlock, SessionLocal, User,
                         anonymize_resume_text, app, engine, hash_pw, migrate, signer)
 
 
@@ -113,6 +113,71 @@ class ResumePrivacyTests(unittest.TestCase):
         with TestClient(app) as client:
             self.assertNotIn("CRM Manager", client.get("/resumes").text)
             self.assertEqual(client.get(f"/resume/{self.resume_id}").status_code, 404)
+
+
+class EmployerWorkflowTests(unittest.TestCase):
+    def setUp(self):
+        Base.metadata.create_all(engine)
+        with SessionLocal() as db:
+            employer = User(email="workflow-employer@test.invalid", password_hash=hash_pw("test"),
+                            role="employer", company_name="Test Casino")
+            candidate = User(email="workflow-candidate@test.invalid", password_hash=hash_pw("test"),
+                             role="talent", name="Candidate")
+            outsider = User(email="workflow-outsider@test.invalid", password_hash=hash_pw("test"),
+                            role="employer", company_name="Other")
+            db.add_all([employer, candidate, outsider])
+            db.flush()
+            job = Job(title="CRM Lead", company_name="Test Casino", category="Маркетинг и CRM",
+                      salary="€4000–5000 net", description="Full description", owner_id=employer.id,
+                      status="approved")
+            db.add(job)
+            db.flush()
+            application = Application(job_id=job.id, user_id=candidate.id)
+            db.add(application)
+            db.commit()
+            self.employer_id, self.candidate_id, self.outsider_id = employer.id, candidate.id, outsider.id
+            self.job_id, self.application_id = job.id, application.id
+
+    def tearDown(self):
+        with SessionLocal() as db:
+            db.query(Notification).filter_by(user_id=self.candidate_id).delete()
+            db.query(Application).filter_by(id=self.application_id).delete()
+            db.query(Job).filter_by(id=self.job_id).delete()
+            db.query(User).filter(User.id.in_([
+                self.employer_id, self.candidate_id, self.outsider_id])).delete(
+                    synchronize_session=False)
+            db.commit()
+
+    def test_status_change_creates_candidate_notification(self):
+        with TestClient(app) as client:
+            client.cookies.set("sh_session", signer.dumps({"uid": self.employer_id}))
+            response = client.post(f"/employer/app/{self.application_id}/status",
+                                   data={"status": "offer"}, follow_redirects=False)
+            self.assertEqual(response.status_code, 303)
+        with SessionLocal() as db:
+            application = db.get(Application, self.application_id)
+            notice = db.query(Notification).filter_by(user_id=self.candidate_id).one()
+            self.assertEqual(application.status, "offer")
+            self.assertEqual(notice.title, "Вам сделали оффер")
+
+    def test_only_owner_can_edit_and_archive_job(self):
+        with TestClient(app) as client:
+            client.cookies.set("sh_session", signer.dumps({"uid": self.outsider_id}))
+            self.assertEqual(client.get(f"/employer/job/{self.job_id}/edit").status_code, 404)
+            client.cookies.set("sh_session", signer.dumps({"uid": self.employer_id}))
+            edited = client.post(f"/employer/job/{self.job_id}/edit", data={
+                "title": "Senior CRM Lead", "category": "Маркетинг и CRM",
+                "location": "Malta", "fmt": "гибрид", "salary": "€5000–6000 net",
+                "tags": "CRM, retention", "description": "Updated full description",
+            }, follow_redirects=False)
+            self.assertEqual(edited.status_code, 303)
+            archived = client.post(f"/employer/job/{self.job_id}/archive", follow_redirects=False)
+            self.assertEqual(archived.status_code, 303)
+        with SessionLocal() as db:
+            job = db.get(Job, self.job_id)
+            self.assertEqual(job.title, "Senior CRM Lead")
+            self.assertEqual(job.status, "archived")
+            self.assertTrue(job.closed_at)
 
 
 if __name__ == "__main__":

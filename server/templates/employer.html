@@ -23,6 +23,8 @@
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Кабинет работодателя</nav>
   {% if request.query_params.get('profile_ok') %}<div class="flash">Профиль компании сохранён.</div>{% endif %}
+  {% if request.query_params.get('job_saved') %}<div class="flash">Вакансия сохранена и отправлена на повторную модерацию.</div>{% endif %}
+  {% if request.query_params.get('job_archived') %}<div class="flash">Вакансия закрыта и перенесена в архив.</div>{% endif %}
   <div class="section-head" style="margin-bottom: var(--sp-5);">
     <div>
       <span class="kicker pink">Бэк-офис</span>
@@ -88,6 +90,7 @@
       <span>{{ j.title }} <span class="status {{ j.status }}">{{ {'pending': 'на модерации', 'approved': 'опубликована', 'rejected': 'отклонена', 'archived': 'в архиве'}[j.status] }}</span></span>
       <span style="color: var(--ink-faint); font-size: 0.8rem; font-weight: 400;">{{ j.views }} просмотров · {{ j.applications|length }} откликов{% if j.featured %} · ⚡ Featured{% endif %}</span>
     </h3>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;"><a class="btn btn-ghost btn-sm" href="/employer/job/{{ j.id }}/edit">Редактировать</a><a class="btn btn-ghost btn-sm" href="/job/{{ j.id }}">Открыть</a>{% if j.status != 'archived' %}<form method="post" action="/employer/job/{{ j.id }}/archive" onsubmit="return confirm('Закрыть вакансию? Она исчезнет из активного поиска.')"><button class="btn btn-ghost btn-sm" type="submit">Закрыть вакансию</button></form>{% endif %}</div>
     {% for a in j.applications %}
     <div class="cand-row" id="application-{{ a.id }}">
       <div class="who">
