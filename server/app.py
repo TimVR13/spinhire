@@ -40,9 +40,12 @@ from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(ROOT, "data", "spinhire.db")
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()
 SECRET = os.environ.get("SPINHIRE_SECRET", "spinhire-dev-secret-change-me")
 ADMIN_EMAIL = os.environ.get("SPINHIRE_ADMIN_EMAIL", "admin@spinhire.io")
-ADMIN_PASSWORD = os.environ.get("SPINHIRE_ADMIN_PASSWORD", "spinhire-boss-2026")
+ADMIN_PASSWORD = os.environ.get("SPINHIRE_ADMIN_PASSWORD", "")
+if ENVIRONMENT == "production" and (SECRET == "spinhire-dev-secret-change-me" or not ADMIN_PASSWORD):
+    raise RuntimeError("Production requires SPINHIRE_SECRET and SPINHIRE_ADMIN_PASSWORD")
 
 # ---- внешние интеграции (секреты только из окружения; пустые дефолты для локали) ----
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
@@ -290,12 +293,18 @@ def guess_category(title: str, tags: str) -> str:
 
 
 def seed(db: Session):
-    if db.query(User).first():
+    if not ADMIN_PASSWORD:
+        print("[seed] SPINHIRE_ADMIN_PASSWORD не задан — администратор автоматически не создаётся")
         return
-    db.add(User(email=ADMIN_EMAIL, password_hash=hash_pw(ADMIN_PASSWORD),
-                name="Админ", role="admin"))
+    admin = db.query(User).filter(func.lower(User.email) == ADMIN_EMAIL.lower()).first()
+    if admin:
+        admin.role = "admin"
+        admin.password_hash = hash_pw(ADMIN_PASSWORD)
+    else:
+        db.add(User(email=ADMIN_EMAIL, password_hash=hash_pw(ADMIN_PASSWORD),
+                    name="Админ", role="admin"))
     db.commit()
-    print(f"[seed] админ создан: {ADMIN_EMAIL}")
+    print(f"[seed] администратор настроен: {ADMIN_EMAIL}")
 
 
 def migrate(db: Session):
@@ -432,7 +441,8 @@ def login_redirect(next_url: str):
 
 def set_session(resp, user: User):
     resp.set_cookie("sh_session", signer.dumps({"uid": user.id}),
-                    httponly=True, max_age=30 * 24 * 3600, samesite="lax")
+                    httponly=True, secure=ENVIRONMENT == "production",
+                    max_age=30 * 24 * 3600, samesite="lax")
     return resp
 
 
