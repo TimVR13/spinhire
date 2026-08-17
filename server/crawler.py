@@ -24,8 +24,9 @@ import json
 import os
 import re
 import sys
+import threading
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, quote_plus, urljoin, urlparse
 
@@ -86,8 +87,8 @@ SOURCE_REGISTRY = [
      "note": "Сайт и внутренний API закрыты Cloudflare. Коннектор готов к официальному feed URL."},
     {"key": "hh.ru", "name": "HeadHunter (hh.ru / hh.ua)", "type": "Публичный API — требует настройки",
      "status": "не подключён", "note": "api.hh.ru бесплатный (зарплата+город+работодатель), но из облака отдаёт 403 — нужен зарегистрированный app-токен ИЛИ запуск с разрешённого IP. Покрывает RU/UA/СНГ. Готов подключить."},
-    {"key": "casino-discovery", "name": "Казино Украины и UK", "type": "Career/hiring discovery",
-     "status": "подключён", "note": "394 бренда из Blask; обход официальных career/job страниц с импортом подтверждённого JobPosting"},
+    {"key": "casino-discovery", "name": "Казино: 9 рынков", "type": "Career/hiring discovery",
+     "status": "подключён", "note": "2 134 бренда из Blask; ежедневный пакетный обход официальных career/job страниц"},
 ]
 
 RESUME_SOURCE_REGISTRY = [
@@ -110,12 +111,13 @@ TIMEOUT = 25
 MAX_PER_BOARD = 100          # крупные борды (SOFTSWISS сейчас 52) забираем целиком
 DESC_LIMIT = 20000           # полное описание без обрезания обычных вакансий
 SOFTSWISS_API = "https://careers.softswiss.com/wp-json/wp/v2/vacancy?per_page=100"
-CASINO_SEEDS_PATH = Path(__file__).resolve().parent.parent / "data" / "casino-operators-ua-uk.json"
+CASINO_SEEDS_PATH = Path(__file__).resolve().parent.parent / "data" / "casino-operators.json"
 DISCOVERY_REPORT_PATH = Path(__file__).resolve().parent.parent / "data" / "casino-careers-report.json"
 CAREER_WORDS = re.compile(r"(?i)(career|jobs?|vacanc|hiring|join[-_ ]?(us|team)|work[-_ ]?with[-_ ]?us)")
-DISCOVERY_LOOKUPS_PER_RUN = int(os.environ.get("CASINO_DISCOVERY_LOOKUPS_PER_RUN", "20"))
+DISCOVERY_LOOKUPS_PER_RUN = int(os.environ.get("CASINO_DISCOVERY_LOOKUPS_PER_RUN", "40"))
 SEARCH_EXCLUDED_HOSTS = ("linkedin.com", "facebook.com", "instagram.com", "wikipedia.org",
                          "casino.guru", "glassdoor.", "indeed.", "trustpilot.", "youtube.com")
+_RUN_LOCK = threading.Lock()
 
 
 def _fetch(url):
@@ -345,6 +347,8 @@ def crawl_casino_seed_registry():
         return []
     payload = json.loads(CASINO_SEEDS_PATH.read_text(encoding="utf-8"))
     records = payload.get("operators", []) if isinstance(payload, dict) else payload
+    # Interleave countries by market rank so one large market cannot block all others.
+    records = sorted(records, key=lambda row: (row.get("rank") or 10**9, row.get("country") or ""))
     previous = {}
     if DISCOVERY_REPORT_PATH.exists():
         try:
@@ -361,7 +365,14 @@ def crawl_casino_seed_registry():
         if not (seed.get("homepage") or seed.get("careers_url")):
             homepage = ""
             attempted = False
-            if prior.get("status") != "homepage_not_found" and lookups < DISCOVERY_LOOKUPS_PER_RUN:
+            retry_at = prior.get("next_retry_at", "")
+            retry_due = not retry_at
+            if retry_at:
+                try:
+                    retry_due = datetime.fromisoformat(retry_at.replace("Z", "+00:00")).replace(tzinfo=None) <= datetime.utcnow()
+                except ValueError:
+                    retry_due = True
+            if retry_due and lookups < DISCOVERY_LOOKUPS_PER_RUN:
                 lookups += 1
                 attempted = True
                 try:
@@ -371,9 +382,14 @@ def crawl_casino_seed_registry():
             if homepage:
                 seed = {**seed, "homepage": homepage}
             else:
-                status = "homepage_not_found" if attempted or prior.get("status") == "homepage_not_found" else "domain_pending"
-                report.append({"operator": seed.get("operator"), "country": seed.get("country"),
-                               "status": status, "career_pages": [], "jobs": 0})
+                status = "homepage_not_found" if attempted else "domain_pending"
+                row = {"operator": seed.get("operator"), "country": seed.get("country"),
+                       "status": status, "career_pages": [], "jobs": 0}
+                if attempted:
+                    row["next_retry_at"] = (datetime.utcnow() + timedelta(days=7)).isoformat() + "Z"
+                elif retry_at:
+                    row["next_retry_at"] = retry_at
+                report.append(row)
                 continue
         try:
             jobs, pages = crawl_discovered_careers(seed)
@@ -649,6 +665,23 @@ def save_status(payload):
     status_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def last_successful_run():
+    """Return the last successful crawl timestamp, if the status file is valid."""
+    status_path = Path(__file__).resolve().parent.parent / "data" / "crawler-status.json"
+    try:
+        payload = json.loads(status_path.read_text(encoding="utf-8"))
+        if payload.get("ok") and payload.get("last_run"):
+            return datetime.fromisoformat(payload["last_run"].replace("Z", "+00:00")).replace(tzinfo=None)
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        pass
+    return None
+
+
+def crawl_is_due(interval_hours=24):
+    last_run = last_successful_run()
+    return last_run is None or datetime.utcnow() - last_run >= timedelta(hours=interval_hours)
+
+
 def collect():
     """Собрать вакансии со всех источников. Возвращает список dict."""
     items = []
@@ -737,23 +770,28 @@ def upsert(db, Job, guess_category, items, approve=True):
 
 
 def run(db, Job, guess_category, approve=True):
-    items = collect()
-    added, updated = upsert(db, Job, guess_category, items, approve=approve)
-    profiles = company_snapshot(items)
-    snapshot_path = Path(__file__).resolve().parent.parent / "data" / "companies.json"
-    snapshot_path.write_text(json.dumps(profiles, ensure_ascii=False, indent=2), encoding="utf-8")
-    source_counts = {}
-    for item in items:
-        source = item.get("source", "unknown")
-        source_counts[source] = source_counts.get(source, 0) + 1
-    save_status({
-        "last_run": datetime.utcnow().isoformat() + "Z", "ok": True,
-        "collected": len(items), "added": added, "updated": updated,
-        "companies": len(profiles), "source_counts": source_counts,
-    })
-    print(f"[crawl] готово: +{added} новых, {updated} обновлено, всего собрано {len(items)}")
-    return {"collected": len(items), "added": added, "updated": updated,
-            "companies": len(profiles), "at": datetime.utcnow().isoformat()}
+    if not _RUN_LOCK.acquire(blocking=False):
+        return {"skipped": "already_running", "at": datetime.utcnow().isoformat()}
+    try:
+        items = collect()
+        added, updated = upsert(db, Job, guess_category, items, approve=approve)
+        profiles = company_snapshot(items)
+        snapshot_path = Path(__file__).resolve().parent.parent / "data" / "companies.json"
+        snapshot_path.write_text(json.dumps(profiles, ensure_ascii=False, indent=2), encoding="utf-8")
+        source_counts = {}
+        for item in items:
+            source = item.get("source", "unknown")
+            source_counts[source] = source_counts.get(source, 0) + 1
+        save_status({
+            "last_run": datetime.utcnow().isoformat() + "Z", "ok": True,
+            "collected": len(items), "added": added, "updated": updated,
+            "companies": len(profiles), "source_counts": source_counts,
+        })
+        print(f"[crawl] готово: +{added} новых, {updated} обновлено, всего собрано {len(items)}")
+        return {"collected": len(items), "added": added, "updated": updated,
+                "companies": len(profiles), "at": datetime.utcnow().isoformat()}
+    finally:
+        _RUN_LOCK.release()
 
 
 if __name__ == "__main__":

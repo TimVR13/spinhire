@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import secrets
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -499,6 +500,24 @@ def _startup():
                 crawler.run(db, Job, guess_category)
             except Exception as e:
                 print(f"[startup] первичный crawl не удался: {str(e)[:120]}")
+    if os.environ.get("CRAWLER_DAILY_ENABLED", "1").lower() not in ("0", "false", "no"):
+        threading.Thread(target=_crawler_scheduler, name="daily-crawler", daemon=True).start()
+
+
+def _crawler_scheduler():
+    """Refresh vacancies daily without delaying application startup."""
+    interval_hours = max(1, int(os.environ.get("CRAWLER_INTERVAL_HOURS", "24")))
+    check_seconds = max(300, int(os.environ.get("CRAWLER_CHECK_SECONDS", "3600")))
+    time.sleep(max(10, int(os.environ.get("CRAWLER_START_DELAY_SECONDS", "60"))))
+    while True:
+        try:
+            from server import crawler
+            if crawler.crawl_is_due(interval_hours):
+                with SessionLocal() as db:
+                    crawler.run(db, Job, guess_category)
+        except Exception as e:
+            print(f"[scheduler] crawl failed: {str(e)[:160]}")
+        time.sleep(check_seconds)
 
 
 # ---------- auth helpers ----------

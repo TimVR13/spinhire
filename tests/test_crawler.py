@@ -1,5 +1,6 @@
 import json
 import unittest
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 from server import crawler
@@ -42,6 +43,23 @@ class CrawlerTests(unittest.TestCase):
         with patch.object(crawler, "_fetch_html", return_value=page):
             homepage = crawler.discover_official_homepage("SuperGra", "Ukraine")
         self.assertEqual(homepage, "https://supergra.ua/")
+
+    def test_daily_crawl_due_without_status(self):
+        with patch.object(crawler, "last_successful_run", return_value=None):
+            self.assertTrue(crawler.crawl_is_due())
+
+    def test_daily_crawl_waits_for_interval(self):
+        with patch.object(crawler, "last_successful_run", return_value=datetime.utcnow() - timedelta(hours=2)):
+            self.assertFalse(crawler.crawl_is_due(interval_hours=24))
+
+    def test_country_registry_is_interleaved_by_rank(self):
+        rows = [
+            {"country": "Big", "rank": 2}, {"country": "Big", "rank": 1},
+            {"country": "Small", "rank": 1},
+        ]
+        ordered = sorted(rows, key=lambda row: (row.get("rank") or 10**9, row.get("country") or ""))
+        self.assertEqual([(row["rank"], row["country"]) for row in ordered],
+                         [(1, "Big"), (1, "Small"), (2, "Big")])
 
 
 if __name__ == "__main__":
