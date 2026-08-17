@@ -10,6 +10,11 @@
   .cand-row .who span { color: var(--ink-faint); font-size: 0.82rem; display: block; }
   .cand-actions { display: flex; gap: 6px; flex-wrap: wrap; }
   .cand-actions .btn { padding: 5px 10px; font-size: 0.68rem; }
+  .cv-access { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:var(--sp-5); align-items:center; padding:var(--sp-5) 0; border-block:2px solid var(--line); margin-bottom:var(--sp-6); }
+  .cv-plans { display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end; }
+  .unlocked-row { display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 0;border-top:1px solid var(--line); }
+  .ledger { color:var(--ink-faint);font-size:.8rem;margin-top:var(--sp-5); }
+  @media(max-width:760px){.cv-access{grid-template-columns:1fr}.cv-plans{justify-content:flex-start}.unlocked-row{grid-template-columns:1fr auto}.unlocked-row>div:nth-child(2){grid-column:1/-1}}
 {% endblock %}
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Кабинет работодателя</nav>
@@ -23,6 +28,30 @@
       <a href="/post-job" class="btn btn-pink">+ Разместить вакансию</a>
     </div>
   </div>
+
+  <section class="cv-access">
+    <div>
+      <span class="kicker">База кандидатов</span>
+      <h2 style="font-size:1.35rem;margin:6px 0;">{{ user.cv_credits or 0 }} оплаченных открытий</h2>
+      <p style="color:var(--ink-dim);">{% if user.cv_access_until %}Безлимит действует до {{ user.cv_access_until[:10] }}. {% endif %}Однажды открытый контакт остаётся доступным в кабинете.</p>
+    </div>
+    <div class="cv-plans">
+      <a href="/resumes" class="btn btn-acid">Найти специалиста</a>
+      <form method="post" action="/checkout/cv10"><button class="btn btn-ghost">+10 · €69</button></form>
+      <form method="post" action="/checkout/cv40"><button class="btn btn-ghost">+40 · €199</button></form>
+    </div>
+  </section>
+
+  {% if unlocked_resumes %}
+  <section style="margin-bottom:var(--sp-7);">
+    <h2 style="font-size:1rem;color:var(--acid);margin-bottom:8px;">Открытые контакты</h2>
+    {% for cv in unlocked_resumes %}
+    <div class="unlocked-row"><span style="color:var(--acid);font-family:var(--font-display);font-size:.75rem;">{{ cv.public_code }}</span><div><b>{{ cv.title }}</b><p style="color:var(--ink-faint);font-size:.82rem;">{{ cv.location }} · {{ cv.experience_years }} лет опыта</p></div><a href="/resume/{{ cv.id }}" class="btn btn-ghost btn-sm">Контакты</a></div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if credit_ledger %}<details class="ledger"><summary>История доступа</summary><div style="margin-top:10px;">{% for op in credit_ledger %}<p>{{ op.created_at.strftime('%d.%m.%Y %H:%M') }} · {{ {'purchase':'покупка','unlock':'открытие контакта','unlimited':'безлимит'}.get(op.action, op.action) }} · {% if op.delta > 0 %}+{% endif %}{{ op.delta }} · баланс {{ op.balance_after }}</p>{% endfor %}</div></details>{% endif %}
 
   {% for j in jobs %}
   <div class="job-block">

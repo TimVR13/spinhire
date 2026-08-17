@@ -3,13 +3,15 @@ import unittest
 from fastapi.testclient import TestClient
 
 from server.app import (Base, Resume, ResumeUnlock, SessionLocal, User,
-                        anonymize_resume_text, app, engine, hash_pw, signer)
+                        anonymize_resume_text, app, engine, hash_pw, migrate, signer)
 
 
 class ResumePrivacyTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         Base.metadata.create_all(engine)
+        with SessionLocal() as db:
+            migrate(db)
 
     def setUp(self):
         with SessionLocal() as db:
@@ -22,6 +24,7 @@ class ResumePrivacyTests(unittest.TestCase):
             resume = Resume(user_id=candidate.id, title="CRM Manager", location="Warsaw",
                             experience_years=6, skills="CRM, Retention", about="iGaming experience",
                             contact_email="private-address@test.invalid", published=True,
+                            status="approved",
                             consent_at="2026-08-17T00:00:00Z")
             db.add(resume)
             db.commit()
@@ -47,11 +50,24 @@ class ResumePrivacyTests(unittest.TestCase):
             unlocked = client.post(f"/resume/{self.resume_id}/unlock", follow_redirects=True)
             self.assertEqual(unlocked.status_code, 200)
             self.assertIn("private-address@test.invalid", unlocked.text)
+            repeated = client.post(f"/resume/{self.resume_id}/unlock", follow_redirects=True)
+            self.assertEqual(repeated.status_code, 200)
         with SessionLocal() as db:
             employer = db.get(User, self.employer_id)
             self.assertEqual(employer.cv_credits, 0)
             self.assertEqual(db.query(ResumeUnlock).filter_by(
                 employer_id=self.employer_id, resume_id=self.resume_id).count(), 1)
+
+    def test_pending_resume_is_not_public(self):
+        with SessionLocal() as db:
+            resume = db.get(Resume, self.resume_id)
+            resume.status = "pending"
+            db.commit()
+        with TestClient(app) as client:
+            listing = client.get("/resumes")
+            detail = client.get(f"/resume/{self.resume_id}")
+            self.assertNotIn("CRM Manager", listing.text)
+            self.assertEqual(detail.status_code, 404)
 
     def test_contacts_are_removed_from_public_description(self):
         public = anonymize_resume_text(

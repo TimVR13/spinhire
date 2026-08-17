@@ -28,6 +28,7 @@
   <nav class="adm-tabs">
     <a href="/admin" class="{% if tab == 'dash' %}on{% endif %}">Дашборд</a>
     <a href="/admin?tab=jobs" class="{% if tab == 'jobs' %}on{% endif %}">Вакансии {% if stats.jobs_pending %}({{ stats.jobs_pending }}!){% endif %}</a>
+    <a href="/admin?tab=resumes" class="{% if tab == 'resumes' %}on{% endif %}">Резюме {% if stats.resumes_pending %}({{ stats.resumes_pending }}!){% endif %}</a>
     <a href="/admin?tab=users" class="{% if tab == 'users' %}on{% endif %}">Пользователи</a>
     <a href="/admin?tab=apps" class="{% if tab == 'apps' %}on{% endif %}">Отклики</a>
     <a href="/admin?tab=orders" class="{% if tab == 'orders' %}on{% endif %}">💳 Заказы {% if orders_pending %}({{ orders_pending }}!){% endif %}</a>
@@ -44,6 +45,9 @@
       <div class="stat-card"><div class="n">{{ stats.talents }}</div><div class="l">Соискателей</div></div>
       <div class="stat-card"><div class="n">{{ stats.apps }}</div><div class="l">Откликов</div></div>
       <div class="stat-card"><div class="n">{{ stats.views }}</div><div class="l">Просмотров вакансий</div></div>
+      <div class="stat-card"><div class="n">{{ stats.resumes_live }}</div><div class="l">CV опубликовано</div></div>
+      <div class="stat-card" {% if stats.resumes_pending %}style="border-color:var(--pink);"{% endif %}><div class="n">{{ stats.resumes_pending }}</div><div class="l">CV на модерации</div></div>
+      <div class="stat-card"><div class="n">{{ stats.resume_unlocks }}</div><div class="l">Контактов открыто</div></div>
     </div>
 
     <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: var(--sp-6); border-color: var(--acid);">
@@ -100,6 +104,26 @@
         </td>
       </tr>
       {% endfor %}
+    </table></div>
+
+  {% elif tab == 'resumes' %}
+    <p style="color:var(--ink-dim);margin-bottom:var(--sp-4);">Перед публикацией проверьте, что в открытых полях нет имени, контактов, ссылок и названий закрытых проектов.</p>
+    <div class="table-wrap"><table class="adm">
+      <tr><th>CV</th><th>Профиль</th><th>Опыт</th><th>Статус</th><th>Метрики</th><th>Модерация</th></tr>
+      {% for cv in resumes %}
+      <tr>
+        <td><a href="/resume/{{ cv.id }}" style="color:inherit;">{{ cv.public_code }}</a><br><span style="color:var(--ink-faint);font-size:.75rem;">{{ cv.location or 'без локации' }}</span></td>
+        <td><b>{{ cv.title or 'Без названия' }}</b><br><span style="color:var(--ink-faint);font-size:.75rem;">{{ cv.skill_list[:4]|join(', ') }}</span></td>
+        <td>{{ cv.experience_years }} лет</td>
+        <td><span class="status {{ cv.status }}">{{ cv.status }}</span>{% if cv.moderation_note %}<br><span style="color:var(--pink);font-size:.75rem;">{{ cv.moderation_note }}</span>{% endif %}</td>
+        <td>{{ cv.views or 0 }} просмотров<br>{{ cv.unlock_count or 0 }} открытий</td>
+        <td style="min-width:270px;">
+          {% if cv.status != 'approved' %}<form method="post" action="/admin/resume/{{ cv.id }}/approve"><button class="btn btn-acid">Одобрить</button></form>{% endif %}
+          <form method="post" action="/admin/resume/{{ cv.id }}/reject" style="display:flex;gap:6px;margin-top:6px;"><input class="input" name="moderation_note" placeholder="Причина отказа"><button class="btn btn-ghost">Вернуть</button></form>
+          {% if cv.status == 'approved' %}<form method="post" action="/admin/resume/{{ cv.id }}/pause"><button class="btn btn-ghost" style="margin-top:6px;">Снять</button></form>{% endif %}
+        </td>
+      </tr>
+      {% else %}<tr><td colspan="6" style="color:var(--ink-dim);">CV пока нет.</td></tr>{% endfor %}
     </table></div>
 
   {% elif tab == 'users' %}

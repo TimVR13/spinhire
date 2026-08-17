@@ -23,6 +23,8 @@
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / <a href="/resumes">Резюме</a> / {{ resume.public_code }}</nav>
   {% if request.query_params.get('unlocked') %}<div class="flash">Контакты открыты. Повторный просмотр этого CV больше не списывает доступ.</div>{% endif %}
+  {% if request.query_params.get('need_plan') %}<div class="flash err">Закончились открытия контактов. Выберите пакет — после подтверждения оплаты лимит появится в кабинете.</div>{% endif %}
+  {% if resume.status != 'approved' %}<div class="flash">Предпросмотр владельца: статус CV — {{ {'draft':'черновик','pending':'на модерации','rejected':'нужны правки','paused':'скрыто'}.get(resume.status, resume.status) }}.</div>{% endif %}
   <div class="resume-layout">
     <article class="resume-main">
       <span class="kicker">{{ resume.public_code }} · анонимный профиль</span>

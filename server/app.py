@@ -35,7 +35,8 @@ def check_pw(pw: str, h: str) -> bool:
     except ValueError:
         return False
 from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer,
-                        String, Text, create_engine, func, or_)
+                        String, Text, UniqueConstraint, create_engine, func, or_)
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -206,7 +207,12 @@ class Resume(Base):
     contact_email = Column(String, default="")
     contact_telegram = Column(String, default="")
     published = Column(Boolean, default=False)
+    status = Column(String, default="draft")  # draft | pending | approved | rejected | paused
+    moderation_note = Column(String, default="")
     consent_at = Column(String, default="")
+    submitted_at = Column(String, default="")
+    views = Column(Integer, default=0)
+    unlock_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
     user = relationship("User")
@@ -222,9 +228,23 @@ class Resume(Base):
 
 class ResumeUnlock(Base):
     __tablename__ = "resume_unlocks"
+    __table_args__ = (UniqueConstraint("employer_id", "resume_id", name="uq_resume_unlock"),)
     id = Column(Integer, primary_key=True)
     employer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=False)
+    access_kind = Column(String, default="credit")  # credit | unlimited | admin
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ResumeCreditLedger(Base):
+    __tablename__ = "resume_credit_ledger"
+    id = Column(Integer, primary_key=True)
+    employer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True)
+    delta = Column(Integer, default=0)
+    balance_after = Column(Integer, default=0)
+    action = Column(String, default="")  # purchase | unlock | unlimited
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -365,6 +385,24 @@ def migrate(db: Session):
         db.execute(text("ALTER TABLE users ADD COLUMN cv_credits INTEGER DEFAULT 0"))
     if "cv_access_until" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN cv_access_until VARCHAR DEFAULT ''"))
+    rcols = {r[1] for r in db.execute(text("PRAGMA table_info(resumes)")).fetchall()}
+    for _sql in (
+        "ALTER TABLE resumes ADD COLUMN status VARCHAR DEFAULT 'draft'",
+        "ALTER TABLE resumes ADD COLUMN moderation_note VARCHAR DEFAULT ''",
+        "ALTER TABLE resumes ADD COLUMN submitted_at VARCHAR DEFAULT ''",
+        "ALTER TABLE resumes ADD COLUMN views INTEGER DEFAULT 0",
+        "ALTER TABLE resumes ADD COLUMN unlock_count INTEGER DEFAULT 0",
+    ):
+        col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
+        if rcols and col not in rcols:
+            db.execute(text(_sql))
+    uunlock_cols = {r[1] for r in db.execute(text("PRAGMA table_info(resume_unlocks)")).fetchall()}
+    if uunlock_cols and "access_kind" not in uunlock_cols:
+        db.execute(text("ALTER TABLE resume_unlocks ADD COLUMN access_kind VARCHAR DEFAULT 'credit'"))
+    if uunlock_cols:
+        db.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_resume_unlock ON resume_unlocks(employer_id, resume_id)"))
+    if rcols:
+        db.execute(text("UPDATE resumes SET status='pending' WHERE published=1 AND status='draft'"))
     # верификация почты: verified DEFAULT 1 — существующие пользователи остаются рабочими
     for _sql in (
         "ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 1",
@@ -1032,7 +1070,7 @@ def anonymize_resume_text(value: str) -> str:
 @app.get("/resumes", response_class=HTMLResponse)
 def resumes(request: Request, q: str = "", location: str = "", fmt: str = "",
             db: Session = Depends(db_session)):
-    query = db.query(Resume).filter(Resume.published == True)  # noqa: E712
+    query = db.query(Resume).filter(Resume.published == True, Resume.status == "approved")  # noqa: E712
     if q.strip():
         needle = f"%{q.strip()}%"
         query = query.filter(or_(Resume.title.ilike(needle), Resume.skills.ilike(needle),
@@ -1050,9 +1088,12 @@ def resumes(request: Request, q: str = "", location: str = "", fmt: str = "",
 def resume_detail(resume_id: int, request: Request, db: Session = Depends(db_session)):
     row = db.get(Resume, resume_id)
     user = get_user(request, db)
-    if not row or (not row.published and (not user or user.id != row.user_id) and
-                   (not user or user.role != "admin")):
+    is_owner_or_admin = bool(user and (user.id == row.user_id or user.role == "admin")) if row else False
+    if not row or ((not row.published or row.status != "approved") and not is_owner_or_admin):
         raise HTTPException(404)
+    if not is_owner_or_admin:
+        row.views = (row.views or 0) + 1
+        db.commit()
     unlocked = resume_contact_access(user, row, db)
     return render(request, db, "resume.html", resume=row, unlocked=unlocked,
                   active="resumes")
@@ -1066,15 +1107,35 @@ def resume_unlock(resume_id: int, request: Request, db: Session = Depends(db_ses
     if user.role != "employer":
         raise HTTPException(403)
     row = db.get(Resume, resume_id)
-    if not row or not row.published:
+    if not row or not row.published or row.status != "approved":
         raise HTTPException(404)
-    if resume_contact_access(user, row, db):
+    if db.query(ResumeUnlock).filter_by(employer_id=user.id, resume_id=row.id).first():
         return RedirectResponse(f"/resume/{resume_id}?unlocked=1", status_code=303)
-    if (user.cv_credits or 0) < 1:
-        return RedirectResponse(f"/resume/{resume_id}?need_plan=1", status_code=303)
-    user.cv_credits -= 1
-    db.add(ResumeUnlock(employer_id=user.id, resume_id=row.id))
-    db.commit()
+    unlimited = False
+    if user.cv_access_until:
+        try:
+            unlimited = datetime.fromisoformat(user.cv_access_until) > datetime.utcnow()
+        except ValueError:
+            unlimited = False
+    if not unlimited:
+        charged = (db.query(User).filter(User.id == user.id, User.cv_credits > 0)
+                   .update({User.cv_credits: User.cv_credits - 1}, synchronize_session=False))
+        if charged != 1:
+            db.rollback()
+            return RedirectResponse(f"/resume/{resume_id}?need_plan=1", status_code=303)
+    try:
+        db.add(ResumeUnlock(employer_id=user.id, resume_id=row.id,
+                            access_kind="unlimited" if unlimited else "credit"))
+        row.unlock_count = (row.unlock_count or 0) + 1
+        db.flush()
+        db.refresh(user)
+        db.add(ResumeCreditLedger(employer_id=user.id, resume_id=row.id,
+                                  delta=0 if unlimited else -1,
+                                  balance_after=user.cv_credits or 0,
+                                  action="unlimited" if unlimited else "unlock"))
+        db.commit()
+    except IntegrityError:
+        db.rollback()
     return RedirectResponse(f"/resume/{resume_id}?unlocked=1", status_code=303)
 
 @app.get("/profile", response_class=HTMLResponse)
@@ -1091,8 +1152,9 @@ def profile(request: Request, db: Session = Depends(db_session)):
     spin_ready = (user.last_spin is None
                   or (datetime.utcnow() - user.last_spin).total_seconds() > 20 * 3600)
     resume = db.query(Resume).filter_by(user_id=user.id).first()
+    resume_unlocks = db.query(ResumeUnlock).filter_by(resume_id=resume.id).count() if resume else 0
     return render(request, db, "profile.html", apps=apps, spin_ready=spin_ready,
-                  resume=resume, formats=FORMATS)
+                  resume=resume, resume_unlocks=resume_unlocks, formats=FORMATS)
 
 
 @app.post("/profile/spin")
@@ -1141,6 +1203,8 @@ def profile_resume_save(request: Request, title: str = Form(""), location: str =
     if not row:
         row = Resume(user_id=user.id)
         db.add(row)
+    old_public = (row.title, row.location, row.experience_years, row.skills, row.about,
+                  row.desired_format, row.salary_expect, row.languages)
     wants_publish = bool(publish)
     if wants_publish and (not consent or not title.strip() or not about.strip()):
         return RedirectResponse("/profile?cv_error=1#cv", status_code=303)
@@ -1156,6 +1220,16 @@ def profile_resume_save(request: Request, title: str = Form(""), location: str =
     row.contact_telegram = contact_telegram.strip()
     row.published = wants_publish
     row.consent_at = datetime.utcnow().isoformat() + "Z" if wants_publish else row.consent_at
+    new_public = (row.title, row.location, row.experience_years, row.skills, row.about,
+                  row.desired_format, row.salary_expect, row.languages)
+    if not wants_publish:
+        row.status = "paused" if row.status == "approved" else "draft"
+    elif row.status == "approved" and old_public == new_public:
+        row.status = "approved"
+    else:
+        row.status = "pending"
+        row.submitted_at = datetime.utcnow().isoformat() + "Z"
+        row.moderation_note = ""
     row.updated_at = datetime.utcnow()
     user.headline = row.title
     user.salary_expect = row.salary_expect
@@ -1175,7 +1249,13 @@ def employer(request: Request, db: Session = Depends(db_session)):
         return RedirectResponse("/profile")
     jobs = (db.query(Job).filter(Job.owner_id == user.id)
             .order_by(Job.created_at.desc()).all())
-    return render(request, db, "employer.html", jobs=jobs)
+    unlocked = (db.query(Resume).join(ResumeUnlock, ResumeUnlock.resume_id == Resume.id)
+                .filter(ResumeUnlock.employer_id == user.id)
+                .order_by(ResumeUnlock.created_at.desc()).all())
+    ledger = (db.query(ResumeCreditLedger).filter_by(employer_id=user.id)
+              .order_by(ResumeCreditLedger.created_at.desc()).limit(8).all())
+    return render(request, db, "employer.html", jobs=jobs, unlocked_resumes=unlocked,
+                  credit_ledger=ledger)
 
 
 @app.post("/employer/app/{app_id}/status")
@@ -1281,6 +1361,9 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         "talents": db.query(User).filter(User.role == "talent").count(),
         "apps": db.query(Application).count(),
         "views": db.query(func.sum(Job.views)).scalar() or 0,
+        "resumes_live": db.query(Resume).filter(Resume.status == "approved", Resume.published == True).count(),  # noqa: E712
+        "resumes_pending": db.query(Resume).filter(Resume.status == "pending").count(),
+        "resume_unlocks": db.query(ResumeUnlock).count(),
     }
     if tab == "jobs":
         q = (request.query_params.get("q") or "").strip().lower()
@@ -1297,6 +1380,9 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         ctx["users"] = db.query(User).order_by(User.created_at.desc()).all()
     elif tab == "apps":
         ctx["apps"] = db.query(Application).order_by(Application.created_at.desc()).all()
+    elif tab == "resumes":
+        ctx["resumes"] = db.query(Resume).order_by(
+            (Resume.status == "pending").desc(), Resume.updated_at.desc()).all()
     elif tab == "sources":
         from server import crawler
         from collections import Counter
@@ -1329,6 +1415,32 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
             .order_by(Job.created_at.desc()).limit(10).all()
         ctx["orders_pending"] = db.query(Order).filter(Order.status == "pending").count()
     return render(request, db, "admin.html", **ctx)
+
+
+@app.post("/admin/resume/{resume_id}/{action}")
+def admin_resume_action(resume_id: int, action: str, request: Request,
+                        moderation_note: str = Form(""), db: Session = Depends(db_session)):
+    need_admin(request, db)
+    row = db.get(Resume, resume_id)
+    if not row:
+        raise HTTPException(404)
+    if action == "approve":
+        row.status = "approved"
+        row.published = True
+        row.moderation_note = ""
+    elif action == "reject":
+        row.status = "rejected"
+        row.published = False
+        row.moderation_note = moderation_note.strip() or "Уберите данные, раскрывающие личность, и уточните опыт."
+    elif action == "pause":
+        row.status = "paused"
+        row.published = False
+        row.moderation_note = moderation_note.strip()
+    else:
+        raise HTTPException(400)
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    return RedirectResponse("/admin?tab=resumes", status_code=303)
 
 
 # редактирование вакансии
@@ -1402,10 +1514,16 @@ def admin_order_action(order_id: int, action: str, request: Request, db: Session
                     job.status = "approved"
             if not already_paid and o.user and o.plan == "cv10":
                 o.user.cv_credits = (o.user.cv_credits or 0) + 10
+                db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=10,
+                                          balance_after=o.user.cv_credits, action="purchase"))
             elif not already_paid and o.user and o.plan == "cv40":
                 o.user.cv_credits = (o.user.cv_credits or 0) + 40
+                db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=40,
+                                          balance_after=o.user.cv_credits, action="purchase"))
             elif not already_paid and o.user and o.plan == "cvunlim":
                 o.user.cv_access_until = (datetime.utcnow() + timedelta(days=30)).isoformat()
+                db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=0,
+                                          balance_after=o.user.cv_credits or 0, action="unlimited"))
         elif action == "cancel":
             o.status = "cancelled"
         db.commit()
@@ -1448,8 +1566,11 @@ def admin_user(user_id: int, action: str, request: Request, db: Session = Depend
         owned_resume = db.query(Resume).filter_by(user_id=u.id).first()
         if owned_resume:
             db.query(ResumeUnlock).filter_by(resume_id=owned_resume.id).delete()
+            db.query(ResumeCreditLedger).filter_by(resume_id=owned_resume.id).update(
+                {"resume_id": None}, synchronize_session=False)
             db.delete(owned_resume)
         db.query(ResumeUnlock).filter_by(employer_id=u.id).delete()
+        db.query(ResumeCreditLedger).filter_by(employer_id=u.id).delete()
         db.delete(u)
     elif action in ("talent", "employer", "admin"):
         u.role = action

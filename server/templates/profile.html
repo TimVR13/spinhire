@@ -12,7 +12,7 @@
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Мой профиль</nav>
   {% if request.query_params.get('ok') %}<div class="flash">✓ Профиль сохранён</div>{% endif %}
-  {% if request.query_params.get('cv_ok') %}<div class="flash">CV сохранено{% if resume and resume.published %} и опубликовано анонимно{% endif %}.</div>{% endif %}
+  {% if request.query_params.get('cv_ok') %}<div class="flash">CV сохранено{% if resume and resume.status == 'pending' %} и отправлено на модерацию{% elif resume and resume.status == 'approved' %} и опубликовано анонимно{% elif resume and resume.status == 'paused' %}; публикация приостановлена{% endif %}.</div>{% endif %}
   {% if request.query_params.get('cv_error') %}<div class="flash err">Чтобы опубликовать CV, заполните роль и описание и подтвердите согласие.</div>{% endif %}
   {% set sp = request.query_params.get('spin') %}
   {% if sp and sp not in ('wait',) %}<div class="flash">🎡 Ежедневный фриспин: <b>+{{ sp }} SpinCoins</b>! Заходи завтра за следующим.</div>{% endif %}
@@ -39,8 +39,10 @@
   <section id="cv" class="card cv-editor">
     <div class="section-head" style="margin-bottom:20px;">
       <div><span class="kicker">Анонимная база</span><h2 style="font-size:clamp(1.3rem,3vw,2rem);">{{ 'Редактировать CV' if resume else 'Добавить CV' }}</h2></div>
-      {% if resume and resume.published %}<a href="/resume/{{ resume.id }}" class="btn btn-ghost">Посмотреть публикацию</a>{% endif %}
+      {% if resume %}<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><span class="status {{ resume.status }}">{{ {'draft':'черновик','pending':'модерация','approved':'опубликовано','rejected':'нужны правки','paused':'скрыто'}.get(resume.status, resume.status) }}</span><a href="/resume/{{ resume.id }}" class="btn btn-ghost">Предпросмотр</a></div>{% endif %}
     </div>
+    {% if resume and resume.moderation_note %}<div class="flash err">Комментарий модератора: {{ resume.moderation_note }}</div>{% endif %}
+    {% if resume %}<p style="color:var(--ink-faint);margin:-8px 0 18px;">{{ resume.views or 0 }} просмотров · {{ resume_unlocks or 0 }} работодателей открыли контакты</p>{% endif %}
     <p style="color:var(--ink-dim);max-width:70ch;margin-bottom:20px;">Работодатели увидят опыт, навыки и ожидания. Имя, email и Telegram останутся закрытыми до оплаченного открытия контакта.</p>
     <form method="post" action="/profile/resume" class="cv-grid">
       <div class="field wide"><label>Желаемая роль</label><input class="input" name="title" value="{{ resume.title if resume else user.headline }}" placeholder="CRM Manager · iGaming" required></div>
