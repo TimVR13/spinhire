@@ -42,6 +42,7 @@
   }
   .co-card:hover { border-color: var(--acid); transform: translate(-3px,-3px); box-shadow: var(--shadow-dark); }
   .co-card__head { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+  .co-card__head .job-card__logo { width:56px; height:56px; flex:0 0 56px; aspect-ratio:1; overflow:hidden; border-radius:12px; }
   .co-card b { font-family: var(--font-display); font-size: 1rem; }
   .co-card .type { color: var(--ink-faint); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
   .co-card .jobs-n { margin-top: var(--sp-3); font-weight: 800; color: var(--acid); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -64,7 +65,7 @@
   .co-row__muted { color:var(--ink-faint); font-size:.82rem; }
   .co-row__jobs { font-weight:800; color:var(--acid); font-variant-numeric:tabular-nums; text-align:right; }
   .co-empty { padding:32px; color:var(--ink-faint); text-align:center; }
-  @media(max-width:760px){.co-directory__head{align-items:stretch;flex-direction:column}.co-directory__tools{width:100%;flex-direction:column}.co-row{grid-template-columns:1fr auto}.co-row__type,.co-row__geo{display:none}.co-row__jobs{text-align:right}}
+  @media(max-width:760px){.co-directory__head{align-items:stretch;flex-direction:column}.co-directory__tools{width:100%;flex-direction:column}.co-row{grid-template-columns:1fr auto}.co-row__type,.co-row__geo{display:none}.co-row__jobs{text-align:right}.co-card__head .job-card__logo{width:48px;height:48px;flex-basis:48px;border-radius:10px}}
 </style>
 </head>
 <body>
