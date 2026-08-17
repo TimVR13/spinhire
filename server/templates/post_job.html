@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 {% set active = 'employer' %}
 {% block title %}Разместить вакансию — SpinHire{% endblock %}
+{% block desc %}Разместите вакансию в iGaming на SpinHire: публикация, отклики, поиск кандидатов и база анонимных CV.{% endblock %}
+{% block robots %}<link rel="canonical" href="https://spinhire.io/post-job">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Разместить вакансию в iGaming — SpinHire">
+<meta property="og:description" content="Публикация вакансий, отклики и доступ к базе специалистов iGaming.">
+<meta property="og:url" content="https://spinhire.io/post-job">
+<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">{% endblock %}
 {% block content %}
   <nav class="crumbs" style="text-align: center;"><a href="/">Главная</a> / Разместить вакансию</nav>
   <div style="text-align: center;"><span class="kicker pink">Сдавай карты</span></div>

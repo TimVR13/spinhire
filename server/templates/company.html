@@ -2,7 +2,13 @@
 {% set active = 'jobs' %}
 {% block title %}{{ company }} — вакансии компании | SpinHire{% endblock %}
 {% block desc %}{{ company }}: {{ jobs|length }} открытых iGaming-вакансий на SpinHire. {{ locations|join(', ') }}.{% endblock %}
-{% block robots %}<link rel="canonical" href="https://spinhire.io/company/{{ jobs[0].company_slug }}">{% endblock %}
+{% block robots %}<link rel="canonical" href="https://spinhire.io/company/{{ jobs[0].company_slug }}">
+<meta property="og:type" content="website"><meta property="og:title" content="{{ company }} — вакансии iGaming">
+<meta property="og:description" content="{{ jobs|length }} открытых вакансий {{ company }} на SpinHire.">
+<meta property="og:url" content="https://spinhire.io/company/{{ jobs[0].company_slug }}">
+<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":{{ company|tojson }},"url":"https://spinhire.io/company/{{ jobs[0].company_slug }}"{% if domain %},"sameAs":"https://{{ domain }}"{% endif %}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Главная","item":"https://spinhire.io/"},{"@type":"ListItem","position":2,"name":"Компании","item":"https://spinhire.io/companies.html"},{"@type":"ListItem","position":3,"name":{{ company|tojson }} }]}</script>{% endblock %}
 {% block style %}
   .co-head { display: flex; align-items: center; gap: var(--sp-4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: var(--sp-6); margin-bottom: var(--sp-5); flex-wrap: wrap; }
   .co-logo { width: 72px; height: 72px; border-radius: 14px; background: var(--bg-deep); display: grid; place-items: center; overflow: hidden; flex-shrink: 0; border: 1px solid var(--line); }
@@ -21,10 +27,12 @@
     </div>
     <div style="flex: 1; min-width: 200px;">
       <h1>{{ company }}</h1>
-      <p class="meta">{{ jobs|length }} открытых вакансий{% if locations %} · {{ locations|join(' · ') }}{% endif %}</p>
+      <p class="meta">{{ jobs|length }} открытых вакансий{% if company_profile and company_profile.company_location %} · {{ company_profile.company_location }}{% elif locations %} · {{ locations|join(' · ') }}{% endif %}{% if company_profile and company_profile.company_size %} · команда {{ company_profile.company_size }}{% endif %}</p>
     </div>
     {% if domain %}<a class="btn btn-ghost" href="https://{{ domain }}" target="_blank" rel="noopener nofollow">Сайт компании ↗</a>{% endif %}
   </div>
+
+  {% if company_profile and company_profile.company_description %}<section style="max-width:75ch;margin:0 0 var(--sp-6);"><h2 style="font-size:1rem;color:var(--acid);margin-bottom:10px;">О компании</h2><p style="color:var(--ink-dim);line-height:1.7;white-space:pre-line;">{{ company_profile.company_description }}</p></section>{% endif %}
 
   <h2 style="font-size: 1.1rem; color: var(--acid); margin-bottom: 14px;">▮ Вакансии {{ company }}</h2>
   <div class="jobs-list">

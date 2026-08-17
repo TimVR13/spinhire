@@ -69,6 +69,7 @@ class CrawlerTests(unittest.TestCase):
 
         class DB:
             def query(self, model): return Query()
+            def flush(self): pass
             def commit(self): pass
             def add(self, item): pass
 
@@ -81,10 +82,11 @@ class CrawlerTests(unittest.TestCase):
         class Job:
             source = status = ext_id = Field()
 
-        row = SimpleNamespace(status="approved", closed_at="", source="softswiss", ext_id="gone")
-        added, updated, closed = crawler.upsert(
+        row = SimpleNamespace(id=7, status="approved", closed_at="", source="softswiss", ext_id="gone")
+        added, updated, closed, changed, removed = crawler.upsert(
             DB(), Job, lambda *_: "Operations", [], complete_sources={"softswiss"})
         self.assertEqual((added, updated, closed), (0, 0, 1))
+        self.assertEqual((changed, removed), ([], [7]))
         self.assertEqual(row.status, "archived")
         self.assertTrue(row.closed_at)
 

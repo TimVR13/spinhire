@@ -2,6 +2,13 @@ User-agent: *
 Allow: /
 Disallow: /profile
 Disallow: /employer
-Disallow: /post-job
+Disallow: /admin
+Disallow: /checkout
+Disallow: /login
+Disallow: /register
+Disallow: /verify
+
+User-agent: OAI-SearchBot
+Allow: /
 
 Sitemap: https://spinhire.io/sitemap.xml

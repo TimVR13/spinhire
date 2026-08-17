@@ -7,7 +7,13 @@
   .cv-editor { border-top: 3px solid var(--acid); margin-bottom: var(--sp-6); }
   .cv-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
   .cv-grid .wide { grid-column:1/-1; }
-  @media(max-width:700px){.cv-grid{grid-template-columns:1fr}.cv-grid .wide{grid-column:auto}}
+  .dash-strip { display:grid;grid-template-columns:1.2fr repeat(4,minmax(100px,.55fr));border-block:2px solid var(--line);margin-bottom:var(--sp-6); }
+  .dash-cell { padding:16px;border-right:1px solid var(--line); }
+  .dash-cell:last-child { border-right:0; }.dash-cell b{display:block;font-family:var(--font-display);font-size:1.25rem;color:var(--acid)}.dash-cell span{color:var(--ink-faint);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}
+  .progress-track{height:8px;background:var(--surface-2);margin-top:10px}.progress-track i{display:block;height:100%;background:var(--acid)}
+  .recommend-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-3);margin-bottom:var(--sp-6)}
+  .recommend-job{padding:16px;border:1px solid var(--line);text-decoration:none}.recommend-job:hover{border-color:var(--acid)}
+  @media(max-width:700px){.cv-grid{grid-template-columns:1fr}.cv-grid .wide{grid-column:auto}.dash-strip{grid-template-columns:repeat(2,1fr)}.dash-cell:first-child{grid-column:1/-1}.recommend-grid{grid-template-columns:1fr}}
 {% endblock %}
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Мой профиль</nav>
@@ -19,6 +25,14 @@
   {% if sp == 'wait' %}<div class="flash err">Сегодня уже крутили — фриспин обновляется раз в сутки.</div>{% endif %}
   <span class="kicker">Кабинет соискателя</span>
   <h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem); margin-block: 8px 24px;">{{ user.name or user.email }}</h1>
+
+  <section class="dash-strip" aria-label="Состояние профиля и откликов">
+    <div class="dash-cell"><span>Готовность профиля</span><b>{{ profile_progress }}%</b><div class="progress-track"><i style="width:{{ profile_progress }}%"></i></div></div>
+    <div class="dash-cell"><span>Отклики</span><b>{{ apps|length }}</b></div>
+    <div class="dash-cell"><span>Просмотрены</span><b>{{ app_counts.viewed }}</b></div>
+    <div class="dash-cell"><span>Интервью</span><b>{{ app_counts.invited }}</b></div>
+    <div class="dash-cell"><span>Открыли CV</span><b>{{ resume_unlocks }}</b></div>
+  </section>
 
   <!-- Ежедневный фриспин на аккаунте -->
   <div class="card" style="display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-5);">
@@ -67,6 +81,7 @@
       <div class="field"><label>Имя</label><input class="input" name="name" value="{{ user.name }}"></div>
       <div class="field"><label>Кто вы (например, «VIP-менеджер · 5 лет · DE C1»)</label><input class="input" name="headline" value="{{ user.headline }}"></div>
       <div class="field"><label>Зарплатные ожидания (net/мес)</label><input class="input" name="salary_expect" value="{{ user.salary_expect }}" placeholder="€4 000"></div>
+      <div class="field"><label>Текущая локация</label><input class="input" name="location" value="{{ user.location }}" placeholder="Варшава, Польша"></div>
       <div class="field"><label>Языки</label><input class="input" name="languages" value="{{ user.languages }}" placeholder="английский C1, немецкий B2"></div>
       <label class="check"><input type="checkbox" name="incognito" {% if user.incognito %}checked{% endif %}> 🥷 Инкогнито: скрывать имя от работодателей</label>
       <button class="btn btn-acid" type="submit">Сохранить</button>
@@ -87,4 +102,6 @@
       {% endfor %}
     </section>
   </div>
+
+  {% if recommendations %}<section style="margin-top:var(--sp-7);"><span class="kicker">Под ваш профиль</span><h2 style="font-size:1.25rem;margin:8px 0 16px;">Рекомендованные вакансии</h2><div class="recommend-grid">{% for job in recommendations %}<a class="recommend-job" href="/job/{{ job.id }}"><b>{{ job.title }}</b><p style="color:var(--ink-faint);font-size:.82rem;margin-top:6px;">{{ job.company_name }} · {{ job.location or job.fmt }}</p>{% if job.has_salary %}<span class="salary">{{ job.salary }}</span>{% endif %}</a>{% endfor %}</div></section>{% endif %}
 {% endblock %}

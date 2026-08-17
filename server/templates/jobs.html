@@ -2,14 +2,15 @@
 {% set active = 'jobs' %}
 {% block title %}Вакансии iGaming — {{ total }} живых вакансий | SpinHire{% endblock %}
 {% block desc %}Живые вакансии iGaming из базы SpinHire: фильтры по формату, направлению и зарплате.{% endblock %}
-{% block robots %}<link rel="canonical" href="https://spinhire.io/jobs">
+{% block robots %}{% if q or fmt or cat or loc or salary_only %}<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://spinhire.io/jobs">{% elif page > 1 %}<link rel="canonical" href="https://spinhire.io/jobs?page={{ page }}">{% else %}<link rel="canonical" href="https://spinhire.io/jobs">{% endif %}
 <meta property="og:type" content="website">
 <meta property="og:title" content="Вакансии iGaming — {{ found }} живых | SpinHire">
 <meta property="og:description" content="Живые вакансии iGaming: казино, беттинг, аффилейты. Фильтры по гео, формату и зарплате.">
-<meta property="og:url" content="https://spinhire.io/jobs">
+<meta property="og:url" content="https://spinhire.io/jobs{% if page > 1 %}?page={{ page }}{% endif %}">
 <meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"ItemList","name":"Вакансии iGaming","itemListElement":[{% for j in jobs %}{"@type":"ListItem","position":{{ loop.index }},"url":"https://spinhire.io/job/{{ j.id }}","name":{{ j.title|tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]}
+{"@context":"https://schema.org","@type":"ItemList","name":"Вакансии iGaming","itemListElement":[{% for j in jobs %}{"@type":"ListItem","position":{{ ((page - 1) * 30) + loop.index }},"url":"https://spinhire.io/job/{{ j.id }}","name":{{ j.title|tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]}
 </script>{% endblock %}
 {% block style %}
   .jobs-list { display: flex; flex-direction: column; gap: var(--sp-3); }

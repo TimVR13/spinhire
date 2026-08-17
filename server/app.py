@@ -8,6 +8,7 @@ import csv
 import hashlib
 import json
 import os
+import re
 import secrets
 import threading
 import time
@@ -18,7 +19,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import bcrypt as _bcrypt
@@ -80,7 +81,12 @@ class User(Base):
     headline = Column(String, default="")
     salary_expect = Column(String, default="")
     languages = Column(String, default="")
+    location = Column(String, default="")
     incognito = Column(Boolean, default=True)
+    company_website = Column(String, default="")
+    company_description = Column(Text, default="")
+    company_location = Column(String, default="")
+    company_size = Column(String, default="")
     cv_credits = Column(Integer, default=0)         # оплаченные открытия контактов
     cv_access_until = Column(String, default="")   # ISO-дата безлимитного доступа
     coins = Column(Integer, default=0)              # SpinCoins на аккаунте
@@ -166,6 +172,11 @@ class Job(Base):
         import re as _re
         s = _re.sub(r"[^a-zа-я0-9]+", "-", (self.company_name or "").lower()).strip("-")
         return s or "company"
+
+    @property
+    def company_site(self):
+        domain = company_domain(self.company_name)
+        return f"https://{domain}" if domain else ""
 
     @property
     def initials(self):
@@ -387,6 +398,16 @@ def migrate(db: Session):
         db.execute(text("ALTER TABLE users ADD COLUMN cv_credits INTEGER DEFAULT 0"))
     if "cv_access_until" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN cv_access_until VARCHAR DEFAULT ''"))
+    for _sql in (
+        "ALTER TABLE users ADD COLUMN location VARCHAR DEFAULT ''",
+        "ALTER TABLE users ADD COLUMN company_website VARCHAR DEFAULT ''",
+        "ALTER TABLE users ADD COLUMN company_description TEXT DEFAULT ''",
+        "ALTER TABLE users ADD COLUMN company_location VARCHAR DEFAULT ''",
+        "ALTER TABLE users ADD COLUMN company_size VARCHAR DEFAULT ''",
+    ):
+        col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
+        if col not in ucols:
+            db.execute(text(_sql))
     rcols = {r[1] for r in db.execute(text("PRAGMA table_info(resumes)")).fetchall()}
     for _sql in (
         "ALTER TABLE resumes ADD COLUMN status VARCHAR DEFAULT 'draft'",
@@ -482,6 +503,8 @@ async def guard(request: Request, call_next):
     resp = await call_next(request)
     for k, v in _SECURITY_HEADERS.items():
         resp.headers.setdefault(k, v)
+    if path.startswith(("/css/", "/js/", "/img/", "/assets/")):
+        resp.headers.setdefault("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400")
     return resp
 
 
@@ -658,7 +681,7 @@ def r5(): return RedirectResponse("/jobs")
 
 # ---------- public: jobs ----------
 
-JOBS_PER_PAGE = 100
+JOBS_PER_PAGE = 30
 
 SEARCH_EQUIVALENTS = {
     "менеджер": ("manager",),
@@ -741,8 +764,10 @@ def company_page(slug: str, request: Request, db: Session = Depends(db_session))
     dom = company_domain(company)
     matched.sort(key=lambda j: j.created_at, reverse=True)
     locs = sorted({j.location for j in matched if j.location})
+    company_profile = next((j.owner for j in matched if j.owner_id), None)
     return render(request, db, "company.html", company=company, jobs=matched,
-                  domain=dom, logo=matched[0].logo_url, locations=locs[:6])
+                  domain=dom, logo=matched[0].logo_url, locations=locs[:6],
+                  company_profile=company_profile)
 
 
 @app.get("/api/events")
@@ -1174,8 +1199,21 @@ def profile(request: Request, db: Session = Depends(db_session)):
                   or (datetime.utcnow() - user.last_spin).total_seconds() > 20 * 3600)
     resume = db.query(Resume).filter_by(user_id=user.id).first()
     resume_unlocks = db.query(ResumeUnlock).filter_by(resume_id=resume.id).count() if resume else 0
+    profile_checks = [user.name, user.headline, user.location, user.salary_expect, user.languages,
+                      resume and resume.title, resume and resume.skills, resume and resume.about,
+                      resume and resume.contact_telegram]
+    profile_progress = round(sum(bool(value) for value in profile_checks) / len(profile_checks) * 100)
+    app_counts = {status: sum(a.status == status for a in apps)
+                  for status in ("new", "viewed", "invited", "rejected")}
+    applied_job_ids = [a.job_id for a in apps]
+    category = guess_category(user.headline, resume.skills if resume else "")
+    recommendations = (db.query(Job).filter(Job.status == "approved", Job.category == category,
+                                             ~Job.id.in_(applied_job_ids) if applied_job_ids else True)
+                       .order_by(Job.featured.desc(), Job.created_at.desc()).limit(4).all())
     return render(request, db, "profile.html", apps=apps, spin_ready=spin_ready,
-                  resume=resume, resume_unlocks=resume_unlocks, formats=FORMATS)
+                  resume=resume, resume_unlocks=resume_unlocks, formats=FORMATS,
+                  profile_progress=profile_progress, app_counts=app_counts,
+                  recommendations=recommendations)
 
 
 @app.post("/profile/spin")
@@ -1198,12 +1236,14 @@ def profile_spin(request: Request, db: Session = Depends(db_session)):
 @app.post("/profile")
 def profile_save(request: Request, name: str = Form(""), headline: str = Form(""),
                  salary_expect: str = Form(""), languages: str = Form(""),
+                 location: str = Form(""),
                  incognito: str = Form(None), db: Session = Depends(db_session)):
     user = get_user(request, db)
     if not user:
         return login_redirect("/profile")
     user.name, user.headline = name.strip(), headline.strip()
     user.salary_expect, user.languages = salary_expect.strip(), languages.strip()
+    user.location = location.strip()
     user.incognito = bool(incognito)
     db.commit()
     return RedirectResponse("/profile?ok=1", status_code=303)
@@ -1275,8 +1315,44 @@ def employer(request: Request, db: Session = Depends(db_session)):
                 .order_by(ResumeUnlock.created_at.desc()).all())
     ledger = (db.query(ResumeCreditLedger).filter_by(employer_id=user.id)
               .order_by(ResumeCreditLedger.created_at.desc()).limit(8).all())
+    applications = [application for job in jobs for application in job.applications]
+    stats = {
+        "active_jobs": sum(job.status == "approved" for job in jobs),
+        "pending_jobs": sum(job.status == "pending" for job in jobs),
+        "views": sum(job.views or 0 for job in jobs),
+        "applications": len(applications),
+        "new_applications": sum(application.status == "new" for application in applications),
+    }
+    company_checks = [user.company_name, user.company_website, user.company_description,
+                      user.company_location, user.company_size]
+    company_progress = round(sum(bool(value) for value in company_checks) / len(company_checks) * 100)
     return render(request, db, "employer.html", jobs=jobs, unlocked_resumes=unlocked,
-                  credit_ledger=ledger)
+                  credit_ledger=ledger, stats=stats, company_progress=company_progress)
+
+
+@app.post("/employer/profile")
+def employer_profile_save(request: Request, company_name: str = Form(""),
+                          company_website: str = Form(""), company_description: str = Form(""),
+                          company_location: str = Form(""), company_size: str = Form(""),
+                          db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    if not user or user.role not in ("employer", "admin"):
+        raise HTTPException(403)
+    website = company_website.strip()
+    if website and not website.startswith(("https://", "http://")):
+        website = "https://" + website
+    if website and urllib.parse.urlparse(website).scheme not in ("http", "https"):
+        website = ""
+    user.company_name = company_name.strip()[:180]
+    user.company_website = website[:500]
+    user.company_description = company_description.strip()[:3000]
+    user.company_location = company_location.strip()[:180]
+    user.company_size = company_size.strip()[:80]
+    for job in db.query(Job).filter(Job.owner_id == user.id).all():
+        if user.company_name:
+            job.company_name = user.company_name
+    db.commit()
+    return RedirectResponse("/employer?profile_ok=1", status_code=303)
 
 
 @app.post("/employer/app/{app_id}/status")
@@ -1601,6 +1677,46 @@ def admin_user(user_id: int, action: str, request: Request, db: Session = Depend
 
 # ---------- sitemap (динамический, включает живые вакансии) ----------
 
+ARTICLE_FILES = {
+    "salaries-igaming-2026": "post-salaries-igaming-2026.html",
+    "relocation-malta": "post-relocation-malta.html",
+    "vip-manager": "post-vip-manager.html",
+    "limassol-vs-warsaw": "post-limassol-vs-warsaw.html",
+    "compliance-career": "post-compliance-career.html",
+    "crypto-salary": "post-crypto-salary.html",
+}
+
+
+@app.get("/blog")
+def blog_short():
+    return RedirectResponse("/blog.html", status_code=301)
+
+
+@app.get("/blog/{slug}")
+def article_page(slug: str):
+    filename = ARTICLE_FILES.get(slug)
+    if not filename:
+        raise HTTPException(404)
+    return FileResponse(os.path.join(ROOT, filename), media_type="text/html")
+
+
+@app.get("/post-{slug}.html")
+def legacy_article(slug: str):
+    canonical_slug = next((key for key, filename in ARTICLE_FILES.items()
+                           if filename == f"post-{slug}.html"), None)
+    if not canonical_slug:
+        raise HTTPException(404)
+    return RedirectResponse(f"/blog/{canonical_slug}", status_code=301)
+
+
+@app.get("/indexnow-key.txt")
+def indexnow_key():
+    from fastapi.responses import PlainTextResponse
+    key = os.environ.get("INDEXNOW_KEY", "").strip()
+    if not key:
+        raise HTTPException(404)
+    return PlainTextResponse(key)
+
 @app.get("/sitemap.xml")
 def sitemap(db: Session = Depends(db_session)):
     from fastapi.responses import Response
@@ -1611,15 +1727,20 @@ def sitemap(db: Session = Depends(db_session)):
               ("jobs-vip-manager.html", "0.8"), ("jobs-affiliate.html", "0.8"), ("jobs-aml.html", "0.8"),
               ("jobs-crypto.html", "0.8"), ("jobs-warsaw.html", "0.8"), ("jobs-tbilisi.html", "0.8"),
               ("jobs-gamedev.html", "0.8"),
-              ("post-salaries-igaming-2026.html", "0.7"), ("post-relocation-malta.html", "0.7"),
-              ("post-vip-manager.html", "0.7"), ("post-limassol-vs-warsaw.html", "0.7"),
-              ("post-compliance-career.html", "0.7"), ("post-crypto-salary.html", "0.7"),
+              ("blog/salaries-igaming-2026", "0.7"), ("blog/relocation-malta", "0.7"),
+              ("blog/vip-manager", "0.7"), ("blog/limassol-vs-warsaw", "0.7"),
+              ("blog/compliance-career", "0.7"), ("blog/crypto-salary", "0.7"),
               ("privacy.html", "0.3"), ("terms.html", "0.3"), ("game-rules.html", "0.3")]
+    static.append(("editorial.html", "0.5"))
     rows = [f"  <url><loc>{base}/{p}</loc><priority>{pr}</priority></url>" for p, pr in static]
     for j in db.query(Job).filter(Job.status == "approved").all():
+        lastmod = j.posted_at if re.match(r"^\d{4}-\d{2}-\d{2}$", j.posted_at or "") else j.created_at.strftime("%Y-%m-%d")
         rows.append(f'  <url><loc>{base}/job/{j.id}</loc>'
-                    f'<lastmod>{j.created_at.strftime("%Y-%m-%d")}</lastmod>'
+                    f'<lastmod>{lastmod}</lastmod>'
                     f'<priority>0.6</priority></url>')
+    company_slugs = sorted({j.company_slug for j in db.query(Job).filter(Job.status == "approved").all()})
+    rows.extend(f'  <url><loc>{base}/company/{slug}</loc><priority>0.6</priority></url>'
+                for slug in company_slugs)
     xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
            + "\n".join(rows) + "\n</urlset>\n")

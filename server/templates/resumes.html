@@ -2,6 +2,12 @@
 {% set active = 'resumes' %}
 {% block title %}Анонимные резюме специалистов iGaming — SpinHire{% endblock %}
 {% block desc %}База анонимных CV специалистов казино, беттинга, платежей, маркетинга и разработки.{% endblock %}
+{% block robots %}<link rel="canonical" href="https://spinhire.io/resumes">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Анонимные резюме специалистов iGaming — SpinHire">
+<meta property="og:description" content="Опыт и навыки доступны сразу, контакты кандидата — после открытия работодателем.">
+<meta property="og:url" content="https://spinhire.io/resumes">
+<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">{% endblock %}
 {% block style %}
   .cv-hero { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(280px,.7fr); gap:var(--sp-6); align-items:end; padding:var(--sp-5) 0 var(--sp-6); }
   .cv-hero h1 { font-size:clamp(2rem,5vw,4.5rem); line-height:.98; max-width:900px; }

@@ -14,10 +14,14 @@
   .cv-plans { display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end; }
   .unlocked-row { display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 0;border-top:1px solid var(--line); }
   .ledger { color:var(--ink-faint);font-size:.8rem;margin-top:var(--sp-5); }
-  @media(max-width:760px){.cv-access{grid-template-columns:1fr}.cv-plans{justify-content:flex-start}.unlocked-row{grid-template-columns:1fr auto}.unlocked-row>div:nth-child(2){grid-column:1/-1}}
+  .company-stats{display:grid;grid-template-columns:1.2fr repeat(5,minmax(90px,.6fr));border-block:2px solid var(--line);margin-bottom:var(--sp-6)}
+  .company-stat{padding:16px;border-right:1px solid var(--line)}.company-stat:last-child{border-right:0}.company-stat b{display:block;color:var(--acid);font-family:var(--font-display);font-size:1.25rem}.company-stat span{color:var(--ink-faint);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em}
+  .profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.profile-grid .wide{grid-column:1/-1}
+  @media(max-width:760px){.cv-access{grid-template-columns:1fr}.cv-plans{justify-content:flex-start}.unlocked-row{grid-template-columns:1fr auto}.unlocked-row>div:nth-child(2){grid-column:1/-1}.company-stats{grid-template-columns:repeat(2,1fr)}.company-stat:first-child{grid-column:1/-1}.profile-grid{grid-template-columns:1fr}.profile-grid .wide{grid-column:auto}}
 {% endblock %}
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Кабинет работодателя</nav>
+  {% if request.query_params.get('profile_ok') %}<div class="flash">Профиль компании сохранён.</div>{% endif %}
   <div class="section-head" style="margin-bottom: var(--sp-5);">
     <div>
       <span class="kicker pink">Бэк-офис</span>
@@ -28,6 +32,28 @@
       <a href="/post-job" class="btn btn-pink">+ Разместить вакансию</a>
     </div>
   </div>
+
+  <section class="company-stats" aria-label="Статистика найма">
+    <div class="company-stat"><span>Профиль компании</span><b>{{ company_progress }}%</b></div>
+    <div class="company-stat"><span>Активные</span><b>{{ stats.active_jobs }}</b></div>
+    <div class="company-stat"><span>Модерация</span><b>{{ stats.pending_jobs }}</b></div>
+    <div class="company-stat"><span>Просмотры</span><b>{{ stats.views }}</b></div>
+    <div class="company-stat"><span>Отклики</span><b>{{ stats.applications }}</b></div>
+    <div class="company-stat"><span>Новые</span><b>{{ stats.new_applications }}</b></div>
+  </section>
+
+  <details class="card" style="margin-bottom:var(--sp-6);" {% if company_progress < 60 %}open{% endif %}>
+    <summary style="cursor:pointer;font-family:var(--font-display);">Профиль компании · {{ company_progress }}%</summary>
+    <p style="color:var(--ink-dim);margin:10px 0 18px;">Эти данные формируют публичную страницу работодателя и повышают доверие кандидатов.</p>
+    <form class="profile-grid" method="post" action="/employer/profile">
+      <div class="field"><label>Название компании</label><input class="input" name="company_name" value="{{ user.company_name }}" required></div>
+      <div class="field"><label>Сайт</label><input class="input" type="url" name="company_website" value="{{ user.company_website }}" placeholder="https://company.com"></div>
+      <div class="field"><label>Локация / хабы</label><input class="input" name="company_location" value="{{ user.company_location }}" placeholder="Мальта · Варшава · Remote"></div>
+      <div class="field"><label>Размер команды</label><select class="input" name="company_size"><option value="">Не указан</option>{% for size in ['1–20','21–100','101–500','500+'] %}<option {% if user.company_size==size %}selected{% endif %}>{{ size }}</option>{% endfor %}</select></div>
+      <div class="field wide"><label>О компании</label><textarea class="input" name="company_description" rows="5" placeholder="Продукт, рынки, лицензии, команда и почему к вам идти.">{{ user.company_description }}</textarea></div>
+      <button class="btn btn-acid wide" type="submit">Сохранить профиль компании</button>
+    </form>
+  </details>
 
   <section class="cv-access">
     <div>
@@ -63,7 +89,8 @@
     <div class="cand-row">
       <div class="who">
         <b>{% if a.user.incognito %}🥷 Аноним #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</b>
-        <span>{{ a.user.headline or 'профиль не заполнен' }}{% if a.user.salary_expect %} · хочет {{ a.user.salary_expect }}{% endif %}{% if a.cover %} · «{{ a.cover }}»{% endif %}</span>
+        <span>{{ a.user.headline or 'профиль не заполнен' }}{% if a.user.location %} · {{ a.user.location }}{% endif %}{% if a.user.salary_expect %} · хочет {{ a.user.salary_expect }}{% endif %}{% if a.cover %} · «{{ a.cover }}»{% endif %}</span>
+        <span><a href="mailto:{{ a.user.email }}" style="color:var(--acid);">{{ a.user.email }}</a></span>
       </div>
       <div class="cand-actions">
         <span class="status {{ a.status }}">{{ {'new': 'новый', 'viewed': 'просмотрен', 'invited': 'интервью', 'rejected': 'отказ'}[a.status] }}</span>

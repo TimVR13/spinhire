@@ -748,6 +748,7 @@ def collect(with_metadata=False):
 def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
     """Upsert jobs and archive IDs missing from successfully fetched complete sources."""
     added = updated = closed = 0
+    changed_rows, closed_rows = [], []
     seen = set()
     for it in items:
         key = (it["source"], it["ext_id"])
@@ -758,6 +759,9 @@ def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
                                        Job.ext_id == it["ext_id"]).first()
         cat = guess_category(it["title"], it["tags"])
         if row:
+            before = (row.title, row.company_name, row.location, row.fmt, row.tags,
+                      row.description, row.source_url, row.category, row.posted_at,
+                      row.deadline, row.status)
             row.title, row.company_name = it["title"], it["company_name"]
             row.location, row.fmt = it["location"], it["fmt"]
             row.tags, row.description = it["tags"], it["description"]
@@ -767,15 +771,22 @@ def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
             if row.status in ("archived", "rejected"):
                 row.status = "approved" if approve else "pending"
                 row.closed_at = ""
+            after = (row.title, row.company_name, row.location, row.fmt, row.tags,
+                     row.description, row.source_url, row.category, row.posted_at,
+                     row.deadline, row.status)
+            if before != after:
+                changed_rows.append(row)
             updated += 1
         else:
-            db.add(Job(title=it["title"], company_name=it["company_name"],
-                       location=it["location"], fmt=it["fmt"], salary=it["salary"],
-                       tags=it["tags"], description=it["description"],
-                       source_url=it["source_url"], source=it["source"],
-                       ext_id=it["ext_id"], category=cat,
-                       posted_at=it.get("posted_at", ""), deadline=it.get("deadline", ""),
-                       status="approved" if approve else "pending"))
+            row = Job(title=it["title"], company_name=it["company_name"],
+                      location=it["location"], fmt=it["fmt"], salary=it["salary"],
+                      tags=it["tags"], description=it["description"],
+                      source_url=it["source_url"], source=it["source"],
+                      ext_id=it["ext_id"], category=cat,
+                      posted_at=it.get("posted_at", ""), deadline=it.get("deadline", ""),
+                      status="approved" if approve else "pending")
+            db.add(row)
+            changed_rows.append(row)
             added += 1
     for source in complete_sources or ():
         active_ids = {it["ext_id"] for it in items if it["source"] == source and it["ext_id"]}
@@ -784,9 +795,68 @@ def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
         for row in stale:
             row.status = "archived"
             row.closed_at = datetime.utcnow().date().isoformat()
+            closed_rows.append(row)
             closed += 1
+    db.flush()
     db.commit()
-    return added, updated, closed
+    return added, updated, closed, [row.id for row in changed_rows], [row.id for row in closed_rows]
+
+
+def notify_indexnow(urls):
+    """Push changed URLs to Yandex/IndexNow when INDEXNOW_KEY is configured."""
+    key = os.environ.get("INDEXNOW_KEY", "").strip()
+    if not key or not urls:
+        return 0
+    body = json.dumps({"host": "spinhire.io", "key": key,
+                       "keyLocation": "https://spinhire.io/indexnow-key.txt",
+                       "urlList": urls[:10000]}).encode()
+    req = urllib.request.Request("https://yandex.com/indexnow", data=body,
+                                 headers={"Content-Type": "application/json", "User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as response:
+        response.read()
+    return len(urls[:10000])
+
+
+def notify_google_indexing(updated_urls, deleted_urls):
+    """Notify Google's JobPosting Indexing API when service-account JSON is configured."""
+    raw = os.environ.get("GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON", "").strip()
+    if not raw:
+        return 0
+    try:
+        from google.auth.transport.requests import AuthorizedSession
+        from google.oauth2 import service_account
+        info = json.loads(raw) if raw.startswith("{") else json.loads(Path(raw).read_text())
+        credentials = service_account.Credentials.from_service_account_info(
+            info, scopes=["https://www.googleapis.com/auth/indexing"])
+        session = AuthorizedSession(credentials)
+        limit = max(1, int(os.environ.get("GOOGLE_INDEXING_MAX_PER_RUN", "180")))
+        sent = 0
+        for url, kind in ([(url, "URL_UPDATED") for url in updated_urls]
+                          + [(url, "URL_DELETED") for url in deleted_urls])[:limit]:
+            response = session.post("https://indexing.googleapis.com/v3/urlNotifications:publish",
+                                    json={"url": url, "type": kind}, timeout=TIMEOUT)
+            response.raise_for_status()
+            sent += 1
+        return sent
+    except ImportError:
+        print("[indexing] google-auth is not installed")
+        return 0
+
+
+def notify_search_engines(changed_ids, closed_ids):
+    base = "https://spinhire.io/job/"
+    updated_urls = [base + str(job_id) for job_id in changed_ids]
+    deleted_urls = [base + str(job_id) for job_id in closed_ids]
+    try:
+        indexnow = notify_indexnow(updated_urls + deleted_urls)
+        print(f"[indexing] IndexNow: {indexnow}")
+    except Exception as exc:
+        print(f"[indexing] IndexNow failed: {str(exc)[:120]}")
+    try:
+        google = notify_google_indexing(updated_urls, deleted_urls)
+        print(f"[indexing] Google: {google}")
+    except Exception as exc:
+        print(f"[indexing] Google failed: {str(exc)[:120]}")
 
 
 def run(db, Job, guess_category, approve=True):
@@ -794,8 +864,9 @@ def run(db, Job, guess_category, approve=True):
         return {"skipped": "already_running", "at": datetime.utcnow().isoformat()}
     try:
         items, complete_sources = collect(with_metadata=True)
-        added, updated, closed = upsert(
+        added, updated, closed, changed_ids, closed_ids = upsert(
             db, Job, guess_category, items, approve=approve, complete_sources=complete_sources)
+        notify_search_engines(changed_ids, closed_ids)
         profiles = company_snapshot(items)
         snapshot_path = Path(__file__).resolve().parent.parent / "data" / "companies.json"
         snapshot_path.write_text(json.dumps(profiles, ensure_ascii=False, indent=2), encoding="utf-8")
