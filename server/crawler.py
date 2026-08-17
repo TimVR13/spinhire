@@ -72,6 +72,15 @@ SOURCE_REGISTRY = [
      "status": "не подключён", "note": "Украинский борд; есть внутренний API. Готов исследовать."},
 ]
 
+RESUME_SOURCE_REGISTRY = [
+    {"key": "spinhire:profiles", "name": "Профили SpinHire", "type": "Собственная база",
+     "status": "работает", "note": "Анкеты, которые кандидаты сами создали и разрешили показывать работодателям."},
+    {"key": "anonymous:partners", "name": "Анонимные партнёрские профили", "type": "Opt-in API",
+     "status": "не подключён", "note": "Подключается только при явном согласии кандидата на передачу. Имя, email и контакты не импортируются."},
+    {"key": "public:resume-sites", "name": "Открытые базы резюме", "type": "Сбор отключён",
+     "status": "запрещён", "note": "Автоматический сбор персональных резюме не запускаем без лицензии источника и согласия кандидатов."},
+]
+
 UA = "SpinHireBot/1.0 (+https://spinhire.io; job aggregation)"
 TIMEOUT = 25
 MAX_PER_BOARD = 40           # не выкачиваем борд целиком — берём свежие
@@ -342,6 +351,13 @@ def sanitize_anonymous_talent(profile):
     return {key: profile.get(key) for key in allowed if profile.get(key) not in (None, "", [])}
 
 
+def save_status(payload):
+    """Сохранить результат последнего запуска для панели администратора."""
+    status_path = Path(__file__).resolve().parent.parent / "data" / "crawler-status.json"
+    status_path.parent.mkdir(parents=True, exist_ok=True)
+    status_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def collect():
     """Собрать вакансии со всех источников. Возвращает список dict."""
     items = []
@@ -415,6 +431,15 @@ def run(db, Job, guess_category, approve=True):
     profiles = company_snapshot(items)
     snapshot_path = Path(__file__).resolve().parent.parent / "data" / "companies.json"
     snapshot_path.write_text(json.dumps(profiles, ensure_ascii=False, indent=2), encoding="utf-8")
+    source_counts = {}
+    for item in items:
+        source = item.get("source", "unknown")
+        source_counts[source] = source_counts.get(source, 0) + 1
+    save_status({
+        "last_run": datetime.utcnow().isoformat() + "Z", "ok": True,
+        "collected": len(items), "added": added, "updated": updated,
+        "companies": len(profiles), "source_counts": source_counts,
+    })
     print(f"[crawl] готово: +{added} новых, {updated} обновлено, всего собрано {len(items)}")
     return {"collected": len(items), "added": added, "updated": updated,
             "companies": len(profiles), "at": datetime.utcnow().isoformat()}

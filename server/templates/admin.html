@@ -11,6 +11,14 @@
   .stat-card { border: 2px solid var(--line); background: var(--surface); padding: 16px 20px; }
   .stat-card .n { font-family: var(--font-display); font-weight: 900; font-size: 1.7rem; color: var(--yellow); }
   .stat-card .l { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-faint); font-weight: 700; }
+  .source-head { display:flex; justify-content:space-between; gap:16px; align-items:end; flex-wrap:wrap; margin:var(--sp-6) 0 12px; }
+  .source-head h2 { margin:0; font-size:1.15rem; }
+  .source-note { color:var(--ink-faint); font-size:.8rem; max-width:72ch; }
+  .source-status { display:inline-flex; align-items:center; gap:7px; }
+  .source-status::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--ink-faint); }
+  .source-status.ok::before { background:var(--acid); box-shadow:0 0 10px color-mix(in srgb,var(--acid) 65%,transparent); }
+  .source-status.warn::before { background:var(--yellow); }
+  .source-status.off::before { background:var(--pink); }
 {% endblock %}
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Админка</nav>
@@ -186,26 +194,51 @@
   {% elif tab == 'sources' %}
     <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: var(--sp-5); border-color: var(--acid);">
       <div>
-        <b style="font-family: var(--font-display); text-transform: uppercase;">🕷 Краулеры вакансий</b>
-        <p style="color: var(--ink-dim); font-size: 0.88rem;">Настроенные источники сбора iGaming-вакансий. Автосбор каждые 6 часов + кнопка справа.</p>
+        <b style="font-family: var(--font-display); text-transform: uppercase;">Центр источников</b>
+        <p style="color: var(--ink-dim); font-size: 0.88rem;">Здесь видно, откуда SpinHire получает вакансии и профили кандидатов.</p>
+        <p class="source-note">Последний запуск: {{ crawl_status.get('last_run', 'ещё не запускался') }}{% if crawl_status.get('collected') is not none %} · собрано {{ crawl_status.get('collected') }} · новых {{ crawl_status.get('added', 0) }} · обновлено {{ crawl_status.get('updated', 0) }}{% endif %}</p>
+        {% if crawl_status.get('error') %}<p style="color:var(--pink);font-size:.82rem;margin-top:6px;">Ошибка: {{ crawl_status.get('error') }}</p>{% endif %}
       </div>
       <form method="post" action="/admin/crawl"><button class="btn btn-acid" type="submit">Запустить сбор сейчас →</button></form>
     </div>
     {% if request.query_params.get('crawl') %}<div class="flash">🕷 {{ request.query_params.get('crawl') }}</div>{% endif %}
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="n">{{ source_summary.jobs_connected }}/{{ source_summary.jobs_total }}</div><div class="l">Источников вакансий</div></div>
+      <div class="stat-card"><div class="n">{{ stats.jobs_approved }}</div><div class="l">Вакансий в базе</div></div>
+      <div class="stat-card"><div class="n">{{ source_summary.resume_connected }}</div><div class="l">Источников резюме</div></div>
+      <div class="stat-card"><div class="n">{{ source_summary.talent_profiles }}</div><div class="l">Профилей кандидатов</div></div>
+    </div>
+
+    <div class="source-head"><div><span class="kicker">Вакансии</span><h2>Источники вакансий</h2></div><p class="source-note">Количество считается по опубликованным вакансиям в базе.</p></div>
     <div class="table-wrap"><table class="adm">
-      <tr><th>Источник</th><th>Тип</th><th>Статус</th><th>Собрано</th><th>Как подключено / план</th></tr>
+      <tr><th>Источник</th><th>Способ сбора</th><th>Статус</th><th>В базе</th><th>Подключение</th></tr>
       {% for s in sources %}
       <tr>
         <td><b>{{ s.name }}</b><br><span style="font-size: 0.72rem; color: var(--ink-faint);">{{ s.key }}</span></td>
         <td style="font-size: 0.82rem;">{{ s.type }}</td>
-        <td><span class="status {% if s.status in ('работает','подключён') %}approved{% else %}pending{% endif %}">{{ s.status }}</span></td>
+        <td><span class="source-status {% if s.status in ('работает','подключён') %}ok{% else %}warn{% endif %}">{{ s.status }}</span></td>
         <td style="font-family: var(--font-display); color: var(--acid);">{{ source_counts.get(s.key, 0) }}</td>
         <td style="font-size: 0.82rem; color: var(--ink-dim); max-width: 360px; white-space: normal;">{{ s.note }}</td>
       </tr>
       {% endfor %}
     </table></div>
+
+    <div class="source-head"><div><span class="kicker" style="color:var(--pink)">Кандидаты</span><h2>Источники резюме</h2></div><p class="source-note">Только собственные анкеты и партнёрские профили с явным согласием кандидата.</p></div>
+    <div class="table-wrap"><table class="adm">
+      <tr><th>Источник</th><th>Способ сбора</th><th>Статус</th><th>Профилей</th><th>Ограничения</th></tr>
+      {% for s in resume_sources %}
+      <tr>
+        <td><b>{{ s.name }}</b><br><span style="font-size: 0.72rem; color: var(--ink-faint);">{{ s.key }}</span></td>
+        <td style="font-size: 0.82rem;">{{ s.type }}</td>
+        <td><span class="source-status {% if s.status in ('работает','подключён') %}ok{% elif s.status == 'запрещён' %}off{% else %}warn{% endif %}">{{ s.status }}</span></td>
+        <td style="font-family:var(--font-display);color:var(--acid);">{% if s.key == 'spinhire:profiles' %}{{ source_summary.talent_profiles }}{% else %}0{% endif %}</td>
+        <td style="font-size: 0.82rem; color: var(--ink-dim); max-width: 420px; white-space: normal;">{{ s.note }}</td>
+      </tr>
+      {% endfor %}
+    </table></div>
     <p style="color: var(--ink-faint); font-size: 0.82rem; margin-top: var(--sp-4); max-width: 80ch;">
-      <b>Как расширять:</b> Greenhouse-борды добавляются одним токеном (десятки iGaming-компаний). Djinni — по JobPosting-разметке (Украина, фильтр gambling). hh.ru/hh.ua — публичный API api.hh.ru (зарплата+город), но из облака отдаёт 403: нужен зарегистрированный app-токен или запуск с разрешённого IP — готов подключить по вашему решению. work.ua/robota.ua — парсинг листингов, в планах.
+      <b>Как расширять:</b> новые Greenhouse, Lever и SmartRecruiters подключаются через публичный ATS API. Для источников резюме нужны договор, разрешение на повторное использование данных и явное согласие кандидата.
     </p>
   {% endif %}
 {% endblock %}

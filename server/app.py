@@ -1072,7 +1072,12 @@ def admin_crawl(request: Request, db: Session = Depends(db_session)):
         msg = f"Собрано {res['collected']}, добавлено {res['added']}, обновлено {res['updated']}"
     except Exception as e:
         msg = f"Ошибка краулера: {str(e)[:150]}"
-    return RedirectResponse(f"/admin?tab=jobs&crawl={msg}", status_code=303)
+        try:
+            crawler.save_status({"last_run": datetime.utcnow().isoformat() + "Z",
+                                 "ok": False, "error": str(e)[:500]})
+        except Exception:
+            pass
+    return RedirectResponse(f"/admin?tab=sources&crawl={msg}", status_code=303)
 
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -1107,10 +1112,24 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
     elif tab == "sources":
         from server import crawler
         from collections import Counter
+        import json
+        from pathlib import Path
         counts = Counter(j.source or "внутренние/ручные"
                          for j in db.query(Job).filter(Job.status == "approved").all())
         ctx["sources"] = crawler.SOURCE_REGISTRY
         ctx["source_counts"] = dict(counts)
+        ctx["resume_sources"] = crawler.RESUME_SOURCE_REGISTRY
+        ctx["source_summary"] = {
+            "jobs_connected": sum(s["status"] in ("работает", "подключён") for s in crawler.SOURCE_REGISTRY),
+            "jobs_total": len(crawler.SOURCE_REGISTRY),
+            "resume_connected": sum(s["status"] in ("работает", "подключён") for s in crawler.RESUME_SOURCE_REGISTRY),
+            "talent_profiles": db.query(User).filter(User.role == "talent").count(),
+        }
+        status_path = Path(__file__).resolve().parent.parent / "data" / "crawler-status.json"
+        try:
+            ctx["crawl_status"] = json.loads(status_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            ctx["crawl_status"] = {}
     elif tab == "events":
         ctx["events"] = db.query(Event).order_by(Event.date_from).all()
     elif tab == "orders":
