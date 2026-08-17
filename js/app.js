@@ -1,6 +1,94 @@
 // iHiring.org — shared prototype behavior
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Единый выпадающий список SpinHire вместо системного меню браузера.
+  const customSelects = [];
+  const closeSelect = (item, restoreFocus = false) => {
+    if (!item || !item.wrapper.classList.contains('is-open')) return;
+    item.wrapper.classList.remove('is-open');
+    item.trigger.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) item.trigger.focus();
+  };
+  const closeAllSelects = except => customSelects.forEach(item => { if (item !== except) closeSelect(item); });
+
+  document.querySelectorAll('select:not([multiple]):not([data-native-select])').forEach((select, selectIndex) => {
+    const measuredWidth = Math.ceil(select.getBoundingClientRect().width);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'custom-select' + (select.disabled ? ' is-disabled' : '');
+    if (measuredWidth) wrapper.style.setProperty('--select-width', measuredWidth + 'px');
+    select.parentNode.insertBefore(wrapper, select);
+    wrapper.appendChild(select);
+    select.classList.add('custom-select__native');
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button'; trigger.className = 'custom-select__trigger';
+    trigger.setAttribute('aria-haspopup', 'listbox'); trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-label', select.getAttribute('aria-label') || select.name || 'Выберите значение');
+    trigger.disabled = select.disabled;
+    wrapper.appendChild(trigger);
+
+    const menu = document.createElement('div'); menu.className = 'custom-select__menu';
+    const list = document.createElement('div'); list.className = 'custom-select__options';
+    list.id = 'custom-select-' + selectIndex; list.setAttribute('role', 'listbox');
+    trigger.setAttribute('aria-controls', list.id);
+    const empty = document.createElement('div'); empty.className = 'custom-select__empty'; empty.textContent = 'Ничего не найдено';
+    let search = null;
+    if (select.options.length > 10) {
+      search = document.createElement('input'); search.type = 'search'; search.className = 'custom-select__search';
+      search.placeholder = 'Найти в списке…'; search.setAttribute('aria-label', 'Поиск по вариантам'); menu.appendChild(search);
+    }
+    menu.appendChild(list); menu.appendChild(empty); wrapper.appendChild(menu);
+
+    const optionButtons = Array.from(select.options).map((option, optionIndex) => {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'custom-select__option'; button.setAttribute('role', 'option');
+      button.dataset.index = optionIndex; button.textContent = option.textContent; button.disabled = option.disabled;
+      button.addEventListener('click', () => {
+        select.selectedIndex = optionIndex;
+        select.dispatchEvent(new Event('input', { bubbles: true }));
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        closeSelect(item, true);
+      });
+      list.appendChild(button); return button;
+    });
+    const sync = () => {
+      const selected = select.options[select.selectedIndex] || select.options[0];
+      trigger.textContent = selected ? selected.textContent : 'Выберите значение';
+      optionButtons.forEach((button, i) => button.setAttribute('aria-selected', String(i === select.selectedIndex)));
+    };
+    const item = { select, wrapper, trigger, menu, search, optionButtons, sync };
+    customSelects.push(item); sync();
+
+    const open = () => {
+      if (select.disabled) return;
+      const willOpen = !wrapper.classList.contains('is-open'); closeAllSelects(item);
+      wrapper.classList.toggle('is-open', willOpen); trigger.setAttribute('aria-expanded', String(willOpen));
+      if (willOpen) {
+        if (search) { search.value = ''; optionButtons.forEach(b => { b.hidden = false; }); empty.classList.remove('is-visible'); search.focus(); }
+        else (optionButtons[select.selectedIndex] || optionButtons[0])?.focus();
+      }
+    };
+    trigger.addEventListener('click', open);
+    trigger.addEventListener('keydown', e => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    select.addEventListener('change', sync);
+    if (select.form) select.form.addEventListener('reset', () => setTimeout(sync));
+    if (search) search.addEventListener('input', () => {
+      const query = search.value.trim().toLocaleLowerCase(); let visible = 0;
+      optionButtons.forEach(button => { button.hidden = !button.textContent.toLocaleLowerCase().includes(query); if (!button.hidden) visible++; });
+      empty.classList.toggle('is-visible', visible === 0);
+    });
+    list.addEventListener('keydown', e => {
+      const visible = optionButtons.filter(button => !button.hidden && !button.disabled);
+      const at = visible.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); visible[(at + (e.key === 'ArrowDown' ? 1 : -1) + visible.length) % visible.length]?.focus(); }
+      if (e.key === 'Home') { e.preventDefault(); visible[0]?.focus(); }
+      if (e.key === 'End') { e.preventDefault(); visible.at(-1)?.focus(); }
+      if (e.key === 'Escape') { e.preventDefault(); closeSelect(item, true); }
+    });
+  });
+  document.addEventListener('click', e => { customSelects.forEach(item => { if (!item.wrapper.contains(e.target)) closeSelect(item); }); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') customSelects.forEach(item => closeSelect(item, true)); });
+
   // CV marketplace entry points for legacy static pages that share this script.
   const sharedNav = document.querySelector('.main-nav');
   if (sharedNav && !sharedNav.querySelector('a[href="/resumes"], a[href="resumes"]')) {
