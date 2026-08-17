@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 72" role="img" aria-label="SpinHire">
-  <path d="M8 17 18 7h50l10 10v21H8Z" fill="#F4F5F7"/>
-  <path d="m15 19 6-6h44l6 6v12H15Z" fill="#090B0E"/>
-  <path d="M8 36h70v22l-9 9H17l-9-9Z" fill="#20E592"/>
-  <path d="M8 36v22l9 9h52l9-9V36" fill="none" stroke="#F4F5F7" stroke-width="5" stroke-linejoin="miter"/>
+  <path d="m14 16 10-11h34l10 11v22H14Z" fill="#F4F5F7"/>
+  <path d="m21 18 6-6h28l6 6v13H21Z" fill="#090B0E"/>
+  <path d="M14 36h54v23l-9 9H23l-9-9Z" fill="#F4F5F7"/>
+  <path d="M20 36h42v20l-6 6H26l-6-6Z" fill="#20E592"/>
   <g fill="#20E592">
-    <path d="m25 17 4-3 4 3v6l-4 3-4-3Z"/><path d="m21 30 3-5h10l3 5Z"/>
-    <path d="m52 17 4-3 4 3v6l-4 3-4-3Z"/><path d="m48 30 3-5h10l3 5Z"/>
+    <path d="m27 17 4-3 4 3v6l-4 3-4-3Z"/><path d="m23 30 3-5h10l3 5Z"/>
+    <path d="m47 17 4-3 4 3v6l-4 3-4-3Z"/><path d="m43 30 3-5h10l3 5Z"/>
   </g>
   <g fill="#090B0E">
-    <path d="m38 43 5-4 5 4v7l-5 4-5-4Z"/>
-    <path d="m32 65 4-12h14l4 12Z"/>
+    <path d="m35 43 6-5 6 5v8l-6 5-6-5Z"/>
+    <path d="m29 66 4-13h16l4 13Z"/>
   </g>
-  <path d="m78 59 9-40" fill="none" stroke="#F4F5F7" stroke-width="8" stroke-linecap="square"/>
-  <path d="m82 8 6-3 5 4v7l-5 4-7-3-2-6Z" fill="#FF37A8"/>
+  <path d="m73 59 11-40" fill="none" stroke="#F4F5F7" stroke-width="7" stroke-linecap="square"/>
+  <path d="m79 8 6-3 6 4v7l-6 4-7-3-2-6Z" fill="#FF37A8"/>
 </svg>
