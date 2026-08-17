@@ -25,13 +25,24 @@ import re
 import sys
 import urllib.request
 from datetime import datetime
+from pathlib import Path
+from urllib.parse import urlparse
 
 # Greenhouse-борды известных iGaming-работодателей (board_token: человекочитаемое имя)
 GREENHOUSE_BOARDS = {
     "betsson": "Betsson Group",
     "kaizengaming": "Kaizen Gaming (Betano)",
     "geniussports": "Genius Sports",
+    "gr8tech": "GR8 Tech",
 }
+
+# Публичные ATS API. Добавление новой компании — одна строка конфигурации.
+LEVER_SITES = {}
+SMARTRECRUITERS_COMPANIES = {"Evolution": "Evolution"}
+
+# Только источники, которые явно разрешают повторное использование уже анонимных
+# профилей. Пусто по умолчанию: персональные резюме не скрейпим.
+ANONYMOUS_TALENT_SOURCES = {}
 
 # Источники с JobPosting JSON-LD на странице листинга (url: (имя, source-ключ))
 JSONLD_LISTINGS = {
@@ -47,6 +58,10 @@ SOURCE_REGISTRY = [
      "status": "работает", "note": "Публичный JSON API"},
     {"key": "greenhouse:geniussports", "name": "Genius Sports", "type": "Greenhouse API",
      "status": "работает", "note": "Публичный JSON API"},
+    {"key": "greenhouse:gr8tech", "name": "GR8 Tech", "type": "Greenhouse API",
+     "status": "подключён", "note": "Публичный JSON API; вакансии и метаданные компании"},
+    {"key": "smartrecruiters:Evolution", "name": "Evolution", "type": "SmartRecruiters API",
+     "status": "подключён", "note": "Публичный ATS API"},
     {"key": "djinni", "name": "Djinni · gambling (Украина)", "type": "JSON-LD парсер",
      "status": "подключён", "note": "15 вакансий/страница из JobPosting-разметки; зарплата/город в HTML (не в JSON-LD)"},
     {"key": "hh.ru", "name": "HeadHunter (hh.ru / hh.ua)", "type": "Публичный API — требует настройки",
@@ -261,6 +276,72 @@ def crawl_greenhouse(board, company):
     return out
 
 
+def crawl_lever(site, company):
+    """Вакансии из публичного Lever Postings API."""
+    jobs = json.loads(_fetch(f"https://api.lever.co/v0/postings/{site}?mode=json"))[:MAX_PER_BOARD]
+    out = []
+    for j in jobs:
+        title = (j.get("text") or "").strip()
+        if not title:
+            continue
+        cats = j.get("categories") or {}
+        loc = cats.get("location", "")
+        desc = _clean_html("\n".join(filter(None, [j.get("descriptionPlain", ""), j.get("additionalPlain", "")])))
+        out.append({"title": title, "company_name": company, "location": loc,
+                    "fmt": _fmt_from(loc, desc), "tags": _tags_from(title, desc),
+                    "description": desc, "source_url": j.get("hostedUrl", ""),
+                    "source": f"lever:{site}", "ext_id": str(j.get("id", "")),
+                    "salary": "по запросу", "posted_at": "", "deadline": ""})
+    return out
+
+
+def crawl_smartrecruiters(company_id, company):
+    """Вакансии из публичного SmartRecruiters API."""
+    data = json.loads(_fetch(f"https://api.smartrecruiters.com/v1/companies/{company_id}/postings?limit={MAX_PER_BOARD}"))
+    out = []
+    for j in (data.get("content") or [])[:MAX_PER_BOARD]:
+        title = (j.get("name") or "").strip()
+        if not title:
+            continue
+        loc_data = j.get("location") or {}
+        loc = ", ".join(filter(None, [loc_data.get("city"), loc_data.get("country")]))
+        dept = ((j.get("department") or {}).get("label") or "")
+        desc = _clean_html(" ".join(filter(None, [title, dept])))
+        out.append({"title": title, "company_name": company, "location": loc,
+                    "fmt": _fmt_from(loc, desc), "tags": _tags_from(f"{title} {dept}", desc),
+                    "description": desc, "source_url": j.get("ref", ""),
+                    "source": f"smartrecruiters:{company_id}", "ext_id": str(j.get("id", "")),
+                    "salary": "по запросу", "posted_at": (j.get("releasedDate") or "")[:10], "deadline": ""})
+    return out
+
+
+def company_snapshot(items):
+    """Агрегировать публичные данные компаний из вакансий без отдельного скрейпинга."""
+    companies = {}
+    for item in items:
+        name = item.get("company_name") or "iGaming-компания"
+        row = companies.setdefault(name, {"name": name, "open_jobs": 0, "locations": set(),
+                                          "sources": set(), "career_url": "", "domain": ""})
+        row["open_jobs"] += 1
+        if item.get("location"):
+            row["locations"].add(item["location"])
+        row["sources"].add(item.get("source", ""))
+        row["career_url"] = row["career_url"] or item.get("source_url", "")
+        host = urlparse(row["career_url"]).hostname or ""
+        row["domain"] = row["domain"] or host.removeprefix("www.")
+    return [{**row, "locations": sorted(row["locations"]), "sources": sorted(row["sources"])}
+            for row in companies.values()]
+
+
+def sanitize_anonymous_talent(profile):
+    """Оставить только неперсональные карьерные поля из opt-in источника."""
+    if profile.get("consent_to_redistribute") is not True:
+        return None
+    allowed = ("headline", "skills", "seniority", "years_experience", "preferred_locations",
+               "remote", "salary_expectation", "languages", "available_from")
+    return {key: profile.get(key) for key in allowed if profile.get(key) not in (None, "", [])}
+
+
 def collect():
     """Собрать вакансии со всех источников. Возвращает список dict."""
     items = []
@@ -278,6 +359,18 @@ def collect():
             print(f"[crawl] {source}: +{len(got)}")
         except Exception as e:
             print(f"[crawl] {source} FAILED: {str(e)[:120]}")
+    for site, company in LEVER_SITES.items():
+        try:
+            got = crawl_lever(site, company); items.extend(got)
+            print(f"[crawl] lever:{site}: +{len(got)}")
+        except Exception as e:
+            print(f"[crawl] lever:{site} FAILED: {str(e)[:120]}")
+    for company_id, company in SMARTRECRUITERS_COMPANIES.items():
+        try:
+            got = crawl_smartrecruiters(company_id, company); items.extend(got)
+            print(f"[crawl] smartrecruiters:{company_id}: +{len(got)}")
+        except Exception as e:
+            print(f"[crawl] smartrecruiters:{company_id} FAILED: {str(e)[:120]}")
     return items
 
 
@@ -319,9 +412,12 @@ def upsert(db, Job, guess_category, items, approve=True):
 def run(db, Job, guess_category, approve=True):
     items = collect()
     added, updated = upsert(db, Job, guess_category, items, approve=approve)
+    profiles = company_snapshot(items)
+    snapshot_path = Path(__file__).resolve().parent.parent / "data" / "companies.json"
+    snapshot_path.write_text(json.dumps(profiles, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[crawl] готово: +{added} новых, {updated} обновлено, всего собрано {len(items)}")
     return {"collected": len(items), "added": added, "updated": updated,
-            "at": datetime.utcnow().isoformat()}
+            "companies": len(profiles), "at": datetime.utcnow().isoformat()}
 
 
 if __name__ == "__main__":

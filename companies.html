@@ -44,6 +44,25 @@
   .co-card .type { color: var(--ink-faint); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
   .co-card .jobs-n { margin-top: var(--sp-3); font-weight: 800; color: var(--acid); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; }
   .src-note { color: var(--ink-faint); font-size: 0.8rem; margin-top: var(--sp-5); }
+  .co-grid .co-card:nth-child(n+5) { display:none; }
+  .co-logo-img { width:100%; height:100%; object-fit:contain; padding:8px; background:#fff; border-radius:inherit; }
+  .co-directory { margin-top:var(--sp-8); }
+  .co-directory__head { display:flex; justify-content:space-between; align-items:end; gap:var(--sp-4); margin-bottom:var(--sp-4); }
+  .co-directory__tools { display:flex; gap:10px; width:min(100%,560px); }
+  .co-directory__tools .input { min-height:46px; }
+  .co-table { border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  .co-row { display:grid; grid-template-columns:minmax(240px,1.4fr) minmax(150px,.8fr) minmax(150px,1fr) 110px 32px; gap:18px; align-items:center; min-height:72px; padding:12px 18px; border-bottom:1px solid var(--line); text-decoration:none; transition:background .15s; }
+  .co-row[hidden] { display:none; }
+  .co-row:last-child { border-bottom:0; }
+  .co-row:hover { background:var(--surface); }
+  .co-row__company { display:flex; align-items:center; gap:12px; min-width:0; }
+  .co-row__logo { width:42px; height:42px; border-radius:10px; overflow:hidden; background:var(--surface-2); flex:0 0 auto; display:grid; place-items:center; font-weight:800; color:var(--acid); }
+  .co-row__logo img { width:100%; height:100%; object-fit:contain; padding:5px; background:#fff; }
+  .co-row b { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .co-row__muted { color:var(--ink-faint); font-size:.82rem; }
+  .co-row__jobs { font-weight:800; color:var(--acid); font-variant-numeric:tabular-nums; text-align:right; }
+  .co-empty { padding:32px; color:var(--ink-faint); text-align:center; }
+  @media(max-width:760px){.co-directory__head{align-items:stretch;flex-direction:column}.co-directory__tools{width:100%;flex-direction:column}.co-row{grid-template-columns:1fr auto}.co-row__type,.co-row__geo{display:none}.co-row__jobs{text-align:right}}
 </style>
 </head>
 <body>
@@ -82,22 +101,22 @@
 
   <div class="co-grid">
     <a class="co-card" href="company.html">
-      <div class="co-card__head"><div class="job-card__logo" style="background: var(--acid); color: var(--on-acid);" aria-hidden="true">BG</div><div><b>Betsson Group</b><div class="type">Оператор · Мальта / Стокгольм</div></div></div>
+      <div class="co-card__head"><div class="job-card__logo"><img class="co-logo-img" src="https://icons.duckduckgo.com/ip3/betssongroup.com.ico" alt="Логотип Betsson Group"></div><div><b>Betsson Group</b><div class="type">Оператор · Мальта / Стокгольм</div></div></div>
       <div class="job-card__tags"><span class="tag">MGA + лицензии в 15+ юрисдикциях</span><span class="tag">Спортсбук · Казино</span><span class="tag tag-yellow">Релокация</span></div>
       <div class="jobs-n">7 вакансий →</div>
     </a>
     <a class="co-card" href="https://careers.softswiss.com/" target="_blank" rel="noopener nofollow">
-      <div class="co-card__head"><div class="job-card__logo" style="background: var(--pink); color: var(--on-pink);" aria-hidden="true">SS</div><div><b>SOFTSWISS</b><div class="type">Платформа B2B · Мальта / Грузия / Польша</div></div></div>
+      <div class="co-card__head"><div class="job-card__logo"><img class="co-logo-img" src="https://icons.duckduckgo.com/ip3/softswiss.com.ico" alt="Логотип SOFTSWISS"></div><div><b>SOFTSWISS</b><div class="type">Платформа B2B · Мальта / Грузия / Польша</div></div></div>
       <div class="job-card__tags"><span class="tag">Казино-платформа</span><span class="tag tag-pink">₿ Крипто-нативная</span></div>
       <div class="jobs-n">3 вакансии ↗</div>
     </a>
     <a class="co-card" href="https://www.pentasia.com/cm/candidates/all-jobs" target="_blank" rel="noopener nofollow">
-      <div class="co-card__head"><div class="job-card__logo" style="background: var(--yellow); color: var(--on-yellow);" aria-hidden="true">PN</div><div><b>Pentasia</b><div class="type">Рекрутинг-агентство · глобально</div></div></div>
+      <div class="co-card__head"><div class="job-card__logo"><img class="co-logo-img" src="https://icons.duckduckgo.com/ip3/pentasia.com.ico" alt="Логотип Pentasia"></div><div><b>Pentasia</b><div class="type">Рекрутинг-агентство · глобально</div></div></div>
       <div class="job-card__tags"><span class="tag">10 000+ размещений</span><span class="tag">Все уровни</span></div>
       <div class="jobs-n">6 вакансий ↗</div>
     </a>
     <a class="co-card" href="https://careers.smartrecruiters.com/Evolution" target="_blank" rel="noopener nofollow">
-      <div class="co-card__head"><div class="job-card__logo" style="background: var(--violet); color: white;" aria-hidden="true">EV</div><div><b>Evolution</b><div class="type">Лайв-казино · глобально</div></div></div>
+      <div class="co-card__head"><div class="job-card__logo"><img class="co-logo-img" src="https://icons.duckduckgo.com/ip3/evolution.com.ico" alt="Логотип Evolution"></div><div><b>Evolution</b><div class="type">Лайв-казино · глобально</div></div></div>
       <div class="job-card__tags"><span class="tag">Лидер live-вертикали</span><span class="tag tag-yellow">Релокация</span></div>
       <div class="jobs-n">1 вакансия ↗</div>
     </a>
@@ -132,6 +151,20 @@
       <div class="jobs-n">4 вакансии ↗</div>
     </a>
   </div>
+
+  <section class="co-directory" aria-labelledby="all-companies-title">
+    <div class="co-directory__head"><div><span class="kicker">Весь рынок</span><h2 id="all-companies-title" style="margin-top:8px">Каталог компаний</h2></div><div class="co-directory__tools"><input class="input" id="companySearch" type="search" placeholder="Название, тип или локация…"><select class="select input" id="companySort" aria-label="Сортировка"><option value="jobs">Сначала больше вакансий</option><option value="name">По алфавиту</option></select></div></div>
+    <div class="co-table" id="companyTable">
+      <a class="co-row" href="company.html" data-name="Betsson Group" data-jobs="7"><div class="co-row__company"><span class="co-row__logo"><img src="https://icons.duckduckgo.com/ip3/betssongroup.com.ico" alt=""></span><b>Betsson Group</b></div><span class="co-row__type co-row__muted">Оператор B2C</span><span class="co-row__geo co-row__muted">Мальта · Швеция</span><span class="co-row__jobs">7 вакансий</span><span>→</span></a>
+      <a class="co-row" href="https://www.pentasia.com/cm/candidates/all-jobs" data-name="Pentasia" data-jobs="6"><div class="co-row__company"><span class="co-row__logo"><img src="https://icons.duckduckgo.com/ip3/pentasia.com.ico" alt=""></span><b>Pentasia</b></div><span class="co-row__type co-row__muted">Рекрутинг</span><span class="co-row__geo co-row__muted">Глобально</span><span class="co-row__jobs">6 вакансий</span><span>↗</span></a>
+      <a class="co-row" href="https://careers.softswiss.com/" data-name="SOFTSWISS" data-jobs="3"><div class="co-row__company"><span class="co-row__logo"><img src="https://icons.duckduckgo.com/ip3/softswiss.com.ico" alt=""></span><b>SOFTSWISS</b></div><span class="co-row__type co-row__muted">Платформа B2B</span><span class="co-row__geo co-row__muted">Мальта · Грузия · Польша</span><span class="co-row__jobs">3 вакансии</span><span>↗</span></a>
+      <a class="co-row" href="https://careers.smartrecruiters.com/Evolution" data-name="Evolution" data-jobs="1"><div class="co-row__company"><span class="co-row__logo"><img src="https://icons.duckduckgo.com/ip3/evolution.com.ico" alt=""></span><b>Evolution</b></div><span class="co-row__type co-row__muted">Live-казино</span><span class="co-row__geo co-row__muted">Глобально</span><span class="co-row__jobs">1 вакансия</span><span>↗</span></a>
+      <a class="co-row" href="https://boards.eu.greenhouse.io/gr8tech" data-name="GR8 Tech" data-jobs="1"><div class="co-row__company"><span class="co-row__logo"><img src="https://icons.duckduckgo.com/ip3/gr8.tech.ico" alt=""></span><b>GR8 Tech</b></div><span class="co-row__type co-row__muted">Sportsbook-платформа</span><span class="co-row__geo co-row__muted">Европа · Remote</span><span class="co-row__jobs">1 вакансия</span><span>↗</span></a>
+      <a class="co-row" href="https://igamingjobs.io/" data-name="Megapari" data-jobs="1"><div class="co-row__company"><span class="co-row__logo"><img src="https://icons.duckduckgo.com/ip3/megapari.com.ico" alt=""></span><b>Megapari</b></div><span class="co-row__type co-row__muted">Оператор B2C</span><span class="co-row__geo co-row__muted">Мульти-гео</span><span class="co-row__jobs">1 вакансия</span><span>↗</span></a>
+      <a class="co-row" href="https://djinni.co/jobs/831169-seo-specialist-igaming/" data-name="SEOJET" data-jobs="1"><div class="co-row__company"><span class="co-row__logo">SJ</span><b>SEOJET</b></div><span class="co-row__type co-row__muted">SEO-агентство</span><span class="co-row__geo co-row__muted">Worldwide</span><span class="co-row__jobs">1 вакансия</span><span>↗</span></a>
+      <div class="co-empty" id="companyEmpty" hidden>Компании не найдены</div>
+    </div>
+  </section>
 
   <p class="src-note">Профили и счётчики собраны из открытых источников (карьерные страницы, igamingjobs.io, djinni, Pentasia) 14.08.2026. Стрелка ↗ — переход на внешний источник. SpinHire не аффилирован с перечисленными компаниями.</p>
 </main>
@@ -200,6 +233,9 @@
   </div>
 </div>
 
+<script>
+(function(){const table=document.getElementById('companyTable');if(!table)return;const rows=[...table.querySelectorAll('.co-row')],search=document.getElementById('companySearch'),sort=document.getElementById('companySort'),empty=document.getElementById('companyEmpty');function render(){const q=search.value.trim().toLocaleLowerCase('ru');const ordered=[...rows].sort((a,b)=>sort.value==='name'?a.dataset.name.localeCompare(b.dataset.name,'ru'):Number(b.dataset.jobs)-Number(a.dataset.jobs)||a.dataset.name.localeCompare(b.dataset.name,'ru'));let shown=0;ordered.forEach(row=>{const ok=row.textContent.toLocaleLowerCase('ru').includes(q);row.hidden=!ok;if(ok){table.insertBefore(row,empty);shown++}});empty.hidden=shown!==0}search.addEventListener('input',render);sort.addEventListener('change',render);render()})();
+</script>
 <script src="js/app.js"></script>
 </body>
 </html>
