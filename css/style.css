@@ -155,12 +155,11 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   font-family: var(--font-display);
   font-weight: 900; font-size: 1.25rem;
   text-decoration: none; text-transform: lowercase;
-  display: flex; align-items: baseline; gap: 2px;
+  display: flex; align-items: center; gap: 7px;
   flex-shrink: 0;
 }
-.logo { perspective: 180px; }
-.logo__mark { width: 34px; height: 34px; filter: drop-shadow(0 0 7px color-mix(in oklch, var(--acid) 48%, transparent)); transform-style:preserve-3d; transition:transform .65s cubic-bezier(.2,.8,.2,1),filter .3s; }
-.logo:hover .logo__mark { transform:rotateY(180deg) rotateZ(8deg); filter:drop-shadow(0 0 12px color-mix(in oklch,var(--acid) 65%,transparent)); }
+.logo__mark { width: 42px; height: 32px; flex: 0 0 auto; transition: transform .2s ease; }
+.logo:hover .logo__mark { transform: translateY(-1px); }
 .logo b { color: var(--acid); }
 .logo .dot-org { color: var(--ink-faint); font-size: 0.8em; font-weight: 700; }
 
@@ -437,7 +436,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   .header-actions .btn-pink { display: none; }  /* дублируется пунктом в бургер-меню */
   .site-header .container { gap: var(--sp-3); }
   .logo { font-size: 1.05rem; }
-  .logo__mark { width: 28px; height: 28px; }
+  .logo__mark { width: 35px; height: 27px; }
   .salary { font-size: 1rem; }
 }
 
