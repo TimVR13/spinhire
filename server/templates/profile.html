@@ -74,6 +74,12 @@
       <div class="field"><label>Зарплатные ожидания</label><input class="input" name="salary_expect" value="{{ resume.salary_expect if resume else user.salary_expect }}" placeholder="€4 000 net"></div>
       <div class="field wide"><label>Навыки через запятую</label><input class="input" name="skills" value="{{ resume.skills if resume else '' }}" placeholder="CRM, retention, VIP, sportsbook, English C1"></div>
       <div class="field wide"><label>Опыт и результаты</label><textarea class="input" name="about" rows="7" placeholder="Опишите опыт без имени, названий закрытых проектов и других данных, которые могут раскрыть личность." required>{{ resume.about if resume else '' }}</textarea></div>
+      <div class="field wide"><label>Места работы и достижения</label><textarea class="input" name="employment_history" rows="6" placeholder="2023–2026 · CRM Lead · обязанности и измеримые результаты без закрытых названий">{{ resume.employment_history if resume else '' }}</textarea></div>
+      <div class="field wide"><label>Образование и сертификаты</label><textarea class="input" name="education" rows="3">{{ resume.education if resume else '' }}</textarea></div>
+      <div class="field"><label>Предпочтительные страны / города</label><input class="input" name="preferred_locations" value="{{ resume.preferred_locations if resume else '' }}" placeholder="Мальта, Кипр, Польша"></div>
+      <div class="field"><label>Готовность выйти</label><input class="input" name="availability" value="{{ resume.availability if resume else '' }}" placeholder="Сразу / через 2 недели"></div>
+      <label class="check wide"><input type="checkbox" name="relocation" {% if resume and resume.relocation %}checked{% endif %}> Готов к релокации</label>
+      <div class="field wide"><label>Портфолио — откроется только после покупки контакта</label><input class="input" type="url" name="portfolio_url" value="{{ resume.portfolio_url if resume else '' }}" placeholder="https://"></div>
       <div class="field"><label>Языки</label><input class="input" name="languages" value="{{ resume.languages if resume else user.languages }}" placeholder="English C1, Polish B1"></div>
       <div class="field"><label>Email для работодателей</label><input class="input" type="email" name="contact_email" value="{{ resume.contact_email if resume else user.email }}" required></div>
       <div class="field wide"><label>Telegram</label><input class="input" name="contact_telegram" value="{{ resume.contact_telegram if resume else '' }}" placeholder="@username"></div>

@@ -99,6 +99,9 @@
     {% if team_role=='owner' %}<form method="post" action="/employer/team/invite" style="display:grid;grid-template-columns:minmax(0,1fr) 180px auto;gap:10px;margin-top:18px;"><input class="input" type="email" name="email" placeholder="recruiter@company.com" required><select class="input" name="role"><option value="recruiter">Рекрутер</option><option value="viewer">Наблюдатель</option></select><button class="btn btn-acid">Пригласить</button></form>{% endif %}
   </details>
 
+  <section style="margin:var(--sp-7) 0;" id="ats"><div class="section-head"><div><span class="kicker pink">Мини-ATS</span><h2 style="font-size:1.25rem;margin-top:6px;">Кандидаты · {{ ats_apps|length }}</h2></div><form method="get" action="/employer" style="display:flex;gap:8px;"><select class="input" name="stage"><option value="">Все этапы</option>{% for value,label in [('new','Новые'),('viewed','Просмотрены'),('invited','Интервью'),('offer','Оффер'),('hired','Наняты'),('rejected','Отказ')] %}<option value="{{ value }}" {% if stage==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="btn btn-ghost">Фильтр</button></form></div>
+  <div style="border-top:2px solid var(--line);">{% for a in ats_apps %}<a href="/employer/application/{{ a.id }}" style="display:grid;grid-template-columns:120px minmax(0,1fr) 180px auto;gap:14px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line);text-decoration:none;"><span class="status {{ a.status }}">{{ a.status }}</span><span><b>{% if a.user.incognito %}Аноним #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</b><small style="display:block;color:var(--ink-faint);margin-top:4px;">{{ a.job.title }}</small></span><span style="color:var(--ink-dim);font-size:.8rem;">{% if a.interview_at %}Интервью {{ a.interview_at|replace('T',' ') }}{% elif a.next_action_at %}Действие {{ a.next_action_at }}{% else %}План не задан{% endif %}</span><span style="color:var(--pink);">→</span></a>{% else %}<p style="padding:24px 0;color:var(--ink-dim);">По выбранному этапу кандидатов нет.</p>{% endfor %}</div></section>
+
   {% for j in jobs %}
   <div class="job-block">
     <h3>
@@ -109,7 +112,7 @@
     {% for a in j.applications %}
     <div class="cand-row" id="application-{{ a.id }}">
       <div class="who">
-        <b>{% if a.user.incognito %}🥷 Аноним #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</b>
+        <b><a href="/employer/application/{{ a.id }}">{% if a.user.incognito %}🥷 Аноним #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</a></b>
         <span>{{ a.user.headline or 'профиль не заполнен' }}{% if a.user.location %} · {{ a.user.location }}{% endif %}{% if a.user.salary_expect %} · хочет {{ a.user.salary_expect }}{% endif %}{% if a.cover %} · «{{ a.cover }}»{% endif %}</span>
         <span><a href="mailto:{{ a.user.email }}" style="color:var(--acid);">{{ a.user.email }}</a></span>
       </div>

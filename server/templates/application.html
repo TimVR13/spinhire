@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% set active='employer' %}
+{% block title %}Кандидат на {{ application.job.title }} — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex,nofollow">{% endblock %}
+{% block content %}
+<nav class="crumbs"><a href="/employer">Кабинет</a> / Кандидат</nav>
+{% if request.query_params.get('saved') %}<div class="flash">План работы с кандидатом сохранён.</div>{% endif %}
+<div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,.65fr);gap:var(--sp-6);align-items:start;">
+  <article><span class="kicker pink">{{ application.job.company_name }} · {{ application.job.title }}</span><h1 style="font-size:clamp(1.5rem,3vw,2.5rem);margin:10px 0;">{% if application.user.incognito %}Аноним #{{ application.user.id }}{% else %}{{ application.user.name or application.user.email }}{% endif %}</h1><p style="color:var(--ink-dim);">{{ application.user.headline or 'Профиль не заполнен' }} · {{ application.user.location or 'локация не указана' }}</p>
+  {% if application.cover %}<section class="card" style="margin-top:var(--sp-5);"><h2 style="font-size:.9rem;color:var(--acid);">Сопроводительное</h2><p style="white-space:pre-line;margin-top:12px;">{{ application.cover }}</p></section>{% endif %}
+  {% if resume %}<section class="card" style="margin-top:var(--sp-4);"><h2 style="font-size:.9rem;color:var(--acid);">Анонимное CV</h2><p style="margin:10px 0;">{{ resume.about }}</p><a class="btn btn-ghost btn-sm" href="/resume/{{ resume.id }}">Открыть профиль CV</a></section>{% endif %}
+  <section style="margin-top:var(--sp-6);"><h2 style="font-size:1rem;color:var(--acid);">История</h2><div style="border-top:2px solid var(--line);margin-top:12px;">{% for event in events %}<div style="display:grid;grid-template-columns:110px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid var(--line);"><time style="color:var(--ink-faint);font-size:.75rem;">{{ event.created_at.strftime('%d.%m %H:%M') }}</time><div><b>{{ event.kind }}</b><p style="color:var(--ink-dim);margin-top:4px;">{{ event.body }}</p></div></div>{% else %}<p style="padding:18px 0;color:var(--ink-dim);">История начнётся после первого действия.</p>{% endfor %}</div></section></article>
+  <aside class="card" style="position:sticky;top:110px;"><span class="status {{ application.status }}">{{ application.status }}</span><h2 style="font-size:1rem;margin:18px 0;">Следующий ход</h2><form method="post" action="/employer/application/{{ application.id }}/plan" style="display:grid;gap:14px;">
+    <div class="field"><label>Ответственный</label><select class="input" name="assigned_to"><option value="0">Не назначен</option><option value="{{ account.id }}" {% if application.assigned_to==account.id %}selected{% endif %}>{{ account.name or account.email }} · владелец</option>{% for membership, member in members %}<option value="{{ member.id }}" {% if application.assigned_to==member.id %}selected{% endif %}>{{ member.name or member.email }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Интервью</label><input class="input" type="datetime-local" name="interview_at" value="{{ application.interview_at }}"></div>
+    <div class="field"><label>Следующее действие</label><input class="input" type="date" name="next_action_at" value="{{ application.next_action_at }}"></div>
+    {% if team_role!='viewer' %}<button class="btn btn-acid">Сохранить план</button>{% endif %}</form>
+    {% if not application.user.incognito %}<p style="margin-top:18px;"><a style="color:var(--acid);" href="mailto:{{ application.user.email }}">{{ application.user.email }}</a></p>{% endif %}
+  </aside>
+</div>
+{% endblock %}

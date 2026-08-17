@@ -35,9 +35,14 @@
         <span class="resume-fact">{{ resume.location or 'Локация скрыта' }}</span>
         <span class="resume-fact">{{ resume.desired_format }}</span>
         {% if resume.salary_expect %}<span class="resume-fact">Ожидания {{ resume.salary_expect }}</span>{% endif %}
+        {% if resume.relocation %}<span class="resume-fact">Готов к релокации</span>{% endif %}
+        {% if resume.availability %}<span class="resume-fact">Выход: {{ resume.availability }}</span>{% endif %}
       </div>
       <section class="resume-section"><h2>О специалисте</h2><p style="white-space:pre-line;line-height:1.75;max-width:72ch;">{{ resume.about }}</p></section>
       <section class="resume-section"><h2>Навыки</h2><div class="cv-skills">{% for skill in resume.skill_list %}<span class="resume-fact">{{ skill }}</span>{% endfor %}</div></section>
+      {% if resume.employment_history %}<section class="resume-section"><h2>Опыт работы</h2><p style="white-space:pre-line;line-height:1.75;">{{ resume.employment_history }}</p></section>{% endif %}
+      {% if resume.education %}<section class="resume-section"><h2>Образование</h2><p style="white-space:pre-line;">{{ resume.education }}</p></section>{% endif %}
+      {% if resume.preferred_locations %}<section class="resume-section"><h2>Предпочтительная география</h2><p>{{ resume.preferred_locations }}</p></section>{% endif %}
       {% if resume.languages %}<section class="resume-section"><h2>Языки</h2><p>{{ resume.languages }}</p></section>{% endif %}
     </article>
 
@@ -47,6 +52,7 @@
         <h2 style="margin:10px 0 20px;">Связаться с кандидатом</h2>
         <p><b>Email</b><br><a style="color:var(--acid);" href="mailto:{{ resume.contact_email }}">{{ resume.contact_email }}</a></p>
         {% if resume.contact_telegram %}<p style="margin-top:14px;"><b>Telegram</b><br>{{ resume.contact_telegram }}</p>{% endif %}
+        {% if resume.portfolio_url %}<p style="margin-top:14px;"><b>Портфолио</b><br><a style="color:var(--acid);" href="{{ resume.portfolio_url }}" target="_blank" rel="noopener">Открыть ↗</a></p>{% endif %}
         {% if resume.cv_file_name %}<a href="/resume/{{ resume.id }}/file" class="btn btn-ghost" style="width:100%;margin-top:18px;">Скачать исходный CV</a>{% endif %}
       {% else %}
         <span class="kicker pink">Контакты закрыты</span>

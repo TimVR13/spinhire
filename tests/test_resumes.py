@@ -3,8 +3,8 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from server.app import (Application, Base, CompanyInvite, CompanyMember, CV_UPLOAD_DIR, Job,
-                        Notification, Resume, ResumeUnlock, SessionLocal, User,
+from server.app import (Application, ApplicationEvent, Base, CompanyInvite, CompanyMember,
+                        CV_UPLOAD_DIR, Job, Notification, Resume, ResumeUnlock, SessionLocal, User,
                         anonymize_resume_text, app, engine, hash_pw, migrate, signer)
 
 
@@ -25,6 +25,10 @@ class ResumePrivacyTests(unittest.TestCase):
             db.flush()
             resume = Resume(user_id=candidate.id, title="CRM Manager", location="Warsaw",
                             experience_years=6, skills="CRM, Retention", about="iGaming experience",
+                            employment_history="Retention Lead — 4 years",
+                            education="Business degree", preferred_locations="Malta, Remote",
+                            relocation=True, availability="2 weeks",
+                            portfolio_url="https://portfolio.test.invalid/private",
                             contact_email="private-address@test.invalid", published=True,
                             status="approved",
                             consent_at="2026-08-17T00:00:00Z")
@@ -54,10 +58,14 @@ class ResumePrivacyTests(unittest.TestCase):
             locked = client.get(f"/resume/{self.resume_id}")
             self.assertEqual(locked.status_code, 200)
             self.assertNotIn("private-address@test.invalid", locked.text)
+            self.assertNotIn("portfolio.test.invalid", locked.text)
+            self.assertIn("Retention Lead", locked.text)
+            self.assertIn("Malta, Remote", locked.text)
 
             unlocked = client.post(f"/resume/{self.resume_id}/unlock", follow_redirects=True)
             self.assertEqual(unlocked.status_code, 200)
             self.assertIn("private-address@test.invalid", unlocked.text)
+            self.assertIn("portfolio.test.invalid", unlocked.text)
             repeated = client.post(f"/resume/{self.resume_id}/unlock", follow_redirects=True)
             self.assertEqual(repeated.status_code, 200)
         with SessionLocal() as db:
@@ -151,6 +159,7 @@ class EmployerWorkflowTests(unittest.TestCase):
             db.query(CompanyInvite).filter_by(account_id=self.employer_id).delete()
             db.query(CompanyMember).filter_by(account_id=self.employer_id).delete()
             db.query(Notification).filter_by(user_id=self.candidate_id).delete()
+            db.query(ApplicationEvent).filter_by(application_id=self.application_id).delete()
             db.query(Application).filter_by(id=self.application_id).delete()
             db.query(Job).filter_by(id=self.job_id).delete()
             db.query(User).filter(User.id.in_([
@@ -249,6 +258,34 @@ class EmployerWorkflowTests(unittest.TestCase):
                 db.query(ResumeUnlock).filter_by(resume_id=resume_id).delete()
                 db.query(Resume).filter_by(id=resume_id).delete()
                 db.commit()
+
+    def test_application_detail_is_company_scoped_and_plan_is_audited(self):
+        with TestClient(app) as client:
+            client.cookies.set("sh_session", signer.dumps({"uid": self.outsider_id}))
+            self.assertEqual(client.get(f"/employer/application/{self.application_id}").status_code, 404)
+            client.cookies.set("sh_session", signer.dumps({"uid": self.recruiter_id}))
+            detail = client.get(f"/employer/application/{self.application_id}")
+            self.assertEqual(detail.status_code, 200)
+            planned = client.post(f"/employer/application/{self.application_id}/plan", data={
+                "assigned_to": self.recruiter_id,
+                "interview_at": "2026-08-20T14:30",
+                "next_action_at": "2026-08-21",
+            }, follow_redirects=False)
+            self.assertEqual(planned.status_code, 303)
+        with SessionLocal() as db:
+            application = db.get(Application, self.application_id)
+            self.assertEqual(application.assigned_to, self.recruiter_id)
+            self.assertEqual(application.interview_at, "2026-08-20T14:30")
+            self.assertEqual(db.query(ApplicationEvent).filter_by(
+                application_id=self.application_id, kind="plan").count(), 1)
+
+    def test_viewer_cannot_change_application_plan(self):
+        with TestClient(app) as client:
+            client.cookies.set("sh_session", signer.dumps({"uid": self.viewer_id}))
+            response = client.post(f"/employer/application/{self.application_id}/plan", data={
+                "assigned_to": self.viewer_id, "interview_at": "", "next_action_at": "",
+            }, follow_redirects=False)
+            self.assertEqual(response.status_code, 403)
 
 
 if __name__ == "__main__":

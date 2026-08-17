@@ -90,6 +90,33 @@ class CrawlerTests(unittest.TestCase):
         self.assertEqual(row.status, "archived")
         self.assertTrue(row.closed_at)
 
+    def test_collect_retries_failed_source_and_reports_health(self):
+        with patch.object(crawler, "crawl_softswiss", side_effect=[RuntimeError("temporary"), []]), \
+             patch.object(crawler, "GREENHOUSE_BOARDS", {}), \
+             patch.object(crawler, "JSONLD_LISTINGS", {}), \
+             patch.object(crawler, "LEVER_SITES", {}), \
+             patch.object(crawler, "SMARTRECRUITERS_COMPANIES", {}), \
+             patch.object(crawler, "PARTNER_FEEDS", {}), \
+             patch.object(crawler, "crawl_casino_seed_registry", return_value=[]):
+            items, complete, health = crawler.collect(with_metadata=True)
+        self.assertEqual(items, [])
+        softswiss = next(row for row in health if row["key"] == "softswiss")
+        self.assertTrue(softswiss["ok"])
+        self.assertEqual(softswiss["attempts"], 2)
+        self.assertIn("softswiss", complete)
+
+    def test_collect_keeps_failed_source_out_of_complete_set(self):
+        with patch.object(crawler, "crawl_softswiss", side_effect=RuntimeError("offline")), \
+             patch.object(crawler, "GREENHOUSE_BOARDS", {}), \
+             patch.object(crawler, "JSONLD_LISTINGS", {}), \
+             patch.object(crawler, "LEVER_SITES", {}), \
+             patch.object(crawler, "SMARTRECRUITERS_COMPANIES", {}), \
+             patch.object(crawler, "PARTNER_FEEDS", {}), \
+             patch.object(crawler, "crawl_casino_seed_registry", return_value=[]):
+            _, complete, health = crawler.collect(with_metadata=True)
+        self.assertNotIn("softswiss", complete)
+        self.assertFalse(next(row for row in health if row["key"] == "softswiss")["ok"])
+
 
 if __name__ == "__main__":
     unittest.main()

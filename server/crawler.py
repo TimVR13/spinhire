@@ -25,6 +25,7 @@ import os
 import re
 import sys
 import threading
+import time
 import urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -663,6 +664,15 @@ def save_status(payload):
     status_path = Path(__file__).resolve().parent.parent / "data" / "crawler-status.json"
     status_path.parent.mkdir(parents=True, exist_ok=True)
     status_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    history_path = status_path.with_name("crawler-history.json")
+    try:
+        history = json.loads(history_path.read_text(encoding="utf-8"))
+        if not isinstance(history, list):
+            history = []
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        history = []
+    history.append(payload)
+    history_path.write_text(json.dumps(history[-30:], ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def last_successful_run():
@@ -686,63 +696,52 @@ def collect(with_metadata=False):
     """Собрать вакансии со всех источников. Возвращает список dict."""
     items = []
     complete_sources = set()
-    try:
-        got = crawl_softswiss()
-        items.extend(got)
-        if len(got) < MAX_PER_BOARD:
-            complete_sources.add("softswiss")
-        print(f"[crawl] softswiss: +{len(got)}")
-    except Exception as e:
-        print(f"[crawl] softswiss FAILED: {str(e)[:120]}")
+    health = []
+
+    def fetch_source(key, callback, complete=False, attempts=2):
+        started = time.monotonic()
+        error = ""
+        got = []
+        used_attempts = 0
+        for attempt in range(1, attempts + 1):
+            used_attempts = attempt
+            try:
+                got = callback()
+                error = ""
+                break
+            except Exception as exc:
+                error = str(exc)[:300]
+        ok = not error
+        if ok:
+            items.extend(got)
+            if complete and len(got) < MAX_PER_BOARD:
+                complete_sources.add(key)
+            print(f"[crawl] {key}: +{len(got)}")
+        else:
+            print(f"[crawl] {key} FAILED after {used_attempts} attempts: {error[:120]}")
+        health.append({
+            "key": key, "ok": ok, "count": len(got), "attempts": used_attempts,
+            "duration_ms": round((time.monotonic() - started) * 1000),
+            "error": error, "checked_at": datetime.utcnow().isoformat() + "Z",
+        })
+        return got
+
+    fetch_source("softswiss", crawl_softswiss, complete=True)
     for board, company in GREENHOUSE_BOARDS.items():
-        try:
-            got = crawl_greenhouse(board, company)
-            items.extend(got)
-            if len(got) < MAX_PER_BOARD:
-                complete_sources.add(f"greenhouse:{board}")
-            print(f"[crawl] greenhouse:{board}: +{len(got)}")
-        except Exception as e:
-            print(f"[crawl] greenhouse:{board} FAILED: {str(e)[:120]}")
+        fetch_source(f"greenhouse:{board}", lambda b=board, c=company: crawl_greenhouse(b, c), complete=True)
     for url, (name, source) in JSONLD_LISTINGS.items():
-        try:
-            got = crawl_jsonld(url, source)
-            items.extend(got)
-            print(f"[crawl] {source}: +{len(got)}")
-        except Exception as e:
-            print(f"[crawl] {source} FAILED: {str(e)[:120]}")
+        fetch_source(source, lambda u=url, s=source: crawl_jsonld(u, s))
     for site, company in LEVER_SITES.items():
-        try:
-            got = crawl_lever(site, company); items.extend(got)
-            if len(got) < MAX_PER_BOARD:
-                complete_sources.add(f"lever:{site}")
-            print(f"[crawl] lever:{site}: +{len(got)}")
-        except Exception as e:
-            print(f"[crawl] lever:{site} FAILED: {str(e)[:120]}")
+        fetch_source(f"lever:{site}", lambda s=site, c=company: crawl_lever(s, c), complete=True)
     for company_id, company in SMARTRECRUITERS_COMPANIES.items():
-        try:
-            got = crawl_smartrecruiters(company_id, company); items.extend(got)
-            if len(got) < MAX_PER_BOARD:
-                complete_sources.add(f"smartrecruiters:{company_id}")
-            print(f"[crawl] smartrecruiters:{company_id}: +{len(got)}")
-        except Exception as e:
-            print(f"[crawl] smartrecruiters:{company_id} FAILED: {str(e)[:120]}")
+        fetch_source(f"smartrecruiters:{company_id}",
+                     lambda i=company_id, c=company: crawl_smartrecruiters(i, c), complete=True)
     for source, url in PARTNER_FEEDS.items():
         if not url:
             continue
-        try:
-            got = crawl_partner_feed(url, source); items.extend(got)
-            if len(got) < MAX_PER_BOARD:
-                complete_sources.add(f"partner:{source}")
-            print(f"[crawl] partner:{source}: +{len(got)}")
-        except Exception as e:
-            print(f"[crawl] partner:{source} FAILED: {str(e)[:120]}")
-    try:
-        got = crawl_casino_seed_registry()
-        items.extend(got)
-        print(f"[crawl] casino-discovery: +{len(got)}")
-    except Exception as e:
-        print(f"[crawl] casino-discovery FAILED: {str(e)[:120]}")
-    return (items, complete_sources) if with_metadata else items
+        fetch_source(f"partner:{source}", lambda u=url, s=source: crawl_partner_feed(u, s), complete=True)
+    fetch_source("casino-discovery", crawl_casino_seed_registry)
+    return (items, complete_sources, health) if with_metadata else items
 
 
 def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
@@ -863,7 +862,8 @@ def run(db, Job, guess_category, approve=True):
     if not _RUN_LOCK.acquire(blocking=False):
         return {"skipped": "already_running", "at": datetime.utcnow().isoformat()}
     try:
-        items, complete_sources = collect(with_metadata=True)
+        started = time.monotonic()
+        items, complete_sources, health = collect(with_metadata=True)
         added, updated, closed, changed_ids, closed_ids = upsert(
             db, Job, guess_category, items, approve=approve, complete_sources=complete_sources)
         notify_search_engines(changed_ids, closed_ids)
@@ -874,15 +874,25 @@ def run(db, Job, guess_category, approve=True):
         for item in items:
             source = item.get("source", "unknown")
             source_counts[source] = source_counts.get(source, 0) + 1
-        save_status({
+        failed = [row for row in health if not row["ok"]]
+        stale_days = max(1, int(os.environ.get("CRAWLER_STALE_DAYS", "120")))
+        stale_cutoff = datetime.utcnow() - timedelta(days=stale_days)
+        stale_candidates = db.query(Job).filter(
+            Job.status == "approved", Job.created_at < stale_cutoff,
+            Job.source.notin_(("manual", "employer"))).count()
+        status = {
             "last_run": datetime.utcnow().isoformat() + "Z", "ok": True,
             "collected": len(items), "added": added, "updated": updated,
             "closed": closed,
-            "companies": len(profiles), "source_counts": source_counts,
-        })
+            "companies": len(profiles), "source_counts": source_counts, "sources": health,
+            "failed_sources": len(failed), "stale_candidates": stale_candidates,
+            "duration_ms": round((time.monotonic() - started) * 1000),
+        }
+        save_status(status)
         print(f"[crawl] готово: +{added} новых, {updated} обновлено, {closed} закрыто, собрано {len(items)}")
         return {"collected": len(items), "added": added, "updated": updated,
-                "closed": closed, "companies": len(profiles), "at": datetime.utcnow().isoformat()}
+                "closed": closed, "companies": len(profiles), "failed_sources": len(failed),
+                "at": datetime.utcnow().isoformat()}
     finally:
         _RUN_LOCK.release()
 

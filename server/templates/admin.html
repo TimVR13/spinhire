@@ -34,6 +34,7 @@
     <a href="/admin?tab=orders" class="{% if tab == 'orders' %}on{% endif %}">💳 Заказы {% if orders_pending %}({{ orders_pending }}!){% endif %}</a>
     <a href="/admin?tab=events" class="{% if tab == 'events' %}on{% endif %}">📅 События</a>
     <a href="/admin?tab=sources" class="{% if tab == 'sources' %}on{% endif %}">🕷 Источники</a>
+    <a href="/admin?tab=analytics" class="{% if tab == 'analytics' %}on{% endif %}">📈 Аналитика и SEO</a>
   </nav>
 
   {% if tab == 'dash' %}
@@ -215,6 +216,31 @@
       {% endfor %}
     </table></div>
 
+  {% elif tab == 'analytics' %}
+    <div class="source-head"><div><span class="kicker">Воронка</span><h2>Продуктовая аналитика</h2></div><p class="source-note">Просмотры — за последние 14 дней; этапы ATS и открытия контактов — за всё время.</p></div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="n">{{ funnel.views }}</div><div class="l">Просмотров вакансий · 14 дней</div></div>
+      <div class="stat-card"><div class="n">{{ funnel.applications }}</div><div class="l">Откликов</div></div>
+      <div class="stat-card"><div class="n">{{ funnel.apply_rate }}%</div><div class="l">Конверсия в отклик</div></div>
+      <div class="stat-card"><div class="n">{{ funnel.interviews }}</div><div class="l">Интервью</div></div>
+      <div class="stat-card"><div class="n">{{ funnel.offers }}</div><div class="l">Офферов</div></div>
+      <div class="stat-card"><div class="n">{{ funnel.hired }}</div><div class="l">Нанято</div></div>
+      <div class="stat-card"><div class="n">{{ funnel.hire_rate }}%</div><div class="l">Отклик → найм</div></div>
+      <div class="stat-card"><div class="n">{{ funnel.resume_unlocks }}</div><div class="l">Открыто контактов CV</div></div>
+    </div>
+    <div class="table-wrap"><table class="adm"><tr><th>Дата</th><th>Просмотры вакансий</th><th>Отклики</th><th>Открытия CV</th></tr>{% for day in daily_events %}<tr><td>{{ day.date }}</td><td>{{ day.get('job_view',0) }}</td><td>{{ day.get('application_created',0) }}</td><td>{{ day.get('resume_unlocked',0) }}</td></tr>{% endfor %}</table></div>
+
+    <div class="source-head"><div><span class="kicker" style="color:var(--pink)">Поисковая видимость</span><h2>SEO-контроль</h2></div><p class="source-note">Автоматические проверки индексируемого контента, sitemap и каналов быстрой индексации.</p></div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="n">{{ seo.indexable_jobs }}</div><div class="l">Вакансий в индексе</div></div>
+      <div class="stat-card" {% if seo.thin_jobs %}style="border-color:var(--pink)"{% endif %}><div class="n">{{ seo.thin_jobs }}</div><div class="l">Тонких описаний &lt; 300</div></div>
+      <div class="stat-card" {% if seo.missing_location %}style="border-color:var(--pink)"{% endif %}><div class="n">{{ seo.missing_location }}</div><div class="l">Без локации</div></div>
+      <div class="stat-card" {% if seo.missing_company %}style="border-color:var(--pink)"{% endif %}><div class="n">{{ seo.missing_company }}</div><div class="l">Без компании</div></div>
+      <div class="stat-card"><div class="n">{{ seo.sitemap_urls }}</div><div class="l">URL в sitemap</div></div>
+      <div class="stat-card"><div class="n">{{ seo.indexable_resumes }}</div><div class="l">Анонимных CV в индексе</div></div>
+    </div>
+    <div class="card"><b>Индексация:</b> IndexNow — <span style="color:{{ 'var(--acid)' if seo.indexnow else 'var(--yellow)' }}">{{ 'настроен' if seo.indexnow else 'нужен ключ' }}</span> · Google Job Indexing — <span style="color:{{ 'var(--acid)' if seo.google_indexing else 'var(--yellow)' }}">{{ 'настроен' if seo.google_indexing else 'нужен service account' }}</span> · последний краулер — {{ crawl_status.get('last_run','не запускался') }}.</div>
+
   {% elif tab == 'sources' %}
     <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: var(--sp-5); border-color: var(--acid);">
       <div>
@@ -236,12 +262,14 @@
 
     <div class="source-head"><div><span class="kicker">Вакансии</span><h2>Источники вакансий</h2></div><p class="source-note">Количество считается по опубликованным вакансиям в базе.</p></div>
     <div class="table-wrap"><table class="adm">
-      <tr><th>Источник</th><th>Способ сбора</th><th>Статус</th><th>В базе</th><th>Подключение</th></tr>
+      <tr><th>Источник</th><th>Способ сбора</th><th>Статус</th><th>Последняя проверка</th><th>В базе</th><th>Подключение</th></tr>
       {% for s in sources %}
+      {% set health = source_health.get(s.key, {}) %}
       <tr>
         <td><b>{{ s.name }}</b><br><span style="font-size: 0.72rem; color: var(--ink-faint);">{{ s.key }}</span></td>
         <td style="font-size: 0.82rem;">{{ s.type }}</td>
-        <td><span class="source-status {% if s.status in ('работает','подключён') %}ok{% else %}warn{% endif %}">{{ s.status }}</span></td>
+        <td><span class="source-status {% if health and not health.get('ok') %}off{% elif s.status in ('работает','подключён') %}ok{% else %}warn{% endif %}">{{ 'ошибка' if health and not health.get('ok') else s.status }}</span></td>
+        <td style="font-size:.75rem;color:var(--ink-dim);">{% if health %}{{ health.get('checked_at','')[:16]|replace('T',' ') }}<br>{{ health.get('count',0) }} шт. · {{ health.get('duration_ms',0) }} мс{% if health.get('error') %}<br><span style="color:var(--pink)">{{ health.get('error')[:80] }}</span>{% endif %}{% else %}нет данных{% endif %}</td>
         <td style="font-family: var(--font-display); color: var(--acid);">{{ source_counts.get(s.key, 0) }}</td>
         <td style="font-size: 0.82rem; color: var(--ink-dim); max-width: 360px; white-space: normal;">{{ s.note }}</td>
       </tr>

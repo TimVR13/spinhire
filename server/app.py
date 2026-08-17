@@ -101,7 +101,8 @@ class User(Base):
     otp_attempts = Column(Integer, default=0)       # попыток ввода текущего кода
     created_at = Column(DateTime, default=datetime.utcnow)
     jobs = relationship("Job", back_populates="owner")
-    applications = relationship("Application", back_populates="user")
+    applications = relationship("Application", back_populates="user",
+                                foreign_keys="Application.user_id")
 
 
 class Job(Base):
@@ -205,9 +206,12 @@ class Application(Base):
     cover = Column(Text, default="")
     status = Column(String, default="new")  # new | viewed | invited | offer | hired | rejected
     employer_note = Column(Text, default="")
+    assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
+    interview_at = Column(String, default="")
+    next_action_at = Column(String, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
     job = relationship("Job", back_populates="applications")
-    user = relationship("User", back_populates="applications")
+    user = relationship("User", back_populates="applications", foreign_keys=[user_id])
 
 
 class Resume(Base):
@@ -226,6 +230,12 @@ class Resume(Base):
     contact_telegram = Column(String, default="")
     cv_file_name = Column(String, default="")
     cv_file_path = Column(String, default="")
+    employment_history = Column(Text, default="")
+    education = Column(Text, default="")
+    preferred_locations = Column(String, default="")
+    relocation = Column(Boolean, default=False)
+    availability = Column(String, default="")
+    portfolio_url = Column(String, default="")
     published = Column(Boolean, default=False)
     status = Column(String, default="draft")  # draft | pending | approved | rejected | paused
     moderation_note = Column(String, default="")
@@ -300,6 +310,27 @@ class CompanyInvite(Base):
     token_hash = Column(String, unique=True, nullable=False)
     status = Column(String, default="pending")  # pending | accepted | revoked
     expires_at = Column(String, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ApplicationEvent(Base):
+    __tablename__ = "application_events"
+    id = Column(Integer, primary_key=True)
+    application_id = Column(Integer, ForeignKey("applications.id"), nullable=False)
+    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    kind = Column(String, default="note")
+    body = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AnalyticsEvent(Base):
+    __tablename__ = "analytics_events"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    entity_type = Column(String, default="")
+    entity_id = Column(Integer, nullable=True)
+    meta = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -474,6 +505,25 @@ def migrate(db: Session):
     acols = {r[1] for r in db.execute(text("PRAGMA table_info(applications)")).fetchall()}
     if acols and "employer_note" not in acols:
         db.execute(text("ALTER TABLE applications ADD COLUMN employer_note TEXT DEFAULT ''"))
+    for _sql in (
+        "ALTER TABLE applications ADD COLUMN assigned_to INTEGER",
+        "ALTER TABLE applications ADD COLUMN interview_at VARCHAR DEFAULT ''",
+        "ALTER TABLE applications ADD COLUMN next_action_at VARCHAR DEFAULT ''",
+    ):
+        col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
+        if acols and col not in acols:
+            db.execute(text(_sql))
+    for _sql in (
+        "ALTER TABLE resumes ADD COLUMN employment_history TEXT DEFAULT ''",
+        "ALTER TABLE resumes ADD COLUMN education TEXT DEFAULT ''",
+        "ALTER TABLE resumes ADD COLUMN preferred_locations VARCHAR DEFAULT ''",
+        "ALTER TABLE resumes ADD COLUMN relocation BOOLEAN DEFAULT 0",
+        "ALTER TABLE resumes ADD COLUMN availability VARCHAR DEFAULT ''",
+        "ALTER TABLE resumes ADD COLUMN portfolio_url VARCHAR DEFAULT ''",
+    ):
+        col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
+        if rcols and col not in rcols:
+            db.execute(text(_sql))
     # верификация почты: verified DEFAULT 1 — существующие пользователи остаются рабочими
     for _sql in (
         "ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 1",
@@ -912,6 +962,8 @@ def job_detail(job_id: int, request: Request, db: Session = Depends(db_session))
     if not job or job.status not in ("approved", "archived"):
         raise HTTPException(404)
     job.views += 1
+    viewer = get_user(request, db)
+    track(db, "job_view", viewer.id if viewer else None, "job", job.id)
     db.commit()
     user = get_user(request, db)
     applied = bool(user and db.query(Application).filter_by(job_id=job.id, user_id=user.id).first())
@@ -938,7 +990,12 @@ def job_apply(job_id: int, request: Request, cover: str = Form(""),
     # Отклик принимаем и на агрегированные вакансии — как лид: мы передаём его
     # работодателю и используем как аргумент подключить компанию к SpinHire.
     if not db.query(Application).filter_by(job_id=job_id, user_id=user.id).first():
-        db.add(Application(job_id=job_id, user_id=user.id, cover=cover.strip()))
+        application = Application(job_id=job_id, user_id=user.id, cover=cover.strip())
+        db.add(application)
+        db.flush()
+        db.add(ApplicationEvent(application_id=application.id, actor_id=user.id,
+                                kind="created", body="Кандидат отправил отклик"))
+        track(db, "application_created", user.id, "job", job_id)
         db.commit()
     return RedirectResponse(f"/job/{job_id}?ok=1", status_code=303)
 
@@ -1193,6 +1250,11 @@ def add_notification(db: Session, user_id: int, kind: str, title: str,
                         body=body[:1000], link=link[:500]))
 
 
+def track(db: Session, name: str, user_id=None, entity_type="", entity_id=None, **meta):
+    db.add(AnalyticsEvent(name=name, user_id=user_id, entity_type=entity_type,
+                          entity_id=entity_id, meta=json.dumps(meta, ensure_ascii=False)[:2000]))
+
+
 def anonymize_resume_text(value: str) -> str:
     """Убрать случайно вставленные контакты из публичной части CV."""
     import re
@@ -1290,6 +1352,7 @@ def resume_unlock(resume_id: int, request: Request, db: Session = Depends(db_ses
                                   delta=0 if unlimited else -1,
                                   balance_after=account.cv_credits or 0,
                                   action="unlimited" if unlimited else "unlock"))
+        track(db, "resume_unlocked", user.id, "resume", row.id, account_id=account.id)
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -1312,7 +1375,8 @@ def profile(request: Request, db: Session = Depends(db_session)):
     resume_unlocks = db.query(ResumeUnlock).filter_by(resume_id=resume.id).count() if resume else 0
     profile_checks = [user.name, user.headline, user.location, user.salary_expect, user.languages,
                       resume and resume.title, resume and resume.skills, resume and resume.about,
-                      resume and resume.contact_telegram]
+                      resume and resume.contact_telegram, resume and resume.employment_history,
+                      resume and resume.preferred_locations, resume and resume.availability]
     profile_progress = round(sum(bool(value) for value in profile_checks) / len(profile_checks) * 100)
     app_counts = {status: sum(a.status == status for a in apps)
                   for status in ("new", "viewed", "invited", "offer", "hired", "rejected")}
@@ -1386,6 +1450,9 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
                         publish: str = Form(None), consent: str = Form(None),
                         cv_file: UploadFile | None = File(None),
                         remove_cv_file: str = Form(None),
+                        employment_history: str = Form(""), education: str = Form(""),
+                        preferred_locations: str = Form(""), relocation: str = Form(None),
+                        availability: str = Form(""), portfolio_url: str = Form(""),
                         db: Session = Depends(db_session)):
     user = get_user(request, db)
     if not user or user.role != "talent":
@@ -1395,7 +1462,8 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
         row = Resume(user_id=user.id)
         db.add(row)
     old_public = (row.title, row.location, row.experience_years, row.skills, row.about,
-                  row.desired_format, row.salary_expect, row.languages)
+                  row.desired_format, row.salary_expect, row.languages, row.employment_history,
+                  row.education, row.preferred_locations, row.relocation, row.availability)
     wants_publish = bool(publish)
     if wants_publish and (not consent or not title.strip() or not about.strip()):
         return RedirectResponse("/profile?cv_error=1#cv", status_code=303)
@@ -1409,6 +1477,13 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
     row.languages = languages.strip()
     row.contact_email = contact_email.strip() or user.email
     row.contact_telegram = contact_telegram.strip()
+    row.employment_history = anonymize_resume_text(employment_history)
+    row.education = anonymize_resume_text(education)
+    row.preferred_locations = preferred_locations.strip()[:500]
+    row.relocation = bool(relocation)
+    row.availability = availability.strip()[:120]
+    portfolio = portfolio_url.strip()
+    row.portfolio_url = portfolio[:500] if portfolio.startswith(("https://", "http://")) else ""
     if remove_cv_file and row.cv_file_path:
         try:
             os.remove(row.cv_file_path)
@@ -1437,7 +1512,8 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
     row.published = wants_publish
     row.consent_at = datetime.utcnow().isoformat() + "Z" if wants_publish else row.consent_at
     new_public = (row.title, row.location, row.experience_years, row.skills, row.about,
-                  row.desired_format, row.salary_expect, row.languages)
+                  row.desired_format, row.salary_expect, row.languages, row.employment_history,
+                  row.education, row.preferred_locations, row.relocation, row.availability)
     if not wants_publish:
         row.status = "paused" if row.status == "approved" else "draft"
     elif row.status == "approved" and old_public == new_public:
@@ -1457,7 +1533,8 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
 # ---------- employer cabinet ----------
 
 @app.get("/employer", response_class=HTMLResponse)
-def employer(request: Request, db: Session = Depends(db_session)):
+def employer(request: Request, stage: str = "", assigned: int = 0,
+             db: Session = Depends(db_session)):
     user = get_user(request, db)
     if not user:
         return login_redirect("/employer")
@@ -1472,6 +1549,8 @@ def employer(request: Request, db: Session = Depends(db_session)):
     ledger = (db.query(ResumeCreditLedger).filter_by(employer_id=account.id)
               .order_by(ResumeCreditLedger.created_at.desc()).limit(8).all())
     applications = [application for job in jobs for application in job.applications]
+    ats_apps = [a for a in applications if (not stage or a.status == stage)
+                and (not assigned or a.assigned_to == assigned)]
     stats = {
         "active_jobs": sum(job.status == "approved" for job in jobs),
         "pending_jobs": sum(job.status == "pending" for job in jobs),
@@ -1490,7 +1569,8 @@ def employer(request: Request, db: Session = Depends(db_session)):
                .order_by(CompanyInvite.created_at.desc()).all())
     return render(request, db, "employer.html", jobs=jobs, unlocked_resumes=unlocked,
                   credit_ledger=ledger, stats=stats, company_progress=company_progress,
-                  account=account, team_role=team_role, team=team, invites=invites)
+                  account=account, team_role=team_role, team=team, invites=invites,
+                  ats_apps=ats_apps, stage=stage, assigned=assigned)
 
 
 @app.post("/employer/profile")
@@ -1530,6 +1610,9 @@ def app_status(app_id: int, request: Request, status: str = Form(...),
                   "rejected": "Статус отклика обновлён", "new": "Отклик возвращён в новые"}
         add_notification(db, a.user_id, "application", labels[status],
                          f"{a.job.company_name}: {a.job.title}", f"/job/{a.job_id}")
+        db.add(ApplicationEvent(application_id=a.id, actor_id=user.id,
+                                kind="status", body=labels[status]))
+        track(db, "application_status", user.id, "application", a.id, status=status)
         db.commit()
         if status in ("invited", "offer", "hired"):
             safe_label = html.escape(labels[status])
@@ -1550,8 +1633,44 @@ def app_note(app_id: int, request: Request, note: str = Form(""),
             application.job.owner_id != account.id and user.role != "admin"):
         raise HTTPException(403)
     application.employer_note = note.strip()[:2000]
+    if application.employer_note:
+        db.add(ApplicationEvent(application_id=application.id, actor_id=user.id,
+                                kind="note", body=application.employer_note))
     db.commit()
     return RedirectResponse(f"/employer#application-{app_id}", status_code=303)
+
+
+@app.get("/employer/application/{app_id}", response_class=HTMLResponse)
+def application_detail(app_id: int, request: Request, db: Session = Depends(db_session)):
+    user, account, team_role = require_company_user(request, db)
+    application = db.get(Application, app_id)
+    if not application or (application.job.owner_id != account.id and user.role != "admin"):
+        raise HTTPException(404)
+    members = (db.query(CompanyMember, User).join(User, User.id == CompanyMember.user_id)
+               .filter(CompanyMember.account_id == account.id).all())
+    events = (db.query(ApplicationEvent).filter_by(application_id=application.id)
+              .order_by(ApplicationEvent.created_at.desc()).all())
+    resume = db.query(Resume).filter_by(user_id=application.user_id).first()
+    return render(request, db, "application.html", application=application, events=events,
+                  resume=resume, account=account, team_role=team_role, members=members)
+
+
+@app.post("/employer/application/{app_id}/plan")
+def application_plan(app_id: int, request: Request, assigned_to: int = Form(0),
+                     interview_at: str = Form(""), next_action_at: str = Form(""),
+                     db: Session = Depends(db_session)):
+    user, account, _ = require_company_user(request, db, write=True)
+    application = db.get(Application, app_id)
+    if not application or application.job.owner_id != account.id:
+        raise HTTPException(404)
+    allowed_ids = {account.id} | {m.user_id for m in db.query(CompanyMember).filter_by(account_id=account.id)}
+    application.assigned_to = assigned_to if assigned_to in allowed_ids else None
+    application.interview_at = interview_at.strip()[:40]
+    application.next_action_at = next_action_at.strip()[:40]
+    db.add(ApplicationEvent(application_id=application.id, actor_id=user.id, kind="plan",
+                            body=f"План обновлён: интервью {application.interview_at or '—'}, следующее действие {application.next_action_at or '—'}"))
+    db.commit()
+    return RedirectResponse(f"/employer/application/{app_id}?saved=1", status_code=303)
 
 
 @app.post("/employer/team/invite")
@@ -1820,8 +1939,6 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
     elif tab == "sources":
         from server import crawler
         from collections import Counter
-        import json
-        from pathlib import Path
         counts = Counter(j.source or "внутренние/ручные"
                          for j in db.query(Job).filter(Job.status == "approved").all())
         ctx["sources"] = crawler.SOURCE_REGISTRY
@@ -1833,9 +1950,55 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
             "resume_connected": sum(s["status"] in ("работает", "подключён") for s in crawler.RESUME_SOURCE_REGISTRY),
             "talent_profiles": db.query(User).filter(User.role == "talent").count(),
         }
-        status_path = Path(__file__).resolve().parent.parent / "data" / "crawler-status.json"
+        status_path = os.path.join(ROOT, "data", "crawler-status.json")
         try:
-            ctx["crawl_status"] = json.loads(status_path.read_text(encoding="utf-8"))
+            with open(status_path, encoding="utf-8") as handle:
+                ctx["crawl_status"] = json.load(handle)
+        except (OSError, ValueError):
+            ctx["crawl_status"] = {}
+        ctx["source_health"] = {row.get("key"): row for row in ctx["crawl_status"].get("sources", [])}
+    elif tab == "analytics":
+        since = datetime.utcnow() - timedelta(days=14)
+        events = db.query(AnalyticsEvent).filter(AnalyticsEvent.created_at >= since).all()
+        event_counts = {}
+        daily = {}
+        for event in events:
+            event_counts[event.name] = event_counts.get(event.name, 0) + 1
+            day = event.created_at.date().isoformat()
+            daily.setdefault(day, {})[event.name] = daily.setdefault(day, {}).get(event.name, 0) + 1
+        applications = db.query(Application).count()
+        interviews = db.query(Application).filter(Application.status == "invited").count()
+        offers = db.query(Application).filter(Application.status == "offer").count()
+        hired = db.query(Application).filter(Application.status == "hired").count()
+        job_views = event_counts.get("job_view", 0)
+        ctx["funnel"] = {
+            "views": job_views, "applications": applications, "interviews": interviews,
+            "offers": offers, "hired": hired,
+            "apply_rate": round(applications * 100 / job_views, 1) if job_views else 0,
+            "hire_rate": round(hired * 100 / applications, 1) if applications else 0,
+            "resume_unlocks": db.query(ResumeUnlock).count(),
+        }
+        ctx["daily_events"] = [{"date": (datetime.utcnow().date() - timedelta(days=offset)).isoformat(),
+                                **daily.get((datetime.utcnow().date() - timedelta(days=offset)).isoformat(), {})}
+                               for offset in range(13, -1, -1)]
+        approved = db.query(Job).filter(Job.status == "approved")
+        thin = approved.filter(func.length(func.trim(Job.description)) < 300).count()
+        missing_location = approved.filter(func.length(func.trim(Job.location)) == 0).count()
+        missing_company = approved.filter(func.length(func.trim(Job.company_name)) == 0).count()
+        archived = db.query(Job).filter(Job.status == "archived").count()
+        indexable_resumes = db.query(Resume).filter(Resume.status == "approved", Resume.published == True).count()  # noqa: E712
+        ctx["seo"] = {
+            "indexable_jobs": approved.count(), "thin_jobs": thin,
+            "missing_location": missing_location, "missing_company": missing_company,
+            "archived": archived, "indexable_resumes": indexable_resumes,
+            "sitemap_urls": approved.count() + indexable_resumes + db.query(Event).filter(Event.active == True).count() + 6,  # noqa: E712
+            "indexnow": bool(os.environ.get("INDEXNOW_KEY")),
+            "google_indexing": bool(os.environ.get("GOOGLE_INDEXING_SERVICE_ACCOUNT_JSON")),
+        }
+        status_path = os.path.join(ROOT, "data", "crawler-status.json")
+        try:
+            with open(status_path, encoding="utf-8") as handle:
+                ctx["crawl_status"] = json.load(handle)
         except (OSError, ValueError):
             ctx["crawl_status"] = {}
     elif tab == "events":
