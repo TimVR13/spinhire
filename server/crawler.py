@@ -21,6 +21,7 @@
 """
 import html
 import json
+import os
 import re
 import sys
 import urllib.request
@@ -44,6 +45,14 @@ SMARTRECRUITERS_COMPANIES = {"Evolution": "Evolution"}
 # профилей. Пусто по умолчанию: персональные резюме не скрейпим.
 ANONYMOUS_TALENT_SOURCES = {}
 
+# Официальные партнёрские JSON-фиды. URL хранятся только в секретах сервера.
+# Ожидаемый формат: список вакансий либо {"jobs": [...]}.
+PARTNER_FEEDS = {
+    "grc.ua": os.environ.get("GRC_JOBS_FEED_URL", ""),
+    "work.ua": os.environ.get("WORKUA_JOBS_FEED_URL", ""),
+    "robota.ua": os.environ.get("ROBOTAUA_JOBS_FEED_URL", ""),
+}
+
 # Источники с JobPosting JSON-LD на странице листинга (url: (имя, source-ключ))
 JSONLD_LISTINGS = {
     "https://djinni.co/jobs/?company_type=gambling":
@@ -64,12 +73,17 @@ SOURCE_REGISTRY = [
      "status": "подключён", "note": "Публичный ATS API"},
     {"key": "djinni", "name": "Djinni · gambling (Украина)", "type": "JSON-LD парсер",
      "status": "подключён", "note": "15 вакансий/страница из JobPosting-разметки; зарплата/город в HTML (не в JSON-LD)"},
+    {"key": "partner:grc.ua", "name": "GRC.UA", "type": "Партнёрский JSON-фид",
+     "status": "подключён" if PARTNER_FEEDS["grc.ua"] else "нужен доступ",
+     "note": "Сайт блокирует серверный сбор (403). Коннектор готов; нужен официальный feed URL от GRC.UA."},
+    {"key": "partner:work.ua", "name": "Work.ua", "type": "Партнёрский JSON-фид",
+     "status": "подключён" if PARTNER_FEEDS["work.ua"] else "нужен доступ",
+     "note": "Sitemap доступен, страницы вакансий возвращают 403. Нужен официальный экспорт/API или письменное разрешение."},
+    {"key": "partner:robota.ua", "name": "robota.ua", "type": "Партнёрский JSON-фид",
+     "status": "подключён" if PARTNER_FEEDS["robota.ua"] else "нужен доступ",
+     "note": "Сайт и внутренний API закрыты Cloudflare. Коннектор готов к официальному feed URL."},
     {"key": "hh.ru", "name": "HeadHunter (hh.ru / hh.ua)", "type": "Публичный API — требует настройки",
      "status": "не подключён", "note": "api.hh.ru бесплатный (зарплата+город+работодатель), но из облака отдаёт 403 — нужен зарегистрированный app-токен ИЛИ запуск с разрешённого IP. Покрывает RU/UA/СНГ. Готов подключить."},
-    {"key": "work.ua", "name": "work.ua", "type": "JobPosting-разметка — в планах",
-     "status": "не подключён", "note": "Нет публичного API; на страницах есть JobPosting schema — парсим листинг HTML. Agressive anti-bot."},
-    {"key": "robota.ua", "name": "robota.ua", "type": "в планах",
-     "status": "не подключён", "note": "Украинский борд; есть внутренний API. Готов исследовать."},
 ]
 
 RESUME_SOURCE_REGISTRY = [
@@ -79,6 +93,12 @@ RESUME_SOURCE_REGISTRY = [
      "status": "не подключён", "note": "Подключается только при явном согласии кандидата на передачу. Имя, email и контакты не импортируются."},
     {"key": "public:resume-sites", "name": "Открытые базы резюме", "type": "Сбор отключён",
      "status": "запрещён", "note": "Автоматический сбор персональных резюме не запускаем без лицензии источника и согласия кандидатов."},
+    {"key": "partner:work.ua:resumes", "name": "Work.ua · база резюме", "type": "Доступ работодателя",
+     "status": "нужен договор", "note": "Просмотр части анкет возможен, контакты регулируются настройками кандидата и тарифом. Массовый перенос требует отдельного разрешения."},
+    {"key": "partner:robota.ua:resumes", "name": "robota.ua · база резюме", "type": "Доступ работодателя",
+     "status": "нужен договор", "note": "База доступна зарегистрированным работодателям; автоматическое копирование в SpinHire без лицензии не включаем."},
+    {"key": "partner:grc.ua:resumes", "name": "GRC.UA · резюме", "type": "Партнёрский доступ",
+     "status": "нужен договор", "note": "Профили создают сами кандидаты. Импорт возможен только через разрешённый API/feed и с согласием на передачу."},
 ]
 
 UA = "SpinHireBot/1.0 (+https://spinhire.io; job aggregation)"
@@ -324,6 +344,34 @@ def crawl_smartrecruiters(company_id, company):
     return out
 
 
+def crawl_partner_feed(url, source):
+    """Импортировать официальный JSON-фид партнёра без привязки к его схеме API."""
+    data = json.loads(_fetch(url))
+    jobs = data.get("jobs", []) if isinstance(data, dict) else data
+    if not isinstance(jobs, list):
+        raise ValueError("partner feed must be a list or an object with jobs[]")
+    out = []
+    for j in jobs[:MAX_PER_BOARD]:
+        if not isinstance(j, dict):
+            continue
+        title = str(j.get("title") or j.get("name") or "").strip()
+        company = str(j.get("company_name") or j.get("company") or "").strip()
+        link = str(j.get("url") or j.get("source_url") or "").strip()
+        if not title or not link:
+            continue
+        location = str(j.get("location") or j.get("city") or "").strip()
+        description = _clean_html(str(j.get("description") or j.get("content") or ""))
+        ext_id = str(j.get("id") or j.get("external_id") or link[-80:])
+        out.append({"title": title, "company_name": company or "iGaming-компания",
+                    "location": location, "fmt": _fmt_from(location, description),
+                    "tags": _tags_from(title, description), "description": description,
+                    "source_url": link, "source": f"partner:{source}", "ext_id": ext_id,
+                    "salary": str(j.get("salary") or "по запросу"),
+                    "posted_at": str(j.get("posted_at") or j.get("date") or "")[:10],
+                    "deadline": str(j.get("deadline") or "")[:10]})
+    return out
+
+
 def company_snapshot(items):
     """Агрегировать публичные данные компаний из вакансий без отдельного скрейпинга."""
     companies = {}
@@ -387,6 +435,14 @@ def collect():
             print(f"[crawl] smartrecruiters:{company_id}: +{len(got)}")
         except Exception as e:
             print(f"[crawl] smartrecruiters:{company_id} FAILED: {str(e)[:120]}")
+    for source, url in PARTNER_FEEDS.items():
+        if not url:
+            continue
+        try:
+            got = crawl_partner_feed(url, source); items.extend(got)
+            print(f"[crawl] partner:{source}: +{len(got)}")
+        except Exception as e:
+            print(f"[crawl] partner:{source} FAILED: {str(e)[:120]}")
     return items
 
 
