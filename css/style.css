@@ -65,6 +65,19 @@ body {
   font-size: 16px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+  background-image: radial-gradient(circle at 15% -10%, oklch(0.23 0.035 162 / 0.16), transparent 34rem);
+  background-attachment: fixed;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
 }
 
 ::selection { background: var(--acid); color: var(--on-acid); }
@@ -130,7 +143,8 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 /* ---------- header ---------- */
 .site-header {
   position: sticky; top: 0; z-index: 50;
-  background: var(--bg-deep);
+  background: color-mix(in oklch, var(--bg-deep) 88%, transparent);
+  backdrop-filter: blur(18px) saturate(125%);
   border-bottom: 2px solid var(--line);
 }
 .site-header .container {
@@ -144,6 +158,9 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   display: flex; align-items: baseline; gap: 2px;
   flex-shrink: 0;
 }
+.logo { perspective: 180px; }
+.logo__mark { width: 34px; height: 34px; filter: drop-shadow(0 0 7px color-mix(in oklch, var(--acid) 48%, transparent)); transform-style:preserve-3d; transition:transform .65s cubic-bezier(.2,.8,.2,1),filter .3s; }
+.logo:hover .logo__mark { transform:rotateY(180deg) rotateZ(8deg); filter:drop-shadow(0 0 12px color-mix(in oklch,var(--acid) 65%,transparent)); }
 .logo b { color: var(--acid); }
 .logo .dot-org { color: var(--ink-faint); font-size: 0.8em; font-weight: 700; }
 
@@ -155,12 +172,14 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 }
 .main-nav a:hover { color: var(--ink); border-bottom-color: var(--pink); }
 .main-nav a.active { color: var(--acid); border-bottom-color: var(--acid); }
+.main-nav a[aria-current="page"] { color: var(--acid); border-bottom-color: var(--acid); }
 .nav-cta-mobile { display: none; }
 @media (max-width: 900px) { .nav-cta-mobile { display: block !important; } }
 
 .header-actions { display: flex; gap: var(--sp-3); align-items: center; }
 
 .nav-burger { display: none; background: none; border: 2px solid var(--line); color: var(--ink); width: 42px; height: 42px; font-size: 1.2rem; }
+.nav-burger:hover { border-color: var(--acid); color: var(--acid); }
 
 /* ---------- buttons ---------- */
 .btn {
@@ -396,10 +415,12 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   .main-nav {
     display: none;
     position: absolute; top: 68px; left: 0; right: 0;
-    background: var(--bg-deep); border-bottom: 2px solid var(--line);
+    background: color-mix(in oklch, var(--bg-deep) 96%, transparent); border-bottom: 2px solid var(--line);
+    box-shadow: 0 24px 40px oklch(0.02 0.01 285 / 0.6);
     flex-direction: column; gap: 0; padding: var(--sp-3) var(--sp-5) var(--sp-5);
   }
   .main-nav.open { display: flex; }
+  body.nav-open { overflow: hidden; }
   .main-nav a { padding: 14px 0; border-bottom: 1px solid var(--line); min-height: 44px; }
   .nav-burger { display: block; margin-left: auto; width: 44px; height: 44px; }
   .site-footer .footer-grid { grid-template-columns: 1fr 1fr; }
@@ -416,6 +437,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   .header-actions .btn-pink { display: none; }  /* дублируется пунктом в бургер-меню */
   .site-header .container { gap: var(--sp-3); }
   .logo { font-size: 1.05rem; }
+  .logo__mark { width: 28px; height: 28px; }
   .salary { font-size: 1rem; }
 }
 
@@ -459,6 +481,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   --shadow-acid: 0 8px 24px oklch(0.52 0.15 162 / 0.18);
   --shadow-pink: 0 8px 24px oklch(0.55 0.24 352 / 0.16);
 }
+:root[data-theme="light"] body { background-image: radial-gradient(circle at 15% -10%, oklch(0.75 0.08 162 / 0.16), transparent 34rem); }
 /* кнопки: яркая заливка с тёмным текстом даже на светлой теме */
 :root[data-theme="light"] .btn-acid { background: var(--acid); color: #fff; }
 :root[data-theme="light"] .btn-pink { background: oklch(0.62 0.26 352); color: #fff; }

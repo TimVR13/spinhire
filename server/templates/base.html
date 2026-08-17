@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}SpinHire{% endblock %}</title>
 <meta name="description" content="{% block desc %}SpinHire — джоб-борд iGaming-индустрии{% endblock %}">
+<meta name="theme-color" content="#0d0d11">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta property="og:site_name" content="SpinHire">
+<meta property="og:locale" content="ru_RU">
+<meta name="twitter:card" content="summary_large_image">
 {% block robots %}{% endblock %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +39,7 @@
 
 <header class="site-header">
   <div class="container">
-    <a href="/" class="logo" aria-label="SpinHire — главная">spin<b>hire</b></a>
+    <a href="/" class="logo" aria-label="SpinHire — главная"><img class="logo__mark" src="/img/brand-chip.svg" alt="" width="32" height="32">spin<b>hire</b></a>
     <nav class="main-nav" aria-label="Основная навигация">
       <a href="/jobs" {% if active == 'jobs' %}class="active"{% endif %}>Вакансии</a>
       <a href="/companies.html">Компании</a>
@@ -53,7 +58,7 @@
         <a href="/login" class="btn btn-ghost btn-sm">Войти</a>
         <a href="/post-job" class="btn btn-pink btn-sm">Разместить вакансию</a>
       {% endif %}
-      <button class="nav-burger" aria-label="Меню">☰</button>
+      <button class="nav-burger" aria-label="Открыть меню"><span aria-hidden="true">☰</span></button>
     </div>
   </div>
 </header>

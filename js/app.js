@@ -8,10 +8,24 @@ document.addEventListener('DOMContentLoaded', () => {
     burger.setAttribute('aria-expanded', 'false');
     burger.setAttribute('aria-controls', 'main-nav');
     nav.id = nav.id || 'main-nav';
+    const setNav = open => {
+      nav.classList.toggle('open', open);
+      document.body.classList.toggle('nav-open', open);
+      burger.setAttribute('aria-expanded', String(open));
+      burger.setAttribute('aria-label', open ? 'Закрыть меню' : 'Открыть меню');
+      const icon = burger.querySelector('span');
+      if (icon) icon.textContent = open ? '✕' : '☰';
+    };
     burger.addEventListener('click', () => {
       const open = nav.classList.toggle('open');
-      burger.setAttribute('aria-expanded', String(open));
+      setNav(open);
     });
+    nav.addEventListener('click', e => { if (e.target.closest('a')) setNav(false); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') setNav(false); });
+    document.addEventListener('click', e => {
+      if (nav.classList.contains('open') && !nav.contains(e.target) && !burger.contains(e.target)) setNav(false);
+    });
+    window.addEventListener('resize', () => { if (window.innerWidth > 900) setNav(false); });
   }
 
   // auth modal

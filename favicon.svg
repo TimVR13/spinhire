@@ -1,13 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect width="64" height="64" rx="15" fill="#0d1014"/>
-  <g fill="none" stroke="#25e17f" stroke-width="4.5" stroke-linecap="round">
-    <circle cx="32" cy="32" r="19"/>
-    <circle cx="32" cy="32" r="8.5"/>
-  </g>
-  <g fill="#25e17f">
-    <rect x="29.5" y="6.5" width="5" height="9" rx="2"/>
-    <rect x="29.5" y="48.5" width="5" height="9" rx="2"/>
-    <rect x="6.5" y="29.5" width="9" height="5" rx="2"/>
-    <rect x="48.5" y="29.5" width="9" height="5" rx="2"/>
-  </g>
+  <defs><linearGradient id="g" x1="10" y1="8" x2="54" y2="56"><stop stop-color="#78ffbf"/><stop offset=".52" stop-color="#19e58a"/><stop offset="1" stop-color="#00a967"/></linearGradient></defs>
+  <rect width="64" height="64" rx="15" fill="#0b0d10"/>
+  <path d="M32 8C22 20 13 25 13 37c0 9 10 13 17 7l-4 11h12l-4-11c7 6 17 2 17-7C51 25 42 20 32 8Z" fill="url(#g)"/>
+  <path d="M24 24v17M40 24v17M24 32.5h16" fill="none" stroke="#08110d" stroke-width="5" stroke-linecap="round"/>
 </svg>

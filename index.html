@@ -163,18 +163,36 @@
   .game-feature__body p { color: var(--ink-dim); margin: 0; }
   @media (max-width: 700px) { .game-feature { grid-template-columns: 1fr; } .game-feature__img { min-height: 180px; } }
   /* играбельный слот на главной */
-  .hp-slot { display: grid; grid-template-columns: auto 1fr; gap: var(--sp-6); align-items: center; border: 1px solid var(--line); border-radius: 18px;
-    padding: var(--sp-6); background: linear-gradient(var(--surface), var(--bg-deep)); }
-  .hp-reels { display: flex; gap: 10px; padding: 14px; border-radius: 14px; background: oklch(0.06 0.004 285); border: 2px solid var(--acid);
-    box-shadow: 0 0 28px color-mix(in oklch, var(--acid) 36%, transparent), inset 0 0 20px #000; flex-shrink: 0; }
-  .hp-cell { width: 88px; height: 88px; border-radius: 10px; overflow: hidden; background: oklch(0.1 0.006 285); }
+  .hp-slot { display: grid; grid-template-columns: minmax(320px,.9fr) 1fr; gap: clamp(24px,5vw,72px); align-items: center; border: 1px solid color-mix(in oklch,var(--acid) 42%,var(--line)); border-radius: 24px;
+    padding: clamp(24px,5vw,64px); background: radial-gradient(circle at 18% 45%,oklch(0.34 0.12 162 / .28),transparent 35%),linear-gradient(135deg,var(--surface),var(--bg-deep)); position:relative; overflow:hidden; box-shadow:inset 0 1px 0 oklch(1 0 0 / .06),0 24px 70px oklch(0.02 0.02 162 / .55); }
+  .hp-slot::before { content:'PLAY'; position:absolute; right:-.04em; bottom:-.22em; font-family:var(--font-display); font-size:clamp(5rem,14vw,12rem); font-weight:900; color:transparent; -webkit-text-stroke:1px oklch(0.8 0.19 162 / .08); pointer-events:none; }
+  .hp-machine { position:relative; z-index:1; padding:14px; border-radius:22px; background:linear-gradient(145deg,oklch(.25 .02 285),oklch(.06 .005 285)); border:1px solid var(--line-strong); box-shadow:0 18px 50px #0008; }
+  .hp-jackpot { display:flex; justify-content:space-between; gap:12px; margin-bottom:10px; font-size:.72rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-faint); }
+  .hp-jackpot b { color:var(--pink); font-variant-numeric:tabular-nums; }
+  .hp-reels { display: grid; grid-template-columns:repeat(3,1fr); gap: 8px; padding: 14px; border-radius: 14px; background: oklch(0.06 0.004 285); border: 2px solid var(--acid);
+    box-shadow: 0 0 28px color-mix(in oklch, var(--acid) 36%, transparent), inset 0 0 20px #000; flex-shrink: 0; cursor: pointer; user-select: none; }
+  .hp-reels:hover { box-shadow: 0 0 40px color-mix(in oklch, var(--acid) 48%, transparent), inset 0 0 20px #000; }
+  @keyframes hpWin { 0%,100% { box-shadow: 0 0 28px color-mix(in oklch, var(--acid) 36%, transparent), inset 0 0 20px #000; } 50% { box-shadow: 0 0 54px 8px var(--acid), inset 0 0 20px #000; } }
+  .hp-reels.win { animation: hpWin .5s ease 3; }
+  .hp-cell { width: clamp(68px,7.2vw,94px); aspect-ratio:1; border-radius: 10px; overflow: hidden; background: oklch(0.1 0.006 285); transition:box-shadow .2s,transform .2s; }
+  .hp-cell.win-cell { box-shadow:0 0 0 3px var(--pink),0 0 24px var(--pink); transform:scale(.96); }
+  .hp-cell img { transition: filter .1s; }
+  .hp-reels.spin .hp-cell img { filter: blur(1.5px) brightness(1.1); }
   .hp-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .hp-slot__sc { font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; }
   .hp-slot__sc b { color: var(--acid); }
   .hp-slot__msg { color: var(--ink-dim); margin: 8px 0 14px; min-height: 1.4em; }
   .hp-slot__btns { display: flex; gap: 10px; flex-wrap: wrap; }
-  @media (max-width: 640px) { .hp-slot { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: var(--sp-5); }
-    .hp-cell { width: 74px; height: 74px; } .hp-slot__btns { justify-content: center; } }
+  .hp-controls { position:relative; z-index:1; display:flex; flex-direction:column; align-items:flex-start; gap:16px; }
+  .hp-balance { font-family:var(--font-display); font-size:clamp(1.35rem,3vw,2rem); font-weight:800; }
+  .hp-balance b { color:var(--acid); }
+  .hp-rules { color:var(--ink-dim); font-size:.85rem; text-underline-offset:4px; }
+  .hp-rules:hover { color:var(--acid); }
+  .hp-live { display:flex; gap:8px; align-items:center; margin-top:18px; color:var(--ink-faint); font-size:.78rem; }
+  .hp-live::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--pink); box-shadow:0 0 12px var(--pink); animation:livePulse 1.4s ease-in-out infinite; }
+  @keyframes livePulse { 50%{ opacity:.35; transform:scale(.7); } }
+  @media (max-width: 760px) { .hp-slot { grid-template-columns: 1fr; justify-items: stretch; text-align: left; padding: var(--sp-5); }
+    .hp-cell { width:auto; } .hp-slot__btns { justify-content: flex-start; } }
   /* iGaming в цифрах */
   .facts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
   @media (max-width: 760px) { .facts-grid { grid-template-columns: 1fr; } }
@@ -277,6 +295,7 @@
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">К содержимому</a>
 
 <div class="ticker" aria-hidden="true">
   <div class="ticker__track">
@@ -287,7 +306,7 @@
 
 <header class="site-header">
   <div class="container">
-    <a href="index.html" class="logo" aria-label="SpinHire — главная"><img class="logo__mark" src="img/mark.svg" alt="" width="28" height="28">spin<b>hire</b></a>
+    <a href="index.html" class="logo" aria-label="SpinHire — главная"><img class="logo__mark" src="img/brand-chip.svg" alt="" width="32" height="32">spin<b>hire</b></a>
     <nav class="main-nav" aria-label="Основная навигация">
       <a href="jobs.html">Вакансии</a>
       <a href="companies.html">Компании</a>
@@ -298,12 +317,12 @@
     <div class="header-actions">
       <button class="btn btn-ghost btn-sm" data-auth>Войти</button>
       <a href="post-job.html" class="btn btn-pink btn-sm">Разместить вакансию</a>
-      <button class="nav-burger" aria-label="Меню">☰</button>
+      <button class="nav-burger" aria-label="Открыть меню"><span aria-hidden="true">☰</span></button>
     </div>
   </div>
 </header>
 
-<main>
+<main id="main">
   <!-- HERO -->
   <section class="hero">
     <div class="container hero__grid">
@@ -391,26 +410,22 @@
   <!-- ИГРОВАЯ ЗОНА -->
   <section class="section" style="padding-top: 0;">
     <div class="container">
-      <div class="section-head">
-        <div><span class="kicker pink">Перекур между откликами</span><h2>Игровая зона на SpinCoins</h2></div>
-        <a class="link-more" href="games.html">Играть →</a>
-      </div>
-      <div class="hp-slot">
-        <div class="hp-reels" id="hpReels">
-          <div class="hp-cell"><img src="img/sym-seven.jpg" alt=""></div>
-          <div class="hp-cell"><img src="img/sym-cherry.jpg" alt=""></div>
-          <div class="hp-cell"><img src="img/sym-bell.jpg" alt=""></div>
-        </div>
-        <div>
-          <div class="hp-slot__sc">🎰 Однорукий бандит · SpinCoins: <b id="hpSc">100</b></div>
-          <p class="hp-slot__msg" id="hpMsg">Три одинаковых — ×20, пара — ×2. Крути прямо здесь!</p>
-          <div class="hp-slot__btns">
-            <button class="btn btn-acid btn-lg" id="hpSpin">Крутить · −10 SC</button>
-            <a href="games.html" class="btn btn-ghost btn-sm">Рулетка и 21 →</a>
+      <div class="hp-slot" id="play">
+        <div class="hp-machine">
+          <div class="hp-jackpot"><span>Джекпот</span><b>2 480 SC</b></div>
+          <div class="hp-reels" id="hpReels" role="button" tabindex="0" aria-label="Крутить игровой автомат за 10 SpinCoins">
+            <div class="hp-cell"><img src="img/sym-seven.jpg" alt="Семёрка"></div><div class="hp-cell"><img src="img/sym-cherry.jpg" alt="Вишня"></div><div class="hp-cell"><img src="img/sym-bell.jpg" alt="Колокол"></div>
+            <div class="hp-cell"><img src="img/sym-crown.jpg" alt="Корона"></div><div class="hp-cell"><img src="img/sym-diamond.jpg" alt="Бриллиант"></div><div class="hp-cell"><img src="img/sym-star.jpg" alt="Звезда"></div>
+            <div class="hp-cell"><img src="img/sym-bar.jpg" alt="BAR"></div><div class="hp-cell"><img src="img/sym-horseshoe.jpg" alt="Подкова"></div><div class="hp-cell"><img src="img/sym-seven.jpg" alt="Семёрка"></div>
           </div>
         </div>
+        <div class="hp-controls">
+          <div class="hp-balance">Баланс: <b id="hpSc">100</b> SC</div>
+          <p class="hp-slot__msg" id="hpMsg" aria-live="polite"></p>
+          <button class="btn btn-acid btn-lg" id="hpSpin">Крутить · −10 SC</button>
+          <a class="hp-rules" href="game-rules.html">Правила и призы →</a>
+        </div>
       </div>
-      <p style="color: var(--ink-faint); font-size: 0.85rem; margin-top: 14px;">SpinCoins — виртуальные баллы: зарабатывай на откликах и в играх, меняй на мерч. Не азартная игра на деньги.</p>
     </div>
   </section>
 
@@ -701,28 +716,39 @@
   const draw = () => SYMS[Math.floor(Math.random() * SYMS.length)];
   scEl.textContent = sc;
   let busy = false;
-  btn.addEventListener('click', () => {
+  function spin() {
     if (busy) return;
     if (sc < 10) { msg.innerHTML = 'Кончились SC — <a href="/register" style="color:var(--acid);font-weight:700">зарегайся, получи 500</a>'; return; }
     busy = true; sc -= 10; scEl.textContent = sc; msg.textContent = 'Крутим…';
+    box.classList.add('spin'); box.classList.remove('win');
+    box.querySelectorAll('.win-cell').forEach(c => c.classList.remove('win-cell'));
     let t = 0;
     const iv = setInterval(() => {
       cells.forEach(c => c.src = 'img/' + draw() + '.jpg');
       if (++t > 12) {
-        clearInterval(iv);
-        const r = [draw(), draw(), draw()];
+        clearInterval(iv); box.classList.remove('spin');
+        const r = Array.from({ length: 9 }, draw);
         cells.forEach((c, i) => c.src = 'img/' + r[i] + '.jpg');
-        let w = 0;
-        if (r[0] === r[1] && r[1] === r[2]) w = 200;
-        else if (r[0] === r[1] || r[1] === r[2] || r[0] === r[2]) w = 20;
-        if (w) { sc += w; msg.innerHTML = 'Выигрыш <b style="color:var(--acid)">+' + w + ' SC</b>! 🎉'; }
+        const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+        const wins = lines.filter(line => r[line[0]] === r[line[1]] && r[line[1]] === r[line[2]]);
+        const pairs = lines.filter(line => !wins.includes(line) && new Set(line.map(i => r[i])).size === 2);
+        const w = wins.length * 200 + pairs.length * 20;
+        if (w) {
+          sc += w; msg.innerHTML = 'Выигрыш <b style="color:var(--acid)">+' + w + ' SC</b>';
+          box.classList.add('win');
+          const pairCells = pairs.flatMap(line => line.filter(i => line.filter(j => r[j] === r[i]).length === 2));
+          [...new Set([...wins.flat(), ...pairCells])].forEach(i => cells[i].closest('.hp-cell').classList.add('win-cell'));
+        }
         else msg.textContent = 'Мимо. Крути ещё!';
         scEl.textContent = sc; localStorage.setItem('spinCoins', sc);
         const fab = document.getElementById('coin-count'); if (fab) fab.textContent = sc;
         busy = false;
       }
     }, 80);
-  });
+  }
+  btn.addEventListener('click', spin);
+  box.addEventListener('click', spin);
+  box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); spin(); } });
 })();
 </script>
 <script src="js/app.js"></script>
