@@ -290,7 +290,7 @@ def crawl_greenhouse(board, company):
         dept = _dept_category(j)
         out.append({
             "title": title,
-            "company_name": (j.get("company_name") or company).strip(),
+            "company_name": company.strip(),
             "location": loc,
             "fmt": _fmt_from(loc, content),
             "tags": _tags_from(f"{title} {dept}", content, lang),

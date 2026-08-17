@@ -150,6 +150,9 @@ class Job(Base):
     @property
     def logo_url(self):
         """Фото/логотип компании через favicon-сервис по домену (если известен)."""
+        normalized = " ".join((self.company_name or "").lower().replace("_", " ").split())
+        if normalized == "gr8 tech":
+            return "/img/company-logos/gr8tech.png"
         dom = company_domain(self.company_name)
         return f"https://icons.duckduckgo.com/ip3/{dom}.ico" if dom else ""
 
