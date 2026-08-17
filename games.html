@@ -134,9 +134,25 @@
     border: 1px solid var(--island-line); border-radius: 16px; padding: var(--sp-5); position: relative; overflow: hidden; }
   .roulette { position: relative; width: 310px; height: 310px; max-width: 100%; }
   .ru-wheel { position: absolute; inset: 0; border-radius: 50%;
-    background: url('img/asset-roulette.jpg') center / cover no-repeat;
+    overflow: hidden; background: oklch(0.12 0.015 285);
     box-shadow: 0 0 0 5px oklch(0.26 0.04 60), 0 14px 38px oklch(0 0 0 / .6), 0 0 34px oklch(0.80 0.15 215 / 0.28);
     transition: transform 4.6s cubic-bezier(0.16, 0.72, 0.12, 1); }
+  .ru-wheel svg { display: block; width: 100%; height: 100%; }
+  .ru-pocket { stroke: oklch(0.72 0.07 80 / .72); stroke-width: 1.2; transition: filter .2s, stroke-width .2s; }
+  .ru-pocket.red { fill: var(--roul-red); }
+  .ru-pocket.black { fill: oklch(0.17 0.012 285); }
+  .ru-pocket.green { fill: oklch(0.72 0.18 155); }
+  .ru-pocket.is-win { filter: brightness(1.5); stroke: var(--yellow); stroke-width: 3; }
+  .ru-pocket-label { fill: #fff; font: 800 11px/1 var(--font-display); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .ru-pocket-label.green { fill: oklch(0.12 0.02 160); }
+  .ru-ring { fill: none; stroke: oklch(0.78 0.09 80 / .78); }
+  .ru-hub { fill: oklch(0.13 0.018 285); stroke: oklch(0.65 0.07 80); stroke-width: 3; }
+  .ru-hub-readout { position: absolute; left: 50%; top: 50%; z-index: 4; transform: translate(-50%, -50%);
+    display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: oklch(0.12 0.015 285);
+    border: 2px solid oklch(0.65 0.07 80); color: #fff; font: 800 1.55rem/1 var(--font-display); box-shadow: 0 5px 16px #000; }
+  .ru-hub-readout.red { background: var(--roul-red); }
+  .ru-hub-readout.black { background: oklch(0.17 0.012 285); }
+  .ru-hub-readout.green { background: var(--acid); color: oklch(0.12 0.02 160); }
   .ru-arm { position: absolute; inset: 0; z-index: 5; transition: transform 4.4s cubic-bezier(0.13, 0.7, 0.1, 1); }
   .ru-ball { position: absolute; left: 50%; top: 10px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, #fff, #b9c0cc 60%, #6b7280); box-shadow: 0 2px 5px #000; }
@@ -308,7 +324,8 @@
           <div class="roul__wheelbox">
             <div class="roulette" id="roulette">
               <div class="ru-pointer"></div>
-              <div class="ru-wheel" id="ru-wheel"></div>
+              <div class="ru-wheel" id="ru-wheel"><svg id="ru-wheel-svg" viewBox="0 0 400 400" aria-hidden="true"></svg></div>
+              <div class="ru-hub-readout" id="ru-hub-readout" aria-live="polite">—</div>
               <div class="ru-arm" id="ru-arm"><div class="ru-ball"></div></div>
             </div>
             <div class="ru-readout" id="ru-readout">Европейское колесо · 0–36</div>
@@ -607,6 +624,7 @@
   const EU = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
   const RED = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
   const ruWheel = document.getElementById('ru-wheel'), ruArm = document.getElementById('ru-arm');
+  const ruWheelSvg = document.getElementById('ru-wheel-svg'), ruHub = document.getElementById('ru-hub-readout');
   const ruRes = document.getElementById('ru-result'), ruReadout = document.getElementById('ru-readout');
   const ruBtn = document.getElementById('ru-spin'), ruClear = document.getElementById('ru-clear');
   const ruGrid = document.getElementById('ru-grid'), ruStakedEl = document.getElementById('ru-staked');
@@ -615,6 +633,46 @@
   // placed bets: id -> amount. id = 'n17' straight, or outside key
   const ruBets = {};
   let ruSpinning = false, ruRot = 0, ruArmRot = 0;
+
+  // Настоящее европейское колесо: каждый видимый сектор связан с тем же числом,
+  // которое использует расчёт ставок. Нулевой сектор изначально находится под указателем.
+  (function buildWheel() {
+    const NS = 'http://www.w3.org/2000/svg';
+    const cx = 200, cy = 200, outer = 194, inner = 120, labelR = 158;
+    const step = 360 / EU.length;
+    const point = (radius, angle) => {
+      const rad = angle * Math.PI / 180;
+      return [cx + radius * Math.sin(rad), cy - radius * Math.cos(rad)];
+    };
+    EU.forEach((n, idx) => {
+      const center = idx * step;
+      const start = center - step / 2, end = center + step / 2;
+      const [osx, osy] = point(outer, start), [oex, oey] = point(outer, end);
+      const [iex, iey] = point(inner, end), [isx, isy] = point(inner, start);
+      const path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', `M ${osx} ${osy} A ${outer} ${outer} 0 0 1 ${oex} ${oey} L ${iex} ${iey} A ${inner} ${inner} 0 0 0 ${isx} ${isy} Z`);
+      path.setAttribute('class', 'ru-pocket ' + colorOf(n));
+      path.dataset.number = n;
+      ruWheelSvg.appendChild(path);
+
+      const [tx, ty] = point(labelR, center);
+      const label = document.createElementNS(NS, 'text');
+      label.setAttribute('x', tx); label.setAttribute('y', ty);
+      label.setAttribute('class', 'ru-pocket-label ' + colorOf(n));
+      label.setAttribute('transform', `rotate(${center} ${tx} ${ty})`);
+      label.textContent = n;
+      ruWheelSvg.appendChild(label);
+    });
+    const innerCircle = document.createElementNS(NS, 'circle');
+    innerCircle.setAttribute('cx', cx); innerCircle.setAttribute('cy', cy); innerCircle.setAttribute('r', 115);
+    innerCircle.setAttribute('class', 'ru-hub'); ruWheelSvg.appendChild(innerCircle);
+    [119, 197].forEach((radius, i) => {
+      const ring = document.createElementNS(NS, 'circle');
+      ring.setAttribute('cx', cx); ring.setAttribute('cy', cy); ring.setAttribute('r', radius);
+      ring.setAttribute('class', 'ru-ring'); ring.setAttribute('stroke-width', i ? 5 : 2);
+      ruWheelSvg.appendChild(ring);
+    });
+  })();
 
   // build number board: 0 (left, full height) + 1..36 in the real 3×12 column layout + three 2:1 column bets
   (function buildBoard() {
@@ -701,12 +759,17 @@
     if (!tryPlay()) return;
     W.add(-total); ruSpinning = true; ruBtn.disabled = true; ruClear.disabled = true;
     ruRes.textContent = 'Шарик пущен...';
+    ruHub.textContent = '…'; ruHub.className = 'ru-hub-readout';
+    ruWheelSvg.querySelectorAll('.is-win').forEach(pocket => pocket.classList.remove('is-win'));
     const step = 360 / EU.length;
     const idx = rnd(EU.length);
     const n = EU[idx];
-    const jitter = (Math.random() - 0.5) * step * 0.5;
-    ruRot += 360 * 6 + (360 - ((idx + 0.5) * step)) - (ruRot % 360) + jitter;
-    ruArmRot += 360 * 10 - (ruArmRot % 360);
+    const currentWheel = ((ruRot % 360) + 360) % 360;
+    const targetWheel = (360 - idx * step) % 360;
+    const wheelDelta = (targetWheel - currentWheel + 360) % 360;
+    const currentArm = ((ruArmRot % 360) + 360) % 360;
+    ruRot += 360 * 6 + wheelDelta;
+    ruArmRot += 360 * 10 + (360 - currentArm) % 360;
     ruWheel.style.transform = 'rotate(' + ruRot + 'deg)';
     ruArm.style.transform = 'rotate(' + ruArmRot + 'deg)';
     setTimeout(() => {
@@ -714,6 +777,9 @@
       let payout = 0;
       Object.keys(ruBets).forEach(id => { if (betWins(id, n)) payout += ruBets[id] * betMult(id); });
       const net = payout - total;
+      ruHub.textContent = n; ruHub.className = 'ru-hub-readout ' + color;
+      const winningPocket = ruWheelSvg.querySelector('[data-number="' + n + '"]');
+      if (winningPocket) winningPocket.classList.add('is-win');
       ruReadout.innerHTML = '<span class="num ' + color + '">' + n + '</span> ' + ruColName(color);
       if (payout > 0) { W.add(payout); ruRes.innerHTML = 'Выпало <b>' + n + '</b> (' + ruColName(color) + '). Возврат ' + payout + ' SC · <b class="big">' + (net >= 0 ? '+' : '') + net + ' SC</b> 🎉'; }
       else { ruRes.innerHTML = 'Выпало ' + n + ' (' + ruColName(color) + '). <span class="lose">−' + total + ' SC</span>'; }
