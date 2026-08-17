@@ -27,7 +27,7 @@ import sys
 import urllib.request
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, quote_plus, urljoin, urlparse
 
 # Greenhouse-борды известных iGaming-работодателей (board_token: человекочитаемое имя)
 GREENHOUSE_BOARDS = {
@@ -61,6 +61,8 @@ JSONLD_LISTINGS = {
 
 # Реестр источников для отображения в админке (что настроено и статус)
 SOURCE_REGISTRY = [
+    {"key": "softswiss", "name": "SOFTSWISS", "type": "WordPress REST API",
+     "status": "работает", "note": "Все опубликованные вакансии и полные описания (до 100 за запуск)"},
     {"key": "greenhouse:betsson", "name": "Betsson Group", "type": "Greenhouse API",
      "status": "работает", "note": "Публичный JSON API, полное описание вакансии"},
     {"key": "greenhouse:kaizengaming", "name": "Kaizen Gaming (Betano)", "type": "Greenhouse API",
@@ -84,6 +86,8 @@ SOURCE_REGISTRY = [
      "note": "Сайт и внутренний API закрыты Cloudflare. Коннектор готов к официальному feed URL."},
     {"key": "hh.ru", "name": "HeadHunter (hh.ru / hh.ua)", "type": "Публичный API — требует настройки",
      "status": "не подключён", "note": "api.hh.ru бесплатный (зарплата+город+работодатель), но из облака отдаёт 403 — нужен зарегистрированный app-токен ИЛИ запуск с разрешённого IP. Покрывает RU/UA/СНГ. Готов подключить."},
+    {"key": "casino-discovery", "name": "Казино Украины и UK", "type": "Career/hiring discovery",
+     "status": "подключён", "note": "394 бренда из Blask; обход официальных career/job страниц с импортом подтверждённого JobPosting"},
 ]
 
 RESUME_SOURCE_REGISTRY = [
@@ -103,8 +107,15 @@ RESUME_SOURCE_REGISTRY = [
 
 UA = "SpinHireBot/1.0 (+https://spinhire.io; job aggregation)"
 TIMEOUT = 25
-MAX_PER_BOARD = 40           # не выкачиваем борд целиком — берём свежие
-DESC_LIMIT = 6000            # ограничиваем длину описания
+MAX_PER_BOARD = 100          # крупные борды (SOFTSWISS сейчас 52) забираем целиком
+DESC_LIMIT = 20000           # полное описание без обрезания обычных вакансий
+SOFTSWISS_API = "https://careers.softswiss.com/wp-json/wp/v2/vacancy?per_page=100"
+CASINO_SEEDS_PATH = Path(__file__).resolve().parent.parent / "data" / "casino-operators-ua-uk.json"
+DISCOVERY_REPORT_PATH = Path(__file__).resolve().parent.parent / "data" / "casino-careers-report.json"
+CAREER_WORDS = re.compile(r"(?i)(career|jobs?|vacanc|hiring|join[-_ ]?(us|team)|work[-_ ]?with[-_ ]?us)")
+DISCOVERY_LOOKUPS_PER_RUN = int(os.environ.get("CASINO_DISCOVERY_LOOKUPS_PER_RUN", "20"))
+SEARCH_EXCLUDED_HOSTS = ("linkedin.com", "facebook.com", "instagram.com", "wikipedia.org",
+                         "casino.guru", "glassdoor.", "indeed.", "trustpilot.", "youtube.com")
 
 
 def _fetch(url):
@@ -134,8 +145,21 @@ def crawl_jsonld(url, source):
         except Exception:
             continue
         items = d if isinstance(d, list) else [d]
+        expanded = []
+        while items:
+            item = items.pop(0)
+            if isinstance(item, list):
+                items.extend(item)
+            elif isinstance(item, dict):
+                expanded.append(item)
+                graph = item.get("@graph")
+                if isinstance(graph, list):
+                    items.extend(graph)
+        items = expanded
         for it in items:
-            if not isinstance(it, dict) or it.get("@type") != "JobPosting":
+            types = it.get("@type") if isinstance(it, dict) else None
+            types = types if isinstance(types, list) else [types]
+            if not isinstance(it, dict) or "JobPosting" not in types:
                 continue
             title = (it.get("title") or "").strip()
             if not title:
@@ -143,9 +167,10 @@ def crawl_jsonld(url, source):
             org = it.get("hiringOrganization") or {}
             company = (org.get("name") if isinstance(org, dict) else "") or "iGaming-компания"
             desc = _clean_html(it.get("description", ""))
-            u = it.get("url", "")
-            m = re.search(r"(\d+)", u.rsplit("/", 1)[-1])
-            ext = m.group(1) if m else u[-24:]
+            u = str(it.get("url") or url)
+            slug = u.rstrip("/").rsplit("/", 1)[-1]
+            m = re.search(r"(\d+)", slug)
+            ext = m.group(1) if m else slug[-80:]
             loc = ""
             jl = it.get("jobLocation")
             if isinstance(jl, list):
@@ -168,6 +193,205 @@ def crawl_jsonld(url, source):
                 "deadline": (it.get("validThrough") or "")[:10],
             })
     return out
+
+
+def crawl_softswiss():
+    """Все опубликованные вакансии SOFTSWISS из официального WordPress REST API."""
+    jobs = json.loads(_fetch(SOFTSWISS_API))
+    out = []
+    for j in jobs:
+        title = _clean_html((j.get("title") or {}).get("rendered", ""))
+        description = _clean_html((j.get("content") or {}).get("rendered", ""))
+        link = str(j.get("link") or "").strip()
+        if not title or not description or not link:
+            continue
+        seo_title = str((j.get("yoast_head_json") or {}).get("title") or "")
+        location = ""
+        match = re.search(r"(?i)vacancy in (.+?)(?:\s*\|\s*SOFTSWISS|$)", seo_title)
+        if match:
+            location = match.group(1).replace(" & ", ", ").strip()
+        out.append({
+            "title": title, "company_name": "SOFTSWISS", "location": location,
+            "fmt": _fmt_from(location, description),
+            "tags": _tags_from(title, description, detect_lang(title, description)),
+            "description": description, "source_url": link,
+            "source": "softswiss", "ext_id": str(j.get("id") or j.get("slug") or link),
+            "salary": "по запросу", "posted_at": str(j.get("date") or "")[:10],
+            "deadline": "",
+        })
+    return out
+
+
+def _links_from_html(page, base_url):
+    """Абсолютные HTTP(S)-ссылки без mailto/javascript и дублей."""
+    links = []
+    for raw in re.findall(r'(?is)<a\b[^>]*?href=["\']([^"\']+)', page):
+        url = urljoin(base_url, html.unescape(raw).strip()).split("#", 1)[0]
+        if url.startswith(("http://", "https://")) and url not in links:
+            links.append(url)
+    return links
+
+
+def discover_career_pages(homepage):
+    """Найти career/hiring URL на официальном сайте и проверить типовые пути."""
+    parsed = urlparse(homepage)
+    root = f"{parsed.scheme or 'https'}://{parsed.netloc or parsed.path.strip('/')}"
+    candidates = []
+    try:
+        page = _fetch_html(root)
+        candidates.extend(url for url in _links_from_html(page, root) if CAREER_WORDS.search(url))
+    except Exception:
+        pass
+    candidates.extend(urljoin(root + "/", path) for path in (
+        "careers", "jobs", "vacancies", "about/careers", "company/careers", "join-us"))
+    found = []
+    for url in dict.fromkeys(candidates):
+        try:
+            page = _fetch_html(url)
+        except Exception:
+            continue
+        text = _clean_html(page[:250000]).lower()
+        if CAREER_WORDS.search(url) and any(word in text for word in ("job", "career", "vacan", "position", "role")):
+            found.append(url)
+        if len(found) >= 5:
+            break
+    return found
+
+
+def discover_official_homepage(operator, country):
+    """Найти вероятный официальный домен бренда; принять только домен с именем бренда."""
+    brand = re.sub(r"[^a-z0-9]", "", operator.lower())
+    brand = re.sub(r"(casino|bingo|betting)$", "", brand)
+    if len(brand) < 4:
+        return ""
+    query = quote_plus(f'"{operator}" casino official {country}')
+    page = _fetch_html(f"https://html.duckduckgo.com/html/?q={query}")
+    for raw in re.findall(r'(?is)class="result__a"[^>]*href="([^"]+)"', page):
+        link = html.unescape(raw)
+        if link.startswith("//"):
+            link = "https:" + link
+        parsed = urlparse(link)
+        if parsed.hostname == "duckduckgo.com":
+            link = (parse_qs(parsed.query).get("uddg") or [""])[0]
+            parsed = urlparse(link)
+        host = (parsed.hostname or "").lower().removeprefix("www.")
+        compact_host = re.sub(r"[^a-z0-9]", "", host.split(".", 1)[0])
+        if (parsed.scheme in ("http", "https") and host
+                and not any(blocked in host for blocked in SEARCH_EXCLUDED_HOSTS)
+                and (brand in compact_host or compact_host in brand)):
+            return f"{parsed.scheme}://{host}/"
+    return ""
+
+
+def crawl_discovered_careers(seed):
+    """Обойти подтверждённый сайт бренда, найти hiring-раздел и JobPosting-страницы."""
+    company = str(seed.get("operator") or "").strip()
+    homepage = str(seed.get("homepage") or "").strip()
+    preset = str(seed.get("careers_url") or "").strip()
+    pages = [preset] if preset else (discover_career_pages(homepage) if homepage else [])
+    jobs = []
+    checked = []
+    for page_url in pages[:5]:
+        try:
+            listing = _fetch_html(page_url)
+        except Exception:
+            continue
+        checked.append(page_url)
+        jobs.extend(crawl_jsonld(page_url, f"discovered:{company}"))
+        links = _links_from_html(listing, page_url)
+        detail_links = [u for u in links if CAREER_WORDS.search(u)]
+        greenhouse = set()
+        lever = set()
+        smart = set()
+        for url in links:
+            parsed = urlparse(url)
+            parts = [p for p in parsed.path.split("/") if p]
+            if parsed.hostname in ("boards.greenhouse.io", "job-boards.greenhouse.io") and parts:
+                greenhouse.add(parts[0])
+            elif parsed.hostname == "jobs.lever.co" and parts:
+                lever.add(parts[0])
+            elif parsed.hostname == "jobs.smartrecruiters.com" and parts:
+                smart.add(parts[0])
+        for board in greenhouse:
+            try:
+                jobs.extend(crawl_greenhouse(board, company))
+            except Exception:
+                pass
+        for site in lever:
+            try:
+                jobs.extend(crawl_lever(site, company))
+            except Exception:
+                pass
+        for company_id in smart:
+            try:
+                jobs.extend(crawl_smartrecruiters(company_id, company))
+            except Exception:
+                pass
+        for detail_url in detail_links[:MAX_PER_BOARD]:
+            try:
+                jobs.extend(crawl_jsonld(detail_url, f"discovered:{company}"))
+            except Exception:
+                continue
+    unique = {}
+    for job in jobs:
+        job["company_name"] = company or job["company_name"]
+        unique[(job["source"], job["ext_id"])] = job
+    return list(unique.values()), checked
+
+
+def crawl_casino_seed_registry():
+    """Пройти список казино Украины/UK; результаты обнаружения сохранить для аудита."""
+    if not CASINO_SEEDS_PATH.exists():
+        return []
+    payload = json.loads(CASINO_SEEDS_PATH.read_text(encoding="utf-8"))
+    records = payload.get("operators", []) if isinstance(payload, dict) else payload
+    previous = {}
+    if DISCOVERY_REPORT_PATH.exists():
+        try:
+            old = json.loads(DISCOVERY_REPORT_PATH.read_text(encoding="utf-8"))
+            old_rows = old.get("operators", []) if isinstance(old, dict) else old
+            previous = {(row.get("country"), row.get("operator")): row for row in old_rows}
+        except Exception:
+            previous = {}
+    all_jobs, report, lookups = [], [], 0
+    for seed in records:
+        prior = previous.get((seed.get("country"), seed.get("operator")), {})
+        if not seed.get("homepage") and prior.get("homepage"):
+            seed = {**seed, "homepage": prior["homepage"]}
+        if not (seed.get("homepage") or seed.get("careers_url")):
+            homepage = ""
+            attempted = False
+            if prior.get("status") != "homepage_not_found" and lookups < DISCOVERY_LOOKUPS_PER_RUN:
+                lookups += 1
+                attempted = True
+                try:
+                    homepage = discover_official_homepage(seed.get("operator", ""), seed.get("country", ""))
+                except Exception:
+                    homepage = ""
+            if homepage:
+                seed = {**seed, "homepage": homepage}
+            else:
+                status = "homepage_not_found" if attempted or prior.get("status") == "homepage_not_found" else "domain_pending"
+                report.append({"operator": seed.get("operator"), "country": seed.get("country"),
+                               "status": status, "career_pages": [], "jobs": 0})
+                continue
+        try:
+            jobs, pages = crawl_discovered_careers(seed)
+            all_jobs.extend(jobs)
+            report.append({"operator": seed.get("operator"), "country": seed.get("country"),
+                           "homepage": seed.get("homepage", ""),
+                           "status": "jobs_found" if jobs else ("career_found" if pages else "not_found"),
+                           "career_pages": pages, "jobs": len(jobs)})
+        except Exception as exc:
+            report.append({"operator": seed.get("operator"), "country": seed.get("country"),
+                           "status": "error", "error": str(exc)[:160], "career_pages": [], "jobs": 0})
+    summary = {}
+    for row in report:
+        summary[row["status"]] = summary.get(row["status"], 0) + 1
+    output = {"generated_at": datetime.utcnow().isoformat() + "Z", "lookups_this_run": lookups,
+              "summary": summary, "operators": report}
+    DISCOVERY_REPORT_PATH.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
+    return all_jobs
 
 
 def _clean_html(raw):
@@ -428,6 +652,12 @@ def save_status(payload):
 def collect():
     """Собрать вакансии со всех источников. Возвращает список dict."""
     items = []
+    try:
+        got = crawl_softswiss()
+        items.extend(got)
+        print(f"[crawl] softswiss: +{len(got)}")
+    except Exception as e:
+        print(f"[crawl] softswiss FAILED: {str(e)[:120]}")
     for board, company in GREENHOUSE_BOARDS.items():
         try:
             got = crawl_greenhouse(board, company)
@@ -462,6 +692,12 @@ def collect():
             print(f"[crawl] partner:{source}: +{len(got)}")
         except Exception as e:
             print(f"[crawl] partner:{source} FAILED: {str(e)[:120]}")
+    try:
+        got = crawl_casino_seed_registry()
+        items.extend(got)
+        print(f"[crawl] casino-discovery: +{len(got)}")
+    except Exception as e:
+        print(f"[crawl] casino-discovery FAILED: {str(e)[:120]}")
     return items
 
 
