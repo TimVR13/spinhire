@@ -84,7 +84,7 @@
         <a href="/login?next=/post-job" class="btn btn-ghost">Войти</a>
       </div>
     </div>
-  {% else %}
+  {% elif can_post %}
   <h2 style="font-size: 1.3rem; margin-bottom: 14px; text-align: center;">Новая вакансия</h2>
   <p style="color: var(--ink-dim); text-align: center; margin-bottom: 22px;">Без зарплатной вилки не публикуем. Тарифы — <a href="/post-job?tariffs=1" style="color: var(--acid);">здесь</a>. <a href="/employer" style="color: var(--ink-dim);">← в кабинет</a></p>
   <form method="post" action="/post-job" class="card" style="display: flex; flex-direction: column; gap: 18px; max-width: 760px; margin: 0 auto;">
@@ -107,5 +107,6 @@
     <button class="btn btn-pink btn-lg" type="submit">Отправить на модерацию →</button>
     <p style="color: var(--ink-faint); font-size: 0.8rem;">Без зарплатной вилки не публикуем — правила заведения. Модерация людьми.</p>
   </form>
+  {% else %}<div class="card" style="max-width:620px;margin:0 auto;"><b>Роль наблюдателя</b><p style="color:var(--ink-dim);margin-top:10px;">Вы можете смотреть вакансии и отклики команды, но не создавать публикации. Попросите владельца изменить роль на рекрутера.</p><a href="/employer" class="btn btn-ghost" style="margin-top:16px;">Вернуться в кабинет</a></div>
   {% endif %}
 {% endblock %}

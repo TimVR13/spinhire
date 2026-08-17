@@ -280,6 +280,29 @@ class Notification(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class CompanyMember(Base):
+    __tablename__ = "company_members"
+    __table_args__ = (UniqueConstraint("user_id", name="uq_company_member_user"),)
+    id = Column(Integer, primary_key=True)
+    account_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    role = Column(String, default="recruiter")  # recruiter | viewer
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class CompanyInvite(Base):
+    __tablename__ = "company_invites"
+    id = Column(Integer, primary_key=True)
+    account_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    invited_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    email = Column(String, nullable=False)
+    role = Column(String, default="recruiter")
+    token_hash = Column(String, unique=True, nullable=False)
+    status = Column(String, default="pending")  # pending | accepted | revoked
+    expires_at = Column(String, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class Event(Base):
     __tablename__ = "events"
     id = Column(Integer, primary_key=True)
@@ -583,6 +606,31 @@ def get_user(request: Request, db: Session) -> Optional[User]:
     return db.get(User, data.get("uid"))
 
 
+def company_context(user: User, db: Session):
+    """Вернуть владельца общего кабинета и роль текущего сотрудника."""
+    if user.role == "admin":
+        return user, "owner"
+    membership = db.query(CompanyMember).filter_by(user_id=user.id).first()
+    if membership:
+        owner = db.get(User, membership.account_id)
+        if owner:
+            return owner, membership.role
+    return user, "owner"
+
+
+def require_company_user(request: Request, db: Session, *, write: bool = False,
+                         owner_only: bool = False):
+    user = get_user(request, db)
+    if not user or user.role not in ("employer", "admin"):
+        raise HTTPException(403)
+    account, team_role = company_context(user, db)
+    if owner_only and team_role != "owner" and user.role != "admin":
+        raise HTTPException(403)
+    if write and team_role == "viewer" and user.role != "admin":
+        raise HTTPException(403)
+    return user, account, team_role
+
+
 def render(request, db, name, **ctx):
     ctx.setdefault("user", get_user(request, db))
     return templates.TemplateResponse(request, name, ctx)
@@ -825,6 +873,11 @@ def checkout_create(plan: str, request: Request, job_id: int = Form(None),
         raise HTTPException(404)
     if plan.startswith("cv") and user.role not in ("employer", "admin"):
         raise HTTPException(403)
+    if user.role == "employer":
+        _, account, team_role = require_company_user(request, db)
+        if team_role != "owner":
+            raise HTTPException(403)
+        user = account
     name, amount, _ = PLANS[plan]
     o = Order(user_id=user.id, plan=plan, plan_name=name, amount=amount,
               job_id=job_id, status="pending")
@@ -909,24 +962,29 @@ def login(request: Request, email: str = Form(...), password: str = Form(...),
         send_otp(u, code)
         _otp_last_send[u.email] = time.time()
         return RedirectResponse(f"/verify?email={urllib.parse.quote(u.email)}", status_code=303)
-    dest = safe_next(next) if u.role not in ("admin", "employer") else dest_for(u)
+    dest = safe_next(next, dest_for(u)) if next and next != "/" else dest_for(u)
     return set_session(RedirectResponse(dest, status_code=303), u)
 
 
 @app.get("/register", response_class=HTMLResponse)
-def register_page(request: Request, role: str = "talent", db: Session = Depends(db_session)):
-    return render(request, db, "register.html", role=role, error="")
+def register_page(request: Request, role: str = "talent", next: str = "",
+                  email: str = "", db: Session = Depends(db_session)):
+    return render(request, db, "register.html", role=role, error="",
+                  next=safe_next(next, "") if next else "", email=email.strip().lower())
 
 
 @app.post("/register")
 def register(request: Request, email: str = Form(...), password: str = Form(...),
              name: str = Form(""), role: str = Form("talent"),
-             company_name: str = Form(""), db: Session = Depends(db_session)):
+             company_name: str = Form(""), next: str = Form(""),
+             db: Session = Depends(db_session)):
     role = role if role in ("talent", "employer") else "talent"
     if db.query(User).filter(func.lower(User.email) == email.strip().lower()).first():
-        return render(request, db, "register.html", role=role, error="Такая почта уже зарегистрирована — войдите")
+        return render(request, db, "register.html", role=role, next=next, email=email,
+                      error="Такая почта уже зарегистрирована — войдите")
     if len(password) < 6:
-        return render(request, db, "register.html", role=role, error="Пароль — от 6 символов")
+        return render(request, db, "register.html", role=role, next=next, email=email,
+                      error="Пароль — от 6 символов")
     u = User(email=email.strip().lower(), password_hash=hash_pw(password),
              name=name.strip(), role=role, company_name=company_name.strip())
     db.add(u)
@@ -946,7 +1004,7 @@ def register(request: Request, email: str = Form(...), password: str = Form(...)
         u.otp_hash = ""
         u.otp_expires = ""
         db.commit()
-    dest = "/employer" if role == "employer" else "/profile"
+    dest = safe_next(next, dest_for(u)) if next else dest_for(u)
     return set_session(RedirectResponse(dest, status_code=303), u)
 
 
@@ -1118,14 +1176,15 @@ def resume_contact_access(user: User, resume: Resume, db: Session) -> bool:
         return True
     if user.role != "employer":
         return False
-    if user.cv_access_until:
+    account, _ = company_context(user, db)
+    if account.cv_access_until:
         try:
-            if datetime.fromisoformat(user.cv_access_until) > datetime.utcnow():
+            if datetime.fromisoformat(account.cv_access_until) > datetime.utcnow():
                 return True
         except ValueError:
             pass
     return db.query(ResumeUnlock).filter_by(
-        employer_id=user.id, resume_id=resume.id).first() is not None
+        employer_id=account.id, resume_id=resume.id).first() is not None
 
 
 def add_notification(db: Session, user_id: int, kind: str, title: str,
@@ -1177,8 +1236,9 @@ def resume_detail(resume_id: int, request: Request, db: Session = Depends(db_ses
         row.views = (row.views or 0) + 1
         db.commit()
     unlocked = resume_contact_access(user, row, db)
+    cv_account, cv_team_role = company_context(user, db) if user and user.role == "employer" else (user, "owner")
     return render(request, db, "resume.html", resume=row, unlocked=unlocked,
-                  active="resumes")
+                  active="resumes", cv_account=cv_account, cv_team_role=cv_team_role)
 
 
 @app.get("/resume/{resume_id}/file")
@@ -1201,35 +1261,34 @@ def resume_unlock(resume_id: int, request: Request, db: Session = Depends(db_ses
     user = get_user(request, db)
     if not user:
         return login_redirect(f"/resume/{resume_id}")
-    if user.role != "employer":
-        raise HTTPException(403)
+    _, account, _ = require_company_user(request, db, write=True)
     row = db.get(Resume, resume_id)
     if (not row or not row.published or row.status != "approved"
             or row.user.job_search_status == "paused"):
         raise HTTPException(404)
-    if db.query(ResumeUnlock).filter_by(employer_id=user.id, resume_id=row.id).first():
+    if db.query(ResumeUnlock).filter_by(employer_id=account.id, resume_id=row.id).first():
         return RedirectResponse(f"/resume/{resume_id}?unlocked=1", status_code=303)
     unlimited = False
-    if user.cv_access_until:
+    if account.cv_access_until:
         try:
-            unlimited = datetime.fromisoformat(user.cv_access_until) > datetime.utcnow()
+            unlimited = datetime.fromisoformat(account.cv_access_until) > datetime.utcnow()
         except ValueError:
             unlimited = False
     if not unlimited:
-        charged = (db.query(User).filter(User.id == user.id, User.cv_credits > 0)
+        charged = (db.query(User).filter(User.id == account.id, User.cv_credits > 0)
                    .update({User.cv_credits: User.cv_credits - 1}, synchronize_session=False))
         if charged != 1:
             db.rollback()
             return RedirectResponse(f"/resume/{resume_id}?need_plan=1", status_code=303)
     try:
-        db.add(ResumeUnlock(employer_id=user.id, resume_id=row.id,
+        db.add(ResumeUnlock(employer_id=account.id, resume_id=row.id,
                             access_kind="unlimited" if unlimited else "credit"))
         row.unlock_count = (row.unlock_count or 0) + 1
         db.flush()
-        db.refresh(user)
-        db.add(ResumeCreditLedger(employer_id=user.id, resume_id=row.id,
+        db.refresh(account)
+        db.add(ResumeCreditLedger(employer_id=account.id, resume_id=row.id,
                                   delta=0 if unlimited else -1,
-                                  balance_after=user.cv_credits or 0,
+                                  balance_after=account.cv_credits or 0,
                                   action="unlimited" if unlimited else "unlock"))
         db.commit()
     except IntegrityError:
@@ -1404,12 +1463,13 @@ def employer(request: Request, db: Session = Depends(db_session)):
         return login_redirect("/employer")
     if user.role == "talent":
         return RedirectResponse("/profile")
-    jobs = (db.query(Job).filter(Job.owner_id == user.id)
+    account, team_role = company_context(user, db)
+    jobs = (db.query(Job).filter(Job.owner_id == account.id)
             .order_by(Job.created_at.desc()).all())
     unlocked = (db.query(Resume).join(ResumeUnlock, ResumeUnlock.resume_id == Resume.id)
-                .filter(ResumeUnlock.employer_id == user.id)
+                .filter(ResumeUnlock.employer_id == account.id)
                 .order_by(ResumeUnlock.created_at.desc()).all())
-    ledger = (db.query(ResumeCreditLedger).filter_by(employer_id=user.id)
+    ledger = (db.query(ResumeCreditLedger).filter_by(employer_id=account.id)
               .order_by(ResumeCreditLedger.created_at.desc()).limit(8).all())
     applications = [application for job in jobs for application in job.applications]
     stats = {
@@ -1421,11 +1481,16 @@ def employer(request: Request, db: Session = Depends(db_session)):
         "offers": sum(application.status == "offer" for application in applications),
         "hired": sum(application.status == "hired" for application in applications),
     }
-    company_checks = [user.company_name, user.company_website, user.company_description,
-                      user.company_location, user.company_size]
+    company_checks = [account.company_name, account.company_website, account.company_description,
+                      account.company_location, account.company_size]
     company_progress = round(sum(bool(value) for value in company_checks) / len(company_checks) * 100)
+    team = (db.query(CompanyMember, User).join(User, User.id == CompanyMember.user_id)
+            .filter(CompanyMember.account_id == account.id).order_by(CompanyMember.created_at).all())
+    invites = (db.query(CompanyInvite).filter_by(account_id=account.id, status="pending")
+               .order_by(CompanyInvite.created_at.desc()).all())
     return render(request, db, "employer.html", jobs=jobs, unlocked_resumes=unlocked,
-                  credit_ledger=ledger, stats=stats, company_progress=company_progress)
+                  credit_ledger=ledger, stats=stats, company_progress=company_progress,
+                  account=account, team_role=team_role, team=team, invites=invites)
 
 
 @app.post("/employer/profile")
@@ -1433,22 +1498,20 @@ def employer_profile_save(request: Request, company_name: str = Form(""),
                           company_website: str = Form(""), company_description: str = Form(""),
                           company_location: str = Form(""), company_size: str = Form(""),
                           db: Session = Depends(db_session)):
-    user = get_user(request, db)
-    if not user or user.role not in ("employer", "admin"):
-        raise HTTPException(403)
+    user, account, _ = require_company_user(request, db, owner_only=True)
     website = company_website.strip()
     if website and not website.startswith(("https://", "http://")):
         website = "https://" + website
     if website and urllib.parse.urlparse(website).scheme not in ("http", "https"):
         website = ""
-    user.company_name = company_name.strip()[:180]
-    user.company_website = website[:500]
-    user.company_description = company_description.strip()[:3000]
-    user.company_location = company_location.strip()[:180]
-    user.company_size = company_size.strip()[:80]
-    for job in db.query(Job).filter(Job.owner_id == user.id).all():
-        if user.company_name:
-            job.company_name = user.company_name
+    account.company_name = company_name.strip()[:180]
+    account.company_website = website[:500]
+    account.company_description = company_description.strip()[:3000]
+    account.company_location = company_location.strip()[:180]
+    account.company_size = company_size.strip()[:80]
+    for job in db.query(Job).filter(Job.owner_id == account.id).all():
+        if account.company_name:
+            job.company_name = account.company_name
     db.commit()
     return RedirectResponse("/employer?profile_ok=1", status_code=303)
 
@@ -1456,9 +1519,9 @@ def employer_profile_save(request: Request, company_name: str = Form(""),
 @app.post("/employer/app/{app_id}/status")
 def app_status(app_id: int, request: Request, status: str = Form(...),
                db: Session = Depends(db_session)):
-    user = get_user(request, db)
+    user, account, _ = require_company_user(request, db, write=True)
     a = db.get(Application, app_id)
-    if not user or not a or (a.job.owner_id != user.id and user.role != "admin"):
+    if not a or (a.job.owner_id != account.id and user.role != "admin"):
         raise HTTPException(403)
     if status in ("new", "viewed", "invited", "offer", "hired", "rejected") and status != a.status:
         a.status = status
@@ -1481,28 +1544,125 @@ def app_status(app_id: int, request: Request, status: str = Form(...),
 @app.post("/employer/app/{app_id}/note")
 def app_note(app_id: int, request: Request, note: str = Form(""),
              db: Session = Depends(db_session)):
-    user = get_user(request, db)
+    user, account, _ = require_company_user(request, db, write=True)
     application = db.get(Application, app_id)
-    if not user or not application or (
-            application.job.owner_id != user.id and user.role != "admin"):
+    if not application or (
+            application.job.owner_id != account.id and user.role != "admin"):
         raise HTTPException(403)
     application.employer_note = note.strip()[:2000]
     db.commit()
     return RedirectResponse(f"/employer#application-{app_id}", status_code=303)
 
 
+@app.post("/employer/team/invite")
+def team_invite(request: Request, email: str = Form(...), role: str = Form("recruiter"),
+                db: Session = Depends(db_session)):
+    user, account, _ = require_company_user(request, db, owner_only=True)
+    target_email = email.strip().lower()
+    if not target_email or "@" not in target_email or target_email == account.email.lower():
+        return RedirectResponse("/employer?invite_error=1#team", status_code=303)
+    role = role if role in ("recruiter", "viewer") else "recruiter"
+    target = db.query(User).filter(func.lower(User.email) == target_email).first()
+    if target and db.query(CompanyMember).filter_by(user_id=target.id).first():
+        return RedirectResponse("/employer?invite_error=member#team", status_code=303)
+    db.query(CompanyInvite).filter_by(account_id=account.id, email=target_email,
+                                      status="pending").update(
+        {CompanyInvite.status: "revoked"}, synchronize_session=False)
+    token = secrets.token_urlsafe(32)
+    invite = CompanyInvite(account_id=account.id, invited_by=user.id, email=target_email,
+                            role=role, token_hash=hashlib.sha256(token.encode()).hexdigest(),
+                            expires_at=(datetime.utcnow() + timedelta(days=7)).isoformat())
+    db.add(invite)
+    db.commit()
+    accept_url = f"{BASE_URL or 'https://spinhire.io'}/employer/invite/{token}/accept"
+    resend_send(target_email, f"Приглашение в команду {account.company_name or 'SpinHire'}",
+                f"<p>Вас пригласили в кабинет компании <b>{html.escape(account.company_name or account.email)}</b>.</p>"
+                f'<p><a href="{html.escape(accept_url)}">Принять приглашение</a></p><p>Ссылка действует 7 дней.</p>')
+    return RedirectResponse("/employer?invite_sent=1#team", status_code=303)
+
+
+@app.get("/employer/invite/{token}/accept")
+def team_invite_accept(token: str, request: Request, db: Session = Depends(db_session)):
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    invite = db.query(CompanyInvite).filter_by(token_hash=token_hash, status="pending").first()
+    try:
+        valid = bool(invite and datetime.fromisoformat(invite.expires_at) > datetime.utcnow())
+    except (TypeError, ValueError):
+        valid = False
+    if not valid:
+        return RedirectResponse("/login?invite_error=expired", status_code=303)
+    user = get_user(request, db)
+    accept_path = f"/employer/invite/{token}/accept"
+    if not user:
+        existing = db.query(User).filter(func.lower(User.email) == invite.email).first()
+        if existing:
+            return RedirectResponse(f"/login?next={urllib.parse.quote(accept_path)}", status_code=303)
+        params = urllib.parse.urlencode({"role": "employer", "next": accept_path,
+                                         "email": invite.email})
+        return RedirectResponse(f"/register?{params}", status_code=303)
+    if user.email.lower() != invite.email.lower():
+        raise HTTPException(403)
+    existing_membership = db.query(CompanyMember).filter_by(user_id=user.id).first()
+    if existing_membership and existing_membership.account_id != invite.account_id:
+        raise HTTPException(409, "Аккаунт уже состоит в другой компании")
+    if (db.query(Job).filter_by(owner_id=user.id).count()
+            or db.query(CompanyMember).filter_by(account_id=user.id).count()):
+        raise HTTPException(409, "Нельзя присоединить владельца другого кабинета")
+    if not existing_membership:
+        db.add(CompanyMember(account_id=invite.account_id, user_id=user.id, role=invite.role))
+    user.role = "employer"
+    invite.status = "accepted"
+    db.commit()
+    return RedirectResponse("/employer?invite_accepted=1#team", status_code=303)
+
+
+@app.post("/employer/team/{membership_id}/remove")
+def team_remove(membership_id: int, request: Request, db: Session = Depends(db_session)):
+    _, account, _ = require_company_user(request, db, owner_only=True)
+    membership = db.get(CompanyMember, membership_id)
+    if not membership or membership.account_id != account.id:
+        raise HTTPException(404)
+    db.delete(membership)
+    db.commit()
+    return RedirectResponse("/employer?member_removed=1#team", status_code=303)
+
+
+@app.post("/employer/team/{membership_id}/role")
+def team_role_change(membership_id: int, request: Request, role: str = Form(...),
+                     db: Session = Depends(db_session)):
+    _, account, _ = require_company_user(request, db, owner_only=True)
+    membership = db.get(CompanyMember, membership_id)
+    if not membership or membership.account_id != account.id:
+        raise HTTPException(404)
+    if role not in ("recruiter", "viewer"):
+        raise HTTPException(400)
+    membership.role = role
+    db.commit()
+    return RedirectResponse("/employer#team", status_code=303)
+
+
+@app.post("/employer/invite/{invite_id}/revoke")
+def team_invite_revoke(invite_id: int, request: Request, db: Session = Depends(db_session)):
+    _, account, _ = require_company_user(request, db, owner_only=True)
+    invite = db.get(CompanyInvite, invite_id)
+    if not invite or invite.account_id != account.id:
+        raise HTTPException(404)
+    invite.status = "revoked"
+    db.commit()
+    return RedirectResponse("/employer#team", status_code=303)
+
+
 def employer_job_or_404(job_id: int, user: User, db: Session) -> Job:
+    account, _ = company_context(user, db)
     job = db.get(Job, job_id)
-    if not job or (job.owner_id != user.id and user.role != "admin"):
+    if not job or (job.owner_id != account.id and user.role != "admin"):
         raise HTTPException(404)
     return job
 
 
 @app.get("/employer/job/{job_id}/edit", response_class=HTMLResponse)
 def employer_job_edit(job_id: int, request: Request, db: Session = Depends(db_session)):
-    user = get_user(request, db)
-    if not user or user.role not in ("employer", "admin"):
-        raise HTTPException(403)
+    user, _, _ = require_company_user(request, db, write=True)
     job = employer_job_or_404(job_id, user, db)
     return render(request, db, "admin_edit.html", job=job, categories=CATEGORIES,
                   formats=FORMATS, employer_mode=True)
@@ -1514,9 +1674,7 @@ def employer_job_save(job_id: int, request: Request, title: str = Form(...),
                       fmt: str = Form("удалёнка"), salary: str = Form(""),
                       tags: str = Form(""), description: str = Form(""),
                       db: Session = Depends(db_session)):
-    user = get_user(request, db)
-    if not user or user.role not in ("employer", "admin"):
-        raise HTTPException(403)
+    user, _, _ = require_company_user(request, db, write=True)
     job = employer_job_or_404(job_id, user, db)
     if not title.strip() or not description.strip() or not any(char.isdigit() for char in salary):
         return RedirectResponse(f"/employer/job/{job_id}/edit?error=1", status_code=303)
@@ -1535,9 +1693,7 @@ def employer_job_save(job_id: int, request: Request, title: str = Form(...),
 
 @app.post("/employer/job/{job_id}/archive")
 def employer_job_archive(job_id: int, request: Request, db: Session = Depends(db_session)):
-    user = get_user(request, db)
-    if not user or user.role not in ("employer", "admin"):
-        raise HTTPException(403)
+    user, _, _ = require_company_user(request, db, write=True)
     job = employer_job_or_404(job_id, user, db)
     job.status = "archived"
     job.closed_at = datetime.utcnow().date().isoformat()
@@ -1548,8 +1704,11 @@ def employer_job_archive(job_id: int, request: Request, db: Session = Depends(db
 @app.get("/post-job", response_class=HTMLResponse)
 def post_job_page(request: Request, db: Session = Depends(db_session)):
     user = get_user(request, db)
+    can_post = bool(user and user.role in ("employer", "admin")
+                    and company_context(user, db)[1] != "viewer")
     return render(request, db, "post_job.html", categories=CATEGORIES, formats=FORMATS,
-                  posted=False, need_login=not user or user.role == "talent")
+                  posted=False, need_login=not user or user.role == "talent",
+                  can_post=can_post)
 
 
 @app.post("/post-job")
@@ -1561,10 +1720,11 @@ def post_job(request: Request, title: str = Form(...), category: str = Form(""),
     user = get_user(request, db)
     if not user or user.role == "talent":
         return login_redirect("/post-job")
+    _, account, _ = require_company_user(request, db, write=True)
 
     def err(msg):
         return render(request, db, "post_job.html", categories=CATEGORIES, formats=FORMATS,
-                      posted=False, need_login=False, error=msg)
+                      posted=False, need_login=False, can_post=True, error=msg)
 
     # правила заведения: без корректной зарплатной вилки не публикуем
     try:
@@ -1586,14 +1746,14 @@ def post_job(request: Request, title: str = Form(...), category: str = Form(""),
     else:
         salary = f"€{s_from}–{s_to} {unit}".strip()
     db.add(Job(title=title.strip(),
-               company_name=user.company_name or user.name or user.email,
+               company_name=account.company_name or account.name or account.email,
                category=category or guess_category(title, tags),
                location=location.strip(), fmt=fmt, salary=salary,
                tags=tags.strip(), description=description.strip(),
-               owner_id=user.id, status="pending"))
+               owner_id=account.id, status="pending"))
     db.commit()
     return render(request, db, "post_job.html", categories=CATEGORIES, formats=FORMATS,
-                  posted=True, need_login=False)
+                  posted=True, need_login=False, can_post=True)
 
 
 # ---------- admin ----------

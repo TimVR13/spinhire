@@ -25,14 +25,19 @@
   {% if request.query_params.get('profile_ok') %}<div class="flash">Профиль компании сохранён.</div>{% endif %}
   {% if request.query_params.get('job_saved') %}<div class="flash">Вакансия сохранена и отправлена на повторную модерацию.</div>{% endif %}
   {% if request.query_params.get('job_archived') %}<div class="flash">Вакансия закрыта и перенесена в архив.</div>{% endif %}
+  {% if request.query_params.get('invite_sent') %}<div class="flash">Приглашение отправлено. Ссылка действует 7 дней.</div>{% endif %}
+  {% if request.query_params.get('invite_accepted') %}<div class="flash">Вы присоединились к командному кабинету.</div>{% endif %}
+  {% if request.query_params.get('member_removed') %}<div class="flash">Сотрудник удалён из командного кабинета.</div>{% endif %}
+  {% if request.query_params.get('invite_error') %}<div class="flash err">Не удалось создать приглашение: проверьте email и членство сотрудника.</div>{% endif %}
   <div class="section-head" style="margin-bottom: var(--sp-5);">
     <div>
       <span class="kicker pink">Бэк-офис</span>
-      <h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem);">{{ user.company_name or user.name or 'Работодатель' }}</h1>
+      <h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem);">{{ account.company_name or account.name or 'Работодатель' }}</h1>
+      {% if team_role != 'owner' %}<p style="color:var(--ink-faint);margin-top:6px;">Командный доступ · {{ 'рекрутер' if team_role=='recruiter' else 'наблюдатель' }}</p>{% endif %}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <a href="/resumes" class="btn btn-acid">Резюме · {{ user.cv_credits or 0 }} открытий</a>
-      <a href="/post-job" class="btn btn-pink">+ Разместить вакансию</a>
+      <a href="/resumes" class="btn btn-acid">Резюме · {{ account.cv_credits or 0 }} открытий</a>
+      {% if team_role != 'viewer' %}<a href="/post-job" class="btn btn-pink">+ Разместить вакансию</a>{% endif %}
     </div>
   </div>
 
@@ -51,25 +56,25 @@
     <summary style="cursor:pointer;font-family:var(--font-display);">Профиль компании · {{ company_progress }}%</summary>
     <p style="color:var(--ink-dim);margin:10px 0 18px;">Эти данные формируют публичную страницу работодателя и повышают доверие кандидатов.</p>
     <form class="profile-grid" method="post" action="/employer/profile">
-      <div class="field"><label>Название компании</label><input class="input" name="company_name" value="{{ user.company_name }}" required></div>
-      <div class="field"><label>Сайт</label><input class="input" type="url" name="company_website" value="{{ user.company_website }}" placeholder="https://company.com"></div>
-      <div class="field"><label>Локация / хабы</label><input class="input" name="company_location" value="{{ user.company_location }}" placeholder="Мальта · Варшава · Remote"></div>
-      <div class="field"><label>Размер команды</label><select class="input" name="company_size"><option value="">Не указан</option>{% for size in ['1–20','21–100','101–500','500+'] %}<option {% if user.company_size==size %}selected{% endif %}>{{ size }}</option>{% endfor %}</select></div>
-      <div class="field wide"><label>О компании</label><textarea class="input" name="company_description" rows="5" placeholder="Продукт, рынки, лицензии, команда и почему к вам идти.">{{ user.company_description }}</textarea></div>
-      <button class="btn btn-acid wide" type="submit">Сохранить профиль компании</button>
+      <div class="field"><label>Название компании</label><input class="input" name="company_name" value="{{ account.company_name }}" required {% if team_role != 'owner' %}disabled{% endif %}></div>
+      <div class="field"><label>Сайт</label><input class="input" type="url" name="company_website" value="{{ account.company_website }}" placeholder="https://company.com" {% if team_role != 'owner' %}disabled{% endif %}></div>
+      <div class="field"><label>Локация / хабы</label><input class="input" name="company_location" value="{{ account.company_location }}" placeholder="Мальта · Варшава · Remote" {% if team_role != 'owner' %}disabled{% endif %}></div>
+      <div class="field"><label>Размер команды</label><select class="input" name="company_size" {% if team_role != 'owner' %}disabled{% endif %}><option value="">Не указан</option>{% for size in ['1–20','21–100','101–500','500+'] %}<option {% if account.company_size==size %}selected{% endif %}>{{ size }}</option>{% endfor %}</select></div>
+      <div class="field wide"><label>О компании</label><textarea class="input" name="company_description" rows="5" placeholder="Продукт, рынки, лицензии, команда и почему к вам идти." {% if team_role != 'owner' %}disabled{% endif %}>{{ account.company_description }}</textarea></div>
+      {% if team_role == 'owner' %}<button class="btn btn-acid wide" type="submit">Сохранить профиль компании</button>{% endif %}
     </form>
   </details>
 
   <section class="cv-access">
     <div>
       <span class="kicker">База кандидатов</span>
-      <h2 style="font-size:1.35rem;margin:6px 0;">{{ user.cv_credits or 0 }} оплаченных открытий</h2>
-      <p style="color:var(--ink-dim);">{% if user.cv_access_until %}Безлимит действует до {{ user.cv_access_until[:10] }}. {% endif %}Однажды открытый контакт остаётся доступным в кабинете.</p>
+      <h2 style="font-size:1.35rem;margin:6px 0;">{{ account.cv_credits or 0 }} оплаченных открытий</h2>
+      <p style="color:var(--ink-dim);">{% if account.cv_access_until %}Безлимит действует до {{ account.cv_access_until[:10] }}. {% endif %}Однажды открытый контакт доступен всей команде.</p>
     </div>
     <div class="cv-plans">
       <a href="/resumes" class="btn btn-acid">Найти специалиста</a>
-      <form method="post" action="/checkout/cv10"><button class="btn btn-ghost">+10 · €69</button></form>
-      <form method="post" action="/checkout/cv40"><button class="btn btn-ghost">+40 · €199</button></form>
+      {% if team_role == 'owner' %}<form method="post" action="/checkout/cv10"><button class="btn btn-ghost">+10 · €69</button></form>
+      <form method="post" action="/checkout/cv40"><button class="btn btn-ghost">+40 · €199</button></form>{% endif %}
     </div>
   </section>
 
@@ -84,13 +89,23 @@
 
   {% if credit_ledger %}<details class="ledger"><summary>История доступа</summary><div style="margin-top:10px;">{% for op in credit_ledger %}<p>{{ op.created_at.strftime('%d.%m.%Y %H:%M') }} · {{ {'purchase':'покупка','unlock':'открытие контакта','unlimited':'безлимит'}.get(op.action, op.action) }} · {% if op.delta > 0 %}+{% endif %}{{ op.delta }} · баланс {{ op.balance_after }}</p>{% endfor %}</div></details>{% endif %}
 
+  <details class="card" style="margin:var(--sp-6) 0;" id="team">
+    <summary style="cursor:pointer;font-family:var(--font-display);">Команда · {{ team|length + 1 }} человек</summary>
+    <div style="margin-top:18px;border-top:2px solid var(--line);">
+      <div class="unlocked-row"><span class="status approved">владелец</span><div><b>{{ account.name or account.email }}</b><p style="color:var(--ink-faint);font-size:.82rem;">{{ account.email }}</p></div></div>
+      {% for membership, member in team %}<div class="unlocked-row"><span class="status {{ 'viewed' if membership.role=='viewer' else 'approved' }}">{{ 'наблюдатель' if membership.role=='viewer' else 'рекрутер' }}</span><div><b>{{ member.name or member.email }}</b><p style="color:var(--ink-faint);font-size:.82rem;">{{ member.email }}</p></div>{% if team_role=='owner' %}<div style="display:flex;gap:8px;"><form method="post" action="/employer/team/{{ membership.id }}/role"><input type="hidden" name="role" value="{{ 'recruiter' if membership.role=='viewer' else 'viewer' }}"><button class="btn btn-ghost btn-sm">Сделать {{ 'рекрутером' if membership.role=='viewer' else 'наблюдателем' }}</button></form><form method="post" action="/employer/team/{{ membership.id }}/remove" onsubmit="return confirm('Убрать сотрудника из кабинета?')"><button class="btn btn-ghost btn-sm">Убрать</button></form></div>{% endif %}</div>{% endfor %}
+      {% for invite in invites %}<div class="unlocked-row"><span class="status pending">приглашён</span><div><b>{{ invite.email }}</b><p style="color:var(--ink-faint);font-size:.82rem;">{{ 'наблюдатель' if invite.role=='viewer' else 'рекрутер' }} · до {{ invite.expires_at[:10] }}</p></div>{% if team_role=='owner' %}<form method="post" action="/employer/invite/{{ invite.id }}/revoke"><button class="btn btn-ghost btn-sm">Отозвать</button></form>{% endif %}</div>{% endfor %}
+    </div>
+    {% if team_role=='owner' %}<form method="post" action="/employer/team/invite" style="display:grid;grid-template-columns:minmax(0,1fr) 180px auto;gap:10px;margin-top:18px;"><input class="input" type="email" name="email" placeholder="recruiter@company.com" required><select class="input" name="role"><option value="recruiter">Рекрутер</option><option value="viewer">Наблюдатель</option></select><button class="btn btn-acid">Пригласить</button></form>{% endif %}
+  </details>
+
   {% for j in jobs %}
   <div class="job-block">
     <h3>
       <span>{{ j.title }} <span class="status {{ j.status }}">{{ {'pending': 'на модерации', 'approved': 'опубликована', 'rejected': 'отклонена', 'archived': 'в архиве'}[j.status] }}</span></span>
       <span style="color: var(--ink-faint); font-size: 0.8rem; font-weight: 400;">{{ j.views }} просмотров · {{ j.applications|length }} откликов{% if j.featured %} · ⚡ Featured{% endif %}</span>
     </h3>
-    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;"><a class="btn btn-ghost btn-sm" href="/employer/job/{{ j.id }}/edit">Редактировать</a><a class="btn btn-ghost btn-sm" href="/job/{{ j.id }}">Открыть</a>{% if j.status != 'archived' %}<form method="post" action="/employer/job/{{ j.id }}/archive" onsubmit="return confirm('Закрыть вакансию? Она исчезнет из активного поиска.')"><button class="btn btn-ghost btn-sm" type="submit">Закрыть вакансию</button></form>{% endif %}</div>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">{% if team_role != 'viewer' %}<a class="btn btn-ghost btn-sm" href="/employer/job/{{ j.id }}/edit">Редактировать</a>{% endif %}<a class="btn btn-ghost btn-sm" href="/job/{{ j.id }}">Открыть</a>{% if team_role != 'viewer' and j.status != 'archived' %}<form method="post" action="/employer/job/{{ j.id }}/archive" onsubmit="return confirm('Закрыть вакансию? Она исчезнет из активного поиска.')"><button class="btn btn-ghost btn-sm" type="submit">Закрыть вакансию</button></form>{% endif %}</div>
     {% for a in j.applications %}
     <div class="cand-row" id="application-{{ a.id }}">
       <div class="who">
@@ -100,9 +115,9 @@
       </div>
       <div class="cand-actions">
         <span class="status {{ a.status }}">{{ {'new': 'новый', 'viewed': 'просмотрен', 'invited': 'интервью', 'offer': 'оффер', 'hired': 'нанят', 'rejected': 'отказ'}.get(a.status, a.status) }}</span>
-        <form method="post" action="/employer/app/{{ a.id }}/status"><select class="input" name="status" onchange="this.form.submit()" aria-label="Этап кандидата"><option value="new" {% if a.status=='new' %}selected{% endif %}>Новый</option><option value="viewed" {% if a.status=='viewed' %}selected{% endif %}>Просмотрен</option><option value="invited" {% if a.status=='invited' %}selected{% endif %}>Интервью</option><option value="offer" {% if a.status=='offer' %}selected{% endif %}>Оффер</option><option value="hired" {% if a.status=='hired' %}selected{% endif %}>Нанят</option><option value="rejected" {% if a.status=='rejected' %}selected{% endif %}>Отказ</option></select></form>
+        {% if team_role != 'viewer' %}<form method="post" action="/employer/app/{{ a.id }}/status"><select class="input" name="status" onchange="this.form.submit()" aria-label="Этап кандидата"><option value="new" {% if a.status=='new' %}selected{% endif %}>Новый</option><option value="viewed" {% if a.status=='viewed' %}selected{% endif %}>Просмотрен</option><option value="invited" {% if a.status=='invited' %}selected{% endif %}>Интервью</option><option value="offer" {% if a.status=='offer' %}selected{% endif %}>Оффер</option><option value="hired" {% if a.status=='hired' %}selected{% endif %}>Нанят</option><option value="rejected" {% if a.status=='rejected' %}selected{% endif %}>Отказ</option></select></form>{% endif %}
       </div>
-      <form class="candidate-note" method="post" action="/employer/app/{{ a.id }}/note"><input class="input" name="note" value="{{ a.employer_note or '' }}" placeholder="Приватная заметка рекрутера"><button class="btn btn-ghost" type="submit">Сохранить</button></form>
+      {% if team_role != 'viewer' %}<form class="candidate-note" method="post" action="/employer/app/{{ a.id }}/note"><input class="input" name="note" value="{{ a.employer_note or '' }}" placeholder="Приватная заметка рекрутера"><button class="btn btn-ghost" type="submit">Сохранить</button></form>{% elif a.employer_note %}<p style="grid-column:1/-1;color:var(--ink-faint);">Заметка: {{ a.employer_note }}</p>{% endif %}
     </div>
     {% else %}
     <p style="color: var(--ink-faint); font-size: 0.85rem; margin-top: 8px;">Откликов пока нет.</p>

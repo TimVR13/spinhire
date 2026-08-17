@@ -3,7 +3,8 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from server.app import (Application, Base, CV_UPLOAD_DIR, Job, Notification, Resume, ResumeUnlock, SessionLocal, User,
+from server.app import (Application, Base, CompanyInvite, CompanyMember, CV_UPLOAD_DIR, Job,
+                        Notification, Resume, ResumeUnlock, SessionLocal, User,
                         anonymize_resume_text, app, engine, hash_pw, migrate, signer)
 
 
@@ -125,8 +126,14 @@ class EmployerWorkflowTests(unittest.TestCase):
                              role="talent", name="Candidate")
             outsider = User(email="workflow-outsider@test.invalid", password_hash=hash_pw("test"),
                             role="employer", company_name="Other")
-            db.add_all([employer, candidate, outsider])
+            recruiter = User(email="workflow-recruiter@test.invalid", password_hash=hash_pw("test"),
+                             role="employer", name="Recruiter")
+            viewer = User(email="workflow-viewer@test.invalid", password_hash=hash_pw("test"),
+                          role="employer", name="Viewer")
+            db.add_all([employer, candidate, outsider, recruiter, viewer])
             db.flush()
+            db.add_all([CompanyMember(account_id=employer.id, user_id=recruiter.id, role="recruiter"),
+                        CompanyMember(account_id=employer.id, user_id=viewer.id, role="viewer")])
             job = Job(title="CRM Lead", company_name="Test Casino", category="Маркетинг и CRM",
                       salary="€4000–5000 net", description="Full description", owner_id=employer.id,
                       status="approved")
@@ -136,15 +143,19 @@ class EmployerWorkflowTests(unittest.TestCase):
             db.add(application)
             db.commit()
             self.employer_id, self.candidate_id, self.outsider_id = employer.id, candidate.id, outsider.id
+            self.recruiter_id, self.viewer_id = recruiter.id, viewer.id
             self.job_id, self.application_id = job.id, application.id
 
     def tearDown(self):
         with SessionLocal() as db:
+            db.query(CompanyInvite).filter_by(account_id=self.employer_id).delete()
+            db.query(CompanyMember).filter_by(account_id=self.employer_id).delete()
             db.query(Notification).filter_by(user_id=self.candidate_id).delete()
             db.query(Application).filter_by(id=self.application_id).delete()
             db.query(Job).filter_by(id=self.job_id).delete()
             db.query(User).filter(User.id.in_([
-                self.employer_id, self.candidate_id, self.outsider_id])).delete(
+                self.employer_id, self.candidate_id, self.outsider_id,
+                self.recruiter_id, self.viewer_id])).delete(
                     synchronize_session=False)
             db.commit()
 
@@ -178,6 +189,66 @@ class EmployerWorkflowTests(unittest.TestCase):
             self.assertEqual(job.title, "Senior CRM Lead")
             self.assertEqual(job.status, "archived")
             self.assertTrue(job.closed_at)
+
+    def test_recruiter_shares_jobs_but_viewer_cannot_mutate(self):
+        with TestClient(app) as client:
+            client.cookies.set("sh_session", signer.dumps({"uid": self.recruiter_id}))
+            dashboard = client.get("/employer")
+            self.assertEqual(dashboard.status_code, 200)
+            self.assertIn("CRM Lead", dashboard.text)
+            changed = client.post(f"/employer/app/{self.application_id}/status",
+                                  data={"status": "invited"}, follow_redirects=False)
+            self.assertEqual(changed.status_code, 303)
+            client.cookies.set("sh_session", signer.dumps({"uid": self.viewer_id}))
+            forbidden = client.post(f"/employer/app/{self.application_id}/status",
+                                    data={"status": "rejected"}, follow_redirects=False)
+            self.assertEqual(forbidden.status_code, 403)
+
+    def test_invite_is_email_bound_and_accepts_existing_user(self):
+        raw_token = "workflow-invite-token"
+        with SessionLocal() as db:
+            db.add(CompanyInvite(account_id=self.employer_id, invited_by=self.employer_id,
+                                 email="workflow-outsider@test.invalid", role="viewer",
+                                 token_hash=__import__("hashlib").sha256(raw_token.encode()).hexdigest(),
+                                 expires_at="2099-01-01T00:00:00"))
+            db.commit()
+        with TestClient(app) as client:
+            client.cookies.set("sh_session", signer.dumps({"uid": self.recruiter_id}))
+            self.assertEqual(client.get(f"/employer/invite/{raw_token}/accept").status_code, 403)
+            client.cookies.set("sh_session", signer.dumps({"uid": self.outsider_id}))
+            accepted = client.get(f"/employer/invite/{raw_token}/accept", follow_redirects=False)
+            self.assertEqual(accepted.status_code, 303)
+        with SessionLocal() as db:
+            membership = db.query(CompanyMember).filter_by(user_id=self.outsider_id).one()
+            self.assertEqual(membership.account_id, self.employer_id)
+            self.assertEqual(membership.role, "viewer")
+
+    def test_recruiter_uses_shared_cv_balance_and_unlock(self):
+        with SessionLocal() as db:
+            owner = db.get(User, self.employer_id)
+            owner.cv_credits = 1
+            resume = Resume(user_id=self.candidate_id, title="VIP Manager", about="Casino CRM",
+                            contact_email="shared-candidate@test.invalid", published=True,
+                            status="approved", consent_at="2026-08-17T00:00:00Z")
+            db.add(resume)
+            db.commit()
+            resume_id = resume.id
+        try:
+            with TestClient(app) as client:
+                client.cookies.set("sh_session", signer.dumps({"uid": self.recruiter_id}))
+                unlocked = client.post(f"/resume/{resume_id}/unlock", follow_redirects=False)
+                self.assertEqual(unlocked.status_code, 303)
+                detail = client.get(f"/resume/{resume_id}")
+                self.assertIn("shared-candidate@test.invalid", detail.text)
+            with SessionLocal() as db:
+                self.assertEqual(db.get(User, self.employer_id).cv_credits, 0)
+                self.assertEqual(db.query(ResumeUnlock).filter_by(
+                    employer_id=self.employer_id, resume_id=resume_id).count(), 1)
+        finally:
+            with SessionLocal() as db:
+                db.query(ResumeUnlock).filter_by(resume_id=resume_id).delete()
+                db.query(Resume).filter_by(id=resume_id).delete()
+                db.commit()
 
 
 if __name__ == "__main__":

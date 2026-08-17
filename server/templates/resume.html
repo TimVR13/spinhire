@@ -53,13 +53,13 @@
         <h2 style="margin:10px 0 8px;">Имя и способы связи скрыты</h2>
         <p style="color:var(--ink-dim);">Один оплаченный доступ открывает контакты навсегда для вашего аккаунта.</p>
         <div class="locked-lines" aria-hidden="true"><span></span><span></span><span></span></div>
-        {% if user and user.role == 'employer' and (user.cv_credits or 0) > 0 %}
-          <form method="post" action="/resume/{{ resume.id }}/unlock"><button class="btn btn-acid" style="width:100%;">Открыть контакт · осталось {{ user.cv_credits }}</button></form>
+        {% if user and user.role == 'employer' and cv_team_role != 'viewer' and (cv_account.cv_credits or 0) > 0 %}
+          <form method="post" action="/resume/{{ resume.id }}/unlock"><button class="btn btn-acid" style="width:100%;">Открыть контакт · осталось {{ cv_account.cv_credits }}</button></form>
         {% elif user and user.role == 'employer' %}
           <div class="plan-actions">
-            <form method="post" action="/checkout/cv10"><button class="btn btn-acid">10 контактов · €69</button></form>
+            {% if cv_team_role == 'owner' %}<form method="post" action="/checkout/cv10"><button class="btn btn-acid">10 контактов · €69</button></form>
             <form method="post" action="/checkout/cv40"><button class="btn btn-ghost">40 контактов · €199</button></form>
-            <form method="post" action="/checkout/cvunlim"><button class="btn btn-ghost">Безлимит на месяц · €349</button></form>
+            <form method="post" action="/checkout/cvunlim"><button class="btn btn-ghost">Безлимит на месяц · €349</button></form>{% else %}<p style="color:var(--ink-dim);">Попросите владельца кабинета пополнить общий баланс.</p>{% endif %}
           </div>
         {% elif user %}
           <p style="color:var(--ink-dim);margin-top:16px;">Открытие контактов доступно аккаунтам работодателей.</p>

@@ -14,6 +14,7 @@
       <span style="flex: 1; height: 1px; background: var(--line);"></span>— или —<span style="flex: 1; height: 1px; background: var(--line);"></span>
     </div>
     <form method="post" action="/register" class="card" style="display: flex; flex-direction: column; gap: 16px;">
+      <input type="hidden" name="next" value="{{ next or '' }}">
       <div class="role-switch" style="margin: 0;">
         <button type="button" class="{% if role != 'employer' %}active{% endif %}" onclick="setRole('talent', this)">Ищу работу</button>
         <button type="button" class="{% if role == 'employer' %}active{% endif %}" onclick="setRole('employer', this)">Нанимаю</button>
@@ -23,7 +24,7 @@
       <div class="field" id="company-field" {% if role != 'employer' %}style="display:none;"{% endif %}>
         <label for="reg-company">Название компании</label><input class="input" id="reg-company" name="company_name" autocomplete="organization" placeholder="например, BetOnyx Ltd">
       </div>
-      <div class="field"><label for="reg-email">Email</label><input class="input" id="reg-email" type="email" name="email" autocomplete="email" required></div>
+      <div class="field"><label for="reg-email">Email</label><input class="input" id="reg-email" type="email" name="email" value="{{ email or '' }}" autocomplete="email" required {% if email %}readonly{% endif %}></div>
       <div class="field"><label for="reg-pw">Пароль (от 6 символов)</label><input class="input" id="reg-pw" type="password" name="password" autocomplete="new-password" minlength="6" required></div>
       <button class="btn btn-acid btn-block" type="submit">Создать аккаунт →</button>
     </form>
