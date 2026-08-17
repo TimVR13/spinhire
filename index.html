@@ -167,6 +167,12 @@
     padding: clamp(24px,5vw,64px); background: radial-gradient(circle at 18% 45%,oklch(0.34 0.12 162 / .28),transparent 35%),linear-gradient(135deg,var(--surface),var(--bg-deep)); position:relative; overflow:hidden; box-shadow:inset 0 1px 0 oklch(1 0 0 / .06),0 24px 70px oklch(0.02 0.02 162 / .55); }
   .hp-slot::before { content:'PLAY'; position:absolute; right:-.04em; bottom:-.22em; font-family:var(--font-display); font-size:clamp(5rem,14vw,12rem); font-weight:900; color:transparent; -webkit-text-stroke:1px oklch(0.8 0.19 162 / .08); pointer-events:none; }
   .hp-machine { position:relative; z-index:1; padding:14px; border-radius:22px; background:linear-gradient(145deg,oklch(.25 .02 285),oklch(.06 .005 285)); border:1px solid var(--line-strong); box-shadow:0 18px 50px #0008; }
+  .hp-machine-wrap { display:grid; grid-template-columns:1fr 50px; gap:12px; align-items:center; position:relative; z-index:1; }
+  .hp-lever { width:50px; height:150px; border:0; background:transparent; position:relative; padding:0; cursor:pointer; transform-origin:50% 78%; transition:transform .28s cubic-bezier(.2,.9,.3,1.4); }
+  .hp-lever::before { content:''; position:absolute; left:21px; top:27px; width:9px; height:105px; border-radius:8px; background:linear-gradient(90deg,#292b30,#777b84,#202226); box-shadow:3px 5px 12px #000; }
+  .hp-lever::after { content:''; position:absolute; left:6px; top:4px; width:38px; height:38px; border-radius:50%; background:radial-gradient(circle at 32% 26%,#ff9a9f,#ff4355 48%,#b7082b); box-shadow:0 0 22px #ff365d80,inset -5px -7px 10px #8c092b66; }
+  .hp-lever:hover { transform:rotate(5deg); }
+  .hp-lever.pulled { transform:rotate(26deg); }
   .hp-jackpot { display:flex; justify-content:space-between; gap:12px; margin-bottom:10px; font-size:.72rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-faint); }
   .hp-jackpot b { color:var(--pink); font-variant-numeric:tabular-nums; }
   .hp-reels { display: grid; grid-template-columns:repeat(3,1fr); gap: 8px; padding: 14px; border-radius: 14px; background: oklch(0.06 0.004 285); border: 2px solid var(--acid);
@@ -188,11 +194,19 @@
   .hp-balance b { color:var(--acid); }
   .hp-rules { color:var(--ink-dim); font-size:.85rem; text-underline-offset:4px; }
   .hp-rules:hover { color:var(--acid); }
+  .hp-bets { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .hp-bets>span { color:var(--ink-faint); font-size:.72rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; margin-right:4px; }
+  .hp-bet { min-width:54px; height:40px; border:1px solid var(--line-strong); border-radius:9px; background:var(--bg-deep); color:var(--ink-dim); font-weight:800; }
+  .hp-bet:hover { border-color:var(--acid); color:var(--acid); }
+  .hp-bet.active { background:var(--acid); border-color:var(--acid); color:var(--on-acid); box-shadow:0 7px 20px color-mix(in oklch,var(--acid) 24%,transparent); }
+  .hp-paytable { display:grid; grid-template-columns:auto auto; gap:6px 22px; padding-top:15px; border-top:1px solid var(--line); color:var(--ink-faint); font-size:.78rem; min-width:min(100%,300px); }
+  .hp-paytable b { color:var(--ink-dim); font-weight:700; }
+  .hp-paytable span:nth-child(even) { text-align:right; color:var(--acid); font-variant-numeric:tabular-nums; }
   .hp-live { display:flex; gap:8px; align-items:center; margin-top:18px; color:var(--ink-faint); font-size:.78rem; }
   .hp-live::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--pink); box-shadow:0 0 12px var(--pink); animation:livePulse 1.4s ease-in-out infinite; }
   @keyframes livePulse { 50%{ opacity:.35; transform:scale(.7); } }
   @media (max-width: 760px) { .hp-slot { grid-template-columns: 1fr; justify-items: stretch; text-align: left; padding: var(--sp-5); }
-    .hp-cell { width:auto; } .hp-slot__btns { justify-content: flex-start; } }
+    .hp-cell { width:auto; } .hp-slot__btns { justify-content: flex-start; } .hp-machine-wrap{grid-template-columns:1fr 34px;gap:6px}.hp-lever{width:34px;height:120px}.hp-lever::before{left:14px;height:82px}.hp-lever::after{left:1px;width:32px;height:32px} }
   /* iGaming в цифрах */
   .facts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
   @media (max-width: 760px) { .facts-grid { grid-template-columns: 1fr; } }
@@ -411,19 +425,24 @@
   <section class="section" style="padding-top: 0;">
     <div class="container">
       <div class="hp-slot" id="play">
-        <div class="hp-machine">
-          <div class="hp-jackpot"><span>Джекпот</span><b>2 480 SC</b></div>
-          <div class="hp-reels" id="hpReels" role="button" tabindex="0" aria-label="Крутить игровой автомат за 10 SpinCoins">
-            <div class="hp-cell"><img src="img/sym-seven.jpg" alt="Семёрка"></div><div class="hp-cell"><img src="img/sym-cherry.jpg" alt="Вишня"></div><div class="hp-cell"><img src="img/sym-bell.jpg" alt="Колокол"></div>
-            <div class="hp-cell"><img src="img/sym-crown.jpg" alt="Корона"></div><div class="hp-cell"><img src="img/sym-diamond.jpg" alt="Бриллиант"></div><div class="hp-cell"><img src="img/sym-star.jpg" alt="Звезда"></div>
-            <div class="hp-cell"><img src="img/sym-bar.jpg" alt="BAR"></div><div class="hp-cell"><img src="img/sym-horseshoe.jpg" alt="Подкова"></div><div class="hp-cell"><img src="img/sym-seven.jpg" alt="Семёрка"></div>
+        <div class="hp-machine-wrap">
+          <div class="hp-machine">
+            <div class="hp-jackpot"><span>Джекпот</span><b>2 480 SC</b></div>
+            <div class="hp-reels" id="hpReels" role="button" tabindex="0" aria-label="Крутить игровой автомат">
+              <div class="hp-cell"><img src="img/sym-seven.jpg" alt="Семёрка"></div><div class="hp-cell"><img src="img/sym-cherry.jpg" alt="Вишня"></div><div class="hp-cell"><img src="img/sym-bell.jpg" alt="Колокол"></div>
+              <div class="hp-cell"><img src="img/sym-crown.jpg" alt="Корона"></div><div class="hp-cell"><img src="img/sym-diamond.jpg" alt="Бриллиант"></div><div class="hp-cell"><img src="img/sym-star.jpg" alt="Звезда"></div>
+              <div class="hp-cell"><img src="img/sym-bar.jpg" alt="BAR"></div><div class="hp-cell"><img src="img/sym-horseshoe.jpg" alt="Подкова"></div><div class="hp-cell"><img src="img/sym-seven.jpg" alt="Семёрка"></div>
+            </div>
           </div>
+          <button class="hp-lever" id="hpLever" type="button" aria-label="Дёрнуть рычаг и запустить автомат"></button>
         </div>
         <div class="hp-controls">
           <div class="hp-balance">Баланс: <b id="hpSc">100</b> SC</div>
+          <div class="hp-bets" role="group" aria-label="Ставка"><span>Ставка</span><button class="hp-bet" data-bet="5">5</button><button class="hp-bet active" data-bet="10">10</button><button class="hp-bet" data-bet="25">25</button></div>
           <p class="hp-slot__msg" id="hpMsg" aria-live="polite"></p>
           <button class="btn btn-acid btn-lg" id="hpSpin">Крутить · −10 SC</button>
-          <a class="hp-rules" href="game-rules.html">Правила и призы →</a>
+          <div class="hp-paytable"><b>3 одинаковых</b><span>×20 ставки</span><b>Пара на линии</b><span>×2 ставки</span><b>Линий</b><span>8</span></div>
+          <a class="hp-rules" href="game-rules.html">Полные правила →</a>
         </div>
       </div>
     </div>
@@ -711,15 +730,26 @@
   const box = document.getElementById('hpReels'); if (!box) return;
   const cells = [...box.querySelectorAll('.hp-cell img')];
   const scEl = document.getElementById('hpSc'), msg = document.getElementById('hpMsg'), btn = document.getElementById('hpSpin');
+  const lever = document.getElementById('hpLever'), betBtns = [...document.querySelectorAll('.hp-bet')];
   const SYMS = ['sym-seven', 'sym-cherry', 'sym-bell', 'sym-crown', 'sym-diamond', 'sym-star', 'sym-bar', 'sym-horseshoe'];
   let sc = parseInt(localStorage.getItem('spinCoins') || '100', 10);
+  let bet = parseInt(localStorage.getItem('spinBet') || '10', 10);
   const draw = () => SYMS[Math.floor(Math.random() * SYMS.length)];
   scEl.textContent = sc;
   let busy = false;
+  function setBet(next) {
+    if (busy) return;
+    bet = next; localStorage.setItem('spinBet', String(bet));
+    betBtns.forEach(b => b.classList.toggle('active', Number(b.dataset.bet) === bet));
+    btn.textContent = 'Крутить · −' + bet + ' SC';
+  }
+  setBet(betBtns.some(b => Number(b.dataset.bet) === bet) ? bet : 10);
+  betBtns.forEach(b => b.addEventListener('click', () => setBet(Number(b.dataset.bet))));
   function spin() {
     if (busy) return;
-    if (sc < 10) { msg.innerHTML = 'Кончились SC — <a href="/register" style="color:var(--acid);font-weight:700">зарегайся, получи 500</a>'; return; }
-    busy = true; sc -= 10; scEl.textContent = sc; msg.textContent = 'Крутим…';
+    if (sc < bet) { msg.innerHTML = 'Недостаточно SC — <a href="/register" style="color:var(--acid);font-weight:700">получить ещё</a>'; return; }
+    busy = true; sc -= bet; scEl.textContent = sc; msg.textContent = 'Крутим…';
+    lever.classList.add('pulled'); setTimeout(() => lever.classList.remove('pulled'), 360);
     box.classList.add('spin'); box.classList.remove('win');
     box.querySelectorAll('.win-cell').forEach(c => c.classList.remove('win-cell'));
     let t = 0;
@@ -732,7 +762,7 @@
         const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
         const wins = lines.filter(line => r[line[0]] === r[line[1]] && r[line[1]] === r[line[2]]);
         const pairs = lines.filter(line => !wins.includes(line) && new Set(line.map(i => r[i])).size === 2);
-        const w = wins.length * 200 + pairs.length * 20;
+        const w = wins.length * bet * 20 + pairs.length * bet * 2;
         if (w) {
           sc += w; msg.innerHTML = 'Выигрыш <b style="color:var(--acid)">+' + w + ' SC</b>';
           box.classList.add('win');
@@ -747,6 +777,7 @@
     }, 80);
   }
   btn.addEventListener('click', spin);
+  lever.addEventListener('click', spin);
   box.addEventListener('click', spin);
   box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); spin(); } });
 })();
