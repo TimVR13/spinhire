@@ -50,7 +50,7 @@
     {% for cv in resumes %}
     <a class="cv-row" href="/resume/{{ cv.id }}">
       <div class="cv-code">{{ cv.public_code }}</div>
-      <div><div class="cv-title">{{ cv.title }}</div><p class="cv-meta">{{ cv.experience_years }} лет опыта · {{ cv.location or 'локация скрыта' }} · {{ cv.desired_format }}</p></div>
+      <div><div class="cv-title">{{ cv.title }}</div><p class="cv-meta">{{ cv.experience_years }} лет опыта · {{ cv.location or 'локация скрыта' }} · {{ cv.desired_format }} · {{ 'активно ищет' if cv.user.job_search_status=='active' else 'открыт предложениям' }}</p></div>
       <div class="cv-skills">{% for skill in cv.skill_list[:4] %}<span class="cv-skill">{{ skill }}</span>{% endfor %}</div>
       <span class="cv-arrow" aria-hidden="true">→</span>
     </a>

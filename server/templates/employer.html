@@ -10,11 +10,12 @@
   .cand-row .who span { color: var(--ink-faint); font-size: 0.82rem; display: block; }
   .cand-actions { display: flex; gap: 6px; flex-wrap: wrap; }
   .cand-actions .btn { padding: 5px 10px; font-size: 0.68rem; }
+  .candidate-note { grid-column:1/-1; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
   .cv-access { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:var(--sp-5); align-items:center; padding:var(--sp-5) 0; border-block:2px solid var(--line); margin-bottom:var(--sp-6); }
   .cv-plans { display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end; }
   .unlocked-row { display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 0;border-top:1px solid var(--line); }
   .ledger { color:var(--ink-faint);font-size:.8rem;margin-top:var(--sp-5); }
-  .company-stats{display:grid;grid-template-columns:1.2fr repeat(5,minmax(90px,.6fr));border-block:2px solid var(--line);margin-bottom:var(--sp-6)}
+  .company-stats{display:grid;grid-template-columns:1.2fr repeat(7,minmax(80px,.55fr));border-block:2px solid var(--line);margin-bottom:var(--sp-6)}
   .company-stat{padding:16px;border-right:1px solid var(--line)}.company-stat:last-child{border-right:0}.company-stat b{display:block;color:var(--acid);font-family:var(--font-display);font-size:1.25rem}.company-stat span{color:var(--ink-faint);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em}
   .profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.profile-grid .wide{grid-column:1/-1}
   @media(max-width:760px){.cv-access{grid-template-columns:1fr}.cv-plans{justify-content:flex-start}.unlocked-row{grid-template-columns:1fr auto}.unlocked-row>div:nth-child(2){grid-column:1/-1}.company-stats{grid-template-columns:repeat(2,1fr)}.company-stat:first-child{grid-column:1/-1}.profile-grid{grid-template-columns:1fr}.profile-grid .wide{grid-column:auto}}
@@ -40,6 +41,8 @@
     <div class="company-stat"><span>Просмотры</span><b>{{ stats.views }}</b></div>
     <div class="company-stat"><span>Отклики</span><b>{{ stats.applications }}</b></div>
     <div class="company-stat"><span>Новые</span><b>{{ stats.new_applications }}</b></div>
+    <div class="company-stat"><span>Офферы</span><b>{{ stats.offers }}</b></div>
+    <div class="company-stat"><span>Наняты</span><b>{{ stats.hired }}</b></div>
   </section>
 
   <details class="card" style="margin-bottom:var(--sp-6);" {% if company_progress < 60 %}open{% endif %}>
@@ -86,18 +89,17 @@
       <span style="color: var(--ink-faint); font-size: 0.8rem; font-weight: 400;">{{ j.views }} просмотров · {{ j.applications|length }} откликов{% if j.featured %} · ⚡ Featured{% endif %}</span>
     </h3>
     {% for a in j.applications %}
-    <div class="cand-row">
+    <div class="cand-row" id="application-{{ a.id }}">
       <div class="who">
         <b>{% if a.user.incognito %}🥷 Аноним #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</b>
         <span>{{ a.user.headline or 'профиль не заполнен' }}{% if a.user.location %} · {{ a.user.location }}{% endif %}{% if a.user.salary_expect %} · хочет {{ a.user.salary_expect }}{% endif %}{% if a.cover %} · «{{ a.cover }}»{% endif %}</span>
         <span><a href="mailto:{{ a.user.email }}" style="color:var(--acid);">{{ a.user.email }}</a></span>
       </div>
       <div class="cand-actions">
-        <span class="status {{ a.status }}">{{ {'new': 'новый', 'viewed': 'просмотрен', 'invited': 'интервью', 'rejected': 'отказ'}[a.status] }}</span>
-        {% for s, label in [('viewed', '👁'), ('invited', 'Интервью'), ('rejected', 'Отказ')] %}
-        <form method="post" action="/employer/app/{{ a.id }}/status"><input type="hidden" name="status" value="{{ s }}"><button class="btn btn-ghost" type="submit">{{ label }}</button></form>
-        {% endfor %}
+        <span class="status {{ a.status }}">{{ {'new': 'новый', 'viewed': 'просмотрен', 'invited': 'интервью', 'offer': 'оффер', 'hired': 'нанят', 'rejected': 'отказ'}.get(a.status, a.status) }}</span>
+        <form method="post" action="/employer/app/{{ a.id }}/status"><select class="input" name="status" onchange="this.form.submit()" aria-label="Этап кандидата"><option value="new" {% if a.status=='new' %}selected{% endif %}>Новый</option><option value="viewed" {% if a.status=='viewed' %}selected{% endif %}>Просмотрен</option><option value="invited" {% if a.status=='invited' %}selected{% endif %}>Интервью</option><option value="offer" {% if a.status=='offer' %}selected{% endif %}>Оффер</option><option value="hired" {% if a.status=='hired' %}selected{% endif %}>Нанят</option><option value="rejected" {% if a.status=='rejected' %}selected{% endif %}>Отказ</option></select></form>
       </div>
+      <form class="candidate-note" method="post" action="/employer/app/{{ a.id }}/note"><input class="input" name="note" value="{{ a.employer_note or '' }}" placeholder="Приватная заметка рекрутера"><button class="btn btn-ghost" type="submit">Сохранить</button></form>
     </div>
     {% else %}
     <p style="color: var(--ink-faint); font-size: 0.85rem; margin-top: 8px;">Откликов пока нет.</p>

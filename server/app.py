@@ -18,7 +18,7 @@ import urllib.request
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Request
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -56,6 +56,8 @@ GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 RESEND_FROM = os.environ.get("RESEND_FROM", "")
 BASE_URL = os.environ.get("BASE_URL", "").rstrip("/")
+CV_UPLOAD_DIR = os.environ.get("CV_UPLOAD_DIR", os.path.join(ROOT, "data", "cv_uploads"))
+CV_MAX_BYTES = 5 * 1024 * 1024
 # Подтверждение почты включается автоматически, когда настроен Resend.
 REQUIRE_VERIFY = bool(RESEND_API_KEY)
 
@@ -82,6 +84,7 @@ class User(Base):
     salary_expect = Column(String, default="")
     languages = Column(String, default="")
     location = Column(String, default="")
+    job_search_status = Column(String, default="active")  # active | open | paused
     incognito = Column(Boolean, default=True)
     company_website = Column(String, default="")
     company_description = Column(Text, default="")
@@ -199,7 +202,8 @@ class Application(Base):
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     cover = Column(Text, default="")
-    status = Column(String, default="new")  # new | viewed | invited | rejected
+    status = Column(String, default="new")  # new | viewed | invited | offer | hired | rejected
+    employer_note = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
     job = relationship("Job", back_populates="applications")
     user = relationship("User", back_populates="applications")
@@ -219,6 +223,8 @@ class Resume(Base):
     languages = Column(String, default="")
     contact_email = Column(String, default="")
     contact_telegram = Column(String, default="")
+    cv_file_name = Column(String, default="")
+    cv_file_path = Column(String, default="")
     published = Column(Boolean, default=False)
     status = Column(String, default="draft")  # draft | pending | approved | rejected | paused
     moderation_note = Column(String, default="")
@@ -400,6 +406,7 @@ def migrate(db: Session):
         db.execute(text("ALTER TABLE users ADD COLUMN cv_access_until VARCHAR DEFAULT ''"))
     for _sql in (
         "ALTER TABLE users ADD COLUMN location VARCHAR DEFAULT ''",
+        "ALTER TABLE users ADD COLUMN job_search_status VARCHAR DEFAULT 'active'",
         "ALTER TABLE users ADD COLUMN company_website VARCHAR DEFAULT ''",
         "ALTER TABLE users ADD COLUMN company_description TEXT DEFAULT ''",
         "ALTER TABLE users ADD COLUMN company_location VARCHAR DEFAULT ''",
@@ -415,6 +422,8 @@ def migrate(db: Session):
         "ALTER TABLE resumes ADD COLUMN submitted_at VARCHAR DEFAULT ''",
         "ALTER TABLE resumes ADD COLUMN views INTEGER DEFAULT 0",
         "ALTER TABLE resumes ADD COLUMN unlock_count INTEGER DEFAULT 0",
+        "ALTER TABLE resumes ADD COLUMN cv_file_name VARCHAR DEFAULT ''",
+        "ALTER TABLE resumes ADD COLUMN cv_file_path VARCHAR DEFAULT ''",
     ):
         col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
         if rcols and col not in rcols:
@@ -426,6 +435,9 @@ def migrate(db: Session):
         db.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_resume_unlock ON resume_unlocks(employer_id, resume_id)"))
     if rcols:
         db.execute(text("UPDATE resumes SET status='pending' WHERE published=1 AND status='draft'"))
+    acols = {r[1] for r in db.execute(text("PRAGMA table_info(applications)")).fetchall()}
+    if acols and "employer_note" not in acols:
+        db.execute(text("ALTER TABLE applications ADD COLUMN employer_note TEXT DEFAULT ''"))
     # верификация почты: verified DEFAULT 1 — существующие пользователи остаются рабочими
     for _sql in (
         "ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 1",
@@ -511,6 +523,7 @@ async def guard(request: Request, call_next):
 @app.on_event("startup")
 def _startup():
     os.makedirs(os.path.join(ROOT, "data"), exist_ok=True)
+    os.makedirs(CV_UPLOAD_DIR, exist_ok=True)
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
         migrate(db)
@@ -1116,7 +1129,9 @@ def anonymize_resume_text(value: str) -> str:
 @app.get("/resumes", response_class=HTMLResponse)
 def resumes(request: Request, q: str = "", location: str = "", fmt: str = "",
             db: Session = Depends(db_session)):
-    query = db.query(Resume).filter(Resume.published == True, Resume.status == "approved")  # noqa: E712
+    query = (db.query(Resume).join(User, User.id == Resume.user_id)
+             .filter(Resume.published == True, Resume.status == "approved",  # noqa: E712
+                     User.job_search_status != "paused"))
     if q.strip():
         needle = f"%{q.strip()}%"
         query = query.filter(or_(Resume.title.ilike(needle), Resume.skills.ilike(needle),
@@ -1135,7 +1150,9 @@ def resume_detail(resume_id: int, request: Request, db: Session = Depends(db_ses
     row = db.get(Resume, resume_id)
     user = get_user(request, db)
     is_owner_or_admin = bool(user and (user.id == row.user_id or user.role == "admin")) if row else False
-    if not row or ((not row.published or row.status != "approved") and not is_owner_or_admin):
+    unavailable = bool(row and (not row.published or row.status != "approved"
+                                or row.user.job_search_status == "paused"))
+    if not row or (unavailable and not is_owner_or_admin):
         raise HTTPException(404)
     if not is_owner_or_admin:
         row.views = (row.views or 0) + 1
@@ -1143,6 +1160,21 @@ def resume_detail(resume_id: int, request: Request, db: Session = Depends(db_ses
     unlocked = resume_contact_access(user, row, db)
     return render(request, db, "resume.html", resume=row, unlocked=unlocked,
                   active="resumes")
+
+
+@app.get("/resume/{resume_id}/file")
+def resume_file(resume_id: int, request: Request, db: Session = Depends(db_session)):
+    """Исходный CV доступен только владельцу, админу или работодателю с открытым контактом."""
+    row = db.get(Resume, resume_id)
+    user = get_user(request, db)
+    if not row or not row.cv_file_path or not resume_contact_access(user, row, db):
+        raise HTTPException(404)
+    path = os.path.abspath(row.cv_file_path)
+    upload_root = os.path.abspath(CV_UPLOAD_DIR) + os.sep
+    if not path.startswith(upload_root) or not os.path.isfile(path):
+        raise HTTPException(404)
+    return FileResponse(path, filename=row.cv_file_name or "candidate-cv.pdf",
+                        media_type="application/octet-stream")
 
 
 @app.post("/resume/{resume_id}/unlock")
@@ -1153,7 +1185,8 @@ def resume_unlock(resume_id: int, request: Request, db: Session = Depends(db_ses
     if user.role != "employer":
         raise HTTPException(403)
     row = db.get(Resume, resume_id)
-    if not row or not row.published or row.status != "approved":
+    if (not row or not row.published or row.status != "approved"
+            or row.user.job_search_status == "paused"):
         raise HTTPException(404)
     if db.query(ResumeUnlock).filter_by(employer_id=user.id, resume_id=row.id).first():
         return RedirectResponse(f"/resume/{resume_id}?unlocked=1", status_code=303)
@@ -1204,7 +1237,7 @@ def profile(request: Request, db: Session = Depends(db_session)):
                       resume and resume.contact_telegram]
     profile_progress = round(sum(bool(value) for value in profile_checks) / len(profile_checks) * 100)
     app_counts = {status: sum(a.status == status for a in apps)
-                  for status in ("new", "viewed", "invited", "rejected")}
+                  for status in ("new", "viewed", "invited", "offer", "hired", "rejected")}
     applied_job_ids = [a.job_id for a in apps]
     category = guess_category(user.headline, resume.skills if resume else "")
     recommendations = (db.query(Job).filter(Job.status == "approved", Job.category == category,
@@ -1237,6 +1270,7 @@ def profile_spin(request: Request, db: Session = Depends(db_session)):
 def profile_save(request: Request, name: str = Form(""), headline: str = Form(""),
                  salary_expect: str = Form(""), languages: str = Form(""),
                  location: str = Form(""),
+                 job_search_status: str = Form("active"),
                  incognito: str = Form(None), db: Session = Depends(db_session)):
     user = get_user(request, db)
     if not user:
@@ -1244,18 +1278,21 @@ def profile_save(request: Request, name: str = Form(""), headline: str = Form(""
     user.name, user.headline = name.strip(), headline.strip()
     user.salary_expect, user.languages = salary_expect.strip(), languages.strip()
     user.location = location.strip()
+    user.job_search_status = job_search_status if job_search_status in ("active", "open", "paused") else "active"
     user.incognito = bool(incognito)
     db.commit()
     return RedirectResponse("/profile?ok=1", status_code=303)
 
 
 @app.post("/profile/resume")
-def profile_resume_save(request: Request, title: str = Form(""), location: str = Form(""),
+async def profile_resume_save(request: Request, title: str = Form(""), location: str = Form(""),
                         experience_years: int = Form(0), skills: str = Form(""),
                         about: str = Form(""), desired_format: str = Form("удалёнка"),
                         salary_expect: str = Form(""), languages: str = Form(""),
                         contact_email: str = Form(""), contact_telegram: str = Form(""),
                         publish: str = Form(None), consent: str = Form(None),
+                        cv_file: UploadFile | None = File(None),
+                        remove_cv_file: str = Form(None),
                         db: Session = Depends(db_session)):
     user = get_user(request, db)
     if not user or user.role != "talent":
@@ -1279,6 +1316,31 @@ def profile_resume_save(request: Request, title: str = Form(""), location: str =
     row.languages = languages.strip()
     row.contact_email = contact_email.strip() or user.email
     row.contact_telegram = contact_telegram.strip()
+    if remove_cv_file and row.cv_file_path:
+        try:
+            os.remove(row.cv_file_path)
+        except FileNotFoundError:
+            pass
+        row.cv_file_name = row.cv_file_path = ""
+    if cv_file and cv_file.filename:
+        safe_name = os.path.basename(cv_file.filename).strip()
+        ext = os.path.splitext(safe_name)[1].lower()
+        if ext not in (".pdf", ".doc", ".docx"):
+            return RedirectResponse("/profile?cv_file_error=type#cv", status_code=303)
+        payload = await cv_file.read(CV_MAX_BYTES + 1)
+        if len(payload) > CV_MAX_BYTES:
+            return RedirectResponse("/profile?cv_file_error=size#cv", status_code=303)
+        os.makedirs(CV_UPLOAD_DIR, exist_ok=True)
+        stored_path = os.path.join(CV_UPLOAD_DIR, f"{user.id}-{secrets.token_hex(12)}{ext}")
+        with open(stored_path, "wb") as handle:
+            handle.write(payload)
+        previous_path = row.cv_file_path
+        row.cv_file_name, row.cv_file_path = safe_name[:240], stored_path
+        if previous_path and previous_path != stored_path:
+            try:
+                os.remove(previous_path)
+            except FileNotFoundError:
+                pass
     row.published = wants_publish
     row.consent_at = datetime.utcnow().isoformat() + "Z" if wants_publish else row.consent_at
     new_public = (row.title, row.location, row.experience_years, row.skills, row.about,
@@ -1322,6 +1384,8 @@ def employer(request: Request, db: Session = Depends(db_session)):
         "views": sum(job.views or 0 for job in jobs),
         "applications": len(applications),
         "new_applications": sum(application.status == "new" for application in applications),
+        "offers": sum(application.status == "offer" for application in applications),
+        "hired": sum(application.status == "hired" for application in applications),
     }
     company_checks = [user.company_name, user.company_website, user.company_description,
                       user.company_location, user.company_size]
@@ -1362,10 +1426,23 @@ def app_status(app_id: int, request: Request, status: str = Form(...),
     a = db.get(Application, app_id)
     if not user or not a or (a.job.owner_id != user.id and user.role != "admin"):
         raise HTTPException(403)
-    if status in ("new", "viewed", "invited", "rejected"):
+    if status in ("new", "viewed", "invited", "offer", "hired", "rejected"):
         a.status = status
         db.commit()
     return RedirectResponse("/employer", status_code=303)
+
+
+@app.post("/employer/app/{app_id}/note")
+def app_note(app_id: int, request: Request, note: str = Form(""),
+             db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    application = db.get(Application, app_id)
+    if not user or not application or (
+            application.job.owner_id != user.id and user.role != "admin"):
+        raise HTTPException(403)
+    application.employer_note = note.strip()[:2000]
+    db.commit()
+    return RedirectResponse(f"/employer#application-{app_id}", status_code=303)
 
 
 @app.get("/post-job", response_class=HTMLResponse)

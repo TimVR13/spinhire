@@ -1,8 +1,9 @@
+import os
 import unittest
 
 from fastapi.testclient import TestClient
 
-from server.app import (Base, Resume, ResumeUnlock, SessionLocal, User,
+from server.app import (Application, Base, CV_UPLOAD_DIR, Job, Resume, ResumeUnlock, SessionLocal, User,
                         anonymize_resume_text, app, engine, hash_pw, migrate, signer)
 
 
@@ -34,6 +35,12 @@ class ResumePrivacyTests(unittest.TestCase):
 
     def tearDown(self):
         with SessionLocal() as db:
+            resume = db.get(Resume, self.resume_id)
+            if resume and resume.cv_file_path:
+                try:
+                    os.remove(resume.cv_file_path)
+                except FileNotFoundError:
+                    pass
             db.query(ResumeUnlock).filter_by(resume_id=self.resume_id).delete()
             db.query(Resume).filter_by(id=self.resume_id).delete()
             db.query(User).filter(User.id.in_([self.candidate_id, self.employer_id])).delete(
@@ -77,6 +84,35 @@ class ResumePrivacyTests(unittest.TestCase):
         self.assertNotIn("@private_handle", public)
         self.assertNotIn("555 111 222", public)
         self.assertNotIn("example.com", public)
+
+    def test_uploaded_cv_requires_paid_access(self):
+        os.makedirs(CV_UPLOAD_DIR, exist_ok=True)
+        path = os.path.join(CV_UPLOAD_DIR, f"test-{self.resume_id}.pdf")
+        with open(path, "wb") as handle:
+            handle.write(b"%PDF-1.4 private candidate document")
+        with SessionLocal() as db:
+            resume = db.get(Resume, self.resume_id)
+            resume.cv_file_name = "candidate.pdf"
+            resume.cv_file_path = path
+            db.commit()
+
+        with TestClient(app) as client:
+            self.assertEqual(client.get(f"/resume/{self.resume_id}/file").status_code, 404)
+            client.cookies.set("sh_session", signer.dumps({"uid": self.employer_id}))
+            self.assertEqual(client.get(f"/resume/{self.resume_id}/file").status_code, 404)
+            client.post(f"/resume/{self.resume_id}/unlock")
+            downloaded = client.get(f"/resume/{self.resume_id}/file")
+            self.assertEqual(downloaded.status_code, 200)
+            self.assertEqual(downloaded.content, b"%PDF-1.4 private candidate document")
+
+    def test_paused_candidate_disappears_from_catalog(self):
+        with SessionLocal() as db:
+            candidate = db.get(User, self.candidate_id)
+            candidate.job_search_status = "paused"
+            db.commit()
+        with TestClient(app) as client:
+            self.assertNotIn("CRM Manager", client.get("/resumes").text)
+            self.assertEqual(client.get(f"/resume/{self.resume_id}").status_code, 404)
 
 
 if __name__ == "__main__":

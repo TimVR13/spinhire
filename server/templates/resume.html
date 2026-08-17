@@ -30,6 +30,7 @@
       <span class="kicker">{{ resume.public_code }} · анонимный профиль</span>
       <h1>{{ resume.title }}</h1>
       <div class="resume-facts">
+        <span class="resume-fact">{{ 'Активно ищет' if resume.user.job_search_status=='active' else ('Открыт предложениям' if resume.user.job_search_status=='open' else 'Поиск приостановлен') }}</span>
         <span class="resume-fact">{{ resume.experience_years }} лет опыта</span>
         <span class="resume-fact">{{ resume.location or 'Локация скрыта' }}</span>
         <span class="resume-fact">{{ resume.desired_format }}</span>
@@ -46,6 +47,7 @@
         <h2 style="margin:10px 0 20px;">Связаться с кандидатом</h2>
         <p><b>Email</b><br><a style="color:var(--acid);" href="mailto:{{ resume.contact_email }}">{{ resume.contact_email }}</a></p>
         {% if resume.contact_telegram %}<p style="margin-top:14px;"><b>Telegram</b><br>{{ resume.contact_telegram }}</p>{% endif %}
+        {% if resume.cv_file_name %}<a href="/resume/{{ resume.id }}/file" class="btn btn-ghost" style="width:100%;margin-top:18px;">Скачать исходный CV</a>{% endif %}
       {% else %}
         <span class="kicker pink">Контакты закрыты</span>
         <h2 style="margin:10px 0 8px;">Имя и способы связи скрыты</h2>
