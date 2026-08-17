@@ -1,18 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 72" role="img" aria-label="SpinHire">
-  <defs><clipPath id="screen"><rect x="11" y="10" width="64" height="52" rx="9"/></clipPath></defs>
-  <rect x="5" y="4" width="76" height="64" rx="14" fill="#F4F5F7"/>
-  <g clip-path="url(#screen)">
-    <rect x="11" y="10" width="64" height="52" fill="#090B0E"/>
-    <rect x="11" y="35" width="64" height="27" fill="#20E592"/>
-  </g>
-  <rect x="11" y="32" width="64" height="5" fill="#F4F5F7"/>
+  <path d="M8 17 18 7h50l10 10v21H8Z" fill="#F4F5F7"/>
+  <path d="m15 19 6-6h44l6 6v12H15Z" fill="#090B0E"/>
+  <path d="M8 36h70v22l-9 9H17l-9-9Z" fill="#20E592"/>
   <g fill="#20E592">
-    <circle cx="30" cy="19" r="5"/><path d="M23 30c0-4.5 3.1-7.5 7-7.5s7 3 7 7.5Z"/>
-    <circle cx="56" cy="19" r="5"/><path d="M49 30c0-4.5 3.1-7.5 7-7.5s7 3 7 7.5Z"/>
+    <path d="m25 17 4-3 4 3v6l-4 3-4-3Z"/><path d="m21 30 3-5h10l3 5Z"/>
+    <path d="m52 17 4-3 4 3v6l-4 3-4-3Z"/><path d="m48 30 3-5h10l3 5Z"/>
   </g>
   <g fill="#090B0E">
-    <circle cx="43" cy="45" r="6"/><path d="M34 60c0-6 4-10 9-10s9 4 9 10Z"/>
+    <path d="m38 43 5-4 5 4v7l-5 4-5-4Z"/>
+    <path d="m32 65 4-12h14l4 12Z"/>
   </g>
-  <path d="M82 55 89 18" fill="none" stroke="#F4F5F7" stroke-width="7" stroke-linecap="round"/>
-  <circle cx="89" cy="14" r="6" fill="#FF37A8"/>
+  <path d="m78 59 9-40" fill="none" stroke="#F4F5F7" stroke-width="8" stroke-linecap="square"/>
+  <path d="m82 8 6-3 5 4v7l-5 4-7-3-2-6Z" fill="#FF37A8"/>
 </svg>
