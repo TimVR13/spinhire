@@ -372,6 +372,32 @@
     .evc__actions { flex-direction: column; }
     .evc__btn { width: 100%; }
   }
+
+  /* Route calendar — months form one continuous industry itinerary */
+  body > .ticker { display: none; }
+  #ev-calendar { position: relative; }
+  #ev-calendar::before { content:''; position:absolute; left:178px; top:10px; bottom:30px; width:1px; background:linear-gradient(var(--acid),var(--line) 18%,var(--line) 82%,var(--pink)); }
+  .ev-month { display:grid; grid-template-columns:180px minmax(0,1fr); gap:34px; margin:0 0 var(--sp-7); position:relative; }
+  .ev-month::before { content:''; position:absolute; left:172px; top:16px; width:13px; height:13px; border-radius:50%; background:var(--bg); border:3px solid var(--acid); box-shadow:0 0 18px color-mix(in oklch,var(--acid) 58%,transparent); z-index:2; }
+  .ev-month:nth-child(even)::before { border-color:var(--pink); box-shadow:0 0 18px color-mix(in oklch,var(--pink) 55%,transparent); }
+  .ev-month__head { display:block; border:0; padding:8px 0 0; margin:0; font-size:1rem; line-height:1.2; text-align:right; position:sticky; top:92px; align-self:start; }
+  .ev-month__head .yr { display:block; margin-top:5px; font-size:.72rem; }
+  .ev-list { display:grid; grid-template-columns:1fr; gap:14px; }
+  .evc { display:grid; grid-template-columns:minmax(270px,.72fr) 1fr; min-height:220px; border-radius:18px; }
+  .evc:hover { transform:translateX(4px); }
+  .evc__cover { min-height:220px; padding:24px; justify-content:flex-end; }
+  .evc__cover-date { top:22px; right:auto; left:24px; padding:0; border:0; border-radius:0; background:transparent!important; color:var(--acid)!important; font-size:.78rem; letter-spacing:.1em; }
+  .evc[data-cat="Выставка"] .evc__cover-date { color:var(--pink)!important; }
+  .evc__cover-flag { top:20px; left:auto; right:22px; font-size:1.25rem; }
+  .evc__cover-title { font-size:clamp(1.15rem,2vw,1.65rem); }
+  .evc__body { justify-content:center; padding:clamp(22px,3vw,38px); }
+  .evc__toprow { display:none; }
+  .evc__desc { max-width:58ch; font-size:.96rem; }
+  .evc__actions { max-width:430px; }
+  .evc__ribbon { top:54px; background:transparent; color:var(--acid); padding-left:24px; border-radius:0; }
+  @media(max-width:760px){
+    #ev-calendar::before{left:7px}.ev-month{grid-template-columns:1fr;gap:12px;padding-left:28px}.ev-month::before{left:1px;top:9px}.ev-month__head{text-align:left;position:static;padding-top:4px}.ev-month__head .yr{display:inline;margin-left:8px}.evc{grid-template-columns:1fr}.evc__cover{min-height:180px}.evc:hover{transform:none}
+  }
 </style>
 </head>
 <body>
@@ -419,13 +445,6 @@
   <!-- CALENDAR -->
   <section class="section">
     <div class="container">
-      <div class="ev-toolbar" role="group" aria-label="Фильтр по типу события">
-        <button class="ev-chip active" data-filter="all" type="button">Все <span class="c" data-count="all"></span></button>
-        <button class="ev-chip" data-filter="Конференция" type="button">Конференции <span class="c" data-count="Конференция"></span></button>
-        <button class="ev-chip" data-filter="Выставка" type="button">Выставки <span class="c" data-count="Выставка"></span></button>
-        <button class="ev-chip" data-filter="Аффилейт" type="button">Аффилейт <span class="c" data-count="Аффилейт"></span></button>
-      </div>
-
       <div id="ev-calendar">
         <!-- СЕНТЯБРЬ 2026 -->
         <div class="ev-month" data-month>

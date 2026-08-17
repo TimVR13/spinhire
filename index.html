@@ -88,6 +88,19 @@
   .search-bar .input:focus { box-shadow: none; }
   .search-bar > * + * { border-left: 2px solid var(--line); }
   .search-bar .btn { border: none; }
+  .location-picker { position:relative; min-width:0; }
+  .location-trigger { width:100%; height:100%; min-height:56px; padding:14px 46px 14px 18px; border:0; background:transparent; color:var(--ink); text-align:left; font-size:1rem; position:relative; }
+  .location-trigger::after { content:'⌄'; position:absolute; right:18px; top:50%; transform:translateY(-55%); color:var(--acid); font-size:1.25rem; }
+  .location-trigger[aria-expanded="true"]::after { transform:translateY(-35%) rotate(180deg); }
+  .location-menu { position:absolute; z-index:80; left:-1px; right:-1px; top:calc(100% + 10px); background:color-mix(in oklch,var(--bg-deep) 96%,transparent); border:1px solid var(--line-strong); border-radius:14px; box-shadow:0 24px 60px #000b; padding:10px; backdrop-filter:blur(18px); }
+  .location-menu[hidden] { display:none; }
+  .location-search { margin-bottom:8px; }
+  .location-options { max-height:280px; overflow:auto; display:grid; gap:3px; scrollbar-color:var(--line-strong) transparent; }
+  .location-option { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; border:0; border-radius:8px; padding:11px 12px; background:transparent; color:var(--ink-dim); text-align:left; font-size:.92rem; }
+  .location-option[hidden] { display:none; }
+  .location-option:hover,.location-option.active { background:var(--surface-2); color:var(--acid); }
+  .location-option span { color:var(--ink-faint); font-size:.72rem; }
+  .location-empty { color:var(--ink-faint); padding:12px; font-size:.85rem; }
 
   .hero-hints { margin-top: var(--sp-4); display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
   .hero-hints span { color: var(--ink-faint); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
@@ -342,21 +355,31 @@
     <div class="container hero__grid">
       <div>
         <span class="kicker rise">Джоб-борд iGaming-индустрии</span>
-        <h1 class="rise rise-1">Скучная карьера <span class="strike">закончилась</span>. <em>Иди&nbsp;<span style="white-space:nowrap">ва-банк.</span></em></h1>
+        <h1 class="rise rise-1">Скучная карьера <span class="strike">закончилась</span> <em>Иди&nbsp;<span style="white-space:nowrap">ва-банк</span></em></h1>
         <p class="lead rise rise-2">Казино, беттинг, геймдев-студии, аффилейты, платежи. Вилки — где их раскрыл работодатель, релокация и удалёнка помечены фильтром. Никакого корпоративного бежевого.</p>
 
         <form class="search-bar rise rise-3" action="jobs.html" method="get" role="search">
           <input class="input" type="search" name="q" placeholder="Должность, скилл или компания…" aria-label="Поиск вакансий">
-          <select class="select input" name="loc" aria-label="Локация">
-            <option>Все локации</option>
-            <option>Удалёнка</option>
-            <option>Мальта</option>
-            <option>Кипр (Лимассол)</option>
-            <option>Польша (Варшава)</option>
-            <option>Грузия (Тбилиси)</option>
-            <option>Румыния (Бухарест)</option>
-            <option>Гибралтар</option>
-          </select>
+          <div class="location-picker" id="locationPicker">
+            <input type="hidden" name="loc" id="locationValue" value="">
+            <button class="location-trigger" id="locationTrigger" type="button" aria-haspopup="listbox" aria-expanded="false">Все локации</button>
+            <div class="location-menu" id="locationMenu" hidden>
+              <input class="input location-search" id="locationSearch" type="search" placeholder="Найти город или страну…" autocomplete="off">
+              <div class="location-options" id="locationOptions" role="listbox">
+                <button class="location-option active" type="button" data-value="">Все локации <span>120+</span></button>
+                <button class="location-option" type="button" data-value="Удалёнка">Удалёнка <span>48</span></button>
+                <button class="location-option" type="button" data-value="Мальта">Мальта <span>21</span></button>
+                <button class="location-option" type="button" data-value="Кипр (Лимассол)">Кипр · Лимассол <span>18</span></button>
+                <button class="location-option" type="button" data-value="Польша (Варшава)">Польша · Варшава <span>11</span></button>
+                <button class="location-option" type="button" data-value="Грузия (Тбилиси)">Грузия · Тбилиси <span>9</span></button>
+                <button class="location-option" type="button" data-value="Румыния (Бухарест)">Румыния · Бухарест <span>7</span></button>
+                <button class="location-option" type="button" data-value="Гибралтар">Гибралтар <span>6</span></button>
+                <button class="location-option" type="button" data-value="Испания (Барселона)">Испания · Барселона <span>5</span></button>
+                <button class="location-option" type="button" data-value="ОАЭ (Дубай)">ОАЭ · Дубай <span>4</span></button>
+              </div>
+              <div class="location-empty" id="locationEmpty" hidden>Ничего не найдено</div>
+            </div>
+          </div>
           <button class="btn btn-acid btn-lg" type="submit">Найти вакансии →</button>
         </form>
         <div class="hero-hints rise rise-4">
@@ -780,6 +803,34 @@
   lever.addEventListener('click', spin);
   box.addEventListener('click', spin);
   box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); spin(); } });
+})();
+
+// Масштабируемый выбор локации на главной
+(function () {
+  const picker = document.getElementById('locationPicker'); if (!picker) return;
+  const trigger = document.getElementById('locationTrigger');
+  const menu = document.getElementById('locationMenu');
+  const search = document.getElementById('locationSearch');
+  const value = document.getElementById('locationValue');
+  const options = [...document.querySelectorAll('.location-option')];
+  const empty = document.getElementById('locationEmpty');
+  function setOpen(open) {
+    menu.hidden = !open; trigger.setAttribute('aria-expanded', String(open));
+    if (open) { search.value = ''; filter(''); setTimeout(() => search.focus(), 0); }
+  }
+  function filter(query) {
+    const q = query.trim().toLocaleLowerCase('ru'); let shown = 0;
+    options.forEach(option => { const show = option.textContent.toLocaleLowerCase('ru').includes(q); option.hidden = !show; if (show) shown++; });
+    empty.hidden = shown !== 0;
+  }
+  trigger.addEventListener('click', () => setOpen(menu.hidden));
+  search.addEventListener('input', () => filter(search.value));
+  options.forEach(option => option.addEventListener('click', () => {
+    value.value = option.dataset.value; trigger.textContent = option.childNodes[0].textContent.trim();
+    options.forEach(item => item.classList.toggle('active', item === option)); setOpen(false);
+  }));
+  document.addEventListener('click', event => { if (!picker.contains(event.target)) setOpen(false); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') { setOpen(false); trigger.focus(); } });
 })();
 </script>
 <script src="js/app.js"></script>
