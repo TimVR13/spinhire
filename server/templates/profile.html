@@ -26,7 +26,10 @@
   {% if sp and sp not in ('wait',) %}<div class="flash">🎡 Ежедневный фриспин: <b>+{{ sp }} SpinCoins</b>! Заходи завтра за следующим.</div>{% endif %}
   {% if sp == 'wait' %}<div class="flash err">Сегодня уже крутили — фриспин обновляется раз в сутки.</div>{% endif %}
   <span class="kicker">Кабинет соискателя</span>
-  <h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem); margin-block: 8px 24px;">{{ user.name or user.email }}</h1>
+  <div class="section-head" style="margin-block: 8px 24px;">
+    <h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem);">{{ user.name or user.email }}</h1>
+    <form method="post" action="/account/role/employer"><button class="btn btn-pink btn-sm" type="submit">Я работодатель → сменить кабинет</button></form>
+  </div>
 
   <section class="dash-strip" aria-label="Состояние профиля и откликов">
     <div class="dash-cell"><span>Готовность профиля</span><b>{{ profile_progress }}%</b><div class="progress-track"><i style="width:{{ profile_progress }}%"></i></div></div>

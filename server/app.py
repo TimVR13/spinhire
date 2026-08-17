@@ -1026,6 +1026,7 @@ def login(request: Request, email: str = Form(...), password: str = Form(...),
 @app.get("/register", response_class=HTMLResponse)
 def register_page(request: Request, role: str = "talent", next: str = "",
                   email: str = "", db: Session = Depends(db_session)):
+    role = role if role in ("talent", "employer") else "talent"
     return render(request, db, "register.html", role=role, error="",
                   next=safe_next(next, "") if next else "", email=email.strip().lower())
 
@@ -1076,9 +1077,11 @@ def logout(next: str = ""):
 # ---------- Google OAuth ----------
 
 @app.get("/auth/google")
-def auth_google():
+def auth_google(role: str = "", next: str = ""):
     if not GOOGLE_CLIENT_ID:
         return RedirectResponse("/login?e=google_off", status_code=307)
+    requested_role = role if role in ("talent", "employer") else ""
+    requested_next = safe_next(next, "") if next else ""
     state = secrets.token_urlsafe(24)
     params = urllib.parse.urlencode({
         "client_id": GOOGLE_CLIENT_ID,
@@ -1092,7 +1095,8 @@ def auth_google():
     resp = RedirectResponse(
         f"https://accounts.google.com/o/oauth2/v2/auth?{params}", status_code=307)
     # состояние — в подписанной короткоживущей куке (тот же signer)
-    resp.set_cookie("sh_oauth", signer.dumps({"state": state}),
+    resp.set_cookie("sh_oauth", signer.dumps({"state": state, "role": requested_role,
+                                               "next": requested_next}),
                     max_age=600, httponly=True, samesite="lax")
     return resp
 
@@ -1106,11 +1110,15 @@ def auth_google_callback(request: Request, code: str = "", state: str = "",
         if not raw or not code or not state:
             return fail
         try:
-            saved = signer.loads(raw).get("state")
+            oauth_data = signer.loads(raw)
+            saved = oauth_data.get("state")
         except BadSignature:
             return fail
         if not saved or not secrets.compare_digest(str(saved), str(state)):
             return fail
+        requested_role = oauth_data.get("role", "")
+        requested_role = requested_role if requested_role in ("talent", "employer") else ""
+        requested_next = safe_next(oauth_data.get("next", ""), "")
 
         # обмен кода на access_token
         token_body = urllib.parse.urlencode({
@@ -1146,8 +1154,14 @@ def auth_google_callback(request: Request, code: str = "", state: str = "",
         u = db.query(User).filter(func.lower(User.email) == email).first()
         if not u:
             u = User(email=email, password_hash=hash_pw(secrets.token_urlsafe(24)),
-                     name=name, role="talent", verified=1)
+                     name=name, role=requested_role or "talent", verified=1)
             db.add(u)
+            db.commit()
+        elif requested_role and u.role != "admin" and u.role != requested_role:
+            # Явный выбор на регистрации также исправляет аккаунты, которые
+            # старый Google-flow ошибочно создавал соискателями.
+            u.role = requested_role
+            u.verified = 1
             db.commit()
         elif not u.verified:
             # вход через Google подтверждает владение почтой
@@ -1156,7 +1170,8 @@ def auth_google_callback(request: Request, code: str = "", state: str = "",
             u.otp_expires = ""
             db.commit()
 
-        resp = set_session(RedirectResponse(dest_for(u), status_code=303), u)
+        destination = requested_next or dest_for(u)
+        resp = set_session(RedirectResponse(destination, status_code=303), u)
         resp.delete_cookie("sh_oauth")
         return resp
     except Exception as e:  # noqa: BLE001 — любой сбой ведёт на /login, не 500
@@ -1392,6 +1407,18 @@ def profile(request: Request, db: Session = Depends(db_session)):
                   resume=resume, resume_unlocks=resume_unlocks, formats=FORMATS,
                   profile_progress=profile_progress, app_counts=app_counts,
                   recommendations=recommendations, notifications=notifications)
+
+
+@app.post("/account/role/{target_role}")
+def account_role(target_role: str, request: Request, db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    if not user:
+        return login_redirect("/profile")
+    if user.role == "admin" or target_role not in ("talent", "employer"):
+        raise HTTPException(403)
+    user.role = target_role
+    db.commit()
+    return RedirectResponse(dest_for(user), status_code=303)
 
 
 @app.post("/profile/notifications/read")
