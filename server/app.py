@@ -1066,8 +1066,9 @@ def register(request: Request, email: str = Form(...), password: str = Form(...)
 
 
 @app.get("/logout")
-def logout():
-    resp = RedirectResponse("/", status_code=303)
+def logout(next: str = ""):
+    destination = f"/login?next={urllib.parse.quote(next, safe='')}" if safe_next(next, "") else "/"
+    resp = RedirectResponse(destination, status_code=303)
     resp.delete_cookie("sh_session")
     return resp
 

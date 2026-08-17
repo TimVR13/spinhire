@@ -35,6 +35,9 @@
   .side-card dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 0.88rem; }
   .side-card dt { color: var(--ink-faint); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.1em; font-weight: 700; padding-top: 2px; }
   .side-card dd { color: var(--ink); font-weight: 600; }
+  .apply-card { position: sticky; top: 92px; border-color: var(--acid); }
+  .apply-card .btn { width: 100%; }
+  .apply-card p { color: var(--ink-dim); font-size: 0.82rem; margin-top: 10px; }
   @media (max-width: 900px) { .job-layout { grid-template-columns: 1fr; } }
 {% endblock %}
 {% block content %}
@@ -66,13 +69,17 @@
           {% elif applied %}
             <span class="status invited" style="align-self: flex-start;">✓ Вы уже откликнулись{% if job.source_url %} — мы передадим отклик работодателю{% endif %}</span>
           {% elif user and user.role == 'talent' %}
-            <form method="post" action="/job/{{ job.id }}/apply" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <form id="apply" method="post" action="/job/{{ job.id }}/apply" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
               <input class="input" name="cover" placeholder="Пара слов о себе (необязательно)" aria-label="Сопроводительное" style="flex: 1 1 260px;">
               <button class="btn btn-acid btn-lg" type="submit">Откликнуться через SpinHire →</button>
             </form>
             {% if job.source_url %}<span style="color: var(--ink-faint); font-size: 0.82rem;">Мы передадим ваш отклик работодателю. Или можно <a href="{{ job.source_url }}" target="_blank" rel="noopener nofollow" style="color: var(--ink-dim);">открыть первоисточник ↗</a></span>{% endif %}
           {% elif user %}
-            <span style="color: var(--ink-faint); font-size: 0.85rem;">Откликаться могут только соискатели.</span>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+              {% if job.source_url %}<a class="btn btn-acid btn-lg" href="{{ job.source_url }}" target="_blank" rel="noopener nofollow">Откликнуться у работодателя ↗</a>{% endif %}
+              <a class="btn btn-ghost" href="/logout?next=/job/{{ job.id }}">Войти как соискатель</a>
+            </div>
+            <span style="color: var(--ink-faint); font-size: 0.85rem;">Сейчас вы вошли как {{ 'администратор' if user.role == 'admin' else 'работодатель' }} — внутренние отклики доступны профилю соискателя.</span>
           {% else %}
             <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
               <a class="btn btn-acid btn-lg" href="/login?next=/job/{{ job.id }}">Войти и откликнуться →</a>
@@ -110,6 +117,24 @@
     </div>
 
     <aside>
+      {% if not is_closed %}
+      <div class="side-card apply-card">
+        <h3>Отклик на вакансию</h3>
+        {% if applied %}
+          <span class="status invited">✓ Отклик отправлен</span>
+        {% elif user and user.role == 'talent' %}
+          <a class="btn btn-acid" href="#apply">Откликнуться →</a>
+          <p>Добавьте пару слов и отправьте отклик через SpinHire.</p>
+        {% elif not user %}
+          <a class="btn btn-acid" href="/login?next=/job/{{ job.id }}">Войти и откликнуться →</a>
+          <p>Вход нужен, чтобы работодатель получил ваш профиль.</p>
+        {% else %}
+          {% if job.source_url %}<a class="btn btn-acid" href="{{ job.source_url }}" target="_blank" rel="noopener nofollow">Откликнуться у работодателя ↗</a>{% endif %}
+          <a class="btn btn-ghost" style="margin-top: 10px;" href="/logout?next=/job/{{ job.id }}">Войти как соискатель</a>
+          <p>Вы вошли не как соискатель, поэтому внутренний отклик недоступен.</p>
+        {% endif %}
+      </div>
+      {% endif %}
       <div class="side-card">
         <h3>О вакансии</h3>
         <dl>
