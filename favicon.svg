@@ -3,7 +3,6 @@
   <path d="m6 15 8-8h31l7 8v14H6Z" fill="#F4F5F7"/>
   <path d="m12 17 4-4h26l4 4v7H12Z" fill="#090B0E"/>
   <path d="M6 27h46v22l-8 8H14l-8-8Z" fill="#20E592"/>
-  <path d="M6 27v22l8 8h30l8-8V27" fill="none" stroke="#F4F5F7" stroke-width="4" stroke-linejoin="miter"/>
   <path d="m24 34 6-5 6 5v8l-6 5-6-5Z" fill="#090B0E"/>
   <path d="m18 54 4-11h16l4 11Z" fill="#090B0E"/>
   <path d="m52 49 6-29" fill="none" stroke="#F4F5F7" stroke-width="5" stroke-linecap="square"/>
