@@ -1,6 +1,7 @@
 import json
 import unittest
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from server import crawler
@@ -60,6 +61,32 @@ class CrawlerTests(unittest.TestCase):
         ordered = sorted(rows, key=lambda row: (row.get("rank") or 10**9, row.get("country") or ""))
         self.assertEqual([(row["rank"], row["country"]) for row in ordered],
                          [(1, "Big"), (1, "Small"), (2, "Big")])
+
+    def test_missing_job_is_archived_only_for_complete_source(self):
+        class Query:
+            def filter(self, *args): return self
+            def all(self): return [row]
+
+        class DB:
+            def query(self, model): return Query()
+            def commit(self): pass
+            def add(self, item): pass
+
+        class Field:
+            def __eq__(self, other): return True
+            def __ne__(self, other): return True
+            def in_(self, values): return True
+            def __invert__(self): return True
+
+        class Job:
+            source = status = ext_id = Field()
+
+        row = SimpleNamespace(status="approved", closed_at="", source="softswiss", ext_id="gone")
+        added, updated, closed = crawler.upsert(
+            DB(), Job, lambda *_: "Operations", [], complete_sources={"softswiss"})
+        self.assertEqual((added, updated, closed), (0, 0, 1))
+        self.assertEqual(row.status, "archived")
+        self.assertTrue(row.closed_at)
 
 
 if __name__ == "__main__":

@@ -110,6 +110,7 @@ class Job(Base):
     ext_id = Column(String, default="")       # id вакансии в источнике — для дедупликации
     posted_at = Column(String, default="")    # реальная дата публикации в источнике (YYYY-MM-DD)
     deadline = Column(String, default="")     # дедлайн приёма (YYYY-MM-DD)
+    closed_at = Column(String, default="")    # когда источник подтвердил исчезновение вакансии
     status = Column(String, default="pending")  # pending | approved | rejected | archived
     featured = Column(Boolean, default=False)
     views = Column(Integer, default=0)
@@ -374,7 +375,7 @@ def migrate(db: Session):
     """Лёгкая миграция: добавить недостающие колонки в существующую БД."""
     from sqlalchemy import text
     cols = {r[1] for r in db.execute(text("PRAGMA table_info(jobs)")).fetchall()}
-    for name in ("source", "ext_id", "posted_at", "deadline"):
+    for name in ("source", "ext_id", "posted_at", "deadline", "closed_at"):
         if name not in cols:
             db.execute(text(f"ALTER TABLE jobs ADD COLUMN {name} VARCHAR DEFAULT ''"))
     ucols = {r[1] for r in db.execute(text("PRAGMA table_info(users)")).fetchall()}
@@ -804,7 +805,7 @@ def checkout_invoice(order_id: int, request: Request, db: Session = Depends(db_s
 @app.get("/job/{job_id}", response_class=HTMLResponse)
 def job_detail(job_id: int, request: Request, db: Session = Depends(db_session)):
     job = db.get(Job, job_id)
-    if not job or job.status != "approved":
+    if not job or job.status not in ("approved", "archived"):
         raise HTTPException(404)
     job.views += 1
     db.commit()
@@ -814,7 +815,8 @@ def job_detail(job_id: int, request: Request, db: Session = Depends(db_session))
                                     Job.category == job.category)
                .order_by(Job.featured.desc(), Job.created_at.desc()).limit(3).all())
     return render(request, db, "job.html", job=job, applied=applied,
-                  applies=len(job.applications), similar=similar)
+                  applies=len(job.applications), similar=similar,
+                  is_closed=job.status == "archived")
 
 
 @app.post("/job/{job_id}/apply")

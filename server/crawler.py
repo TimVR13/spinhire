@@ -682,12 +682,15 @@ def crawl_is_due(interval_hours=24):
     return last_run is None or datetime.utcnow() - last_run >= timedelta(hours=interval_hours)
 
 
-def collect():
+def collect(with_metadata=False):
     """Собрать вакансии со всех источников. Возвращает список dict."""
     items = []
+    complete_sources = set()
     try:
         got = crawl_softswiss()
         items.extend(got)
+        if len(got) < MAX_PER_BOARD:
+            complete_sources.add("softswiss")
         print(f"[crawl] softswiss: +{len(got)}")
     except Exception as e:
         print(f"[crawl] softswiss FAILED: {str(e)[:120]}")
@@ -695,6 +698,8 @@ def collect():
         try:
             got = crawl_greenhouse(board, company)
             items.extend(got)
+            if len(got) < MAX_PER_BOARD:
+                complete_sources.add(f"greenhouse:{board}")
             print(f"[crawl] greenhouse:{board}: +{len(got)}")
         except Exception as e:
             print(f"[crawl] greenhouse:{board} FAILED: {str(e)[:120]}")
@@ -708,12 +713,16 @@ def collect():
     for site, company in LEVER_SITES.items():
         try:
             got = crawl_lever(site, company); items.extend(got)
+            if len(got) < MAX_PER_BOARD:
+                complete_sources.add(f"lever:{site}")
             print(f"[crawl] lever:{site}: +{len(got)}")
         except Exception as e:
             print(f"[crawl] lever:{site} FAILED: {str(e)[:120]}")
     for company_id, company in SMARTRECRUITERS_COMPANIES.items():
         try:
             got = crawl_smartrecruiters(company_id, company); items.extend(got)
+            if len(got) < MAX_PER_BOARD:
+                complete_sources.add(f"smartrecruiters:{company_id}")
             print(f"[crawl] smartrecruiters:{company_id}: +{len(got)}")
         except Exception as e:
             print(f"[crawl] smartrecruiters:{company_id} FAILED: {str(e)[:120]}")
@@ -722,6 +731,8 @@ def collect():
             continue
         try:
             got = crawl_partner_feed(url, source); items.extend(got)
+            if len(got) < MAX_PER_BOARD:
+                complete_sources.add(f"partner:{source}")
             print(f"[crawl] partner:{source}: +{len(got)}")
         except Exception as e:
             print(f"[crawl] partner:{source} FAILED: {str(e)[:120]}")
@@ -731,12 +742,12 @@ def collect():
         print(f"[crawl] casino-discovery: +{len(got)}")
     except Exception as e:
         print(f"[crawl] casino-discovery FAILED: {str(e)[:120]}")
-    return items
+    return (items, complete_sources) if with_metadata else items
 
 
-def upsert(db, Job, guess_category, items, approve=True):
-    """Записать/обновить вакансии в БД по (source, ext_id). Вернуть (added, updated)."""
-    added = updated = 0
+def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
+    """Upsert jobs and archive IDs missing from successfully fetched complete sources."""
+    added = updated = closed = 0
     seen = set()
     for it in items:
         key = (it["source"], it["ext_id"])
@@ -755,6 +766,7 @@ def upsert(db, Job, guess_category, items, approve=True):
             row.deadline = it.get("deadline", "") or row.deadline
             if row.status in ("archived", "rejected"):
                 row.status = "approved" if approve else "pending"
+                row.closed_at = ""
             updated += 1
         else:
             db.add(Job(title=it["title"], company_name=it["company_name"],
@@ -765,16 +777,25 @@ def upsert(db, Job, guess_category, items, approve=True):
                        posted_at=it.get("posted_at", ""), deadline=it.get("deadline", ""),
                        status="approved" if approve else "pending"))
             added += 1
+    for source in complete_sources or ():
+        active_ids = {it["ext_id"] for it in items if it["source"] == source and it["ext_id"]}
+        stale = (db.query(Job).filter(Job.source == source, Job.status == "approved")
+                 .filter(~Job.ext_id.in_(active_ids) if active_ids else Job.ext_id != "").all())
+        for row in stale:
+            row.status = "archived"
+            row.closed_at = datetime.utcnow().date().isoformat()
+            closed += 1
     db.commit()
-    return added, updated
+    return added, updated, closed
 
 
 def run(db, Job, guess_category, approve=True):
     if not _RUN_LOCK.acquire(blocking=False):
         return {"skipped": "already_running", "at": datetime.utcnow().isoformat()}
     try:
-        items = collect()
-        added, updated = upsert(db, Job, guess_category, items, approve=approve)
+        items, complete_sources = collect(with_metadata=True)
+        added, updated, closed = upsert(
+            db, Job, guess_category, items, approve=approve, complete_sources=complete_sources)
         profiles = company_snapshot(items)
         snapshot_path = Path(__file__).resolve().parent.parent / "data" / "companies.json"
         snapshot_path.write_text(json.dumps(profiles, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -785,11 +806,12 @@ def run(db, Job, guess_category, approve=True):
         save_status({
             "last_run": datetime.utcnow().isoformat() + "Z", "ok": True,
             "collected": len(items), "added": added, "updated": updated,
+            "closed": closed,
             "companies": len(profiles), "source_counts": source_counts,
         })
-        print(f"[crawl] готово: +{added} новых, {updated} обновлено, всего собрано {len(items)}")
+        print(f"[crawl] готово: +{added} новых, {updated} обновлено, {closed} закрыто, собрано {len(items)}")
         return {"collected": len(items), "added": added, "updated": updated,
-                "companies": len(profiles), "at": datetime.utcnow().isoformat()}
+                "closed": closed, "companies": len(profiles), "at": datetime.utcnow().isoformat()}
     finally:
         _RUN_LOCK.release()
 
