@@ -559,6 +559,14 @@ def r5(): return RedirectResponse("/jobs")
 
 JOBS_PER_PAGE = 100
 
+SEARCH_EQUIVALENTS = {
+    "менеджер": ("manager",),
+    "руководитель": ("manager", "head", "lead", "director"),
+    "аналитик": ("analyst", "analytics"),
+    "разработчик": ("developer", "engineer"),
+    "дизайнер": ("designer", "design"),
+}
+
 
 @app.get("/jobs", response_class=HTMLResponse)
 def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
@@ -576,8 +584,13 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
     if q:
         # регистронезависимо, включая кириллицу (SQLite LIKE не сворачивает регистр не-ASCII)
         ql = q.strip().lower()
+        terms = [ql]
+        for russian, english in SEARCH_EQUIVALENTS.items():
+            if ql == russian or ql.startswith(f"{russian} "):
+                terms.extend(english)
         jobs = [j for j in jobs
-                if ql in f"{j.title} {j.company_name} {j.tags} {j.location}".lower()]
+                if any(term in f"{j.title} {j.company_name} {j.tags} {j.location}".lower()
+                       for term in terms)]
     if salary_only:
         jobs = [j for j in jobs if j.has_salary]
 

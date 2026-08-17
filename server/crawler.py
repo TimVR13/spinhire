@@ -335,10 +335,29 @@ def crawl_smartrecruiters(company_id, company):
         loc_data = j.get("location") or {}
         loc = ", ".join(filter(None, [loc_data.get("city"), loc_data.get("country")]))
         dept = ((j.get("department") or {}).get("label") or "")
-        desc = _clean_html(" ".join(filter(None, [title, dept])))
+        detail = {}
+        try:
+            detail = json.loads(_fetch(
+                f"https://api.smartrecruiters.com/v1/companies/{company_id}/postings/{j.get('id')}"))
+        except Exception as e:
+            print(f"[crawl] smartrecruiters:{company_id}:{j.get('id')} detail FAILED: {str(e)[:100]}")
+        sections = (((detail.get("jobAd") or {}).get("sections") or {})
+                    if isinstance(detail, dict) else {})
+        description_parts = []
+        for section in sections.values():
+            if not isinstance(section, dict):
+                continue
+            heading = str(section.get("title") or "").strip()
+            text = str(section.get("text") or "").strip()
+            if text:
+                description_parts.append(f"{heading}\n{text}" if heading else text)
+        desc = _clean_html("\n\n".join(description_parts))
+        if not desc:
+            desc = _clean_html(" ".join(filter(None, [title, dept])))
+        source_url = detail.get("applyUrl") or j.get("ref", "")
         out.append({"title": title, "company_name": company, "location": loc,
                     "fmt": _fmt_from(loc, desc), "tags": _tags_from(f"{title} {dept}", desc),
-                    "description": desc, "source_url": j.get("ref", ""),
+                    "description": desc, "source_url": source_url,
                     "source": f"smartrecruiters:{company_id}", "ext_id": str(j.get("id", "")),
                     "salary": "по запросу", "posted_at": (j.get("releasedDate") or "")[:10], "deadline": ""})
     return out
