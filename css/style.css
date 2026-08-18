@@ -166,6 +166,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   line-height: 1; letter-spacing: -0.04em;
 }
 .logo__mark { width: 60px; height: 36px; flex: 0 0 60px; object-fit: contain; transition: transform .2s ease; }
+.site-header .logo__mark { width: 60px; height: 36px; flex-basis: 60px; }
 .logo:hover .logo__mark { transform: translateY(-1px); }
 .logo b { color: var(--acid); }
 .logo .dot-org { color: var(--ink-faint); font-size: 0.8em; font-weight: 700; }
@@ -484,7 +485,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   .site-header .container { height: 68px; gap: var(--sp-3); }
   .main-nav { top: 68px; }
   .logo { font-size: 1.2rem; gap: 8px; }
-  .logo__mark { width: 50px; height: 30px; flex-basis: 50px; }
+  .site-header .logo__mark { width: 50px; height: 30px; flex-basis: 50px; }
   .salary { font-size: 1rem; }
 }
 
