@@ -1,7 +1,6 @@
 (function () {
   'use strict';
 
-  const MEASUREMENT_ID = 'G-0W5XWDYPZ3';
   const CONSENT_KEY = 'spinhireConsent';
   const COOKIE_NAME = 'spinhire_consent';
   const CONSENT_FIELDS = {
@@ -28,18 +27,6 @@
     return match ? decodeURIComponent(match[1]) : '';
   };
 
-  let tagLoaded = false;
-  const loadGoogleTag = () => {
-    if (tagLoaded) return;
-    tagLoaded = true;
-    window.gtag('js', new Date());
-    window.gtag('config', MEASUREMENT_ID, { anonymize_ip: true, allow_google_signals: true });
-    const googleTag = document.createElement('script');
-    googleTag.async = true;
-    googleTag.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(MEASUREMENT_ID);
-    document.head.appendChild(googleTag);
-  };
-
   const savedConsent = readConsent();
   if (savedConsent === 'granted') {
     window.gtag('consent', 'update', {
@@ -48,7 +35,6 @@
       ad_user_data: 'granted',
       ad_personalization: 'granted'
     });
-    loadGoogleTag();
   }
 
   const copyFor = () => {
@@ -91,7 +77,6 @@
     });
     window.gtag('set', 'allow_google_signals', granted);
     remember(value);
-    if (granted) loadGoogleTag();
     document.querySelector('.consent-banner')?.remove();
   };
 
