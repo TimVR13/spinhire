@@ -96,6 +96,7 @@
       <div class="field"><label>Формат</label>
         <select class="select input" name="fmt">{% for f in formats %}<option>{{ f }}</option>{% endfor %}</select></div>
       <div class="field"><label>Локация</label><input class="input" name="location" placeholder="Лимассол / Мальта / удалёнка"></div>
+      <div class="field"><label>Язык работы *</label><select class="select input" name="languages" required><option value="">Выберите язык</option><option value="en">English</option><option value="uk">Українська</option><option value="ru">Русский</option><option value="de">Deutsch</option><option value="es">Español</option><option value="fr">Français</option><option value="pt">Português</option><option value="pl">Polski</option></select></div>
     </div>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 14px;">
       <div class="field"><label>Зарплата от *</label><input class="input" name="salary_from" type="number" required placeholder="3500"></div>

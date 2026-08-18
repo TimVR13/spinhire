@@ -136,8 +136,21 @@ class Job(Base):
     applications = relationship("Application", back_populates="job", cascade="all, delete-orphan")
 
     @property
+    def language_list(self):
+        """Языки работы из явных тегов и текста вакансии."""
+        text_value = f"{self.title} {self.tags} {self.description}".lower()
+        found = []
+        for code, label, aliases in JOB_LANGUAGES:
+            if any((re.search(rf"(?<![a-z]){re.escape(alias)}(?![a-z])", text_value)
+                    if alias.isascii() else alias in text_value) for alias in aliases):
+                found.append((code, label))
+        return found
+
+    @property
     def tag_list(self):
-        return [t.strip() for t in self.tags.split(",") if t.strip()][:3]
+        language_labels = {label.lower() for _, label, _ in JOB_LANGUAGES}
+        return [t.strip() for t in self.tags.split(",")
+                if t.strip() and t.strip().lower() not in language_labels][:3]
 
     @property
     def has_salary(self):
@@ -824,10 +837,21 @@ SEARCH_EQUIVALENTS = {
     "дизайнер": ("designer", "design"),
 }
 
+JOB_LANGUAGES = (
+    ("en", "English", ("english", "английск", "англійськ")),
+    ("uk", "Українська", ("ukrainian", "українськ", "украинск")),
+    ("ru", "Русский", ("russian", "русск", "російськ")),
+    ("de", "Deutsch", ("german", "deutsch", "немецк", "німецьк")),
+    ("es", "Español", ("spanish", "español", "испанск", "іспанськ")),
+    ("fr", "Français", ("french", "français", "французск", "французьк")),
+    ("pt", "Português", ("portuguese", "português", "португальск", "португальськ")),
+    ("pl", "Polski", ("polish", "польск", "польськ")),
+)
+
 
 @app.get("/jobs", response_class=HTMLResponse)
 def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
-              loc: str = "", salary_only: int = 0, page: int = 1,
+              loc: str = "", lang: str = "", salary_only: int = 0, page: int = 1,
               db: Session = Depends(db_session)):
     base = db.query(Job).filter(Job.status == "approved")
     qs = base
@@ -850,6 +874,8 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
                        for term in terms)]
     if salary_only:
         jobs = [j for j in jobs if j.has_salary]
+    if lang:
+        jobs = [j for j in jobs if lang in {code for code, _ in j.language_list}]
 
     # список локаций для выпадающего фильтра (страна/город)
     locations = sorted({j.location for j in base.all() if j.location})
@@ -862,11 +888,12 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
 
     from urllib.parse import urlencode
     active = {k: v for k, v in (("q", q), ("fmt", fmt), ("cat", cat),
-              ("loc", loc), ("salary_only", salary_only or "")) if v}
+              ("loc", loc), ("lang", lang), ("salary_only", salary_only or "")) if v}
     qs_base = urlencode(active)
 
     return render(request, db, "jobs.html", jobs=page_jobs, q=q, fmt=fmt, cat=cat,
-                  loc=loc, salary_only=salary_only, formats=FORMATS, categories=CATEGORIES,
+                  loc=loc, lang=lang, salary_only=salary_only, formats=FORMATS, categories=CATEGORIES,
+                  job_languages=JOB_LANGUAGES,
                   locations=locations, page=page, total_pages=total_pages, found=found,
                   qs_base=qs_base,
                   total=base.count())
@@ -1922,8 +1949,8 @@ def employer_job_edit(job_id: int, request: Request, db: Session = Depends(db_se
 def employer_job_save(job_id: int, request: Request, title: str = Form(...),
                       category: str = Form(""), location: str = Form(""),
                       fmt: str = Form("удалёнка"), salary: str = Form(""),
-                      tags: str = Form(""), description: str = Form(""),
-                      db: Session = Depends(db_session)):
+                      tags: str = Form(""), languages: str = Form(""),
+                      description: str = Form(""), db: Session = Depends(db_session)):
     user, _, _ = require_company_user(request, db, write=True)
     job = employer_job_or_404(job_id, user, db)
     if not title.strip() or not description.strip() or not any(char.isdigit() for char in salary):
@@ -1933,7 +1960,8 @@ def employer_job_save(job_id: int, request: Request, title: str = Form(...),
     job.location = location.strip()[:180]
     job.fmt = fmt if fmt in FORMATS else "удалёнка"
     job.salary = salary.strip()[:180]
-    job.tags = tags.strip()[:1000]
+    language_label = next((label for code, label, _ in JOB_LANGUAGES if code == languages), "")
+    job.tags = ", ".join(filter(None, (tags.strip()[:1000], language_label)))
     job.description = description.strip()
     if job.status == "approved":
         job.status = "pending"
@@ -1965,7 +1993,7 @@ def post_job_page(request: Request, db: Session = Depends(db_session)):
 def post_job(request: Request, title: str = Form(...), category: str = Form(""),
              location: str = Form(""), fmt: str = Form("удалёнка"),
              salary_from: str = Form(""), salary_to: str = Form(""),
-             currency: str = Form("EUR net"), tags: str = Form(""),
+             currency: str = Form("EUR net"), tags: str = Form(""), languages: str = Form(""),
              description: str = Form(""), db: Session = Depends(db_session)):
     user = get_user(request, db)
     if not user or user.role == "talent":
@@ -1987,6 +2015,8 @@ def post_job(request: Request, title: str = Form(...), category: str = Form(""),
         return err("«Зарплата от» не может быть больше «до».")
     if not title.strip():
         return err("Укажите название вакансии.")
+    if languages not in {code for code, _, _ in JOB_LANGUAGES}:
+        return err("Укажите язык работы для вакансии.")
 
     unit = currency.split()[1] if " " in currency else ""
     if currency.startswith("USDT"):
@@ -1995,11 +2025,13 @@ def post_job(request: Request, title: str = Form(...), category: str = Form(""),
         salary = f"${s_from}–{s_to} {unit}".strip()
     else:
         salary = f"€{s_from}–{s_to} {unit}".strip()
+    language_label = next((label for code, label, _ in JOB_LANGUAGES if code == languages), "")
+    normalized_tags = ", ".join(filter(None, (tags.strip(), language_label)))
     db.add(Job(title=title.strip(),
                company_name=account.company_name or account.name or account.email,
                category=category or guess_category(title, tags),
                location=location.strip(), fmt=fmt, salary=salary,
-               tags=tags.strip(), description=description.strip(),
+               tags=normalized_tags, description=description.strip(),
                owner_id=account.id, status="pending"))
     db.commit()
     return render(request, db, "post_job.html", categories=CATEGORIES, formats=FORMATS,
@@ -2192,7 +2224,7 @@ def admin_job_edit(job_id: int, request: Request, db: Session = Depends(db_sessi
 def admin_job_save(job_id: int, request: Request, title: str = Form(...),
                    company_name: str = Form(""), category: str = Form(""),
                    location: str = Form(""), fmt: str = Form("удалёнка"),
-                   salary: str = Form(""), tags: str = Form(""),
+                   salary: str = Form(""), tags: str = Form(""), languages: str = Form(""),
                    description: str = Form(""), db: Session = Depends(db_session)):
     need_admin(request, db)
     job = db.get(Job, job_id)
@@ -2201,7 +2233,9 @@ def admin_job_save(job_id: int, request: Request, title: str = Form(...),
     job.title, job.company_name = title.strip(), company_name.strip()
     job.category, job.location, job.fmt = category, location.strip(), fmt
     job.salary = salary.strip() or "по запросу"
-    job.tags, job.description = tags.strip(), description.strip()
+    language_label = next((label for code, label, _ in JOB_LANGUAGES if code == languages), "")
+    job.tags = ", ".join(filter(None, (tags.strip(), language_label)))
+    job.description = description.strip()
     db.commit()
     return RedirectResponse("/admin?tab=jobs", status_code=303)
 

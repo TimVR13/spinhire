@@ -2,7 +2,7 @@
 {% set active = 'jobs' %}
 {% block title %}Вакансии iGaming — {{ total }} живых вакансий | SpinHire{% endblock %}
 {% block desc %}Живые вакансии iGaming из базы SpinHire: фильтры по формату, направлению и зарплате.{% endblock %}
-{% block robots %}{% if q or fmt or cat or loc or salary_only %}<meta name="robots" content="noindex,follow">
+{% block robots %}{% if q or fmt or cat or loc or lang or salary_only %}<meta name="robots" content="noindex,follow">
 <link rel="canonical" href="https://spinhire.io/jobs">{% elif page > 1 %}<link rel="canonical" href="https://spinhire.io/jobs?page={{ page }}">{% else %}<link rel="canonical" href="https://spinhire.io/jobs">{% endif %}
 <meta property="og:type" content="website">
 <meta property="og:title" content="Вакансии iGaming — {{ found }} живых | SpinHire">
@@ -27,7 +27,7 @@
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Вакансии</nav>
   <span class="kicker">Живая база</span>
-  <h1 style="font-size: clamp(1.6rem, 3vw, 2.2rem); margin-top: 8px;">Вакансии iGaming — {{ found }}{% if q or fmt or cat or loc or salary_only %} по фильтрам{% endif %}</h1>
+  <h1 style="font-size: clamp(1.6rem, 3vw, 2.2rem); margin-top: 8px;" data-i18n-prefix="jobsCount">Вакансии iGaming — {{ found }}{% if q or fmt or cat or loc or lang or salary_only %} по фильтрам{% endif %}</h1>
 
   <form class="filter-bar" method="get" action="/jobs" role="search">
     <input class="input" type="search" name="q" value="{{ q }}" placeholder="Должность, компания, тег…" aria-label="Поиск вакансий">
@@ -43,9 +43,13 @@
       <option value="">Все направления</option>
       {% for c in categories %}<option value="{{ c }}" {% if cat == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
     </select>
+    <select class="select input" name="lang" aria-label="Язык работы">
+      <option value="">Любой язык</option>
+      {% for code, label, aliases in job_languages %}<option value="{{ code }}" {% if lang == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
     <label class="check"><input type="checkbox" name="salary_only" value="1" {% if salary_only %}checked{% endif %}> с вилкой</label>
     <button class="btn btn-acid btn-sm" type="submit">Найти</button>
-    {% if q or fmt or cat or loc or salary_only %}<a class="tag" href="/jobs">Сбросить</a>{% endif %}
+    {% if q or fmt or cat or loc or lang or salary_only %}<a class="tag" href="/jobs">Сбросить</a>{% endif %}
   </form>
 
   <div class="jobs-list">
@@ -60,6 +64,7 @@
         <div class="job-card__tags">
           {% if j.category %}<span class="tag">{{ j.category }}</span>{% endif %}
           {% for t in j.tag_list %}<span class="tag">{{ t }}</span>{% endfor %}
+          {% for code, label in j.language_list %}<span class="tag tag-acid" title="Язык работы">{{ label }}</span>{% endfor %}
           {% if j.source and j.source != 'ручная' %}<span class="tag" style="color: var(--ink-faint);" title="Агрегировано из {{ j.source }}">↗ агрегатор</span>{% endif %}
         </div>
       </div>

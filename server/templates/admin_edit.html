@@ -13,6 +13,8 @@
         <select class="select input" name="category">{% for c in categories %}<option {% if job.category == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
       <div class="field"><label>Формат</label>
         <select class="select input" name="fmt">{% for f in formats %}<option {% if job.fmt == f %}selected{% endif %}>{{ f }}</option>{% endfor %}</select></div>
+      {% set selected_language = job.language_list[0][0] if job.language_list else '' %}
+      <div class="field"><label>Язык работы</label><select class="select input" name="languages"><option value="">Не указан</option><option value="en" {% if selected_language == 'en' %}selected{% endif %}>English</option><option value="uk" {% if selected_language == 'uk' %}selected{% endif %}>Українська</option><option value="ru" {% if selected_language == 'ru' %}selected{% endif %}>Русский</option><option value="de" {% if selected_language == 'de' %}selected{% endif %}>Deutsch</option><option value="es" {% if selected_language == 'es' %}selected{% endif %}>Español</option><option value="fr" {% if selected_language == 'fr' %}selected{% endif %}>Français</option><option value="pt" {% if selected_language == 'pt' %}selected{% endif %}>Português</option><option value="pl" {% if selected_language == 'pl' %}selected{% endif %}>Polski</option></select></div>
     </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
       <div class="field"><label>Локация</label><input class="input" name="location" value="{{ job.location }}"></div>

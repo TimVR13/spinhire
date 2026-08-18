@@ -1,6 +1,68 @@
 // iHiring.org — shared prototype behavior
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Единый переключатель интерфейса для статических страниц и серверных шаблонов.
+  const UI_LANGS = ['ru', 'uk', 'en'];
+  const uiLang = UI_LANGS.includes(localStorage.getItem('uiLanguage')) ? localStorage.getItem('uiLanguage') : 'ru';
+  const UI_COPY = {
+    uk: {
+      'Вакансии':'Вакансії','Резюме':'Резюме','Компании':'Компанії','Блог':'Блог','Работодателям':'Роботодавцям',
+      'Войти':'Увійти','Выйти':'Вийти','Добавить CV':'Додати CV','+ Добавить CV':'+ Додати CV','Мой профиль':'Мій профіль',
+      'Кандидатам':'Кандидатам','Анонимные резюме':'Анонімні резюме','Гид по зарплатам':'Гід із зарплат','Игровая зона':'Ігрова зона','🎡 Игровая зона':'🎡 Ігрова зона','Карьерный блог':'Кар’єрний блог',
+      'Разместить вакансию':'Розмістити вакансію','Кабинет работодателя':'Кабінет роботодавця','Тарифы':'Тарифи','База резюме':'База резюме','О проекте':'Про проєкт','О нас':'Про нас','Методология':'Методологія','Контакты':'Контакти','Конфиденциальность':'Конфіденційність','Условия':'Умови','Правила игр':'Правила ігор',
+      'Главная':'Головна','Живая база':'Жива база','Онлайн / офис — любой':'Онлайн / офіс — будь-який','Любая страна / город':'Будь-яка країна / місто','Все направления':'Усі напрями','Любой язык':'Будь-яка мова','с вилкой':'із зарплатною вилкою','Найти':'Знайти','Сбросить':'Скинути',
+      'по запросу':'за запитом','Пусто по этим фильтрам':'За цими фільтрами порожньо','Назад':'Назад','Вперёд':'Далі','Описание':'Опис','Похожие вакансии':'Схожі вакансії','О вакансии':'Про вакансію','Компания':'Компанія','Направление':'Напрям','Формат':'Формат','Локация':'Локація','Зарплата':'Зарплата','Размещена':'Розміщена','Дедлайн':'Дедлайн','Статус':'Статус','Откликнуться':'Відгукнутися','Язык работы':'Мова роботи','Выберите язык':'Оберіть мову','Не указан':'Не вказано',
+      '▮ Описание':'▮ Опис','▮ Похожие вакансии':'▮ Схожі вакансії','Отклик на вакансию':'Відгук на вакансію','Откликнуться →':'Відгукнутися →','Войти и откликнуться →':'Увійти та відгукнутися →','Откликнуться через SpinHire →':'Відгукнутися через SpinHire →','Откликнуться у работодателя ↗':'Відгукнутися у роботодавця ↗','Войти как соискатель':'Увійти як кандидат','Смотреть актуальные вакансии →':'Дивитися актуальні вакансії →','Должность, компания, тег…':'Посада, компанія, тег…','Поиск вакансий':'Пошук вакансій','Страна и город':'Країна та місто',
+      'удалёнка':'віддалено','удалёнка ЕС':'віддалено в ЄС','гибрид':'гібрид','офис':'офіс','Топ-менеджмент':'Топменеджмент','Разработка игр':'Розробка ігор','Маркетинг и CRM':'Маркетинг і CRM','Саппорт (языки)':'Підтримка (мови)'
+    },
+    en: {
+      'Вакансии':'Jobs','Резюме':'Resumes','Компании':'Companies','Блог':'Blog','Работодателям':'For employers',
+      'Войти':'Log in','Выйти':'Log out','Добавить CV':'Add CV','+ Добавить CV':'+ Add CV','Мой профиль':'My profile',
+      'Кандидатам':'For candidates','Анонимные резюме':'Anonymous resumes','Гид по зарплатам':'Salary guide','Игровая зона':'Game zone','🎡 Игровая зона':'🎡 Game zone','Карьерный блог':'Career blog',
+      'Разместить вакансию':'Post a job','Кабинет работодателя':'Employer dashboard','Тарифы':'Pricing','База резюме':'Resume database','О проекте':'About','О нас':'About us','Методология':'Methodology','Контакты':'Contacts','Конфиденциальность':'Privacy','Условия':'Terms','Правила игр':'Game rules',
+      'Главная':'Home','Живая база':'Live database','Онлайн / офис — любой':'Remote / office — any','Любая страна / город':'Any country / city','Все направления':'All categories','Любой язык':'Any language','с вилкой':'salary shown','Найти':'Search','Сбросить':'Reset',
+      'по запросу':'on request','Пусто по этим фильтрам':'No jobs match these filters','Назад':'Back','Вперёд':'Next','Описание':'Description','Похожие вакансии':'Similar jobs','О вакансии':'About this job','Компания':'Company','Направление':'Category','Формат':'Work format','Локация':'Location','Зарплата':'Salary','Размещена':'Posted','Дедлайн':'Deadline','Статус':'Status','Откликнуться':'Apply','Язык работы':'Working language','Выберите язык':'Select a language','Не указан':'Not specified',
+      '▮ Описание':'▮ Description','▮ Похожие вакансии':'▮ Similar jobs','Отклик на вакансию':'Apply for this job','Откликнуться →':'Apply →','Войти и откликнуться →':'Log in and apply →','Откликнуться через SpinHire →':'Apply via SpinHire →','Откликнуться у работодателя ↗':'Apply on employer site ↗','Войти как соискатель':'Log in as candidate','Смотреть актуальные вакансии →':'View open jobs →','Должность, компания, тег…':'Job title, company, tag…','Поиск вакансий':'Search jobs','Страна и город':'Country and city',
+      'удалёнка':'remote','удалёнка ЕС':'remote in EU','гибрид':'hybrid','офис':'office','Топ-менеджмент':'Executive','Разработка игр':'Game development','Маркетинг и CRM':'Marketing & CRM','Саппорт (языки)':'Customer support (languages)'
+    }
+  };
+  const translateInterface = lang => {
+    document.documentElement.lang = lang;
+    if (lang === 'ru') return;
+    const dict = UI_COPY[lang];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) {
+      const parent = walker.currentNode.parentElement;
+      if (parent && !parent.closest('script, style, textarea')) nodes.push(walker.currentNode);
+    }
+    nodes.forEach(node => {
+      const raw = node.nodeValue, key = raw.trim();
+      if (dict[key]) node.nodeValue = raw.replace(key, dict[key]);
+    });
+    document.querySelectorAll('[placeholder],[aria-label],[title]').forEach(el => {
+      ['placeholder','aria-label','title'].forEach(attr => {
+        const value = el.getAttribute(attr); if (value && dict[value]) el.setAttribute(attr, dict[value]);
+      });
+    });
+    document.querySelectorAll('[data-i18n-prefix="jobsCount"]').forEach(el => {
+      const count = (el.textContent.match(/\d+/) || ['0'])[0];
+      el.textContent = lang === 'uk' ? `Вакансії iGaming — ${count}` : `iGaming jobs — ${count}`;
+    });
+  };
+  const languageHost = document.querySelector('.header-actions');
+  if (languageHost && !languageHost.querySelector('.language-switcher')) {
+    const switcher = document.createElement('div');
+    switcher.className = 'language-switcher'; switcher.setAttribute('aria-label', 'Language');
+    switcher.innerHTML = UI_LANGS.map(code => `<button type="button" data-ui-language="${code}" class="${code === uiLang ? 'is-active' : ''}">${code === 'uk' ? 'UA' : code.toUpperCase()}</button>`).join('');
+    languageHost.prepend(switcher);
+    switcher.addEventListener('click', event => {
+      const button = event.target.closest('[data-ui-language]'); if (!button) return;
+      localStorage.setItem('uiLanguage', button.dataset.uiLanguage); location.reload();
+    });
+  }
+  setTimeout(() => translateInterface(uiLang), 0);
+
   // Единый выпадающий список SpinHire вместо системного меню браузера.
   const customSelects = [];
   const closeSelect = (item, restoreFocus = false) => {
