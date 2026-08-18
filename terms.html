@@ -23,7 +23,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <style>
-  .legal { max-width: 76ch; padding-block: var(--sp-6) var(--sp-8); }
+  .legal { width: min(100%, 76ch); margin-inline: auto; padding-block: var(--sp-6) var(--sp-8); }
   .legal h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); margin-bottom: var(--sp-3); }
   .legal .upd { color: var(--ink-faint); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; margin-bottom: var(--sp-6); }
   .legal h2 { font-size: 1.15rem; color: var(--acid); margin: var(--sp-6) 0 var(--sp-3); }
@@ -127,6 +127,7 @@
     </div>
   </div>
 </footer>
+<script src="js/legal-pages.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
