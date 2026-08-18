@@ -3,13 +3,13 @@
    ============================================================ */
 
 :root {
-  /* palette — premium near-black, restrained accent (неон живёт в 3D-картинках, не в интерфейсе) */
-  --bg: oklch(0.11 0.006 285);
-  --bg-deep: oklch(0.08 0.005 285);
-  --surface: oklch(0.15 0.008 285);
-  --surface-2: oklch(0.19 0.01 285);
-  --line: oklch(0.27 0.008 285);
-  --line-strong: oklch(0.46 0.01 285);  /* границы контролов — WCAG 1.4.11 (3:1) */
+  /* graphite-green neutrals: dark, but never a flat black void */
+  --bg: oklch(0.145 0.012 170);
+  --bg-deep: oklch(0.105 0.010 175);
+  --surface: oklch(0.185 0.014 170);
+  --surface-2: oklch(0.225 0.016 170);
+  --line: oklch(0.31 0.018 170);
+  --line-strong: oklch(0.49 0.022 170);  /* границы контролов — WCAG 1.4.11 (3:1) */
   --ink: oklch(0.96 0.005 285);
   --ink-dim: oklch(0.74 0.008 285);
   --ink-faint: oklch(0.63 0.008 285);   /* AA (~5:1) для мелкого текста */
@@ -66,7 +66,11 @@ body {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
-  background-image: radial-gradient(circle at 15% -10%, oklch(0.23 0.035 162 / 0.16), transparent 34rem);
+  background-image:
+    radial-gradient(circle at 12% 2%, oklch(0.42 0.10 162 / 0.16), transparent 31rem),
+    radial-gradient(circle at 88% 32%, oklch(0.34 0.08 350 / 0.07), transparent 30rem),
+    linear-gradient(135deg, oklch(0.16 0.018 170), var(--bg) 46%, oklch(0.13 0.014 205));
+  background-size: auto, auto, 100% 100%;
   background-attachment: fixed;
 }
 
@@ -410,7 +414,11 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 .role-switch button.active { background: var(--acid); color: var(--on-acid); }
 
 /* ---------- misc ---------- */
-.section { padding-block: var(--sp-8); }
+.section { padding-block: var(--sp-8); position: relative; }
+main > .section:nth-of-type(even) {
+  background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--surface) 62%, transparent) 18%, color-mix(in oklch, var(--surface) 62%, transparent) 82%, transparent);
+  border-block: 1px solid color-mix(in oklch, var(--acid) 9%, transparent);
+}
 .section-head { display: flex; justify-content: space-between; align-items: end; gap: var(--sp-5); margin-bottom: var(--sp-6); }
 .section-head h2 { max-width: 22ch; }
 .link-more { font-weight: 700; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.06em; color: var(--acid); text-decoration: none; white-space: nowrap; }
@@ -499,35 +507,55 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
    Светлая тема (переключатель — плавающая кнопка, app.js)
    ============================================================ */
 :root[data-theme="light"] {
-  --bg: oklch(0.975 0.004 285);
-  --bg-deep: oklch(0.93 0.004 285);
-  --surface: oklch(1 0 0);
-  --surface-2: oklch(0.965 0.004 285);
-  --line: oklch(0.89 0.006 285);
-  --line-strong: oklch(0.74 0.008 285);
-  --ink: oklch(0.21 0.01 285);
-  --ink-dim: oklch(0.40 0.01 285);
-  --ink-faint: oklch(0.48 0.012 285);
-  --acid: oklch(0.52 0.15 162);          /* акцент, читается как текст на светлом */
-  --acid-deep: oklch(0.44 0.13 164);
-  --emerald: oklch(0.52 0.14 162);
-  --pink: oklch(0.55 0.24 352);
+  --bg: oklch(0.965 0.014 155);
+  --bg-deep: oklch(0.915 0.020 160);
+  --surface: oklch(0.988 0.008 155);
+  --surface-2: oklch(0.942 0.018 158);
+  --line: oklch(0.84 0.025 160);
+  --line-strong: oklch(0.65 0.035 165);
+  --ink: oklch(0.23 0.025 170);
+  --ink-dim: oklch(0.39 0.028 170);
+  --ink-faint: oklch(0.49 0.026 170);
+  --acid: oklch(0.50 0.15 162);          /* акцент, читается как текст на светлом */
+  --acid-deep: oklch(0.40 0.13 164);
+  --emerald: oklch(0.49 0.14 162);
+  --pink: oklch(0.53 0.23 352);
   --violet: oklch(0.5 0.2 300);
   --yellow: oklch(0.62 0.14 80);
-  --on-acid: oklch(0.99 0 0);
-  --on-pink: oklch(0.99 0 0);
-  --shadow-dark: 0 8px 24px oklch(0.45 0.02 285 / 0.10);
+  --on-acid: oklch(0.985 0.006 155);
+  --on-pink: oklch(0.985 0.006 350);
+  --shadow-dark: 0 10px 30px oklch(0.35 0.045 170 / 0.13);
   --shadow-acid: 0 8px 24px oklch(0.52 0.15 162 / 0.18);
   --shadow-pink: 0 8px 24px oklch(0.55 0.24 352 / 0.16);
 }
-:root[data-theme="light"] body { background-image: radial-gradient(circle at 15% -10%, oklch(0.75 0.08 162 / 0.16), transparent 34rem); }
+:root[data-theme="light"] body {
+  background-image:
+    radial-gradient(circle at 12% 0%, oklch(0.82 0.11 155 / 0.30), transparent 34rem),
+    radial-gradient(circle at 92% 38%, oklch(0.86 0.08 350 / 0.20), transparent 31rem),
+    linear-gradient(145deg, oklch(0.98 0.012 155), var(--bg) 55%, oklch(0.95 0.018 195));
+}
 /* кнопки: яркая заливка с тёмным текстом даже на светлой теме */
-:root[data-theme="light"] .btn-acid { background: var(--acid); color: #fff; }
-:root[data-theme="light"] .btn-pink { background: oklch(0.62 0.26 352); color: #fff; }
+:root[data-theme="light"] .btn-acid { background: var(--acid); color: var(--on-acid); }
+:root[data-theme="light"] .btn-pink { background: oklch(0.60 0.25 352); color: var(--on-pink); }
 :root[data-theme="light"] .logo b { color: var(--acid-deep); }
 :root[data-theme="light"] .tag-acid { background: color-mix(in oklch, var(--acid) 14%, transparent); }
-:root[data-theme="light"] .tag-hot { background: oklch(0.62 0.26 352); color: #fff; }
+:root[data-theme="light"] .tag-hot { background: oklch(0.60 0.25 352); color: var(--on-pink); }
 :root[data-theme="light"] .cat-ico { background: color-mix(in oklch, var(--acid) 14%, transparent); }
+:root[data-theme="light"] .card,
+:root[data-theme="light"] .job-card,
+:root[data-theme="light"] .cat-card,
+:root[data-theme="light"] .company-tile,
+:root[data-theme="light"] .post-card {
+  box-shadow: 0 10px 30px oklch(0.40 0.045 170 / 0.08);
+}
+:root[data-theme="light"] .site-header {
+  background: color-mix(in oklch, var(--surface) 88%, transparent);
+  border-bottom-color: color-mix(in oklch, var(--acid) 22%, var(--line));
+}
+:root[data-theme="light"] main > .section:nth-of-type(even) {
+  background: linear-gradient(90deg, transparent, oklch(0.99 0.012 155 / .72) 18%, oklch(0.99 0.012 155 / .72) 82%, transparent);
+  border-block-color: color-mix(in oklch, var(--acid) 16%, transparent);
+}
 /* герой — всегда тёмный шоукейс-баннер (в нём 3D-картинка): текст светлый */
 :root[data-theme="light"] .hero { color: oklch(0.96 0.005 285); }
 :root[data-theme="light"] .hero h1 { color: oklch(0.97 0.005 285); }
