@@ -203,18 +203,26 @@
   .hp-slot__msg { color: var(--ink-dim); margin: 8px 0 14px; min-height: 1.4em; }
   .hp-slot__btns { display: flex; gap: 10px; flex-wrap: wrap; }
   .hp-controls { position:relative; z-index:1; display:flex; flex-direction:column; align-items:flex-start; gap:16px; }
+  .hp-section-head { margin-bottom:var(--sp-5); max-width:900px; }
+  .hp-section-head h2 { margin-top:8px; font-size:clamp(1.65rem,3.4vw,3rem); }
   .hp-balance { font-family:var(--font-display); font-size:clamp(1.35rem,3vw,2rem); font-weight:800; }
   .hp-balance b { color:var(--acid); }
-  .hp-rules { color:var(--ink-dim); font-size:.85rem; text-underline-offset:4px; }
-  .hp-rules:hover { color:var(--acid); }
-  .hp-links { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
-  .hp-games-link { color:var(--acid); font-weight:800; font-size:.88rem; text-decoration:none; }
-  .hp-games-link:hover { color:var(--ink); }
+  .hp-links { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .hp-games-link,.hp-rules { min-height:42px; display:inline-flex; align-items:center; justify-content:center; padding:10px 16px; border-radius:9px; font-size:.78rem; font-weight:900; letter-spacing:.08em; text-decoration:none; }
+  .hp-games-link { background:var(--acid); border:1px solid var(--acid); color:var(--on-acid); }
+  .hp-games-link:hover { background:var(--ink); border-color:var(--ink); color:var(--bg-deep); }
+  .hp-rules { border:1px solid var(--line-strong); color:var(--ink-dim); }
+  .hp-rules:hover { border-color:var(--pink); color:var(--pink); }
   .hp-bets { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .hp-bets>span { color:var(--ink-faint); font-size:.72rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; margin-right:4px; }
   .hp-bet { min-width:54px; height:40px; border:1px solid var(--line-strong); border-radius:9px; background:var(--bg-deep); color:var(--ink-dim); font-weight:800; }
   .hp-bet:hover { border-color:var(--acid); color:var(--acid); }
   .hp-bet.active { background:var(--acid); border-color:var(--acid); color:var(--on-acid); box-shadow:0 7px 20px color-mix(in oklch,var(--acid) 24%,transparent); }
+  .hp-custom-bet { display:flex; align-items:center; gap:6px; margin-left:4px; }
+  .hp-custom-bet input { width:104px; height:40px; border:1px solid var(--line-strong); border-radius:9px; background:var(--bg-deep); color:var(--ink); padding:0 10px; font-weight:800; }
+  .hp-custom-bet input:focus { outline:2px solid var(--acid); outline-offset:2px; }
+  .hp-custom-bet button { height:40px; border:1px solid var(--line-strong); border-radius:9px; padding:0 12px; background:var(--surface-2); color:var(--ink); font-weight:800; }
+  .hp-custom-bet button:hover { border-color:var(--acid); color:var(--acid); }
   .hp-paytable { display:grid; grid-template-columns:auto auto; gap:6px 22px; padding-top:15px; border-top:1px solid var(--line); color:var(--ink-faint); font-size:.78rem; min-width:min(100%,300px); }
   .hp-paytable b { color:var(--ink-dim); font-weight:700; }
   .hp-paytable span:nth-child(even) { text-align:right; color:var(--acid); font-variant-numeric:tabular-nums; }
@@ -448,6 +456,10 @@
   <!-- ИГРОВАЯ ЗОНА -->
   <section class="section" style="padding-top: 0;">
     <div class="container">
+      <div class="hp-section-head">
+        <span class="kicker">Игровая зона SpinHire</span>
+        <h2>Крути, копи SC и забирай призы</h2>
+      </div>
       <div class="hp-slot" id="play">
         <div class="hp-machine-wrap">
           <div class="hp-machine">
@@ -462,13 +474,16 @@
         </div>
         <div class="hp-controls">
           <div class="hp-balance">Баланс: <b id="hpSc">100</b> SC</div>
-          <div class="hp-bets" role="group" aria-label="Ставка"><span>Ставка</span><button class="hp-bet active" data-bet="10">10</button><button class="hp-bet" data-bet="20">20</button><button class="hp-bet" data-bet="50">50</button></div>
+          <div class="hp-bets" role="group" aria-label="Ставка">
+            <span>Ставка</span><button class="hp-bet active" data-bet="10">10</button><button class="hp-bet" data-bet="20">20</button><button class="hp-bet" data-bet="50">50</button>
+            <div class="hp-custom-bet"><input id="hpCustomBet" type="number" min="1" max="1000" step="1" inputmode="numeric" placeholder="Своя ставка" aria-label="Своя ставка в SC"><button id="hpSetBet" type="button">Выбрать</button></div>
+          </div>
           <p class="hp-slot__msg" id="hpMsg" aria-live="polite"></p>
           <button class="btn btn-acid btn-lg" id="hpSpin">Крутить · −10 SC</button>
           <div class="hp-paytable"><b>3 одинаковых в строке</b><span>×5 ставки</span><b>Пара в строке</b><span>×0,5 ставки</span><b>Считаем</b><span>3 строки</span></div>
           <div class="hp-links">
-            <a class="hp-games-link" href="games.html">Все игры в игровой зоне →</a>
-            <a class="hp-rules" href="game-rules.html">Правила</a>
+            <a class="hp-games-link" href="games.html">ВСЕ ИГРЫ →</a>
+            <a class="hp-rules" href="game-rules.html">ПРАВИЛА</a>
           </div>
         </div>
       </div>
@@ -779,6 +794,7 @@
   const cells = [...box.querySelectorAll('.hp-cell img')];
   const scEl = document.getElementById('hpSc'), msg = document.getElementById('hpMsg'), btn = document.getElementById('hpSpin');
   const lever = document.getElementById('hpLever'), betBtns = [...document.querySelectorAll('.hp-bet')];
+  const customBet = document.getElementById('hpCustomBet'), setBetBtn = document.getElementById('hpSetBet');
   const SYMS = ['sym-seven', 'sym-cherry', 'sym-bell', 'sym-crown', 'sym-diamond', 'sym-star', 'sym-bar', 'sym-horseshoe'];
   let sc = parseInt(localStorage.getItem('spinCoins') || '100', 10);
   let bet = parseInt(localStorage.getItem('spinBet') || '10', 10);
@@ -787,12 +803,16 @@
   let busy = false;
   function setBet(next) {
     if (busy) return;
-    bet = next; localStorage.setItem('spinBet', String(bet));
+    bet = Math.max(1, Math.min(1000, Math.round(Number(next) || 1))); localStorage.setItem('spinBet', String(bet));
     betBtns.forEach(b => b.classList.toggle('active', Number(b.dataset.bet) === bet));
-    btn.textContent = 'Крутить · −' + bet + ' SC';
+    if (customBet && !betBtns.some(b => Number(b.dataset.bet) === bet)) customBet.value = bet;
+    const lang = document.documentElement.lang;
+    btn.textContent = (lang === 'uk' ? 'Крутити' : lang === 'en' ? 'Spin' : 'Крутить') + ' · −' + bet + ' SC';
   }
-  setBet(betBtns.some(b => Number(b.dataset.bet) === bet) ? bet : 10);
+  setBet(bet);
   betBtns.forEach(b => b.addEventListener('click', () => setBet(Number(b.dataset.bet))));
+  setBetBtn.addEventListener('click', () => setBet(customBet.value));
+  customBet.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); setBet(customBet.value); } });
   function spin() {
     if (busy) return;
     if (sc < bet) { msg.innerHTML = 'Недостаточно SC — <a href="/register" style="color:var(--acid);font-weight:700">получить ещё</a>'; return; }
