@@ -39,19 +39,15 @@
   }
   .post-card:hover { border-color: var(--acid); transform: translate(-3px,-3px); box-shadow: var(--shadow-dark); }
   .post-card__cover {
-    height: 150px; display: grid; place-items: center;
+    width: 100%; aspect-ratio: 16 / 9; display: grid; place-items: center;
     font-size: 3rem; border-bottom: 2px solid var(--line);
     font-family: var(--font-display);
   }
-  img.post-card__cover { width: 100%; object-fit: cover; display: block; }
-  .post-card.featured img.post-card__cover { height: 230px; }
+  img.post-card__cover { height: auto; object-fit: cover; display: block; }
   .post-card__body { padding: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); flex: 1; }
   .post-card h2 { font-size: 1.05rem; line-height: 1.3; }
   .post-card p { color: var(--ink-dim); font-size: 0.9rem; flex: 1; }
   .post-card .meta { color: var(--ink-faint); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
-  .post-card.featured { grid-column: span 2; }
-  .post-card.featured h2 { font-size: 1.5rem; }
-  @media (max-width: 760px) { .post-card.featured { grid-column: span 1; } }
 </style>
 </head>
 <body>
@@ -85,7 +81,7 @@
   <section class="section">
     <div class="container">
       <div class="blog-grid">
-        <a class="post-card featured" href="post-salaries-igaming-2026.html">
+        <a class="post-card" href="post-salaries-igaming-2026.html">
           <img class="post-card__cover" src="img/blog-salaries.jpg" alt="Зарплаты в iGaming" loading="lazy">
           <div class="post-card__body">
             <span class="meta">Зарплаты · 14 августа 2026 · 8 мин</span>
