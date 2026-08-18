@@ -35,24 +35,40 @@ document.addEventListener('DOMContentLoaded', () => {
       'удалёнка':'remote','удалёнка ЕС':'remote in EU','гибрид':'hybrid','офис':'office','Топ-менеджмент':'Executive','Разработка игр':'Game development','Маркетинг и CRM':'Marketing & CRM','Саппорт (языки)':'Customer support (languages)'
     }
   };
-  const translateInterface = lang => {
+  const translateInterface = async lang => {
     document.documentElement.lang = lang;
     if (lang === 'ru') return;
-    const dict = UI_COPY[lang];
+    let complete = {};
+    try {
+      const response = await fetch(`/data/i18n-${lang}.json?v=20260818`, { credentials: 'same-origin' });
+      if (response.ok) complete = await response.json();
+    } catch (_) {}
+    const dict = Object.assign({}, complete, UI_COPY[lang]);
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     const nodes = [];
     while (walker.nextNode()) {
       const parent = walker.currentNode.parentElement;
-      if (parent && !parent.closest('script, style, textarea')) nodes.push(walker.currentNode);
+      if (parent && !parent.closest('script, style, textarea, [data-no-translate], .job-card, .job-body')) nodes.push(walker.currentNode);
     }
     nodes.forEach(node => {
-      const raw = node.nodeValue, key = raw.trim();
-      if (dict[key]) node.nodeValue = raw.replace(key, dict[key]);
+      const raw = node.nodeValue, key = raw.trim().replace(/\s+/g, ' ');
+      if (dict[key]) {
+        const leading = (raw.match(/^\s*/) || [''])[0];
+        const trailing = (raw.match(/\s*$/) || [''])[0];
+        node.nodeValue = leading + dict[key] + trailing;
+      }
     });
     document.querySelectorAll('[placeholder],[aria-label],[title]').forEach(el => {
+      if (el.closest('[data-no-translate], .job-card, .job-body')) return;
       ['placeholder','aria-label','title'].forEach(attr => {
-        const value = el.getAttribute(attr); if (value && dict[value]) el.setAttribute(attr, dict[value]);
+        const value = el.getAttribute(attr), key = value && value.trim().replace(/\s+/g, ' ');
+        if (key && dict[key]) el.setAttribute(attr, dict[key]);
       });
+    });
+    if (dict[document.title]) document.title = dict[document.title];
+    document.querySelectorAll('meta[name="description"],meta[property^="og:"],meta[name^="twitter:"]').forEach(meta => {
+      const value = meta.getAttribute('content');
+      if (value && dict[value]) meta.setAttribute('content', dict[value]);
     });
     document.querySelectorAll('[data-i18n-prefix="jobsCount"]').forEach(el => {
       const count = (el.textContent.match(/\d+/) || ['0'])[0];

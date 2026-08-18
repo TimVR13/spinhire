@@ -53,16 +53,16 @@
             Вакансия закрыта{% if job.closed_at %} {{ job.closed_at }}{% endif %}. Ниже есть похожие актуальные предложения.
           </div>
         {% endif %}
-        <p style="color: var(--ink-dim); display: flex; align-items: center; gap: 10px;">
+        <p data-no-translate style="color: var(--ink-dim); display: flex; align-items: center; gap: 10px;">
           {% if job.logo_url %}<img src="{{ job.logo_url }}" alt="" width="28" height="28" style="border-radius: 6px; object-fit: contain;" onerror="this.style.display='none'">{% endif %}
           <a href="/company/{{ job.company_slug }}" style="color: var(--ink); font-weight: 700; text-decoration: none;">{{ job.company_name }}</a> · {{ job.location or '—' }} · {{ job.fmt }}</p>
-        <h1>{{ job.title }}</h1>
-        <div class="job-card__tags" style="margin-bottom: var(--sp-4);">
+        <h1 data-no-translate>{{ job.title }}</h1>
+        <div class="job-card__tags" data-no-translate style="margin-bottom: var(--sp-4);">
           {% if job.featured %}<span class="tag tag-hot">⚡ Featured</span>{% endif %}
           {% if job.category %}<span class="tag">{{ job.category }}</span>{% endif %}
           {% for t in job.tag_list %}<span class="tag tag-acid">{{ t }}</span>{% endfor %}
         </div>
-        <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}вилка по запросу{% endif %}</p>
+        <p class="salary" data-no-translate style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}вилка по запросу{% endif %}</p>
         <div style="display: flex; flex-direction: column; gap: 12px; margin-top: var(--sp-4);">
           {% if is_closed %}
             <a class="btn btn-acid btn-lg" href="/jobs?cat={{ job.category|urlencode }}">Смотреть актуальные вакансии →</a>
@@ -92,7 +92,7 @@
 
       {% if job.description %}
         <h2 style="font-size: 1.1rem; color: var(--acid); margin-bottom: 12px;">▮ Описание</h2>
-        <div class="desc-block">{{ job.description }}</div>
+        <div class="desc-block" data-no-translate>{{ job.description }}</div>
       {% else %}
         <div class="desc-block" style="color: var(--ink-faint);">Работодатель не добавил подробное описание. Основное — в тегах и условиях выше{% if job.source_url %}, полный текст — у источника{% endif %}.</div>
       {% endif %}
