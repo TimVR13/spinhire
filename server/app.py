@@ -236,6 +236,7 @@ class Resume(Base):
     relocation = Column(Boolean, default=False)
     availability = Column(String, default="")
     portfolio_url = Column(String, default="")
+    linkedin_url = Column(String, default="")
     published = Column(Boolean, default=False)
     status = Column(String, default="draft")  # draft | pending | approved | rejected | paused
     moderation_note = Column(String, default="")
@@ -520,6 +521,7 @@ def migrate(db: Session):
         "ALTER TABLE resumes ADD COLUMN relocation BOOLEAN DEFAULT 0",
         "ALTER TABLE resumes ADD COLUMN availability VARCHAR DEFAULT ''",
         "ALTER TABLE resumes ADD COLUMN portfolio_url VARCHAR DEFAULT ''",
+        "ALTER TABLE resumes ADD COLUMN linkedin_url VARCHAR DEFAULT ''",
     ):
         col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
         if rcols and col not in rcols:
@@ -1481,6 +1483,7 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
                         employment_history: str = Form(""), education: str = Form(""),
                         preferred_locations: str = Form(""), relocation: str = Form(None),
                         availability: str = Form(""), portfolio_url: str = Form(""),
+                        linkedin_url: str = Form(""),
                         db: Session = Depends(db_session)):
     user = get_user(request, db)
     if not user or user.role != "talent":
@@ -1512,6 +1515,8 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
     row.availability = availability.strip()[:120]
     portfolio = portfolio_url.strip()
     row.portfolio_url = portfolio[:500] if portfolio.startswith(("https://", "http://")) else ""
+    linkedin = linkedin_url.strip()
+    row.linkedin_url = linkedin[:500] if linkedin.startswith(("https://www.linkedin.com/", "https://linkedin.com/")) else ""
     if remove_cv_file and row.cv_file_path:
         try:
             os.remove(row.cv_file_path)
@@ -1556,6 +1561,31 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
     user.languages = row.languages
     db.commit()
     return RedirectResponse("/profile?cv_ok=1#cv", status_code=303)
+
+
+@app.post("/profile/resume/linkedin")
+def profile_resume_linkedin(request: Request, linkedin_url: str = Form(""),
+                            db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    if not user or user.role != "talent":
+        return login_redirect("/profile#cv")
+    url = linkedin_url.strip()
+    if not url.startswith(("https://www.linkedin.com/", "https://linkedin.com/")):
+        return RedirectResponse("/profile?linkedin_error=1#cv", status_code=303)
+    row = db.query(Resume).filter_by(user_id=user.id).first()
+    if not row:
+        row = Resume(user_id=user.id)
+        db.add(row)
+    row.linkedin_url = url[:500]
+    row.title = row.title or (user.headline or "").strip()
+    row.location = row.location or (user.location or "").strip()
+    row.salary_expect = row.salary_expect or (user.salary_expect or "").strip()
+    row.languages = row.languages or (user.languages or "").strip()
+    row.contact_email = row.contact_email or user.email
+    row.status = "draft"
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    return RedirectResponse("/profile?cv_source=linkedin#cv", status_code=303)
 
 
 # ---------- employer cabinet ----------

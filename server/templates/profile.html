@@ -7,13 +7,17 @@
   .cv-editor { border-top: 3px solid var(--acid); margin-bottom: var(--sp-6); }
   .cv-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
   .cv-grid .wide { grid-column:1/-1; }
+  .cv-start { display:grid;grid-template-columns:1.1fr 1fr 1fr;border:2px solid var(--line);margin-top:20px; }
+  .cv-choice { display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:170px;padding:24px;background:transparent;color:var(--ink);border:0;border-right:1px solid var(--line);text-align:left;cursor:pointer; }
+  .cv-choice:last-child { border-right:0; }.cv-choice:hover,.cv-choice:focus-visible{background:var(--surface-2);outline:2px solid var(--acid);outline-offset:-2px}.cv-choice b{font-family:var(--font-display);font-size:.95rem;text-transform:uppercase}.cv-choice span{color:var(--ink-dim);line-height:1.45}.cv-choice em{margin-top:auto;color:var(--acid);font-style:normal;font-weight:700}
+  .cv-path { display:none;padding-top:24px; }.cv-path.is-open{display:block}.cv-path form{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}.cv-path .field{flex:1 1 340px}.cv-manual{display:none}.cv-manual.is-open{display:grid}
   .dash-strip { display:grid;grid-template-columns:1.2fr repeat(4,minmax(100px,.55fr));border-block:2px solid var(--line);margin-bottom:var(--sp-6); }
   .dash-cell { padding:16px;border-right:1px solid var(--line); }
   .dash-cell:last-child { border-right:0; }.dash-cell b{display:block;font-family:var(--font-display);font-size:1.25rem;color:var(--acid)}.dash-cell span{color:var(--ink-faint);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}
   .progress-track{height:8px;background:var(--surface-2);margin-top:10px}.progress-track i{display:block;height:100%;background:var(--acid)}
   .recommend-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-3);margin-bottom:var(--sp-6)}
   .recommend-job{padding:16px;border:1px solid var(--line);text-decoration:none}.recommend-job:hover{border-color:var(--acid)}
-  @media(max-width:700px){.cv-grid{grid-template-columns:1fr}.cv-grid .wide{grid-column:auto}.dash-strip{grid-template-columns:repeat(2,1fr)}.dash-cell:first-child{grid-column:1/-1}.recommend-grid{grid-template-columns:1fr}}
+  @media(max-width:700px){.cv-grid{grid-template-columns:1fr}.cv-grid .wide{grid-column:auto}.cv-start{grid-template-columns:1fr}.cv-choice{min-height:0;border-right:0;border-bottom:1px solid var(--line)}.cv-choice:last-child{border-bottom:0}.dash-strip{grid-template-columns:repeat(2,1fr)}.dash-cell:first-child{grid-column:1/-1}.recommend-grid{grid-template-columns:1fr}}
 {% endblock %}
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Мой профиль</nav>
@@ -22,6 +26,8 @@
   {% if request.query_params.get('cv_error') %}<div class="flash err">Чтобы опубликовать CV, заполните роль и описание и подтвердите согласие.</div>{% endif %}
   {% if request.query_params.get('cv_file_error') == 'type' %}<div class="flash err">CV принимается только в PDF, DOC или DOCX.</div>{% endif %}
   {% if request.query_params.get('cv_file_error') == 'size' %}<div class="flash err">Файл CV больше 5 МБ. Сожмите его и попробуйте снова.</div>{% endif %}
+  {% if request.query_params.get('linkedin_error') %}<div class="flash err">Вставьте полную ссылку на профиль LinkedIn.</div>{% endif %}
+  {% if request.query_params.get('cv_source') == 'linkedin' %}<div class="flash">Черновик создан. Проверьте данные, дополните опыт и сохраните CV.</div>{% endif %}
   {% set sp = request.query_params.get('spin') %}
   {% if sp and sp not in ('wait',) %}<div class="flash">🎡 Ежедневный фриспин: <b>+{{ sp }} SpinCoins</b>! Заходи завтра за следующим.</div>{% endif %}
   {% if sp == 'wait' %}<div class="flash err">Сегодня уже крутили — фриспин обновляется раз в сутки.</div>{% endif %}
@@ -69,7 +75,28 @@
     {% if resume and resume.moderation_note %}<div class="flash err">Комментарий модератора: {{ resume.moderation_note }}</div>{% endif %}
     {% if resume %}<p style="color:var(--ink-faint);margin:-8px 0 18px;">{{ resume.views or 0 }} просмотров · {{ resume_unlocks or 0 }} работодателей открыли контакты</p>{% endif %}
     <p style="color:var(--ink-dim);max-width:70ch;margin-bottom:20px;">Работодатели увидят опыт, навыки и ожидания. Имя, email и Telegram останутся закрытыми до оплаченного открытия контакта.</p>
-    <form method="post" action="/profile/resume" enctype="multipart/form-data" class="cv-grid">
+    {% if not resume %}
+    <h3 style="font-size:1rem;margin-top:24px;">Как добавить резюме?</h3>
+    <div class="cv-start" role="group" aria-label="Способ добавления резюме">
+      <button class="cv-choice" type="button" data-cv-path="upload"><b>Есть готовое резюме</b><span>Загрузите PDF, DOC или DOCX. Мы сохраним файл в черновике.</span><em>Загрузить файл →</em></button>
+      <button class="cv-choice" type="button" data-cv-path="linkedin"><b>Создать из LinkedIn</b><span>Сохраним профиль как источник и подготовим черновик из данных аккаунта.</span><em>Вставить ссылку →</em></button>
+      <button class="cv-choice" type="button" data-cv-path="manual"><b>Заполнить вручную</b><span>Укажите опыт, навыки и ожидания прямо на SpinHire.</span><em>Открыть форму →</em></button>
+    </div>
+    <div class="cv-path" data-cv-panel="upload">
+      <form method="post" action="/profile/resume" enctype="multipart/form-data">
+        <input type="hidden" name="title" value="{{ user.headline or '' }}"><input type="hidden" name="location" value="{{ user.location or '' }}"><input type="hidden" name="salary_expect" value="{{ user.salary_expect or '' }}"><input type="hidden" name="languages" value="{{ user.languages or '' }}"><input type="hidden" name="contact_email" value="{{ user.email }}">
+        <div class="field"><label>Файл резюме · до 5 МБ</label><input class="input" type="file" name="cv_file" accept=".pdf,.doc,.docx" required></div>
+        <button class="btn btn-acid" type="submit">Создать черновик</button>
+      </form>
+    </div>
+    <div class="cv-path" data-cv-panel="linkedin">
+      <form method="post" action="/profile/resume/linkedin">
+        <div class="field"><label>Ссылка на профиль LinkedIn</label><input class="input" type="url" name="linkedin_url" placeholder="https://www.linkedin.com/in/username" required></div>
+        <button class="btn btn-acid" type="submit">Создать черновик</button>
+      </form>
+    </div>
+    {% endif %}
+    <form method="post" action="/profile/resume" enctype="multipart/form-data" class="cv-grid cv-manual{% if resume %} is-open{% endif %}" data-cv-panel="manual">
       <div class="field wide"><label>Желаемая роль</label><input class="input" name="title" value="{{ resume.title if resume else user.headline }}" placeholder="CRM Manager · iGaming" required></div>
       <div class="field"><label>Локация</label><input class="input" name="location" value="{{ resume.location if resume else '' }}" placeholder="Варшава, Польша"></div>
       <div class="field"><label>Опыт в годах</label><input class="input" type="number" min="0" max="60" name="experience_years" value="{{ resume.experience_years if resume else 0 }}"></div>
@@ -83,6 +110,7 @@
       <div class="field"><label>Готовность выйти</label><input class="input" name="availability" value="{{ resume.availability if resume else '' }}" placeholder="Сразу / через 2 недели"></div>
       <label class="check wide"><input type="checkbox" name="relocation" {% if resume and resume.relocation %}checked{% endif %}> Готов к релокации</label>
       <div class="field wide"><label>Портфолио — откроется только после покупки контакта</label><input class="input" type="url" name="portfolio_url" value="{{ resume.portfolio_url if resume else '' }}" placeholder="https://"></div>
+      <div class="field wide"><label>LinkedIn — источник резюме</label><input class="input" type="url" name="linkedin_url" value="{{ resume.linkedin_url if resume else '' }}" placeholder="https://www.linkedin.com/in/username"></div>
       <div class="field"><label>Языки</label><input class="input" name="languages" value="{{ resume.languages if resume else user.languages }}" placeholder="English C1, Polish B1"></div>
       <div class="field"><label>Email для работодателей</label><input class="input" type="email" name="contact_email" value="{{ resume.contact_email if resume else user.email }}" required></div>
       <div class="field wide"><label>Telegram</label><input class="input" name="contact_telegram" value="{{ resume.contact_telegram if resume else '' }}" placeholder="@username"></div>
@@ -92,6 +120,14 @@
       <button class="btn btn-acid wide" type="submit">Сохранить CV</button>
     </form>
   </section>
+  {% if not resume %}<script>
+    document.querySelectorAll('[data-cv-path]').forEach((button) => button.addEventListener('click', () => {
+      document.querySelectorAll('[data-cv-panel]').forEach((panel) => panel.classList.remove('is-open'));
+      const panel = document.querySelector(`[data-cv-panel="${button.dataset.cvPath}"]`);
+      panel.classList.add('is-open');
+      panel.querySelector('input, textarea, select')?.focus();
+    }));
+  </script>{% endif %}
 
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: var(--sp-5); align-items: start;">
     <form method="post" action="/profile" class="card" style="display: flex; flex-direction: column; gap: 14px;">
