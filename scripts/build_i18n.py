@@ -127,7 +127,7 @@ def main() -> None:
     output_dir.mkdir(exist_ok=True)
     for target in TARGETS:
         dictionary = build(strings, target)
-        output = output_dir / f"i18n-{target}.json"
+        output = output_dir / f"i18n-{target}.js"
         output.write_text(json.dumps(dictionary, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
         print(f"Wrote {output.relative_to(ROOT)} ({len(dictionary)} entries)")
 
