@@ -59,6 +59,8 @@ RESEND_FROM = os.environ.get("RESEND_FROM", "")
 BASE_URL = os.environ.get("BASE_URL", "").rstrip("/")
 CV_UPLOAD_DIR = os.environ.get("CV_UPLOAD_DIR", os.path.join(ROOT, "data", "cv_uploads"))
 CV_MAX_BYTES = 5 * 1024 * 1024
+AVATAR_UPLOAD_DIR = os.environ.get("AVATAR_UPLOAD_DIR", os.path.join(ROOT, "data", "avatars"))
+AVATAR_MAX_BYTES = 3 * 1024 * 1024
 SIGNUP_COIN_BONUS = 20
 # Подтверждение почты включается автоматически, когда настроен Resend.
 REQUIRE_VERIFY = bool(RESEND_API_KEY)
@@ -95,6 +97,8 @@ class User(Base):
     cv_credits = Column(Integer, default=0)         # оплаченные открытия контактов
     cv_access_until = Column(String, default="")   # ISO-дата безлимитного доступа
     coins = Column(Integer, default=0)              # SpinCoins на аккаунте
+    avatar_file_name = Column(String, default="")
+    avatar_file_path = Column(String, default="")
     last_spin = Column(DateTime, nullable=True)     # последний ежедневный фриспин
     verified = Column(Integer, default=1)           # 0 — ждём подтверждения почты; старые = 1
     otp_hash = Column(String, default="")           # хэш текущего кода подтверждения
@@ -480,6 +484,8 @@ def migrate(db: Session):
         "ALTER TABLE users ADD COLUMN company_description TEXT DEFAULT ''",
         "ALTER TABLE users ADD COLUMN company_location VARCHAR DEFAULT ''",
         "ALTER TABLE users ADD COLUMN company_size VARCHAR DEFAULT ''",
+        "ALTER TABLE users ADD COLUMN avatar_file_name VARCHAR DEFAULT ''",
+        "ALTER TABLE users ADD COLUMN avatar_file_path VARCHAR DEFAULT ''",
     ):
         col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
         if col not in ucols:
@@ -1339,6 +1345,20 @@ def resume_file(resume_id: int, request: Request, db: Session = Depends(db_sessi
                         media_type="application/octet-stream")
 
 
+@app.get("/resume/{resume_id}/avatar")
+def resume_avatar(resume_id: int, request: Request, db: Session = Depends(db_session)):
+    """Фото раскрывается вместе с контактами, но не в анонимной базе."""
+    row = db.get(Resume, resume_id)
+    user = get_user(request, db)
+    if not row or not resume_contact_access(user, row, db):
+        raise HTTPException(404)
+    path = os.path.abspath(row.user.avatar_file_path or "")
+    upload_root = os.path.abspath(AVATAR_UPLOAD_DIR) + os.sep
+    if not path.startswith(upload_root) or not os.path.isfile(path):
+        raise HTTPException(404)
+    return FileResponse(path)
+
+
 @app.post("/resume/{resume_id}/unlock")
 def resume_unlock(resume_id: int, request: Request, db: Session = Depends(db_session)):
     user = get_user(request, db)
@@ -1474,6 +1494,28 @@ def profile_save(request: Request, name: str = Form(""), headline: str = Form(""
     return RedirectResponse("/profile?ok=1", status_code=303)
 
 
+def valid_avatar_payload(payload: bytes, ext: str) -> bool:
+    """Проверяем реальный формат изображения, а не только имя файла."""
+    signatures = {
+        ".jpg": payload.startswith(b"\xff\xd8\xff"),
+        ".jpeg": payload.startswith(b"\xff\xd8\xff"),
+        ".png": payload.startswith(b"\x89PNG\r\n\x1a\n"),
+        ".webp": len(payload) >= 12 and payload[:4] == b"RIFF" and payload[8:12] == b"WEBP",
+    }
+    return signatures.get(ext, False)
+
+
+@app.get("/profile/avatar")
+def profile_avatar(request: Request, db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    if not user:
+        raise HTTPException(404)
+    path = user.avatar_file_path or ""
+    if not path or not os.path.isfile(path):
+        raise HTTPException(404)
+    return FileResponse(path, filename=user.avatar_file_name or os.path.basename(path))
+
+
 @app.post("/profile/resume")
 async def profile_resume_save(request: Request, title: str = Form(""), location: str = Form(""),
                         experience_years: int = Form(0), skills: str = Form(""),
@@ -1487,6 +1529,7 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
                         preferred_locations: str = Form(""), relocation: str = Form(None),
                         availability: str = Form(""), portfolio_url: str = Form(""),
                         linkedin_url: str = Form(""),
+                        avatar_file: UploadFile | None = File(None),
                         db: Session = Depends(db_session)):
     user = get_user(request, db)
     if not user or user.role != "talent":
@@ -1499,8 +1542,23 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
                   row.desired_format, row.salary_expect, row.languages, row.employment_history,
                   row.education, row.preferred_locations, row.relocation, row.availability)
     wants_publish = bool(publish)
-    if wants_publish and (not consent or not title.strip() or not about.strip()):
+    if not wants_publish or not consent:
+        return RedirectResponse("/profile?cv_error=consent#cv", status_code=303)
+    if not title.strip() or not about.strip():
         return RedirectResponse("/profile?cv_error=1#cv", status_code=303)
+    avatar_name = avatar_ext = ""
+    avatar_payload = b""
+    if not avatar_file or not avatar_file.filename:
+        if not user.avatar_file_path or not os.path.isfile(user.avatar_file_path):
+            return RedirectResponse("/profile?cv_error=avatar#cv", status_code=303)
+    else:
+        avatar_name = os.path.basename(avatar_file.filename).strip()
+        avatar_ext = os.path.splitext(avatar_name)[1].lower()
+        avatar_payload = await avatar_file.read(AVATAR_MAX_BYTES + 1)
+        if len(avatar_payload) > AVATAR_MAX_BYTES:
+            return RedirectResponse("/profile?avatar_error=size#cv", status_code=303)
+        if not valid_avatar_payload(avatar_payload, avatar_ext):
+            return RedirectResponse("/profile?avatar_error=type#cv", status_code=303)
     row.title = title.strip()
     row.location = location.strip()
     row.experience_years = max(0, min(int(experience_years or 0), 60))
@@ -1543,6 +1601,18 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
         if previous_path and previous_path != stored_path:
             try:
                 os.remove(previous_path)
+            except FileNotFoundError:
+                pass
+    if avatar_payload:
+        os.makedirs(AVATAR_UPLOAD_DIR, exist_ok=True)
+        avatar_path = os.path.join(AVATAR_UPLOAD_DIR, f"{user.id}-{secrets.token_hex(12)}{avatar_ext}")
+        with open(avatar_path, "wb") as handle:
+            handle.write(avatar_payload)
+        previous_avatar = user.avatar_file_path
+        user.avatar_file_name, user.avatar_file_path = avatar_name[:240], avatar_path
+        if previous_avatar and previous_avatar != avatar_path:
+            try:
+                os.remove(previous_avatar)
             except FileNotFoundError:
                 pass
     row.published = wants_publish

@@ -13,6 +13,7 @@
   .cv-skills { display:flex; flex-wrap:wrap; gap:8px; }
   .contact-panel { position:sticky; top:110px; border:2px solid var(--line); background:var(--surface); padding:var(--sp-5); }
   .contact-panel.unlocked { border-color:var(--acid); }
+  .contact-avatar { width:112px; height:112px; object-fit:cover; border-radius:22px; border:2px solid var(--acid); margin-bottom:18px; }
   .locked-lines { margin:20px 0; display:grid; gap:8px; }
   .locked-lines span { display:block; height:12px; background:var(--line); }
   .locked-lines span:nth-child(2){width:72%}.locked-lines span:nth-child(3){width:84%}
@@ -48,6 +49,7 @@
 
     <aside class="contact-panel {% if unlocked %}unlocked{% endif %}">
       {% if unlocked %}
+        {% if resume.user.avatar_file_path %}<img class="contact-avatar" src="/resume/{{ resume.id }}/avatar" alt="Фото кандидата">{% endif %}
         <span class="kicker">Контакты открыты</span>
         <h2 style="margin:10px 0 20px;">Связаться с кандидатом</h2>
         <p><b>Email</b><br><a style="color:var(--acid);" href="mailto:{{ resume.contact_email }}">{{ resume.contact_email }}</a></p>

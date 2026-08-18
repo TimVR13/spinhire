@@ -15,6 +15,7 @@
   .dash-cell { padding:16px;border-right:1px solid var(--line); }
   .dash-cell:last-child { border-right:0; }.dash-cell b{display:block;font-family:var(--font-display);font-size:1.25rem;color:var(--acid)}.dash-cell span{color:var(--ink-faint);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}
   .progress-track{height:8px;background:var(--surface-2);margin-top:10px}.progress-track i{display:block;height:100%;background:var(--acid)}
+  .profile-avatar{width:76px;height:76px;flex:0 0 76px;border-radius:18px;object-fit:cover;border:2px solid var(--acid);background:var(--surface-2)}
   .recommend-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-3);margin-bottom:var(--sp-6)}
   .recommend-job{padding:16px;border:1px solid var(--line);text-decoration:none}.recommend-job:hover{border-color:var(--acid)}
   @media(max-width:700px){.cv-grid{grid-template-columns:1fr}.cv-grid .wide{grid-column:auto}.cv-start{grid-template-columns:1fr}.cv-choice{min-height:0;border-right:0;border-bottom:1px solid var(--line)}.cv-choice:last-child{border-bottom:0}.dash-strip{grid-template-columns:repeat(2,1fr)}.dash-cell:first-child{grid-column:1/-1}.recommend-grid{grid-template-columns:1fr}}
@@ -23,7 +24,11 @@
   <nav class="crumbs"><a href="/">Главная</a> / Мой профиль</nav>
   {% if request.query_params.get('ok') %}<div class="flash">✓ Профиль сохранён</div>{% endif %}
   {% if request.query_params.get('cv_ok') %}<div class="flash">CV сохранено{% if resume and resume.status == 'pending' %} и отправлено на модерацию{% elif resume and resume.status == 'approved' %} и опубликовано анонимно{% elif resume and resume.status == 'paused' %}; публикация приостановлена{% endif %}.</div>{% endif %}
-  {% if request.query_params.get('cv_error') %}<div class="flash err">Чтобы опубликовать CV, заполните роль и описание и подтвердите согласие.</div>{% endif %}
+  {% if request.query_params.get('cv_error') == 'consent' %}<div class="flash err">Оба подтверждения обязательны: публикация в базе и согласие на обработку контактов.</div>
+  {% elif request.query_params.get('cv_error') == 'avatar' %}<div class="flash err">Добавьте фотографию профиля.</div>
+  {% elif request.query_params.get('cv_error') %}<div class="flash err">Заполните роль и описание резюме.</div>{% endif %}
+  {% if request.query_params.get('avatar_error') == 'type' %}<div class="flash err">Аватар принимается только в JPG, PNG или WebP.</div>{% endif %}
+  {% if request.query_params.get('avatar_error') == 'size' %}<div class="flash err">Фотография больше 3 МБ. Уменьшите файл и попробуйте снова.</div>{% endif %}
   {% if request.query_params.get('cv_file_error') == 'type' %}<div class="flash err">CV принимается только в PDF, DOC или DOCX.</div>{% endif %}
   {% if request.query_params.get('cv_file_error') == 'size' %}<div class="flash err">Файл CV больше 5 МБ. Сожмите его и попробуйте снова.</div>{% endif %}
   {% if request.query_params.get('linkedin_error') %}<div class="flash err">Вставьте полную ссылку на профиль LinkedIn.</div>{% endif %}
@@ -33,7 +38,7 @@
   {% if sp == 'wait' %}<div class="flash err">Сегодня уже крутили — фриспин обновляется раз в сутки.</div>{% endif %}
   <span class="kicker">Кабинет соискателя</span>
   <div class="section-head" style="margin-block: 8px 24px;">
-    <h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem);">{{ user.name or user.email }}</h1>
+    <div style="display:flex;align-items:center;gap:16px;min-width:0;">{% if user.avatar_file_path %}<img class="profile-avatar" src="/profile/avatar" alt="Аватар {{ user.name or 'пользователя' }}">{% else %}<div class="profile-avatar" style="display:grid;place-items:center;font-family:var(--font-display);font-size:1.4rem;">{{ (user.name or user.email)[:2]|upper }}</div>{% endif %}<h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem);">{{ user.name or user.email }}</h1></div>
     <form method="post" action="/account/role/employer"><button class="btn btn-pink btn-sm" type="submit">Я работодатель → сменить кабинет</button></form>
   </div>
 
@@ -84,8 +89,10 @@
     </div>
     <div class="cv-path" data-cv-panel="upload">
       <form method="post" action="/profile/resume" enctype="multipart/form-data">
-        <input type="hidden" name="title" value="{{ user.headline or '' }}"><input type="hidden" name="location" value="{{ user.location or '' }}"><input type="hidden" name="salary_expect" value="{{ user.salary_expect or '' }}"><input type="hidden" name="languages" value="{{ user.languages or '' }}"><input type="hidden" name="contact_email" value="{{ user.email }}">
+        <input type="hidden" name="title" value="{{ user.headline or 'Резюме на обработке' }}"><input type="hidden" name="about" value="Данные будут структурированы после обработки загруженного CV."><input type="hidden" name="location" value="{{ user.location or '' }}"><input type="hidden" name="salary_expect" value="{{ user.salary_expect or '' }}"><input type="hidden" name="languages" value="{{ user.languages or '' }}"><input type="hidden" name="contact_email" value="{{ user.email }}"><input type="hidden" name="publish" value="1">
         <div class="field"><label>Файл резюме · до 5 МБ</label><input class="input" type="file" name="cv_file" accept=".pdf,.doc,.docx" required></div>
+        <div class="field"><label>Аватар · JPG, PNG или WebP до 3 МБ</label><input class="input" type="file" name="avatar_file" accept="image/jpeg,image/png,image/webp" {% if not user.avatar_file_path %}required{% endif %}></div>
+        <label class="check" style="flex-basis:100%;"><input type="checkbox" name="consent" required> Я разрешаю публикацию обезличенного CV и передачу контактов после оплаченного открытия.</label>
         <button class="btn btn-acid" type="submit">Создать черновик</button>
       </form>
     </div>
@@ -115,8 +122,9 @@
       <div class="field"><label>Email для работодателей</label><input class="input" type="email" name="contact_email" value="{{ resume.contact_email if resume else user.email }}" required></div>
       <div class="field wide"><label>Telegram</label><input class="input" name="contact_telegram" value="{{ resume.contact_telegram if resume else '' }}" placeholder="@username"></div>
       <div class="field wide"><label>Исходный CV · PDF, DOC или DOCX до 5 МБ</label><input class="input" type="file" name="cv_file" accept=".pdf,.doc,.docx">{% if resume and resume.cv_file_name %}<p style="margin-top:8px;color:var(--ink-dim);">Загружен: <a href="/resume/{{ resume.id }}/file" style="color:var(--acid);">{{ resume.cv_file_name }}</a></p><label class="check" style="margin-top:8px;"><input type="checkbox" name="remove_cv_file"> Удалить файл</label>{% endif %}</div>
-      <label class="check wide"><input type="checkbox" name="publish" {% if resume and resume.published %}checked{% endif %}> Показывать CV в анонимной базе</label>
-      <label class="check wide"><input type="checkbox" name="consent" {% if resume and resume.consent_at %}checked{% endif %}> Я разрешаю публиковать обезличенную информацию и передавать мои контакты работодателям после оплаченного открытия.</label>
+      <div class="field wide"><label>Аватар · JPG, PNG или WebP до 3 МБ</label>{% if user.avatar_file_path %}<div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;"><img class="profile-avatar" src="/profile/avatar" alt="Текущий аватар"><span style="color:var(--ink-dim);">{{ user.avatar_file_name or 'Аватар загружен' }}</span></div>{% endif %}<input class="input" type="file" name="avatar_file" accept="image/jpeg,image/png,image/webp" {% if not user.avatar_file_path %}required{% endif %}></div>
+      <label class="check wide"><input type="checkbox" name="publish" required {% if resume and resume.published %}checked{% endif %}> Показывать CV в анонимной базе <b>· обязательно</b></label>
+      <label class="check wide"><input type="checkbox" name="consent" required {% if resume and resume.consent_at %}checked{% endif %}> Я разрешаю публиковать обезличенную информацию и передавать мои контакты работодателям после оплаченного открытия <b>· обязательно</b></label>
       <button class="btn btn-acid wide" type="submit">Сохранить CV</button>
     </form>
   </section>
