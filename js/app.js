@@ -1,9 +1,14 @@
 // iHiring.org — shared prototype behavior
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Единый переключатель интерфейса для статических страниц и серверных шаблонов.
+  // Язык автоматически следует за браузером; ручной выбор доступен в футере.
   const UI_LANGS = ['ru', 'uk', 'en'];
-  const uiLang = UI_LANGS.includes(localStorage.getItem('uiLanguage')) ? localStorage.getItem('uiLanguage') : 'ru';
+  const savedUiLang = localStorage.getItem('uiLanguage');
+  const browserUiLang = (navigator.languages || [navigator.language || 'ru'])
+    .map(lang => String(lang).toLowerCase().split('-')[0])
+    .map(lang => lang === 'ua' ? 'uk' : lang)
+    .find(lang => UI_LANGS.includes(lang)) || 'ru';
+  const uiLang = UI_LANGS.includes(savedUiLang) ? savedUiLang : browserUiLang;
   const UI_COPY = {
     uk: {
       'Вакансии':'Вакансії','Резюме':'Резюме','Компании':'Компанії','Блог':'Блог','Работодателям':'Роботодавцям',
@@ -50,16 +55,18 @@ document.addEventListener('DOMContentLoaded', () => {
       el.textContent = lang === 'uk' ? `Вакансії iGaming — ${count}` : `iGaming jobs — ${count}`;
     });
   };
-  const languageHost = document.querySelector('.header-actions');
-  if (languageHost && !languageHost.querySelector('.language-switcher')) {
-    const switcher = document.createElement('div');
-    switcher.className = 'language-switcher'; switcher.setAttribute('aria-label', 'Language');
-    switcher.innerHTML = UI_LANGS.map(code => `<button type="button" data-ui-language="${code}" class="${code === uiLang ? 'is-active' : ''}">${code === 'uk' ? 'UA' : code.toUpperCase()}</button>`).join('');
-    languageHost.prepend(switcher);
-    switcher.addEventListener('click', event => {
-      const button = event.target.closest('[data-ui-language]'); if (!button) return;
-      localStorage.setItem('uiLanguage', button.dataset.uiLanguage); location.reload();
+  const languageHost = document.querySelector('.footer-bottom');
+  if (languageHost && !languageHost.querySelector('.footer-language')) {
+    const label = document.createElement('label'); label.className = 'footer-language';
+    const caption = document.createElement('span'); caption.textContent = 'Язык';
+    const select = document.createElement('select');
+    select.setAttribute('data-native-select', ''); select.setAttribute('aria-label', 'Язык сайта');
+    select.innerHTML = '<option value="ru">Русский</option><option value="uk">Українська</option><option value="en">English</option>';
+    select.value = uiLang;
+    select.addEventListener('change', () => {
+      localStorage.setItem('uiLanguage', select.value); location.reload();
     });
+    label.append(caption, select); languageHost.appendChild(label);
   }
   setTimeout(() => translateInterface(uiLang), 0);
 
