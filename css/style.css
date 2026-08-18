@@ -489,18 +489,6 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   .salary { font-size: 1rem; }
 }
 
-/* wheel fab (SpinCoins demo) */
-.wheel-fab {
-  position: fixed; right: var(--sp-4); bottom: var(--sp-4); z-index: 90;
-  background: var(--bg-deep); color: var(--acid);
-  border: 2px solid var(--acid); box-shadow: 4px 4px 0 oklch(0.08 0.02 305);
-  font-weight: 800; font-size: 0.9rem; padding: 10px 16px;
-  text-transform: uppercase; letter-spacing: 0.05em;
-  animation: fab-pulse 2.4s ease-in-out infinite;
-}
-.wheel-fab:hover { background: var(--acid); color: var(--on-acid); animation-play-state: paused; }
-@keyframes fab-pulse { 0%,100% { box-shadow: 4px 4px 0 oklch(0.08 0.02 305), 0 0 0 0 oklch(0.9 0.26 127 / 0.5); } 55% { box-shadow: 4px 4px 0 oklch(0.08 0.02 305), 0 0 0 14px oklch(0.9 0.26 127 / 0); } }
-
 /* 3d tilt */
 .job-card, .co-card, .company-tile, .post-card { transform-style: preserve-3d; will-change: transform; }
 

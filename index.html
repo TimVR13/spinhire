@@ -680,8 +680,6 @@
   </div>
 </div>
 
-<a class="wheel-fab" id="wheel-fab" href="games.html" aria-label="Игровая зона SpinCoins">🎡 <span id="coin-count">0</span> SC</a>
-
 <script>
 // Вакансии дня — реальные, из нашей базы (внутренние ссылки /job/{id})
 (function () {
@@ -793,7 +791,6 @@
         }
         else msg.textContent = 'Мимо. Крути ещё!';
         scEl.textContent = sc; localStorage.setItem('spinCoins', sc);
-        const fab = document.getElementById('coin-count'); if (fab) fab.textContent = sc;
         busy = false;
       }
     }, 80);

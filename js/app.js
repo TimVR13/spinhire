@@ -254,12 +254,6 @@ if (window.matchMedia('(pointer: fine)').matches &&
   });
 }
 
-// SpinCoins counter on fab (games live on games.html)
-(function () {
-  const counter = document.getElementById('coin-count');
-  if (counter) counter.textContent = localStorage.getItem('spinCoins') || '0';
-})();
-
 // Переключатель светлой/тёмной темы (на всех страницах)
 (function () {
   const saved = localStorage.getItem('theme');
