@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import bcrypt as _bcrypt
@@ -187,7 +187,7 @@ class Job(Base):
         normalized = " ".join((self.company_name or "").lower().replace("_", " ").split())
         if normalized == "gr8 tech":
             return "/img/company-logos/gr8tech.png"
-        dom = company_domain(self.company_name)
+        dom = company_domain(self.company_name, self.source_url)
         return f"https://icons.duckduckgo.com/ip3/{dom}.ico" if dom else ""
 
     @property
@@ -400,10 +400,23 @@ COMPANY_DOMAINS = {
     "megapari": "megapari.com", "genesis": "gen.tech", "owox": "owox.com",
     "everymatrix": "everymatrix.com", "n-ix": "n-ix.com", "trinetix": "trinetix.com",
     "parimatch tech": "parimatch.tech", "growe": "growe.com", "boldplay": "boldplay.com",
+    "truegroup": "truegroup.io", "true group": "truegroup.io",
+    "devox software": "devoxsoftware.com", "devox": "devoxsoftware.com",
+    "scoutbytes": "scoutbytes.com", "scout bytes": "scoutbytes.com",
+    "yanarchy": "yanarchy.com",
 }
 
 
-def company_domain(name: str) -> str:
+NON_COMPANY_HOSTS = {
+    "linkedin.com", "www.linkedin.com", "djinni.co", "www.djinni.co",
+    "greenhouse.io", "boards.greenhouse.io", "job-boards.greenhouse.io",
+    "smartrecruiters.com", "www.smartrecruiters.com", "jobs.smartrecruiters.com",
+    "lever.co", "jobs.lever.co", "work.ua", "www.work.ua", "robota.ua",
+    "www.robota.ua", "grc.ua", "www.grc.ua", "hh.ru", "www.hh.ru",
+}
+
+
+def company_domain(name: str, source_url: str = "") -> str:
     n = (name or "").lower().strip()
     if n in COMPANY_DOMAINS:
         return COMPANY_DOMAINS[n]
@@ -411,6 +424,16 @@ def company_domain(name: str) -> str:
     for key, dom in COMPANY_DOMAINS.items():
         if key in n or n in key:
             return dom
+    # Для прямых вакансий используем домен сайта работодателя автоматически.
+    # Домены агрегаторов и ATS исключаем: их favicon не является логотипом компании.
+    try:
+        host = urllib.parse.urlparse(source_url or "").hostname or ""
+        host = host.lower().removeprefix("www.")
+        if host and host not in NON_COMPANY_HOSTS and not any(
+                host.endswith(f".{blocked}") for blocked in NON_COMPANY_HOSTS):
+            return host
+    except ValueError:
+        pass
     return ""
 
 
@@ -910,8 +933,27 @@ def api_featured(db: Session = Depends(db_session)):
     out = [{"id": j.id, "title": j.title, "company": j.company_name,
             "location": j.location or "—", "fmt": j.fmt,
             "salary": j.salary if j.has_salary else "по запросу",
-            "cat": j.category, "initials": j.initials} for j in jobs[:6]]
+            "cat": j.category, "initials": j.initials,
+            "logo_url": j.logo_url} for j in jobs[:6]]
     return JSONResponse(out)
+
+
+@app.get("/api/top-companies")
+def api_top_companies(db: Session = Depends(db_session)):
+    """Топ работодателей с актуальными счётчиками и проверенными логотипами."""
+    count = func.count(Job.id)
+    rows = (db.query(Job.company_name, count.label("jobs"))
+            .filter(Job.status == "approved", Job.company_name != "")
+            .group_by(Job.company_name).order_by(count.desc(), Job.company_name.asc())
+            .limit(8).all())
+    result = []
+    for name, jobs_count in rows:
+        sample = (db.query(Job).filter(Job.status == "approved", Job.company_name == name)
+                  .order_by(Job.created_at.desc()).first())
+        if sample:
+            result.append({"name": name, "jobs": jobs_count, "slug": sample.company_slug,
+                           "logo_url": sample.logo_url, "initials": sample.initials})
+    return JSONResponse(result)
 
 
 @app.get("/company/{slug}", response_class=HTMLResponse)

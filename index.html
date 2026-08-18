@@ -150,7 +150,8 @@
     transition: transform 0.12s cubic-bezier(0.22,1,0.36,1), border-color 0.12s, box-shadow 0.12s;
   }
   .company-tile:hover { border-color: var(--line-strong); transform: translate(-2px,-2px); box-shadow: var(--shadow-dark); }
-  .company-tile .job-card__logo { margin-bottom: var(--sp-3); }
+  .company-tile .job-card__logo { margin-bottom: var(--sp-3); background:#fff; overflow:hidden; }
+  .company-tile .job-card__logo img { width:100%; height:100%; padding:7px; object-fit:contain; display:block; }
   .company-tile b { display: block; font-size: 1rem; }
   .company-tile span { color: var(--ink-faint); font-size: 0.8rem; }
 
@@ -565,15 +566,15 @@
         </div>
         <a class="link-more" href="companies.html">Все компании →</a>
       </div>
-      <div class="company-strip">
-        <a class="company-tile" href="company.html"><div class="job-card__logo" style="background: var(--acid); color: var(--on-acid);" aria-hidden="true">BG</div><b>Betsson Group</b><span>Оператор · 7 вакансий</span></a>
-        <a class="company-tile" href="companies.html"><div class="job-card__logo" style="background: var(--pink); color: var(--on-pink);" aria-hidden="true">SS</div><b>SOFTSWISS</b><span>Платформа B2B · 3 вакансии</span></a>
-        <a class="company-tile" href="companies.html"><div class="job-card__logo" style="background: var(--yellow); color: var(--on-yellow);" aria-hidden="true">PN</div><b>Pentasia</b><span>Рекрутинг · 6 вакансий</span></a>
-        <a class="company-tile" href="companies.html"><div class="job-card__logo" style="background: var(--violet); color: white;" aria-hidden="true">EV</div><b>Evolution</b><span>Лайв-казино · 1 вакансия</span></a>
-        <a class="company-tile" href="companies.html"><div class="job-card__logo" style="background: var(--surface-2); color: var(--acid);" aria-hidden="true">MP</div><b>Megapari</b><span>Оператор · 1 вакансия</span></a>
-        <a class="company-tile" href="companies.html"><div class="job-card__logo" style="background: var(--surface-2); color: var(--pink);" aria-hidden="true">G8</div><b>GR8 Tech</b><span>Платформа · 1 вакансия</span></a>
-        <a class="company-tile" href="companies.html"><div class="job-card__logo" style="background: var(--surface-2); color: var(--yellow);" aria-hidden="true">PC</div><b>Pampas Casino</b><span>Оператор · 1 вакансия</span></a>
-        <a class="company-tile" href="companies.html"><div class="job-card__logo" style="background: var(--surface-2); color: white;" aria-hidden="true">SJ</div><b>SEOJET</b><span>SEO-агентство · 1 вакансия</span></a>
+      <div class="company-strip" id="homeCompanies">
+        <a class="company-tile" href="/company/betsson-group"><div class="job-card__logo"><img src="/img/company-logos/betsson.png" alt="Логотип Betsson Group"></div><b>Betsson Group</b><span>Компания нанимает</span></a>
+        <a class="company-tile" href="/company/softswiss"><div class="job-card__logo"><img src="/img/company-logos/softswiss.webp" alt="Логотип SOFTSWISS"></div><b>SOFTSWISS</b><span>Компания нанимает</span></a>
+        <a class="company-tile" href="/company/pentasia"><div class="job-card__logo"><img src="/img/company-logos/pentasia.png" alt="Логотип Pentasia"></div><b>Pentasia</b><span>Компания нанимает</span></a>
+        <a class="company-tile" href="/company/evolution"><div class="job-card__logo"><img src="/img/company-logos/evolution.png" alt="Логотип Evolution"></div><b>Evolution</b><span>Компания нанимает</span></a>
+        <a class="company-tile" href="/company/megapari"><div class="job-card__logo"><img src="/img/company-logos/megapari.webp" alt="Логотип Megapari"></div><b>Megapari</b><span>Компания нанимает</span></a>
+        <a class="company-tile" href="/company/gr8-tech"><div class="job-card__logo"><img src="/img/company-logos/gr8tech.png" alt="Логотип GR8 Tech"></div><b>GR8 Tech</b><span>Компания нанимает</span></a>
+        <a class="company-tile" href="/company/kaizen-gaming"><div class="job-card__logo"><img src="https://icons.duckduckgo.com/ip3/kaizengaming.com.ico" alt="Логотип Kaizen Gaming"></div><b>Kaizen Gaming</b><span>Компания нанимает</span></a>
+        <a class="company-tile" href="/company/seojet"><div class="job-card__logo"><img src="/img/company-logos/seojet.png" alt="Логотип SEOJET"></div><b>SEOJET</b><span>Компания нанимает</span></a>
       </div>
     </div>
   </section>
@@ -694,7 +695,11 @@
     if (!jobs.length) { box.innerHTML = '<p style="color: var(--ink-faint); padding: 16px;">Смотрите <a href="/jobs" style="color: var(--acid);">все вакансии →</a></p>'; return; }
     box.innerHTML = jobs.map((j, i) => `
       <a class="job-card" href="/job/${j.id}">
-        <div class="job-card__logo" style="background: ${colors[i % 6]}; color: var(--bg-deep);" aria-hidden="true">${j.initials}</div>
+        <div class="job-card__logo" style="background: ${j.logo_url ? 'var(--surface-2)' : colors[i % 6]}; color: var(--bg-deep); overflow: hidden;" aria-hidden="true">
+          ${j.logo_url
+            ? `<img src="${j.logo_url}" alt="" style="width:34px;height:34px;object-fit:contain" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="display:none">${j.initials}</span>`
+            : j.initials}
+        </div>
         <div>
           <h3 class="job-card__title">${j.title}</h3>
           <p class="job-card__meta"><b>${j.company}</b> · ${j.location} · ${j.fmt}</p>
@@ -747,6 +752,25 @@
     }));
   }
   fetch('/api/events').then(r => r.ok ? r.json() : null).then(ev => render(ev && ev.length ? ev : fallback)).catch(() => render(fallback));
+})();
+
+// Актуальные компании и число вакансий — из той же базы, которую обновляют краулеры.
+(function () {
+  const grid = document.getElementById('homeCompanies'); if (!grid) return;
+  fetch('/api/top-companies').then(r => r.ok ? r.json() : null).then(companies => {
+    if (!companies || !companies.length) return;
+    grid.replaceChildren(...companies.map(company => {
+      const card = document.createElement('a'); card.className = 'company-tile'; card.href = '/company/' + company.slug;
+      const logo = document.createElement('div'); logo.className = 'job-card__logo';
+      if (company.logo_url) {
+        const image = document.createElement('img'); image.src = company.logo_url; image.alt = 'Логотип ' + company.name;
+        image.addEventListener('error', () => { logo.textContent = company.initials; image.remove(); }); logo.appendChild(image);
+      } else logo.textContent = company.initials;
+      const name = document.createElement('b'); name.textContent = company.name;
+      const count = document.createElement('span'); count.textContent = company.jobs + ' ' + (company.jobs === 1 ? 'вакансия' : company.jobs < 5 ? 'вакансии' : 'вакансий');
+      card.append(logo, name, count); return card;
+    }));
+  }).catch(() => {});
 })();
 
 // Играбельный слот на главной
