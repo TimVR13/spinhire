@@ -450,7 +450,7 @@
       <div class="hp-slot" id="play">
         <div class="hp-machine-wrap">
           <div class="hp-machine">
-            <div class="hp-jackpot"><span>Джекпот</span><b>2 480 SC</b></div>
+            <div class="hp-jackpot"><span>Джекпот · 9 одинаковых</span><b>30 000 SC</b></div>
             <div class="hp-reels" id="hpReels" role="button" tabindex="0" aria-label="Крутить игровой автомат">
               <div class="hp-cell"><img src="img/sym-seven.jpg" alt="Семёрка"></div><div class="hp-cell"><img src="img/sym-cherry.jpg" alt="Вишня"></div><div class="hp-cell"><img src="img/sym-bell.jpg" alt="Колокол"></div>
               <div class="hp-cell"><img src="img/sym-crown.jpg" alt="Корона"></div><div class="hp-cell"><img src="img/sym-diamond.jpg" alt="Бриллиант"></div><div class="hp-cell"><img src="img/sym-star.jpg" alt="Звезда"></div>
@@ -461,10 +461,10 @@
         </div>
         <div class="hp-controls">
           <div class="hp-balance">Баланс: <b id="hpSc">100</b> SC</div>
-          <div class="hp-bets" role="group" aria-label="Ставка"><span>Ставка</span><button class="hp-bet" data-bet="5">5</button><button class="hp-bet active" data-bet="10">10</button><button class="hp-bet" data-bet="25">25</button></div>
+          <div class="hp-bets" role="group" aria-label="Ставка"><span>Ставка</span><button class="hp-bet active" data-bet="10">10</button><button class="hp-bet" data-bet="20">20</button><button class="hp-bet" data-bet="50">50</button></div>
           <p class="hp-slot__msg" id="hpMsg" aria-live="polite"></p>
           <button class="btn btn-acid btn-lg" id="hpSpin">Крутить · −10 SC</button>
-          <div class="hp-paytable"><b>3 одинаковых</b><span>×20 ставки</span><b>Пара на линии</b><span>×2 ставки</span><b>Линий</b><span>8</span></div>
+          <div class="hp-paytable"><b>3 одинаковых в строке</b><span>×5 ставки</span><b>Пара в строке</b><span>×0,5 ставки</span><b>Считаем</b><span>3 строки</span></div>
           <div class="hp-links">
             <a class="hp-games-link" href="games.html">Все игры в игровой зоне →</a>
             <a class="hp-rules" href="game-rules.html">Правила</a>
@@ -783,15 +783,20 @@
         clearInterval(iv); box.classList.remove('spin');
         const r = Array.from({ length: 9 }, draw);
         cells.forEach((c, i) => c.src = 'img/' + r[i] + '.jpg');
-        const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-        const wins = lines.filter(line => r[line[0]] === r[line[1]] && r[line[1]] === r[line[2]]);
-        const pairs = lines.filter(line => !wins.includes(line) && new Set(line.map(i => r[i])).size === 2);
-        const w = wins.length * bet * 20 + pairs.length * bet * 2;
+        const rows = [[0,1,2],[3,4,5],[6,7,8]];
+        const jackpot = r.every(symbol => symbol === r[0]);
+        const wins = rows.filter(row => r[row[0]] === r[row[1]] && r[row[1]] === r[row[2]]);
+        const pairs = rows.filter(row => !wins.includes(row) && new Set(row.map(i => r[i])).size === 2);
+        const w = jackpot ? 30000 : Math.round(wins.length * bet * 5 + pairs.length * bet * 0.5);
         if (w) {
-          sc += w; msg.innerHTML = 'Выигрыш <b style="color:var(--acid)">+' + w + ' SC</b>';
+          sc += w;
+          msg.innerHTML = jackpot
+            ? 'Джекпот! 9 одинаковых <b style="color:var(--pink)">+30 000 SC</b>'
+            : 'Выигрыш <b style="color:var(--acid)">+' + w + ' SC</b>';
           box.classList.add('win');
           const pairCells = pairs.flatMap(line => line.filter(i => line.filter(j => r[j] === r[i]).length === 2));
-          [...new Set([...wins.flat(), ...pairCells])].forEach(i => cells[i].closest('.hp-cell').classList.add('win-cell'));
+          const winningCells = jackpot ? rows.flat() : [...wins.flat(), ...pairCells];
+          [...new Set(winningCells)].forEach(i => cells[i].closest('.hp-cell').classList.add('win-cell'));
         }
         else msg.textContent = 'Мимо. Крути ещё!';
         scEl.textContent = sc; localStorage.setItem('spinCoins', sc);

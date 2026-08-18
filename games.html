@@ -100,16 +100,10 @@
   .slot__reels { display: flex; gap: var(--sp-3); padding: 14px; border-radius: 16px; position: relative;
     background: linear-gradient(oklch(0.06 0.004 285), oklch(0.03 0.002 285)); border: 2px solid var(--island-line);
     box-shadow: 0 0 0 5px oklch(0.62 0.14 80 / 0.28), inset 0 0 34px oklch(0 0 0 / 0.65); }
-  /* payline — центральная линия выплат */
-  .slot__reels::after { content: ""; position: absolute; left: 8px; right: 8px; top: 50%; height: 3px; transform: translateY(-50%);
-    background: linear-gradient(90deg, transparent, var(--pink), transparent); opacity: .85; pointer-events: none; z-index: 4; }
   .reel { width: 90px; height: 270px; overflow: hidden; border-radius: 10px; background: oklch(0.16 0.01 285); position: relative;
     box-shadow: inset 0 22px 26px -14px #000, inset 0 -22px 26px -14px #000; }
   .reel__strip { display: flex; flex-direction: column; will-change: transform; }
   .reel__strip img { width: 90px; height: 90px; object-fit: cover; display: block; }
-  /* подсветка средней ячейки (payline row) */
-  .slot__reels::before { content: ""; position: absolute; left: 8px; right: 8px; top: 50%; height: 90px; transform: translateY(-50%);
-    border-top: 1px solid oklch(1 0 0 / 0.12); border-bottom: 1px solid oklch(1 0 0 / 0.12); pointer-events: none; z-index: 3; }
   /* lever */
   .slot__lever { position: relative; width: 30px; align-self: center; height: 200px; }
   .slot__lever .track { width: 9px; height: 150px; margin: 25px auto 0; border-radius: 6px; background: linear-gradient(oklch(0.3 0.01 285), oklch(0.12 0.006 285)); }
@@ -121,8 +115,6 @@
     .slot__stage { padding: var(--sp-4); }
     .slot__reels { gap: 8px; padding: 8px; }
     .reel { width: 56px; height: 168px; } .reel__strip img { width: 56px; height: 56px; }
-    .slot__reels::before { height: 56px; }
-    .slot__reels::after { height: 3px; }
     .slot__lever { display: none; }
   }
 
@@ -289,9 +281,9 @@
       <!-- SLOT MACHINE (однорукий бандит 3×3) -->
       <section class="game" aria-label="Слот-машина">
         <div class="game__head">
-          <h2>🎰 Однорукий бандит <span class="odds">линия по центру · три в ряд ×20 · пара ×2</span></h2>
+          <h2>🎰 Однорукий бандит <span class="odds">3 строки · три в ряд ×5 · пара ×0,5</span></h2>
         </div>
-        <p class="game__how">Выбери <b>ставку</b> и дёрни рычаг. Барабаны крутятся — считается <b>средняя линия</b>: три одинаковых символа дают джекпот <b>×20</b>, пара — <b>×2</b>.</p>
+        <p class="game__how">Смотрим только по трём горизонтальным строкам. Пара одинаковых даёт <b>×0,5</b>, три одинаковых — <b>×5</b>. Все 9 одинаковых — джекпот <b>30 000 SC</b>.</p>
         <div class="slot__stage" id="sl-stage">
           <div class="slot__cabinet">
             <div class="slot__reels" id="sl-reels">
@@ -303,7 +295,7 @@
             <div class="slot__lever" id="sl-lever"><div class="track"></div><div class="knob"></div></div>
           </div>
         </div>
-        <p class="result" id="sl-result">Ставь и дёргай рычаг. Считается средняя линия — три одинаковых дают джекпот.</p>
+        <p class="result" id="sl-result">Ставь и дёргай рычаг. Считаются три горизонтальные строки.</p>
         <div class="controls">
           <div class="bet-select" data-game="sl">
             <span class="cap">Ставка</span>
@@ -590,7 +582,6 @@
 
   // ===================== SLOT MACHINE (3×3) =====================
   const SYMS = ['seven', 'cherry', 'bell', 'diamond', 'crown', 'horseshoe', 'star', 'bar'];
-  const PAY = { seven: 20, star: 20, diamond: 15, crown: 12, bar: 10, bell: 8, horseshoe: 6, cherry: 5 };
   const slImg = s => 'img/sym-' + s + '.jpg';
   const slCell = () => window.matchMedia('(max-width:560px)').matches ? 56 : 90;
   // строит вертикальную ленту, последние 3 символа = видимые (верх/центр/низ)
@@ -643,12 +634,16 @@
       r.style.transform = 'translateY(-' + ((n - 3) * cell) + 'px)';
     });
     setTimeout(() => {
-      // средняя линия выплат = центральная ячейка каждой катушки
-      const a = grid[0][1], b = grid[1][1], c = grid[2][1];
-      let win = 0, msg;
-      if (a === b && b === c) { win = bet * (PAY[a] || 10); msg = '🎰 <span class="big">ДЖЕКПОТ!</span> Три в ряд по линии — <b>+' + win + ' SC</b>'; }
-      else if (a === b || b === c || a === c) { win = bet * 2; msg = 'Пара на линии — <b>+' + win + ' SC</b>'; }
-      else { msg = '<span class="lose">Мимо линии. −' + bet + ' SC</span>'; }
+      const rows = [0, 1, 2].map(row => [grid[0][row], grid[1][row], grid[2][row]]);
+      const flat = grid.flat();
+      const jackpot = flat.every(symbol => symbol === flat[0]);
+      const triples = rows.filter(row => row[0] === row[1] && row[1] === row[2]);
+      const pairs = rows.filter(row => !(row[0] === row[1] && row[1] === row[2]) && new Set(row).size === 2);
+      const win = jackpot ? 30000 : Math.round(triples.length * bet * 5 + pairs.length * bet * 0.5);
+      let msg;
+      if (jackpot) msg = '🎰 <span class="big">ДЖЕКПОТ!</span> Все 9 одинаковых — <b>+30 000 SC</b>';
+      else if (win) msg = 'Выигрыш по строкам: ' + triples.length + ' тройки, ' + pairs.length + ' пары — <b>+' + win + ' SC</b>';
+      else msg = '<span class="lose">Совпадений по строкам нет. −' + bet + ' SC</span>';
       if (win) { W.add(win); coinBurst(); slReelsBox.classList.add('win-flash'); setTimeout(() => slReelsBox.classList.remove('win-flash'), 1400); }
       slRes.innerHTML = msg;
       slSpinning = false; slBtn.disabled = false;
