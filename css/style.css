@@ -155,16 +155,17 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 }
 .site-header .container {
   display: flex; align-items: center; gap: var(--sp-6);
-  height: 68px;
+  height: 78px;
 }
 .logo {
   font-family: var(--font-display);
-  font-weight: 900; font-size: 1.25rem;
+  font-weight: 900; font-size: 1.55rem;
   text-decoration: none; text-transform: lowercase;
-  display: flex; align-items: center; gap: 7px;
+  display: flex; align-items: center; gap: 10px;
   flex-shrink: 0;
+  line-height: 1; letter-spacing: -0.04em;
 }
-.logo__mark { width: 42px; height: 32px; flex: 0 0 auto; transition: transform .2s ease; }
+.logo__mark { width: 60px; height: 36px; flex: 0 0 60px; object-fit: contain; transition: transform .2s ease; }
 .logo:hover .logo__mark { transform: translateY(-1px); }
 .logo b { color: var(--acid); }
 .logo .dot-org { color: var(--ink-faint); font-size: 0.8em; font-weight: 700; }
@@ -459,7 +460,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 @media (max-width: 1100px) {
   .main-nav {
     display: none;
-    position: absolute; top: 68px; left: 0; right: 0;
+    position: absolute; top: 78px; left: 0; right: 0;
     background: color-mix(in oklch, var(--bg-deep) 96%, transparent); border-bottom: 2px solid var(--line);
     box-shadow: 0 24px 40px oklch(0.02 0.01 285 / 0.6);
     flex-direction: column; gap: 0; padding: var(--sp-3) var(--sp-5) var(--sp-5);
@@ -480,9 +481,10 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   .header-actions { gap: var(--sp-2); }
   .header-actions .btn { padding: 9px 11px; font-size: 0.72rem; min-height: 40px; }
   .header-actions .btn-pink { display: none; }  /* дублируется пунктом в бургер-меню */
-  .site-header .container { gap: var(--sp-3); }
-  .logo { font-size: 1.05rem; }
-  .logo__mark { width: 35px; height: 27px; }
+  .site-header .container { height: 68px; gap: var(--sp-3); }
+  .main-nav { top: 68px; }
+  .logo { font-size: 1.2rem; gap: 8px; }
+  .logo__mark { width: 50px; height: 30px; flex-basis: 50px; }
   .salary { font-size: 1rem; }
 }
 
