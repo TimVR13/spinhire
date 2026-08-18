@@ -19,17 +19,37 @@
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <style>
-  .about-wrap { max-width: 76ch; padding-block: var(--sp-6) var(--sp-8); }
-  .about-wrap h1 { font-size: clamp(1.7rem, 4vw, 2.6rem); margin-bottom: var(--sp-3); }
-  .about-wrap h2 { font-size: 1.2rem; color: var(--acid); margin: var(--sp-7) 0 var(--sp-3); }
-  .about-wrap p, .about-wrap li { color: var(--ink-dim); line-height: 1.75; font-size: 1.02rem; }
-  .about-wrap ul { padding-left: 1.2em; margin-block: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); }
-  .about-wrap li::marker { color: var(--pink); }
+  .about-wrap { width: 100%; max-width: 1180px; margin-inline: auto; padding-block: var(--sp-6) var(--sp-8); }
+  .about-wrap h1 { font-size: clamp(2.2rem, 5.5vw, 5.2rem); line-height: 1.02; margin: 8px 0 var(--sp-4); }
+  .about-wrap h2 { font-size: clamp(1.25rem, 2.4vw, 2rem); color: var(--acid); margin: 0 0 var(--sp-4); }
+  .about-wrap p, .about-wrap li { color: var(--ink-dim); line-height: 1.7; font-size: 1rem; }
+  .about-hero { display: grid; grid-template-columns: minmax(0, .95fr) minmax(420px, 1.05fr); gap: clamp(24px, 5vw, 72px); align-items: center; min-height: 560px; }
+  .about-hero__copy { max-width: 62ch; }
+  .about-hero__art { position: relative; margin: 0; }
+  .about-hero__art::after { content: ''; position: absolute; inset: 12% 10%; background: radial-gradient(circle, oklch(.72 .2 155 / .22), transparent 68%); filter: blur(32px); z-index: -1; }
+  .about-hero__art img { display: block; width: 100%; height: auto; filter: saturate(1.12) contrast(1.04); }
+  .about-section { margin-top: clamp(64px, 9vw, 112px); }
+  .about-mission { display: grid; grid-template-columns: .7fr 1.3fr; gap: clamp(28px, 6vw, 80px); align-items: start; }
+  .about-list { list-style: none; display: grid; gap: 0; }
+  .about-list li { display: grid; grid-template-columns: 44px 1fr; gap: 14px; padding: 18px 0; border-top: 1px solid var(--line); }
+  .about-list li::before { content: attr(data-n); font-family: var(--font-display); color: var(--pink); font-weight: 800; }
+  .about-list b { color: var(--ink); }
+  .journey-art { margin: 0 auto var(--sp-5); max-width: 980px; }
+  .journey-art img { display: block; width: 100%; height: auto; }
   .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: var(--sp-3); margin-block: var(--sp-4); }
   .step { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: var(--sp-5); }
   .step b { font-family: var(--font-display); color: var(--acid); display: block; margin-bottom: 6px; }
-  .contact-card { border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); padding: var(--sp-5); margin-top: var(--sp-5); }
+  .about-columns { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-6); align-items: start; }
+  .about-columns ul { padding-left: 1.2em; display: grid; gap: var(--sp-2); }
+  .about-columns li::marker { color: var(--pink); }
+  .contact-card { border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); padding: var(--sp-6); }
   .contact-card a { color: var(--acid); }
+  @media (max-width: 900px) {
+    .about-hero { grid-template-columns: 1fr; min-height: 0; text-align: center; }
+    .about-hero__copy { margin-inline: auto; }
+    .about-hero__art { max-width: 680px; margin-inline: auto; }
+    .about-mission, .about-columns { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -41,7 +61,6 @@
       <a href="jobs.html">Вакансии</a>
       <a href="companies.html">Компании</a>
       <a href="blog.html">Блог</a>
-      <a href="games.html">Игровая</a>
       <a href="post-job.html">Работодателям</a>
     </nav>
     <div class="header-actions">
@@ -54,41 +73,54 @@
 <main id="main" class="container">
   <div class="about-wrap">
     <nav class="crumbs" aria-label="Хлебные крошки"><a href="index.html">Главная</a> / О проекте</nav>
-    <span class="kicker">Кто мы</span>
-    <h1>О проекте SpinHire</h1>
-    <p>SpinHire — джоб-борд для iGaming-индустрии: казино, беттинг, геймдев-студии, аффилейты, платежи, комплаенс. Мы собираем живые вакансии индустрии в одном месте, на русском языке, с фильтрами, которых нет на обычных бордах: вертикаль, лицензия работодателя, языки, релокация, крипто-оплата.</p>
+    <section class="about-hero">
+      <div class="about-hero__copy">
+        <span class="kicker">Кто мы</span>
+        <h1>Карьера в iGaming без скучных правил</h1>
+        <p>SpinHire собирает живые вакансии казино, беттинга, геймдева, аффилейтов и платежей в одном месте. С зарплатами, релокацией, языками и понятными фильтрами — без корпоративного бежевого.</p>
+      </div>
+      <figure class="about-hero__art"><img src="img/about-hero-3d.png" alt="Яркая 3D-композиция о карьере в iGaming" width="1536" height="1024"></figure>
+    </section>
 
-    <h2>Что мы делаем</h2>
-    <ul>
-      <li><b>Агрегируем вакансии</b> из открытых источников (карьерные порталы операторов, отраслевые борды) с полным описанием и ссылкой на первоисточник.</li>
-      <li><b>Даём работодателям</b> размещать собственные вакансии и вести кандидатов в мини-ATS.</li>
-      <li><b>Помогаем соискателям</b> откликаться, вести профиль и оставаться анонимными для текущего работодателя.</li>
-      <li><b>Пишем полезное</b> — гид по зарплатам, релокации, разбор профессий индустрии.</li>
-    </ul>
+    <section class="about-section about-mission">
+      <div><span class="kicker pink">Что мы делаем</span><h2>Соединяем индустрию и людей</h2></div>
+      <ul class="about-list">
+        <li data-n="01"><span><b>Собираем вакансии</b> из открытых источников с полным описанием и ссылкой на работодателя.</span></li>
+        <li data-n="02"><span><b>Даём компаниям нанимать</b> напрямую и вести отклики в кабинете работодателя.</span></li>
+        <li data-n="03"><span><b>Защищаем соискателей</b> с анонимным профилем и контролем доступа к контактам.</span></li>
+        <li data-n="04"><span><b>Помогаем расти</b> с данными о зарплатах, релокации и профессиях индустрии.</span></li>
+      </ul>
+    </section>
 
-    <h2>Как это работает</h2>
-    <div class="steps">
-      <div class="step"><b>01 · Ищите</b>Фильтруйте вакансии по формату, направлению, зарплате.</div>
-      <div class="step"><b>02 · Откликайтесь</b>На внутренние вакансии — в один клик; на агрегированные — на портале работодателя.</div>
-      <div class="step"><b>03 · Растите</b>Профиль, зарплатные ожидания, инкогнито-режим, карьерный блог.</div>
-    </div>
+    <section class="about-section">
+      <div style="text-align:center;"><span class="kicker">Как это работает</span><h2>От поиска до следующего уровня</h2></div>
+      <figure class="journey-art"><img src="img/about-journey-3d.png" alt="Три этапа карьерного пути: поиск, отклик и рост" width="1672" height="941"></figure>
+      <div class="steps">
+        <div class="step"><b>01 · Ищите</b>Фильтруйте вакансии по формату, направлению и зарплате.</div>
+        <div class="step"><b>02 · Откликайтесь</b>Подавайте отклик внутри SpinHire или напрямую работодателю.</div>
+        <div class="step"><b>03 · Растите</b>Улучшайте профиль и находите предложения следующего уровня.</div>
+      </div>
+    </section>
 
-    <h2>Честно о статусе</h2>
-    <p>Проект в активной разработке. Часть вакансий — агрегированные из открытых источников и помечены соответствующе; отклик по ним подаётся на стороне работодателя. Мы не являемся оператором азартных игр, кадровым агентством или работодателем и не гарантируем трудоустройство. Мы — информационная площадка (посредник) между соискателями и работодателями iGaming.</p>
+    <section class="about-section about-columns">
+      <div>
+        <h2>Честно о платформе</h2>
+        <p>SpinHire находится в активной разработке. Часть вакансий собрана из открытых источников и ведёт на сайт работодателя. Мы — информационная площадка между специалистами и компаниями iGaming.</p>
+      </div>
+      <div>
+        <h2>Безопасность</h2>
+        <ul>
+          <li>Индустрия 18+. Работодатель не должен просить депозит до оффера.</li>
+          <li>Игры используют только виртуальные баллы без денежной стоимости.</li>
+          <li>Персональные данные защищены настройками приватности профиля.</li>
+        </ul>
+      </div>
+    </section>
 
-    <h2>Ответственность и безопасность</h2>
-    <ul>
-      <li>Индустрия 18+. Настоящие работодатели никогда не просят депозит или документы до оффера — сообщайте о подозрительном.</li>
-      <li>Мини-игры в «Игровой зоне» — бесплатная геймификация на виртуальные баллы без денежной стоимости, это не азартные игры на деньги (<a href="game-rules.html" style="color: var(--acid);">правила</a>).</li>
-      <li>Ваши данные — по <a href="privacy.html" style="color: var(--acid);">политике конфиденциальности</a>; условия — в <a href="terms.html" style="color: var(--acid);">пользовательском соглашении</a>.</li>
-    </ul>
-
-    <div class="contact-card">
-      <h2 style="margin-top: 0;">Контакты</h2>
-      <p style="color: var(--ink);">Почта: <a href="mailto:hello@spinhire.io">hello@spinhire.io</a><br>
-      Telegram: <a href="https://t.me/spinhire" target="_blank" rel="noopener">@spinhire</a><br>
-      По вопросам данных: <a href="mailto:privacy@spinhire.io">privacy@spinhire.io</a></p>
-      <p style="font-size: 0.85rem; color: var(--ink-faint); margin-top: 10px;">Реквизиты юридического лица будут опубликованы к публичному запуску.</p>
+    <div class="contact-card about-section">
+      <span class="kicker pink">На связи</span>
+      <h2>Контакты</h2>
+      <p style="color: var(--ink);">Почта: <a href="mailto:hello@spinhire.io">hello@spinhire.io</a><br>Telegram: <a href="https://t.me/spinhire" target="_blank" rel="noopener">@spinhire</a><br>По вопросам данных: <a href="mailto:privacy@spinhire.io">privacy@spinhire.io</a></p>
     </div>
   </div>
 </main>

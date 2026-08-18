@@ -206,6 +206,9 @@
   .hp-balance b { color:var(--acid); }
   .hp-rules { color:var(--ink-dim); font-size:.85rem; text-underline-offset:4px; }
   .hp-rules:hover { color:var(--acid); }
+  .hp-links { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .hp-games-link { color:var(--acid); font-weight:800; font-size:.88rem; text-decoration:none; }
+  .hp-games-link:hover { color:var(--ink); }
   .hp-bets { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .hp-bets>span { color:var(--ink-faint); font-size:.72rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; margin-right:4px; }
   .hp-bet { min-width:54px; height:40px; border:1px solid var(--line-strong); border-radius:9px; background:var(--bg-deep); color:var(--ink-dim); font-weight:800; }
@@ -337,7 +340,6 @@
       <a href="jobs.html">Вакансии</a>
       <a href="companies.html">Компании</a>
       <a href="blog.html">Блог</a>
-      <a href="games.html">Игровая</a>
       <a href="post-job.html">Работодателям</a>
     </nav>
     <div class="header-actions">
@@ -463,7 +465,10 @@
           <p class="hp-slot__msg" id="hpMsg" aria-live="polite"></p>
           <button class="btn btn-acid btn-lg" id="hpSpin">Крутить · −10 SC</button>
           <div class="hp-paytable"><b>3 одинаковых</b><span>×20 ставки</span><b>Пара на линии</b><span>×2 ставки</span><b>Линий</b><span>8</span></div>
-          <a class="hp-rules" href="game-rules.html">Полные правила →</a>
+          <div class="hp-links">
+            <a class="hp-games-link" href="games.html">Все игры в игровой зоне →</a>
+            <a class="hp-rules" href="game-rules.html">Правила</a>
+          </div>
         </div>
       </div>
     </div>
