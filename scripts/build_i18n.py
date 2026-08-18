@@ -123,7 +123,7 @@ def build(strings: list[str], target: str) -> dict[str, str]:
 def main() -> None:
     strings = collect_strings()
     print(f"Collected {len(strings)} public UI strings")
-    output_dir = ROOT / "data"
+    output_dir = ROOT / "js"
     output_dir.mkdir(exist_ok=True)
     for target in TARGETS:
         dictionary = build(strings, target)

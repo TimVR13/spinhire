@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (lang === 'ru') return;
     let complete = {};
     try {
-      const response = await fetch(`/data/i18n-${lang}.json?v=20260818`, { credentials: 'same-origin' });
+      const response = await fetch(`/js/i18n-${lang}.json?v=20260818`, { credentials: 'same-origin' });
       if (response.ok) complete = await response.json();
     } catch (_) {}
     const dict = Object.assign({}, complete, UI_COPY[lang]);
