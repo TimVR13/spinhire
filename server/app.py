@@ -59,6 +59,7 @@ RESEND_FROM = os.environ.get("RESEND_FROM", "")
 BASE_URL = os.environ.get("BASE_URL", "").rstrip("/")
 CV_UPLOAD_DIR = os.environ.get("CV_UPLOAD_DIR", os.path.join(ROOT, "data", "cv_uploads"))
 CV_MAX_BYTES = 5 * 1024 * 1024
+SIGNUP_COIN_BONUS = 20
 # Подтверждение почты включается автоматически, когда настроен Resend.
 REQUIRE_VERIFY = bool(RESEND_API_KEY)
 
@@ -1046,7 +1047,8 @@ def register(request: Request, email: str = Form(...), password: str = Form(...)
         return render(request, db, "register.html", role=role, next=next, email=email,
                       error="Пароль — от 6 символов")
     u = User(email=email.strip().lower(), password_hash=hash_pw(password),
-             name=name.strip(), role=role, company_name=company_name.strip())
+             name=name.strip(), role=role, company_name=company_name.strip(),
+             coins=SIGNUP_COIN_BONUS)
     db.add(u)
     db.commit()
     # подтверждение почты: только если Resend настроен
@@ -1156,7 +1158,8 @@ def auth_google_callback(request: Request, code: str = "", state: str = "",
         u = db.query(User).filter(func.lower(User.email) == email).first()
         if not u:
             u = User(email=email, password_hash=hash_pw(secrets.token_urlsafe(24)),
-                     name=name, role=requested_role or "talent", verified=1)
+                     name=name, role=requested_role or "talent", verified=1,
+                     coins=SIGNUP_COIN_BONUS)
             db.add(u)
             db.commit()
         elif requested_role and u.role != "admin" and u.role != requested_role:
