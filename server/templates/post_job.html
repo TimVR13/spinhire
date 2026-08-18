@@ -27,6 +27,8 @@
       .tariff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: var(--sp-3); margin-top: var(--sp-4); }
       .tariff { display: flex; flex-direction: column; }
       .tariff .salary { font-size: 1.6rem; margin: 6px 0 2px; }
+      .tariff .old-price { color: var(--ink-faint); font-size: 0.9rem; text-decoration: line-through; margin-left: 8px; }
+      .tariff .discount { display: inline-flex; width: fit-content; margin-top: 8px; padding: 4px 8px; border: 1px solid var(--acid); color: var(--acid); font-size: 0.72rem; font-weight: 800; text-transform: uppercase; }
       .tariff .per { color: var(--ink-dim); font-size: 0.9rem; line-height: 1.45; min-height: 2.6em; }
       .tariff ul { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 0.83rem; color: var(--ink-dim); margin: 12px 0 14px; flex: 1; }
       .tariff li::before { content: "▸ "; color: var(--acid); font-weight: 800; }
@@ -35,7 +37,7 @@
     </style>
     <div class="tariff-grid">
       <div class="card tariff"><b style="font-family: var(--font-display);">Стандарт</b>
-        <div class="salary">€199</div><span class="per">Размещение вакансии на 30 дней</span>
+        <div class="salary">€99 <span class="old-price">€199</span></div><span class="per">Размещение вакансии на 30 дней</span><span class="discount">Скидка 50%</span>
         <ul>
           <li>Вакансия показывается в поиске и категориях</li>
           <li>Все отклики доступны в кабинете работодателя</li>
@@ -45,7 +47,7 @@
         <form method="post" action="/checkout/single"><button class="btn btn-ghost btn-sm btn-block" type="submit">Разместить вакансию</button></form></div>
 
       <div class="card tariff" style="border-color: var(--acid);"><b style="font-family: var(--font-display);">Продвижение ⚡</b>
-        <div class="salary">€399</div><span class="per">Продвижение вакансии на 60 дней</span>
+        <div class="salary">€199 <span class="old-price">€399</span></div><span class="per">Продвижение вакансии на 60 дней</span><span class="discount">Скидка 50%</span>
         <ul>
           <li>Всё, что входит в тариф «Стандарт»</li>
           <li>Вакансия закреплена вверху поиска и на главной</li>
@@ -54,15 +56,15 @@
         </ul>
         <form method="post" action="/checkout/featured"><button class="btn btn-acid btn-sm btn-block" type="submit">Продвинуть вакансию</button></form></div>
 
-      <div class="card tariff"><b style="font-family: var(--font-display);">10 контактов</b>
-        <div class="salary">€69</div><span class="per">Контакты 10 кандидатов из базы резюме</span>
+      <div class="card tariff"><b style="font-family: var(--font-display);">1 контакт</b>
+        <div class="salary">€5</div><span class="per">Одно открытие контактов кандидата</span>
         <ul>
           <li>Telegram и e-mail каждого кандидата</li>
           <li>Просмотр профилей и поиск по базе — бесплатно</li>
           <li>Если кандидат не ответил за 14 дней, контакт вернётся</li>
-          <li>Пакет действует 6 месяцев</li>
+          <li>Открытый контакт остаётся доступен навсегда</li>
         </ul>
-        <form method="post" action="/checkout/cv10"><button class="btn btn-ghost btn-sm btn-block" type="submit">Купить 10 контактов</button></form></div>
+        <form method="post" action="/checkout/cv1"><button class="btn btn-ghost btn-sm btn-block" type="submit">Открыть 1 контакт за €5</button></form></div>
 
       <div class="card tariff pinkc" style="border-color: var(--pink);"><b style="font-family: var(--font-display);">Подбор под ключ</b>
         <div class="salary" style="color: var(--pink);">1 зарплата</div><span class="per">Полный поиск и найм одного сотрудника</span>

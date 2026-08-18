@@ -366,11 +366,12 @@ class Event(Base):
 
 
 PLANS = {
-    "single": ("Одна вакансия", 199, "Размещение вакансии на 30 дней"),
-    "featured": ("Featured ⚡", 399, "Топ поиска + главная, 60 дней"),
+    "single": ("Одна вакансия", 99, "Размещение вакансии на 30 дней — скидка 50%"),
+    "featured": ("Featured ⚡", 199, "Топ поиска + главная, 60 дней — скидка 50%"),
     "pack5": ("Пакет 5 вакансий", 799, "5 размещений по 30 дней"),
-    "cv10": ("10 контактов из базы", 69, "Открытие 10 контактов резюме (€6.9/контакт)"),
-    "cv40": ("40 контактов из базы", 199, "Открытие 40 контактов резюме (€4.98/контакт)"),
+    "cv1": ("1 контакт из базы", 5, "Открытие одного контакта резюме"),
+    "cv10": ("10 контактов из базы", 50, "Открытие 10 контактов резюме (€5/контакт)"),
+    "cv40": ("40 контактов из базы", 200, "Открытие 40 контактов резюме (€5/контакт)"),
     "cvunlim": ("База резюме — безлимит / мес", 349, "Безлимитные контакты на 30 дней"),
     "hunt": ("Подбор под ключ — предоплата", 1000, "Итоговая стоимость — 1 зарплата кандидата"),
 }
@@ -2323,7 +2324,11 @@ def admin_order_action(order_id: int, action: str, request: Request, db: Session
                 if job:
                     job.featured = True
                     job.status = "approved"
-            if not already_paid and o.user and o.plan == "cv10":
+            if not already_paid and o.user and o.plan == "cv1":
+                o.user.cv_credits = (o.user.cv_credits or 0) + 1
+                db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=1,
+                                          balance_after=o.user.cv_credits, action="purchase"))
+            elif not already_paid and o.user and o.plan == "cv10":
                 o.user.cv_credits = (o.user.cv_credits or 0) + 10
                 db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=10,
                                           balance_after=o.user.cv_credits, action="purchase"))
