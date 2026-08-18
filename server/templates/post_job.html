@@ -27,7 +27,7 @@
       .tariff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: var(--sp-3); margin-top: var(--sp-4); }
       .tariff { display: flex; flex-direction: column; }
       .tariff .salary { font-size: 1.6rem; margin: 6px 0 2px; }
-      .tariff .per { color: var(--ink-faint); font-size: 0.78rem; }
+      .tariff .per { color: var(--ink-dim); font-size: 0.9rem; line-height: 1.45; min-height: 2.6em; }
       .tariff ul { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 0.83rem; color: var(--ink-dim); margin: 12px 0 14px; flex: 1; }
       .tariff li::before { content: "▸ "; color: var(--acid); font-weight: 800; }
       .tariff.pinkc li::before { color: var(--pink); }
@@ -35,45 +35,45 @@
     </style>
     <div class="tariff-grid">
       <div class="card tariff"><b style="font-family: var(--font-display);">Стандарт</b>
-        <div class="salary">€199</div><span class="per">30 дней</span>
+        <div class="salary">€199</div><span class="per">Размещение вакансии на 30 дней</span>
         <ul>
-          <li>Поиск, категории и гео-страницы</li>
-          <li>Отклики падают в мини-ATS</li>
-          <li>1 поднятие в топ включено</li>
-          <li>Модерация людьми ~2 часа</li>
+          <li>Вакансия показывается в поиске и категориях</li>
+          <li>Все отклики доступны в кабинете работодателя</li>
+          <li>Одно поднятие вакансии в начало списка</li>
+          <li>Проверка и публикация — обычно до 2 часов</li>
         </ul>
-        <form method="post" action="/checkout/single"><button class="btn btn-ghost btn-sm btn-block" type="submit">Купить</button></form></div>
+        <form method="post" action="/checkout/single"><button class="btn btn-ghost btn-sm btn-block" type="submit">Разместить вакансию</button></form></div>
 
-      <div class="card tariff" style="border-color: var(--acid);"><b style="font-family: var(--font-display);">Featured ⚡</b>
-        <div class="salary">€399</div><span class="per">60 дней · выбирают чаще</span>
+      <div class="card tariff" style="border-color: var(--acid);"><b style="font-family: var(--font-display);">Продвижение ⚡</b>
+        <div class="salary">€399</div><span class="per">Продвижение вакансии на 60 дней</span>
         <ul>
-          <li>Топ поиска + блок на главной</li>
-          <li>Неон-подсветка карточки</li>
-          <li>Пост в Telegram-канал (12K)</li>
-          <li>4 автоподнятия за период</li>
+          <li>Всё, что входит в тариф «Стандарт»</li>
+          <li>Вакансия закреплена вверху поиска и на главной</li>
+          <li>Отдельная публикация в Telegram-канале</li>
+          <li>Четыре автоматических поднятия за 60 дней</li>
         </ul>
-        <form method="post" action="/checkout/featured"><button class="btn btn-acid btn-sm btn-block" type="submit">Взять Featured</button></form></div>
+        <form method="post" action="/checkout/featured"><button class="btn btn-acid btn-sm btn-block" type="submit">Продвинуть вакансию</button></form></div>
 
-      <div class="card tariff"><b style="font-family: var(--font-display);">Контакты резюме</b>
-        <div class="salary">€69</div><span class="per">10 контактов · €6.9 / контакт</span>
+      <div class="card tariff"><b style="font-family: var(--font-display);">10 контактов</b>
+        <div class="salary">€69</div><span class="per">Контакты 10 кандидатов из базы резюме</span>
         <ul>
-          <li>Контакт = Telegram + e-mail кандидата</li>
-          <li>Профили и фильтры смотрите бесплатно</li>
-          <li>Не ответил за 14 дней — контакт вернём</li>
-          <li>Ещё: 40 за €199, безлимит €349/мес</li>
+          <li>Telegram и e-mail каждого кандидата</li>
+          <li>Просмотр профилей и поиск по базе — бесплатно</li>
+          <li>Если кандидат не ответил за 14 дней, контакт вернётся</li>
+          <li>Пакет действует 6 месяцев</li>
         </ul>
-        <form method="post" action="/checkout/cv10"><button class="btn btn-ghost btn-sm btn-block" type="submit">Купить 10</button></form></div>
+        <form method="post" action="/checkout/cv10"><button class="btn btn-ghost btn-sm btn-block" type="submit">Купить 10 контактов</button></form></div>
 
       <div class="card tariff pinkc" style="border-color: var(--pink);"><b style="font-family: var(--font-display);">Подбор под ключ</b>
-        <div class="salary" style="color: var(--pink);">1 зарплата</div><span class="per">кандидата · предоплата €1 000</span>
+        <div class="salary" style="color: var(--pink);">1 зарплата</div><span class="per">Полный поиск и найм одного сотрудника</span>
         <ul>
-          <li>Вносите €1 000 — и мы начинаем поиск</li>
-          <li>Шорт-лист 10+ проверенных за 7 дней</li>
-          <li>Первичные интервью и проверка языков</li>
-          <li>Интро только с согласными кандидатами</li>
-          <li>Ушёл в первые 60 дней — заменим бесплатно</li>
+          <li>Предоплата €1 000 для начала поиска</li>
+          <li>Не менее 10 проверенных кандидатов за 7 дней</li>
+          <li>Мы проводим первые интервью и проверяем языки</li>
+          <li>Вы знакомитесь только с заинтересованными кандидатами</li>
+          <li>Бесплатная замена, если сотрудник уйдёт в первые 60 дней</li>
         </ul>
-        <form method="post" action="/checkout/hunt"><button class="btn btn-pink btn-sm btn-block" type="submit">Запустить за €1 000</button></form></div>
+        <form method="post" action="/checkout/hunt"><button class="btn btn-pink btn-sm btn-block" type="submit">Начать подбор за €1 000</button></form></div>
     </div>
   </section>
 
