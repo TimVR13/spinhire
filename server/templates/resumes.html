@@ -9,10 +9,11 @@
 <meta property="og:url" content="https://spinhire.io/resumes">
 <meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">{% endblock %}
 {% block style %}
-  .cv-hero { display:grid; grid-template-columns:minmax(0,1.7fr) minmax(280px,.65fr); gap:var(--sp-6); align-items:end; padding:var(--sp-5) 0 var(--sp-6); }
-  .cv-hero h1 { display:grid; gap:.08em; max-width:none; font-size:clamp(2rem,4vw,3.5rem); line-height:1.04; }
-  .cv-hero-title-line { display:block; white-space:nowrap; }
-  .cv-note { border-left:3px solid var(--acid); padding:4px 0 4px 18px; color:var(--ink-dim); max-width:44ch; }
+  .cv-hero { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(300px,.55fr); gap:clamp(var(--sp-6),5vw,var(--sp-8)); align-items:end; padding:var(--sp-5) 0 var(--sp-6); }
+  .cv-hero h1 { display:grid; gap:.08em; max-width:16ch; font-size:clamp(2rem,3.2vw,3rem); line-height:1.04; }
+  .cv-hero-title-line { display:block; white-space:normal; }
+  .cv-aside { align-self:end; border:1px solid color-mix(in oklch,var(--acid) 38%,var(--line)); border-radius:var(--radius); background:color-mix(in oklch,var(--surface) 82%,transparent); padding:var(--sp-5); }
+  .cv-note { color:var(--ink-dim); max-width:36ch; line-height:1.6; }
   .cv-search { display:grid; grid-template-columns:1.5fr 1fr 1fr auto; gap:10px; margin-bottom:var(--sp-5); }
   .cv-list { border-top:2px solid var(--line); }
   .cv-row { display:grid; grid-template-columns:150px minmax(0,1.4fr) minmax(180px,.7fr) auto; gap:var(--sp-4); align-items:center; padding:var(--sp-5) 0; border-bottom:1px solid var(--line); color:inherit; text-decoration:none; transition:transform .25s cubic-bezier(.16,1,.3,1),border-color .25s; }
@@ -25,7 +26,7 @@
   .cv-skill { border:1px solid var(--line); padding:5px 8px; color:var(--ink-dim); font-size:.75rem; }
   .cv-arrow { color:var(--pink); font-size:1.4rem; }
   .cv-empty { padding:60px 0; color:var(--ink-dim); border-bottom:1px solid var(--line); }
-  @media(max-width:900px){.cv-hero{grid-template-columns:1fr}.cv-hero h1{font-size:clamp(1.8rem,7.5vw,3.2rem)}.cv-hero-title-line{white-space:normal}.cv-search{grid-template-columns:1fr}.cv-row{grid-template-columns:1fr auto}.cv-code,.cv-skills{grid-column:1/-1}.cv-arrow{grid-column:2;grid-row:1}.cv-row>div:nth-child(3){grid-column:1/-1}}
+  @media(max-width:900px){.cv-hero{grid-template-columns:1fr;gap:var(--sp-5)}.cv-hero h1{font-size:clamp(1.8rem,7.5vw,3.2rem);max-width:18ch}.cv-aside{max-width:560px}.cv-search{grid-template-columns:1fr}.cv-row{grid-template-columns:1fr auto}.cv-code,.cv-skills{grid-column:1/-1}.cv-arrow{grid-column:2;grid-row:1}.cv-row>div:nth-child(3){grid-column:1/-1}}
 {% endblock %}
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Резюме</nav>
@@ -34,7 +35,7 @@
       <span class="kicker">Закрытая база талантов</span>
       <h1><span class="cv-hero-title-line">Специалисты iGaming</span><span class="cv-hero-title-line">Контакты закрыты</span></h1>
     </div>
-    <div>
+    <div class="cv-aside">
       <p class="cv-note">Опыт и навыки видны всем. Имя, email и Telegram открываются работодателю только после оплаты.</p>
       <a href="/profile#cv" class="btn btn-acid" style="margin-top:18px;">Добавить своё CV</a>
     </div>
