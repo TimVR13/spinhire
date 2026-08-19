@@ -309,6 +309,10 @@ class Job(Base):
         return f"https://icons.duckduckgo.com/ip3/{dom}.ico" if dom else ""
 
     @property
+    def salary_estimate(self):
+        return "" if self.has_salary else estimate_salary(self)
+
+    @property
     def company_slug(self):
         import re as _re
         s = _re.sub(r"[^a-zа-я0-9]+", "-", (self.company_name or "").lower()).strip("-")
@@ -638,6 +642,53 @@ def host_of(url: str) -> str:
         return (urllib.parse.urlparse(url or "").hostname or "").lower().removeprefix("www.")
     except ValueError:
         return ""
+
+
+
+# ---------- оценочная вилка из картотеки профессий ----------
+# Работодатели в iGaming вилку почти не публикуют (реально ~3–5% описаний).
+# Там, где её нет, показываем ОЦЕНКУ из нашей картотеки — с явной пометкой,
+# отдельным стилем и никогда в разметке JobPosting.
+
+_EST_GRADE = [
+    (re.compile(r"(?i)\b(intern|trainee|junior|jr\.?)\b"), "junior"),
+    (re.compile(r"(?i)\b(head|director|principal|chief|vp)\b|team ?lead|lead\b"), "lead"),
+    (re.compile(r"(?i)\b(senior|sr\.?)\b"), "senior"),
+]
+_EST_MT = re.compile(r"(?i)malta|cyprus|limassol|nicosia|мальта|кипр|лимассол|gibraltar|isle of man")
+
+
+def _estimate_index():
+    idx = getattr(_estimate_index, "_cache", None)
+    data = professions_data()
+    if idx and idx[0] is data:
+        return idx[1]
+    pairs = []
+    for role in data.get("roles", []):
+        for kw in (role.get("match") or []):
+            pairs.append((kw.lower(), role))
+    pairs.sort(key=lambda kv: -len(kv[0]))  # длинный ключ специфичнее
+    _estimate_index._cache = (data, pairs)
+    return pairs
+
+
+def estimate_salary(job) -> str:
+    """«€3 200–4 300» по роли, региону и грейду — либо пустая строка."""
+    title = (job.title or "").lower()
+    role = next((r for kw, r in _estimate_index() if kw in title), None)
+    if not role:
+        return ""
+    grid = role.get("salary") or {}
+    location = f"{job.location or ''} {job.fmt or ''}"
+    region = ("mt_cy" if _EST_MT.search(location)
+              else "remote" if "удал" in location.lower() or "remote" in location.lower()
+              else "eu")
+    grade = next((g for rx, g in _EST_GRADE if rx.search(job.title or "")), "middle")
+    rng = (grid.get(region) or {}).get(grade)
+    if not rng or len(rng) != 2:
+        return ""
+    fmt = lambda v: f"{int(v):,}".replace(",", " ")
+    return f"€{fmt(rng[0])}–{fmt(rng[1])}"
 
 
 def company_domain(name: str, source_url: str = "") -> str:
@@ -1634,6 +1685,18 @@ def register(request: Request, email: str = Form(...), password: str = Form(...)
         db.commit()
     dest = safe_next(next, dest_for(u)) if next else dest_for(u)
     return set_session(RedirectResponse(dest, status_code=303), u)
+
+
+
+@app.post("/account/mode")
+def account_mode(request: Request, mode: str = Form(...), db: Session = Depends(db_session)):
+    """Один аккаунт — два режима: соискатель и работодатель, переключение без потери данных."""
+    user = get_user(request, db)
+    if not user or user.role == "admin" or mode not in ("talent", "employer"):
+        return RedirectResponse("/", status_code=303)
+    user.role = mode
+    db.commit()
+    return RedirectResponse("/employer" if mode == "employer" else "/profile", status_code=303)
 
 
 @app.get("/logout")

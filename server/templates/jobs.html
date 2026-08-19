@@ -88,6 +88,7 @@
       </div>
       <div class="job-card__side">
         {% if j.has_salary %}<span class="salary">{{ j.salary }}</span>
+        {% elif j.salary_estimate %}<span class="salary salary--est" title="Оценка SpinHire по картотеке профессий — не данные работодателя">≈ {{ j.salary_estimate }}</span>
         {% else %}<span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>{% endif %}
         <span class="job-card__age">{{ j.created_at.strftime('%d.%m') }}</span>
       </div>

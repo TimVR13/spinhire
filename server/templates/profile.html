@@ -22,6 +22,7 @@
   @media(max-width:700px){.cv-grid{grid-template-columns:1fr}.cv-grid .wide{grid-column:auto}.cv-start{grid-template-columns:1fr}.cv-choice{min-height:0;border-right:0;border-bottom:1px solid var(--line)}.cv-choice:last-child{border-bottom:0}.dash-strip{grid-template-columns:repeat(2,1fr)}.dash-cell:first-child{grid-column:1/-1}.recommend-grid{grid-template-columns:1fr}}
 {% endblock %}
 {% block content %}
+  {% if user and user.role == 'talent' %}<form method="post" action="/account/mode" style="float:right;margin-top:4px;"><input type="hidden" name="mode" value="employer"><button class="btn btn-ghost btn-sm" type="submit" title="Тот же аккаунт, данные обоих режимов сохраняются">⇄ Режим работодателя</button></form>{% endif %}
   <nav class="crumbs"><a href="/">Главная</a> / Мой профиль</nav>
   {% if request.query_params.get('quick') %}<div class="flash">✓ Мы разобрали ваше CV и заполнили черновик. Проверьте поля ниже, поправьте что нужно — и опубликуйте. Пароль для входа задайте через «Забыли пароль» или продолжайте по этой сессии.</div>{% endif %}
   {% if request.query_params.get('ok') %}<div class="flash">✓ Профиль сохранён</div>{% endif %}

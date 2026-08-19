@@ -131,6 +131,9 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   h2 { font-size: clamp(1.35rem, 7vw, 1.85rem); }
 }
 
+.salary--est { color: color-mix(in oklch, var(--acid) 55%, var(--ink-faint)); font-weight: 600; }
+.salary--est::after { content: ""; }
+
 .kicker {
   font-family: var(--font-body);
   font-weight: 700;

@@ -88,7 +88,7 @@
           {% if job.category %}<span class="tag">{{ job.category }}</span>{% endif %}
           {% for t in job.tag_list %}<span class="tag tag-acid" data-no-translate>{{ t }}</span>{% endfor %}
         </div>
-        <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}вилка по запросу{% endif %}</p>
+        <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% elif job.salary_estimate %}<span class="salary--est">≈ {{ job.salary_estimate }}</span> <small style="color:var(--ink-faint);font-size:0.55em;font-weight:400;">оценка SpinHire</small>{% else %}вилка по запросу{% endif %}</p>
         <div style="display: flex; flex-direction: column; gap: 12px; margin-top: var(--sp-4);">
           {% if is_closed %}
             <a class="btn btn-acid btn-lg" href="/jobs?cat={{ job.category|urlencode }}">Смотреть актуальные вакансии →</a>
@@ -134,7 +134,7 @@
             <p class="job-card__meta"><b>{{ s.company_name }}</b> · {{ s.location or '—' }} · {{ s.fmt }}</p>
           </div>
           <div class="job-card__side">
-            {% if s.has_salary %}<span class="salary">{{ s.salary }}</span>{% else %}<span class="salary" style="color: var(--ink-faint); font-size: 0.85rem;">по запросу</span>{% endif %}
+            {% if s.has_salary %}<span class="salary">{{ s.salary }}</span>{% elif s.salary_estimate %}<span class="salary salary--est">≈ {{ s.salary_estimate }}</span>{% else %}<span class="salary" style="color: var(--ink-faint); font-size: 0.85rem;">по запросу</span>{% endif %}
           </div>
         </a>
         {% endfor %}
@@ -168,7 +168,7 @@
           {% if job.category %}<dt>Направление</dt><dd>{{ job.category }}</dd>{% endif %}
           <dt>Формат</dt><dd>{{ job.fmt }}</dd>
           {% if job.location %}<dt>Локация</dt><dd>{{ job.location }}</dd>{% endif %}
-          <dt>Зарплата</dt><dd>{% if job.has_salary %}{{ job.salary }}{% else %}по запросу{% endif %}</dd>
+          <dt>Зарплата</dt><dd>{% if job.has_salary %}{{ job.salary }}{% elif job.salary_estimate %}≈ {{ job.salary_estimate }} · оценка{% else %}по запросу{% endif %}</dd>
           <dt>Размещена</dt><dd>{% if job.posted_at %}{{ job.posted_at }}{% else %}{{ job.created_at.strftime('%d.%m.%Y') }}{% endif %}</dd>
           {% if job.deadline %}<dt>Дедлайн</dt><dd>{{ job.deadline }}</dd>{% endif %}
           {% if is_closed %}<dt>Статус</dt><dd style="color: var(--yellow);">Закрыта</dd>{% endif %}

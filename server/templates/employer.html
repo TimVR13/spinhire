@@ -52,6 +52,7 @@
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <a href="/resumes" class="btn btn-acid">Резюме · {{ account.cv_credits or 0 }} открытий</a>
       {% if team_role != 'viewer' %}<a href="/post-job" class="btn btn-pink">+ Разместить вакансию</a>{% endif %}
+      {% if user and user.role == 'employer' %}<form method="post" action="/account/mode"><input type="hidden" name="mode" value="talent"><button class="btn btn-ghost" type="submit" title="Тот же аккаунт, данные обоих режимов сохраняются">⇄ Я соискатель</button></form>{% endif %}
     </div>
   </div>
 
