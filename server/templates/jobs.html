@@ -45,7 +45,8 @@
 
   <form class="filter-bar" method="get" action="/jobs" role="search">
     <input class="input" type="search" name="q" value="{{ q }}" placeholder="Должность, компания, тег…" aria-label="Поиск вакансий">
-    <button class="btn btn-ghost btn-sm filter-toggle" type="button" aria-expanded="false" aria-controls="filterMore">Фильтры{% if fmt or cat or loc or lang or salary_only %} · вкл{% endif %}</button>
+    {% set active_filters = [fmt, cat, loc, lang, salary_only] | select | list | length %}
+    <button class="btn btn-ghost btn-sm filter-toggle" type="button" aria-expanded="false" aria-controls="filterMore" data-active="{{ active_filters }}">Фильтры{% if active_filters %} <b>· {{ active_filters }}</b>{% endif %}</button>
     <div class="filter-more" id="filterMore">
     <select class="select input" name="fmt" aria-label="Формат работы — онлайн, офис, гибрид">
       <option value="">Онлайн / офис — любой</option>
@@ -117,6 +118,6 @@
 <script>
 (function(){const bar=document.querySelector('.filter-bar'),btn=bar&&bar.querySelector('.filter-toggle');if(!btn)return;
 const open=o=>{bar.classList.toggle('is-open',o);btn.setAttribute('aria-expanded',String(o));};
-open(/вкл/.test(btn.textContent));btn.addEventListener('click',()=>open(!bar.classList.contains('is-open')));})();
+open(Number(btn.dataset.active) > 0);btn.addEventListener('click',()=>open(!bar.classList.contains('is-open')));})();
 </script>
 {% endblock %}
