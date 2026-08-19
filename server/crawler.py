@@ -89,6 +89,10 @@ SOURCE_REGISTRY = [
      "note": "Сайт и внутренний API закрыты Cloudflare. Коннектор готов к официальному feed URL."},
     {"key": "hh.ru", "name": "HeadHunter (hh.ru / hh.ua)", "type": "Публичный API — требует настройки",
      "status": "не подключён", "note": "api.hh.ru бесплатный (зарплата+город+работодатель), но из облака отдаёт 403 — нужен зарегистрированный app-токен ИЛИ запуск с разрешённого IP. Покрывает RU/UA/СНГ. Готов подключить."},
+    {"key": "vendor-seeds", "name": "B2B-вендоры iGaming (55 компаний)", "type": "Карьерные страницы по списку",
+     "status": "подключён", "note": "data/vendor-seeds.json: провайдеры слотов, платформы и агрегаторы. У 27 из 55 найдена карьерная страница; описания компаний идут в карточки"},
+    {"key": "bamboohr", "name": "BambooHR: Altenar, Kalamba, Hacksaw", "type": "Публичный карьерный портал",
+     "status": "подключён", "note": "Эндпоинты /careers/list и /careers/{id}/detail отдают вакансию с полным описанием. Новую студию подключить = строка в BAMBOO_ACCOUNTS"},
     {"key": "igamingcareers", "name": "iGamingCareers.co", "type": "Публичный JSON API агрегатора",
      "status": "подключён", "note": "~1 360 вакансий, 14 страниц по 100. Ссылка ведёт на карьерную страницу работодателя (applicationUrl), заглушки «No job postings» отбрасываем"},
     {"key": "casino-discovery", "name": "Казино: 9 рынков", "type": "Career/hiring discovery",
@@ -118,7 +122,7 @@ SOFTSWISS_API = "https://careers.softswiss.com/wp-json/wp/v2/vacancy?per_page=10
 CASINO_SEEDS_PATH = Path(__file__).resolve().parent.parent / "data" / "casino-operators.json"
 DISCOVERY_REPORT_PATH = Path(__file__).resolve().parent.parent / "data" / "casino-careers-report.json"
 CAREER_WORDS = re.compile(r"(?i)(career|jobs?|vacanc|hiring|join[-_ ]?(us|team)|work[-_ ]?with[-_ ]?us)")
-DISCOVERY_LOOKUPS_PER_RUN = int(os.environ.get("CASINO_DISCOVERY_LOOKUPS_PER_RUN", "40"))
+DISCOVERY_LOOKUPS_PER_RUN = int(os.environ.get("CASINO_DISCOVERY_LOOKUPS_PER_RUN", "120"))
 SEARCH_EXCLUDED_HOSTS = ("linkedin.com", "facebook.com", "instagram.com", "wikipedia.org",
                          "casino.guru", "glassdoor.", "indeed.", "trustpilot.", "youtube.com")
 _RUN_LOCK = threading.Lock()
@@ -343,6 +347,55 @@ def crawl_discovered_careers(seed):
         job["company_name"] = company or job["company_name"]
         unique[(job["source"], job["ext_id"])] = job
     return list(unique.values()), checked
+
+
+
+VENDOR_SEEDS_PATH = Path(__file__).resolve().parent.parent / "data" / "vendor-seeds.json"
+
+
+def vendor_seeds():
+    """Список B2B-вендоров iGaming с подтверждёнными карьерными страницами."""
+    if not VENDOR_SEEDS_PATH.exists():
+        return []
+    payload = json.loads(VENDOR_SEEDS_PATH.read_text(encoding="utf-8"))
+    return payload.get("vendors", []) if isinstance(payload, dict) else payload
+
+
+def crawl_vendor_seeds():
+    """Обойти карьерные страницы вендоров: JSON-LD, ATS-ссылки и страницы вакансий."""
+    jobs = []
+    for seed in vendor_seeds():
+        if not seed.get("careers_url"):
+            continue          # карьерная страница не найдена — оставляем на следующий прогон
+        try:
+            found, _pages = crawl_discovered_careers({
+                "operator": seed.get("operator", ""),
+                "homepage": seed.get("homepage", ""),
+                "careers_url": seed["careers_url"]})
+            jobs.extend(found)
+        except Exception:
+            continue
+    return jobs
+
+
+def vendor_company_profiles():
+    """Описания и сайты вендоров для карточек компаний — без обращения к сети."""
+    rows = []
+    for seed in vendor_seeds():
+        rows.append({
+            "name": seed.get("operator", ""),
+            "description_ru": seed.get("description", ""),
+            "description": "",
+            "website": seed.get("homepage", ""),
+            "careers_url": seed.get("careers_url", ""),
+            "industry": seed.get("vertical", ""),
+            "founded_year": seed.get("founded_year"),
+            "headquarters": "",
+            "tagline": "",
+            "size": "",
+            "source": "vendor-seeds",
+        })
+    return rows
 
 
 def crawl_casino_seed_registry():
@@ -607,6 +660,53 @@ def crawl_smartrecruiters(company_id, company):
     return out
 
 
+
+# BambooHR — второй по популярности ATS у iGaming-студий после Greenhouse.
+# Публичные эндпоинты: /careers/list (список) и /careers/{id}/detail (описание).
+BAMBOO_ACCOUNTS = {
+    "altenar": "Altenar",
+    "kalambagames": "Kalamba Games",
+    "hacksawoperations": "Hacksaw Gaming",
+}
+
+
+def crawl_bamboohr(account, company):
+    """Вакансии из публичного карьерного портала BambooHR."""
+    listing = json.loads(_fetch(f"https://{account}.bamboohr.com/careers/list"))
+    rows = listing.get("result") if isinstance(listing, dict) else listing
+    out = []
+    for row in (rows or [])[:MAX_PER_BOARD]:
+        job_id = str(row.get("id") or "")
+        title = (row.get("jobOpeningName") or "").strip()
+        if not job_id or not title:
+            continue
+        loc = row.get("location") or {}
+        location = ", ".join(part for part in (loc.get("city"), loc.get("state")) if part)
+        description = ""
+        try:
+            detail = json.loads(_fetch(f"https://{account}.bamboohr.com/careers/{job_id}/detail"))
+            opening = (detail.get("result") or {}).get("jobOpening") or {}
+            description = _clean_html(opening.get("description") or "")
+            if not location:
+                place = opening.get("location") or {}
+                location = ", ".join(part for part in (place.get("city"),
+                                                       place.get("addressCountry")) if part)
+        except Exception:
+            pass
+        lang = detect_lang(title, description)
+        out.append({
+            "title": title, "company_name": company, "location": location,
+            "fmt": "удалёнка" if row.get("isRemote") else _fmt_from(location, description),
+            "tags": _tags_from(title, description, lang),
+            "description": description,
+            "source_url": f"https://{account}.bamboohr.com/careers/{job_id}",
+            "source": f"bamboohr:{account}", "ext_id": job_id,
+            "salary": "по запросу", "posted_at": "", "deadline": "",
+        })
+        time.sleep(0.15)
+    return out
+
+
 def crawl_partner_feed(url, source):
     """Импортировать официальный JSON-фид партнёра без привязки к его схеме API."""
     data = json.loads(_fetch(url))
@@ -868,6 +968,9 @@ def collect(with_metadata=False):
         fetch_source(source, lambda u=url, s=source: crawl_jsonld(u, s))
     for site, company in LEVER_SITES.items():
         fetch_source(f"lever:{site}", lambda s=site, c=company: crawl_lever(s, c), complete=True)
+    for account, company in BAMBOO_ACCOUNTS.items():
+        fetch_source(f"bamboohr:{account}",
+                     lambda a=account, c=company: crawl_bamboohr(a, c), complete=True)
     for company_id, company in SMARTRECRUITERS_COMPANIES.items():
         fetch_source(f"smartrecruiters:{company_id}",
                      lambda i=company_id, c=company: crawl_smartrecruiters(i, c), complete=True)
@@ -875,6 +978,7 @@ def collect(with_metadata=False):
         if not url:
             continue
         fetch_source(f"partner:{source}", lambda u=url, s=source: crawl_partner_feed(u, s), complete=True)
+    fetch_source("vendor-seeds", crawl_vendor_seeds)
     fetch_source("igamingcareers", crawl_igamingcareers)
     fetch_source("casino-discovery", crawl_casino_seed_registry)
     return (items, complete_sources, health) if with_metadata else items
@@ -1008,7 +1112,8 @@ def run(db, Job, guess_category, approve=True, upsert_companies=None):
         if upsert_companies:
             # публичные профили работодателей: описание, сайт, карьерная страница, HQ
             slugs = [item.get("company_ref") for item in items if item.get("company_ref")]
-            company_rows = upsert_companies(crawl_igamingcareers_companies(slugs))
+            profiles_in = vendor_company_profiles() + crawl_igamingcareers_companies(slugs)
+            company_rows = upsert_companies(profiles_in)
             print(f"[crawl] профилей компаний обновлено: {company_rows}")
         snapshot_path = Path(__file__).resolve().parent.parent / "data" / "companies.json"
         snapshot_path.write_text(json.dumps(profiles, ensure_ascii=False, indent=2), encoding="utf-8")

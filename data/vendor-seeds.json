@@ -1,0 +1,555 @@
+{
+ "source": "iGaming Lead Analysis — Paykilla (55 B2B-компаний)",
+ "vendors": [
+  {
+   "operator": "The Affiliate Platform",
+   "country": "iGaming B2B",
+   "vertical": "Аффилиат платформа",
+   "homepage": "https://theaffiliateplatform.com/",
+   "careers_url": "",
+   "description": "Управление партнёрскими программами для iGaming операторов.",
+   "founded_year": 2015,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Playtech",
+   "country": "iGaming B2B",
+   "vertical": "Платформа + контент",
+   "homepage": "https://playtech.com/",
+   "careers_url": "",
+   "description": "Крупнейший iGaming провайдер. Выручка $861M листинг LSE. Казино покер беттинг.",
+   "founded_year": 1999,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Pragmatic Play",
+   "country": "iGaming B2B",
+   "vertical": "Слоты / Live Casino",
+   "homepage": "https://pragmaticplay.com/",
+   "careers_url": "",
+   "description": "Ведущий контент-провайдер. 500+ слотов live casino 40+ рынков. Частная компания.",
+   "founded_year": 2015,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Yggdrasil Gaming",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://yggdrasilgaming.com/",
+   "careers_url": "",
+   "description": "Качественные слоты и инструменты для студий (Game in a Box). Мальта.",
+   "founded_year": 2013,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Play'n GO",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://playngo.com/",
+   "careers_url": "",
+   "description": "Шведский провайдер слотов 300+ игр один из старейших.",
+   "founded_year": 1997,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Relax Gaming",
+   "country": "iGaming B2B",
+   "vertical": "Агрегатор + слоты",
+   "homepage": "https://relax-gaming.com/",
+   "careers_url": "https://careers.relax-gaming.com/",
+   "description": "Контент-агрегатор и разработчик слотов. Silver Bullet и Powered by Relax.",
+   "founded_year": 2010,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "ELK Studios",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://elk-studios.com/",
+   "careers_url": "https://www.elk-studios.com/career/",
+   "description": "Шведская слот-студия Betting Strategies механика 60+ игр.",
+   "founded_year": 2012,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Push Gaming",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://pushgaming.com/",
+   "careers_url": "https://www.pushgaming.com/careers/join-our-team/",
+   "description": "Независимая слот-студия (Jammin' Jars). Лицензии MGA UKGC.",
+   "founded_year": 2010,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "1spin4win",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://1spin4win.com/",
+   "careers_url": "https://www.1spin4win.com/career",
+   "description": "Молодой провайдер слотов быстрорастущий.",
+   "founded_year": 2020,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Tecpinion",
+   "country": "iGaming B2B",
+   "vertical": "iGaming разработка",
+   "homepage": "https://tecpinion.com/",
+   "careers_url": "",
+   "description": "Разработка и консалтинг в iGaming. Крипто-казино специализация.",
+   "founded_year": 2018,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Hacksaw Gaming",
+   "country": "iGaming B2B",
+   "vertical": "Слоты / Скретч-карты",
+   "homepage": "https://hacksawgaming.com/",
+   "careers_url": "https://www.hacksawgaming.com/careers",
+   "description": "Mobile-first слоты и скретч-карты. MGA UKGC лицензии.",
+   "founded_year": 2018,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Wazdan",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://wazdan.com/",
+   "careers_url": "https://wazdan.com/career",
+   "description": "Литовская студия 250+ слотов Volatility Levels™ технология.",
+   "founded_year": 2010,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Spinomenal",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://spinomenal.com/",
+   "careers_url": "",
+   "description": "Быстрорастущий провайдер 200+ игр. Активно работают с крипто-казино.",
+   "founded_year": 2014,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "1X2 Network",
+   "country": "iGaming B2B",
+   "vertical": "Слоты / Виртуал спорт",
+   "homepage": "https://1x2network.com/",
+   "careers_url": "https://www.1x2network.com/careers/",
+   "description": "Провайдер слотов и виртуального спорта. Независимая студия.",
+   "founded_year": 2003,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Booming Games",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://booming-games.com/",
+   "careers_url": "",
+   "description": "Мальтийский провайдер слотов 100+ игр.",
+   "founded_year": 2014,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Kalamba Games",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://kalambagames.com/",
+   "careers_url": "https://kalambagames.com/career/",
+   "description": "Независимая студия HyperBonus™ HyperBet™ механики.",
+   "founded_year": 2017,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Thunderkick",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://thunderkick.com/",
+   "careers_url": "https://www.thunderkick.com/career/",
+   "description": "Шведская нишевая студия нестандартный дизайн слотов.",
+   "founded_year": 2012,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Digitain",
+   "country": "iGaming B2B",
+   "vertical": "Спортбет + Казино",
+   "homepage": "https://digitain.com/",
+   "careers_url": "",
+   "description": "Армянский провайдер спортбет и казино платформа. 150+ партнёров.",
+   "founded_year": 1999,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Altenar",
+   "country": "iGaming B2B",
+   "vertical": "Спортбет провайдер",
+   "homepage": "https://altenar.com/",
+   "careers_url": "https://altenar.com/career/",
+   "description": "B2B спортбет платформа. 50+ юрисдикций Isle of Man.",
+   "founded_year": 2011,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Hub88",
+   "country": "iGaming B2B",
+   "vertical": "Контент агрегатор",
+   "homepage": "https://hub88.io/",
+   "careers_url": "https://hub88.io/careers/",
+   "description": "Быстрорастущий агрегатор. 300+ операторов 12000+ игр. GGR +87% YoY.",
+   "founded_year": 2018,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Smartico.ai",
+   "country": "iGaming B2B",
+   "vertical": "CRM/Gamification",
+   "homepage": "https://smartico.ai/",
+   "careers_url": "https://www.smartico.ai/company/careers",
+   "description": "CRM-автоматизация и геймификация для iGaming. Куплена Optimove в 2026.",
+   "founded_year": 2019,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Gamingtec",
+   "country": "iGaming B2B",
+   "vertical": "B2B платформа",
+   "homepage": "https://gamingtec.com/",
+   "careers_url": "https://gamingtec.com/careers",
+   "description": "Платформа для запуска казино и беттинга. Лондон. 400+ сотрудников.",
+   "founded_year": 2013,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Bettoblock",
+   "country": "iGaming B2B",
+   "vertical": "Разработка / Блокчейн",
+   "homepage": "https://bettoblock.com/",
+   "careers_url": "https://bettoblock.com/career/",
+   "description": "Кастомная разработка беттинг-платформ с блокчейн и крипто-поддержкой.",
+   "founded_year": 2018,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "RealTime Gaming",
+   "country": "iGaming B2B",
+   "vertical": "Слоты / Казино ПО",
+   "homepage": "https://realtimegaming.com/",
+   "careers_url": "",
+   "description": "Провайдер казино-ПО популярен на офшорных рынках (Curaçao).",
+   "founded_year": 1999,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "BetSoft",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://gamingsoft.com/",
+   "careers_url": "",
+   "description": "3D слоты провайдер. Популярен у офшорных и крипто-казино.",
+   "founded_year": 2006,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "EveryMatrix",
+   "country": "iGaming B2B",
+   "vertical": "B2B платформа",
+   "homepage": "https://everymatrix.com/",
+   "careers_url": "https://everymatrix.teamtailor.com/",
+   "description": "Модульная iGaming платформа: казино спортбет платежи аффилиаты. 1400+ сотрудников.",
+   "founded_year": 2008,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "CrustLab",
+   "country": "iGaming B2B",
+   "vertical": "Разработка iGaming",
+   "homepage": "https://crustlab.com/",
+   "careers_url": "https://crustlab.com/career/",
+   "description": "Польская студия разработки iGaming специализация на крипто-казино.",
+   "founded_year": 2017,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "BGaming",
+   "country": "iGaming B2B",
+   "vertical": "Слоты (Provably Fair)",
+   "homepage": "https://bgaming.com/",
+   "careers_url": "https://bgaming.com/careers",
+   "description": "Провайдер слотов с акцентом на Provably Fair и крипто-казино.",
+   "founded_year": 2018,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "2UP",
+   "country": "iGaming B2B",
+   "vertical": "iGaming платформа",
+   "homepage": "https://2up.io/",
+   "careers_url": "",
+   "description": "Облачные iGaming решения. Казино + спортбет.",
+   "founded_year": 2018,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "EvaCodes",
+   "country": "iGaming B2B",
+   "vertical": "iGaming разработка",
+   "homepage": "https://evacodes.com/",
+   "careers_url": "",
+   "description": "Украинская студия разработки iGaming решений.",
+   "founded_year": 2015,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "LimeUp",
+   "country": "iGaming B2B",
+   "vertical": "iGaming разработка",
+   "homepage": "https://limeup.io/",
+   "careers_url": "",
+   "description": "IT-разработка под iGaming: платформы интеграции.",
+   "founded_year": 2019,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Together Gaming Solutions",
+   "country": "iGaming B2B",
+   "vertical": "Казино платформа",
+   "homepage": "https://togethergamingsolutions.com/",
+   "careers_url": "",
+   "description": "White-label казино платформа. Полный стек для операторов.",
+   "founded_year": 2018,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "BetConstruct",
+   "country": "iGaming B2B",
+   "vertical": "Спортбет + Казино платформа",
+   "homepage": "https://betconstruct.com/",
+   "careers_url": "",
+   "description": "Армянский гигант 50+ продуктов 200+ партнёров $630M выручка.",
+   "founded_year": 2003,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Soft2Bet",
+   "country": "iGaming B2B",
+   "vertical": "Платформа + B2C казино",
+   "homepage": "https://soft2bet.com/",
+   "careers_url": "",
+   "description": "iGaming платформа + собственные бренды казино. Мальта. MEGA геймификация.",
+   "founded_year": 2016,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Betinvest",
+   "country": "iGaming B2B",
+   "vertical": "Спортбет платформа",
+   "homepage": "https://betinvest.com/",
+   "careers_url": "",
+   "description": "Украинская B2B платформа для спортбет и казино операторов.",
+   "founded_year": 2012,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "SOFTSWISS",
+   "country": "iGaming B2B",
+   "vertical": "Крипто-казино платформа",
+   "homepage": "https://softswiss.com/",
+   "careers_url": "https://careers.softswiss.com/",
+   "description": "Пионер крипто-казино ПО. 1000+ брендов на платформе. Мальта.",
+   "founded_year": 2009,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Slotegrator",
+   "country": "iGaming B2B",
+   "vertical": "Агрегатор + платформа",
+   "homepage": "https://slotegrator.pro/",
+   "careers_url": "https://slotegrator.pro/careers/",
+   "description": "Агрегатор игр и turnkey казино платформа. 4-6 недель запуск.",
+   "founded_year": 2012,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "SoftGamings",
+   "country": "iGaming B2B",
+   "vertical": "White-label казино",
+   "homepage": "https://softgamings.com/",
+   "careers_url": "https://www.softgamings.com/careers/",
+   "description": "White-label платформа с крипто-поддержкой. 10000+ игр.",
+   "founded_year": 2013,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "NuxGame",
+   "country": "iGaming B2B",
+   "vertical": "Turnkey iGaming платформа",
+   "homepage": "https://nuxgame.com/",
+   "careers_url": "https://nuxgame.com/careers",
+   "description": "Turnkey и API казино + спортбет с крипто-интеграцией.",
+   "founded_year": 2018,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "GammaStack",
+   "country": "iGaming B2B",
+   "vertical": "iGaming разработка",
+   "homepage": "https://gammastack.com/",
+   "careers_url": "https://www.gammastack.com/careers/",
+   "description": "Разработка крипто-казино и спортбет платформ под ключ.",
+   "founded_year": 2018,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Evolution AB",
+   "country": "iGaming B2B",
+   "vertical": "Live Casino провайдер",
+   "homepage": "https://evolution.com/",
+   "careers_url": "https://careers.evolution.com/",
+   "description": "Мировой лидер live casino B2B. Выручка €1.6 млрд+. 800+ операторов.",
+   "founded_year": 2006,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Microgaming (Apricot)",
+   "country": "iGaming B2B",
+   "vertical": "Слоты / Платформа",
+   "homepage": "https://microgaming.io/",
+   "careers_url": "",
+   "description": "Пионер индустрии. С 2022 — платформенный бизнес продал игры Games Global.",
+   "founded_year": 1994,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "NetEnt",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://netent.com/",
+   "careers_url": "https://careers.evolution.com/",
+   "description": "Классические слоты (Starburst Gonzo's Quest). С 2020 — часть Evolution Group.",
+   "founded_year": 1996,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Quickspin",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://quickspin.com/",
+   "careers_url": "https://quickspin.com/career/",
+   "description": "Шведская слот-студия куплена Playtech в 2016.",
+   "founded_year": 2011,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "IGT",
+   "country": "iGaming B2B",
+   "vertical": "Лотереи / Казино",
+   "homepage": "https://igt.com/",
+   "careers_url": "",
+   "description": "Один из старейших провайдеров. Лотереи казино спортбет. $3B+ выручка.",
+   "founded_year": 1975,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Aristocrat Interactive",
+   "country": "iGaming B2B",
+   "vertical": "iGaming",
+   "homepage": "https://aristocratinteractive.com/",
+   "careers_url": "",
+   "description": "Онлайн-подразделение Aristocrat Leisure ($5B+ компания).",
+   "founded_year": 2021,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "High 5 Games",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://high5games.com/",
+   "careers_url": "",
+   "description": "Американский провайдер слотов B2C и B2B направления.",
+   "founded_year": 1995,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Big Time Gaming",
+   "country": "iGaming B2B",
+   "vertical": "Слоты (Megaways)",
+   "homepage": "https://bigtimegaming.com/",
+   "careers_url": "",
+   "description": "Создатели механики Megaways. Куплены Evolution в 2021.",
+   "founded_year": 2011,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "AMATIC Industries",
+   "country": "iGaming B2B",
+   "vertical": "Наземные / Онлайн слоты",
+   "homepage": "https://amatic.com/",
+   "careers_url": "",
+   "description": "Австрийский производитель наземных и онлайн-слотов.",
+   "founded_year": 1993,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "AMATIC (агрегатор)",
+   "country": "iGaming B2B",
+   "vertical": "Агрегатор",
+   "homepage": "https://cs2bet.com/",
+   "careers_url": "",
+   "description": "Агрегатор контента AMATIC для онлайн-казино.",
+   "founded_year": null,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Blueprint Gaming",
+   "country": "iGaming B2B",
+   "vertical": "Слоты провайдер",
+   "homepage": "https://blueprintgaming.com/",
+   "careers_url": "",
+   "description": "Дочка Gauselmann Group. Онлайн и мобильные слоты UK рынок.",
+   "founded_year": 2001,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Novomatic",
+   "country": "iGaming B2B",
+   "vertical": "Наземные / Онлайн",
+   "homepage": "https://novomatic.com/",
+   "careers_url": "https://www.novomatic.com/en/explore-novomatic/careers",
+   "description": "Австрийский гигант один из крупнейших в мире. Наземные + онлайн.",
+   "founded_year": 1980,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Merkur Gaming",
+   "country": "iGaming B2B",
+   "vertical": "Наземные / Онлайн слоты",
+   "homepage": "https://merkur-gaming.com/",
+   "careers_url": "",
+   "description": "Немецкий производитель дочка Gauselmann. Онлайн и наземные.",
+   "founded_year": 1957,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "Stakelogic",
+   "country": "iGaming B2B",
+   "vertical": "Слоты / Live Casino",
+   "homepage": "https://stakelogic.com/",
+   "careers_url": "https://stakelogic.com/career/information-security-manager/",
+   "description": "Дочка Greentube (Novomatic). Live Casino Platinum.",
+   "founded_year": 2015,
+   "seed_source": "paykilla-lead-list"
+  },
+  {
+   "operator": "DraftKings",
+   "country": "iGaming B2B",
+   "vertical": "DFS / Спортбет оператор",
+   "homepage": "https://draftkings.com/",
+   "careers_url": "",
+   "description": "Американский DFS и спортбет оператор. NASDAQ: DKNG. $3B+ выручка.",
+   "founded_year": 2012,
+   "seed_source": "paykilla-lead-list"
+  }
+ ]
+}
