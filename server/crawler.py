@@ -498,6 +498,12 @@ def crawl_casino_seed_registry():
     return all_jobs
 
 
+try:  # как часть пакета: from server import crawler
+    from .salary import format_salary, parse_salary
+except ImportError:  # как скрипт: python server/crawler.py
+    from salary import format_salary, parse_salary
+
+
 def _clean_text(raw):
     """Короткое поле (заголовок, компания, город) → чистый текст.
 
@@ -1224,15 +1230,25 @@ def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
                                        Job.ext_id == it["ext_id"]).first()
         for field in ("title", "company_name", "location"):
             it[field] = _clean_text(it.get(field))
+        # Источник часто не заполняет поле с вилкой, хотя в тексте она есть
+        if not any(ch.isdigit() for ch in (it.get("salary") or "")):
+            found = format_salary(parse_salary(it.get("description")))
+            if found:
+                it["salary"] = found
         cat = guess_category(it["title"], it["tags"])
         if row:
             before = (row.title, row.company_name, row.location, row.fmt, row.tags,
                       row.description, row.source_url, row.category, row.posted_at,
-                      row.deadline, row.status)
+                      row.deadline, row.status, row.salary)
             row.title, row.company_name = it["title"], it["company_name"]
             row.location, row.fmt = it["location"], it["fmt"]
             row.tags, row.description = it["tags"], it["description"]
             row.source_url, row.category = it["source_url"], cat
+            # Вилку не перетираем: у уже размещённой вакансии она могла быть
+            # уточнена вручную. Заполняем только там, где её не было.
+            if not any(ch.isdigit() for ch in (row.salary or "")) and \
+                    any(ch.isdigit() for ch in (it.get("salary") or "")):
+                row.salary = it["salary"]
             row.posted_at = it.get("posted_at", "") or row.posted_at
             row.deadline = it.get("deadline", "") or row.deadline
             if row.status in ("archived", "rejected"):
@@ -1240,7 +1256,7 @@ def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
                 row.closed_at = ""
             after = (row.title, row.company_name, row.location, row.fmt, row.tags,
                      row.description, row.source_url, row.category, row.posted_at,
-                     row.deadline, row.status)
+                     row.deadline, row.status, row.salary)
             if before != after:
                 changed_rows.append(row)
             updated += 1

@@ -1,3 +1,6 @@
+# SpinHire — джоб-борд iGaming-индустрии
+# Полный текстовый обзор для языковых моделей: https://spinhire.io/llms.txt
+
 User-agent: *
 Allow: /
 Disallow: /profile
@@ -7,8 +10,52 @@ Disallow: /checkout
 Disallow: /login
 Disallow: /register
 Disallow: /verify
+Disallow: /games
 
+# --- Поисковые краулеры ИИ-ассистентов (цитирование в ответах) ---
 User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# --- Краулеры обучающих корпусов: пускаем осознанно ---
+# Вакансии и аналитика рынка труда — открытые данные, и попадание в корпус
+# означает, что модели будут знать про SpinHire без обращения к поиску.
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: Bytespider
 Allow: /
 
 Sitemap: https://spinhire.io/sitemap.xml

@@ -22,7 +22,7 @@
   "hiringOrganization": { "@type": "Organization", "name": {{ job.company_name|tojson }}{% if job.company_site %}, "sameAs": {{ job.company_site|tojson }}{% endif %} },
   {% if job.fmt in ('удалёнка', 'удалёнка ЕС') %}"jobLocationType": "TELECOMMUTE",{% endif %}
   {% if job.location %}"jobLocation": { "@type": "Place", "address": { "@type": "PostalAddress", "addressLocality": {{ job.location.split(',')[0].strip()|tojson }}{% if ',' in job.location %}, "addressCountry": {{ job.location.split(',')[-1].strip()|tojson }}{% endif %} } },{% endif %}
-  {% if job.has_salary and job.sal_min %}"baseSalary": { "@type": "MonetaryAmount", "currency": "{{ job.sal_currency }}", "value": { "@type": "QuantitativeValue", "minValue": {{ job.sal_min }}, "maxValue": {{ job.sal_max }}, "unitText": "MONTH" } },{% endif %}
+  {% if job.has_salary and job.sal_min %}"baseSalary": { "@type": "MonetaryAmount", "currency": "{{ job.sal_currency }}", "value": { "@type": "QuantitativeValue", "minValue": {{ job.sal_min }}, "maxValue": {{ job.sal_max }}, "unitText": "{{ job.sal_unit }}" } },{% endif %}
   "directApply": true,
   "identifier": { "@type": "PropertyValue", "name": "SpinHire", "value": "{{ job.id }}" }
 }

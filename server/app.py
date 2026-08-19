@@ -191,9 +191,18 @@ class Job(Base):
 
     @property
     def _sal_nums(self):
+        """Числа из строки вилки. Часовые ставки бывают дробными («18,25»)."""
         import re as _re
-        nums = [int(n.replace(" ", "")) for n in _re.findall(r"\d[\d ]*", self.salary or "")]
-        return [n for n in nums if n > 0]
+        nums = []
+        for raw in _re.findall(r"\d[\d\u00a0\u202f ]*(?:,\d{1,2})?", self.salary or ""):
+            cleaned = _re.sub(r"[^\d,]", "", raw).replace(",", ".")
+            try:
+                value = float(cleaned)
+            except ValueError:
+                continue
+            if value > 0:
+                nums.append(int(value) if value == int(value) else value)
+        return nums
 
     @property
     def sal_min(self):
@@ -204,6 +213,16 @@ class Job(Base):
     def sal_max(self):
         n = self._sal_nums
         return max(n) if n else None
+
+    @property
+    def sal_unit(self):
+        """Период вилки для JobPosting: разметка не должна врать про месяц."""
+        text_value = self.salary or ""
+        if "в час" in text_value:
+            return "HOUR"
+        if "в год" in text_value:
+            return "YEAR"
+        return "MONTH"
 
     @property
     def sal_currency(self):
