@@ -52,6 +52,9 @@
         {% if resume.user.avatar_file_path %}<img class="contact-avatar" src="/resume/{{ resume.id }}/avatar" alt="Фото кандидата">{% endif %}
         <span class="kicker">Контакты открыты</span>
         <h2 style="margin:10px 0 20px;">Связаться с кандидатом</h2>
+        {% if user and user.role == 'admin' %}
+        <p><b>Владелец (видит только админ)</b><br>{{ resume.user.name or 'имя не указано' }} · {{ resume.user.email }}</p>
+        {% endif %}
         <p><b>Email</b><br><a style="color:var(--acid);" href="mailto:{{ resume.contact_email }}">{{ resume.contact_email }}</a></p>
         {% if resume.contact_telegram %}<p style="margin-top:14px;"><b>Telegram</b><br>{{ resume.contact_telegram }}</p>{% endif %}
         {% if resume.portfolio_url %}<p style="margin-top:14px;"><b>Портфолио</b><br><a style="color:var(--acid);" href="{{ resume.portfolio_url }}" target="_blank" rel="nofollow noopener ugc">Открыть ↗</a></p>{% endif %}

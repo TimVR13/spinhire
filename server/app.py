@@ -1526,10 +1526,12 @@ def checkout_invoice(order_id: int, request: Request, db: Session = Depends(db_s
 @app.get("/job/{job_id}", response_class=HTMLResponse)
 def job_detail(job_id: int, request: Request, db: Session = Depends(db_session)):
     job = db.get(Job, job_id)
-    if not job or job.status not in ("approved", "archived"):
+    viewer = get_user(request, db)
+    # Админ и владелец видят вакансию в любом статусе — иначе из очереди модерации нечего открывать
+    privileged = viewer and (viewer.role == "admin" or viewer.id == job.owner_id if job else False)
+    if not job or (job.status not in ("approved", "archived") and not privileged):
         raise HTTPException(404)
     job.views += 1
-    viewer = get_user(request, db)
     track(db, "job_view", viewer.id if viewer else None, "job", job.id)
     db.commit()
     user = get_user(request, db)
@@ -2679,8 +2681,11 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
     if tab == "jobs":
         q = (request.query_params.get("q") or "").strip().lower()
         st = request.query_params.get("st") or ""
-        jobs = db.query(Job).order_by((Job.status == "pending").desc(),
-                                      Job.created_at.desc()).all()
+        if request.query_params.get("sort") == "views":
+            jobs = db.query(Job).order_by(Job.views.desc(), Job.created_at.desc()).all()
+        else:
+            jobs = db.query(Job).order_by((Job.status == "pending").desc(),
+                                          Job.created_at.desc()).all()
         if st:
             jobs = [j for j in jobs if j.status == st]
         if q:
@@ -2688,12 +2693,31 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         ctx["jobs"] = jobs[:200]
         ctx["q"], ctx["st"] = q, st
     elif tab == "users":
-        ctx["users"] = db.query(User).order_by(User.created_at.desc()).all()
+        role = request.query_params.get("role") or ""
+        users_q = db.query(User)
+        if role in ("employer", "talent", "admin"):
+            users_q = users_q.filter(User.role == role)
+        ctx["users"] = users_q.order_by(User.created_at.desc()).all()
+        ctx["role"] = role
     elif tab == "apps":
         ctx["apps"] = db.query(Application).order_by(Application.created_at.desc()).all()
     elif tab == "resumes":
-        ctx["resumes"] = db.query(Resume).order_by(
+        st = request.query_params.get("st") or ""
+        resumes_q = db.query(Resume)
+        if st == "pending":
+            resumes_q = resumes_q.filter(Resume.status == "pending")
+        elif st == "live":
+            resumes_q = resumes_q.filter(Resume.status == "approved", Resume.published == True)  # noqa: E712
+        ctx["resumes"] = resumes_q.order_by(
             (Resume.status == "pending").desc(), Resume.updated_at.desc()).all()
+        ctx["st"] = st
+    elif tab == "unlocks":
+        rows = db.query(ResumeUnlock).order_by(ResumeUnlock.created_at.desc()).limit(300).all()
+        ctx["unlocks"] = [{
+            "when": r.created_at, "kind": r.access_kind,
+            "employer": db.get(User, r.employer_id),
+            "resume": db.get(Resume, r.resume_id),
+        } for r in rows]
     elif tab == "sources":
         from server import crawler
         from collections import Counter
@@ -2759,6 +2783,25 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
                 ctx["crawl_status"] = json.load(handle)
         except (OSError, ValueError):
             ctx["crawl_status"] = {}
+    elif tab == "crawler":
+        from server import crawler as crawler_mod
+        status_path = os.path.join(ROOT, "data", "crawler-status.json")
+        try:
+            with open(status_path, encoding="utf-8") as handle:
+                ctx["crawl_status"] = json.load(handle)
+        except (OSError, ValueError):
+            ctx["crawl_status"] = {}
+        history_path = os.path.join(ROOT, "data", "crawler-history.json")
+        try:
+            with open(history_path, encoding="utf-8") as handle:
+                ctx["crawl_history"] = list(reversed(json.load(handle)))[:20]
+        except (OSError, ValueError):
+            ctx["crawl_history"] = []
+        ctx["crawl_settings"] = {
+            "max_per_board": crawler_mod.MAX_PER_BOARD,
+            "greenhouse_boards": sorted(crawler_mod.GREENHOUSE_BOARDS),
+            "sources_total": len(crawler_mod.SOURCE_REGISTRY),
+        }
     elif tab == "events":
         ctx["events"] = db.query(Event).order_by(Event.date_from).all()
     elif tab == "orders":

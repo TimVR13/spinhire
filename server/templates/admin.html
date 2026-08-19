@@ -1,17 +1,27 @@
 {% extends "base.html" %}
+{% block bodyclass %}workspace{% endblock %}
 {% block title %}Админка — SpinHire{% endblock %}
 {% block robots %}<meta name="robots" content="noindex">{% endblock %}
 {% block style %}
   .adm-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-block: var(--sp-4) var(--sp-5); }
-  .adm-tabs a { text-decoration: none; border: 2px solid var(--line); padding: 8px 16px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-dim); }
-  .adm-tabs a.on { background: var(--yellow); color: var(--on-yellow); border-color: var(--yellow); }
-  .adm-tabs a:hover { border-color: var(--yellow); color: var(--yellow); }
-  .adm-tabs a.on:hover { color: var(--on-yellow); }
+  .adm-tabs a { text-decoration: none; border: 1px solid var(--line); border-radius: 10px; padding: 8px 16px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-dim); background: var(--surface); }
+  .adm-tabs a.on { background: var(--acid); color: var(--on-acid); border-color: var(--acid); }
+  .adm-tabs a:hover { border-color: var(--acid); color: var(--acid-deep, var(--acid)); }
+  .adm-tabs a.on:hover { color: var(--on-acid); }
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 12px; margin-bottom: var(--sp-6); }
-  .stat-card { border: 2px solid var(--line); background: var(--surface); padding: 16px 20px; }
-  .stat-card .n { font-family: var(--font-display); font-weight: 900; font-size: 1.7rem; color: var(--yellow); }
+  .stat-card { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 14px 18px; display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 84px; text-decoration: none; box-shadow: var(--bezel, none); }
+  a.stat-card { transition: border-color .2s var(--ease, ease), transform .3s var(--ease-spring, ease); }
+  a.stat-card:hover { border-color: var(--acid); transform: translateY(-2px); }
+  .stat-card .n { font-family: var(--font-display); font-weight: 900; font-size: 1.55rem; color: var(--ink); line-height: 1.1; }
   .stat-card .l { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-faint); font-weight: 700; }
-  .source-head { display:flex; justify-content:space-between; gap:16px; align-items:end; flex-wrap:wrap; margin:var(--sp-6) 0 12px; }
+  .source-head { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,480px); gap:8px 24px; align-items:end; margin:var(--sp-6) 0 12px; }
+  .source-head h2 { font-size: 1.15rem; margin-top: 6px; }
+  .source-head .source-note { text-align: right; align-self: end; }
+  @media (max-width: 900px) { .source-head { grid-template-columns: 1fr; } .source-head .source-note { text-align: left; } }
+  .subtabs { display:flex; gap:8px; margin: var(--sp-5) 0 var(--sp-4); border-bottom: 1px solid var(--line); }
+  .subtabs button { border:0; background:transparent; padding:10px 14px; font:700 0.85rem var(--font-body); color:var(--ink-dim); border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .subtabs button.on { color:var(--acid-deep, var(--acid)); border-bottom-color:var(--acid); }
+  .subpane[hidden] { display:none; }
   .source-head h2 { margin:0; font-size:1.15rem; }
   .source-note { color:var(--ink-faint); font-size:.8rem; max-width:72ch; }
   .source-status { display:inline-flex; align-items:center; gap:7px; }
@@ -28,6 +38,7 @@
   <nav class="adm-tabs">
     <a href="/admin" class="{% if tab == 'dash' %}on{% endif %}">Дашборд</a>
     <a href="/admin?tab=jobs" class="{% if tab == 'jobs' %}on{% endif %}">Вакансии {% if stats.jobs_pending %}({{ stats.jobs_pending }}!){% endif %}</a>
+    <a href="/admin?tab=crawler" class="{% if tab == 'crawler' %}on{% endif %}">🕷 Краулер</a>
     <a href="/admin?tab=resumes" class="{% if tab == 'resumes' %}on{% endif %}">Резюме {% if stats.resumes_pending %}({{ stats.resumes_pending }}!){% endif %}</a>
     <a href="/admin?tab=users" class="{% if tab == 'users' %}on{% endif %}">Пользователи</a>
     <a href="/admin?tab=apps" class="{% if tab == 'apps' %}on{% endif %}">Отклики</a>
@@ -39,34 +50,32 @@
 
   {% if tab == 'dash' %}
     <div class="stat-grid">
-      <div class="stat-card"><div class="n">{{ stats.jobs_approved }}</div><div class="l">Вакансий live</div></div>
-      <div class="stat-card" {% if stats.jobs_pending %}style="border-color: var(--pink);"{% endif %}><div class="n" {% if stats.jobs_pending %}style="color: var(--pink);"{% endif %}>{{ stats.jobs_pending }}</div><div class="l">На модерации</div></div>
-      <div class="stat-card"><div class="n">{{ stats.users }}</div><div class="l">Пользователей</div></div>
-      <div class="stat-card"><div class="n">{{ stats.employers }}</div><div class="l">Работодателей</div></div>
-      <div class="stat-card"><div class="n">{{ stats.talents }}</div><div class="l">Соискателей</div></div>
-      <div class="stat-card"><div class="n">{{ stats.apps }}</div><div class="l">Откликов</div></div>
-      <div class="stat-card"><div class="n">{{ stats.views }}</div><div class="l">Просмотров вакансий</div></div>
-      <div class="stat-card"><div class="n">{{ stats.resumes_live }}</div><div class="l">CV опубликовано</div></div>
-      <div class="stat-card" {% if stats.resumes_pending %}style="border-color:var(--pink);"{% endif %}><div class="n">{{ stats.resumes_pending }}</div><div class="l">CV на модерации</div></div>
-      <div class="stat-card"><div class="n">{{ stats.resume_unlocks }}</div><div class="l">Контактов открыто</div></div>
+      <a class="stat-card" href="/admin?tab=jobs&st=approved"><div class="n">{{ stats.jobs_approved }}</div><div class="l">Вакансий live&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=jobs&st=pending" {% if stats.jobs_pending %}style="border-color: var(--pink);"{% endif %}><div class="n" {% if stats.jobs_pending %}style="color: var(--pink);"{% endif %}>{{ stats.jobs_pending }}</div><div class="l">На модерации&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=users"><div class="n">{{ stats.users }}</div><div class="l">Пользователей&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=users&role=employer"><div class="n">{{ stats.employers }}</div><div class="l">Работодателей&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=users&role=talent"><div class="n">{{ stats.talents }}</div><div class="l">Соискателей&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=apps"><div class="n">{{ stats.apps }}</div><div class="l">Откликов&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=jobs&sort=views"><div class="n">{{ stats.views }}</div><div class="l">Просмотров вакансий&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=resumes&st=live"><div class="n">{{ stats.resumes_live }}</div><div class="l">CV опубликовано&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=resumes&st=pending" {% if stats.resumes_pending %}style="border-color:var(--pink);"{% endif %}><div class="n">{{ stats.resumes_pending }}</div><div class="l">CV на модерации&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=unlocks"><div class="n">{{ stats.resume_unlocks }}</div><div class="l">Контактов открыто&nbsp;→</div></a>
     </div>
 
-    <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: var(--sp-6); border-color: var(--acid);">
-      <div>
-        <b style="font-family: var(--font-display); text-transform: uppercase;">🕷 Краулер вакансий</b>
-        <p style="color: var(--ink-dim); font-size: 0.88rem;">Собирает клоны вакансий с публичных источников (Greenhouse и др.) в нашу базу — с полным описанием и ссылкой на первоисточник.</p>
-      </div>
-      <form method="post" action="/admin/crawl"><button class="btn btn-acid" type="submit">Запустить сбор →</button></form>
-    </div>
     {% if request.query_params.get('crawl') %}<div class="flash">🕷 {{ request.query_params.get('crawl') }}</div>{% endif %}
 
     <h2 style="font-size: 1.05rem; color: var(--pink); margin-bottom: 12px;">▮ Очередь модерации</h2>
     {% for j in pending %}
       <div class="card" style="display: flex; justify-content: space-between; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; border-color: var(--pink);">
-        <div><b>{{ j.title }}</b> — {{ j.company_name }} · {{ j.salary }} <span style="color: var(--ink-faint); font-size: 0.8rem;">{{ j.created_at.strftime('%d.%m %H:%M') }}</span></div>
-        <div style="display: flex; gap: 8px;">
+        <div>
+          <a href="/job/{{ j.id }}" target="_blank" rel="noopener" style="color: inherit; font-weight: 700;">{{ j.title }} ↗</a> — {{ j.company_name }} · {{ j.salary }}
+          <span style="color: var(--ink-faint); font-size: 0.8rem;">{{ j.created_at.strftime('%d.%m %H:%M') }}</span>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <a class="btn btn-ghost btn-sm" href="/job/{{ j.id }}" target="_blank" rel="noopener">Открыть ↗</a>
+          <a class="btn btn-ghost btn-sm" href="/admin/job/{{ j.id }}/edit">✎ Править</a>
           <form method="post" action="/admin/job/{{ j.id }}/approve"><button class="btn btn-acid btn-sm">Одобрить</button></form>
-          <form method="post" action="/admin/job/{{ j.id }}/reject"><button class="btn btn-ghost btn-sm">Отклонить</button></form>
+          <form method="post" action="/admin/job/{{ j.id }}/reject"><button class="btn btn-ghost btn-sm" style="color: var(--pink);">Отклонить</button></form>
         </div>
       </div>
     {% else %}
@@ -110,10 +119,11 @@
   {% elif tab == 'resumes' %}
     <p style="color:var(--ink-dim);margin-bottom:var(--sp-4);">Перед публикацией проверьте, что в открытых полях нет имени, контактов, ссылок и названий закрытых проектов.</p>
     <div class="table-wrap"><table class="adm">
-      <tr><th>CV</th><th>Профиль</th><th>Опыт</th><th>Статус</th><th>Метрики</th><th>Модерация</th></tr>
+      <tr><th>CV</th><th>Владелец</th><th>Профиль</th><th>Опыт</th><th>Статус</th><th>Метрики</th><th>Модерация</th></tr>
       {% for cv in resumes %}
       <tr>
         <td><a href="/resume/{{ cv.id }}" style="color:inherit;">{{ cv.public_code }}</a><br><span style="color:var(--ink-faint);font-size:.75rem;">{{ cv.location or 'без локации' }}</span></td>
+        <td><b>{{ cv.user.name or '—' }}</b><br><span style="color:var(--ink-faint);font-size:.75rem;">{{ cv.user.email }}</span></td>
         <td><b>{{ cv.title or 'Без названия' }}</b><br><span style="color:var(--ink-faint);font-size:.75rem;">{{ cv.skill_list[:4]|join(', ') }}</span></td>
         <td>{{ cv.experience_years }} лет</td>
         <td><span class="status {{ cv.status }}">{{ cv.status }}</span>{% if cv.moderation_note %}<br><span style="color:var(--pink);font-size:.75rem;">{{ cv.moderation_note }}</span>{% endif %}</td>
@@ -124,10 +134,15 @@
           {% if cv.status == 'approved' %}<form method="post" action="/admin/resume/{{ cv.id }}/pause"><button class="btn btn-ghost" style="margin-top:6px;">Снять</button></form>{% endif %}
         </td>
       </tr>
-      {% else %}<tr><td colspan="6" style="color:var(--ink-dim);">CV пока нет.</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="7" style="color:var(--ink-dim);">CV пока нет.</td></tr>{% endfor %}
     </table></div>
 
   {% elif tab == 'users' %}
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      {% for value, label in [('', 'Все'), ('employer', 'Работодатели'), ('talent', 'Соискатели'), ('admin', 'Админы')] %}
+      <a class="tag {% if role == value %}tag-acid{% endif %}" href="/admin?tab=users{% if value %}&role={{ value }}{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </div>
     <div class="table-wrap"><table class="adm">
       <tr><th>Email</th><th>Имя</th><th>Роль</th><th>Компания</th><th>С нами</th><th>Действия</th></tr>
       {% for u in users %}
@@ -159,6 +174,21 @@
         <td>{{ a.created_at.strftime('%d.%m %H:%M') }}</td>
       </tr>
       {% endfor %}
+    </table></div>
+
+  {% elif tab == 'unlocks' %}
+    <p style="color:var(--ink-dim);margin-bottom:var(--sp-4);">Кто из работодателей открывал контакты кандидатов. Открытие списывает кредит, если у компании нет безлимита.</p>
+    <div class="table-wrap"><table class="adm">
+      <tr><th>Когда</th><th>Работодатель</th><th>Компания</th><th>CV</th><th>Тип доступа</th></tr>
+      {% for r in unlocks %}
+      <tr>
+        <td>{{ r.when.strftime('%d.%m %H:%M') }}</td>
+        <td>{{ r.employer.email if r.employer else '—' }}</td>
+        <td>{{ r.employer.company_name if r.employer else '—' }}</td>
+        <td>{% if r.resume %}<a href="/resume/{{ r.resume.id }}" style="color:inherit;">{{ r.resume.public_code }}</a> · {{ r.resume.title or 'без названия' }}{% else %}—{% endif %}</td>
+        <td><span class="status {% if r.kind == 'unlimited' %}invited{% elif r.kind == 'admin' %}viewed{% else %}new{% endif %}">{{ r.kind }}</span></td>
+      </tr>
+      {% else %}<tr><td colspan="5" style="color:var(--ink-dim);">Контакты пока никто не открывал.</td></tr>{% endfor %}
     </table></div>
 
   {% elif tab == 'orders' %}
@@ -246,6 +276,45 @@
     </div>
     <div class="card"><b>Индексация:</b> IndexNow — <span style="color:{{ 'var(--acid)' if seo.indexnow else 'var(--yellow)' }}">{{ 'настроен' if seo.indexnow else 'нужен ключ' }}</span> · Google Job Indexing — <span style="color:{{ 'var(--acid)' if seo.google_indexing else 'var(--yellow)' }}">{{ 'настроен' if seo.google_indexing else 'нужен service account' }}</span> · последний краулер — {{ crawl_status.get('last_run','не запускался') }}.</div>
 
+  {% elif tab == 'crawler' %}
+    <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: var(--sp-5); border-color: var(--acid);">
+      <div>
+        <b style="font-family: var(--font-display); text-transform: uppercase;">🕷 Краулер вакансий</b>
+        <p style="color: var(--ink-dim); font-size: 0.88rem;">Клонирует вакансии с публичных источников в нашу базу — с полным описанием и ссылкой на первоисточник. По расписанию — каждые 6 часов (systemd-таймер spinhire-crawl).</p>
+        <p class="source-note">Последний запуск: {{ crawl_status.get('last_run', 'ещё не запускался') }}{% if crawl_status.get('collected') is not none %} · собрано {{ crawl_status.get('collected') }} · новых {{ crawl_status.get('added', 0) }} · обновлено {{ crawl_status.get('updated', 0) }}{% endif %}</p>
+        {% if crawl_status.get('error') %}<p style="color:var(--pink);font-size:.82rem;margin-top:6px;">Ошибка: {{ crawl_status.get('error') }}</p>{% endif %}
+      </div>
+      <form method="post" action="/admin/crawl"><button class="btn btn-acid" type="submit">Запустить сбор сейчас →</button></form>
+    </div>
+    {% if request.query_params.get('crawl') %}<div class="flash">🕷 {{ request.query_params.get('crawl') }}</div>{% endif %}
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="n">каждые 6 ч</div><div class="l">Расписание</div></div>
+      <div class="stat-card"><div class="n">{{ crawl_settings.sources_total }}</div><div class="l">Источников подключено</div></div>
+      <div class="stat-card"><div class="n">{{ crawl_settings.max_per_board }}</div><div class="l">Максимум с борда за запуск</div></div>
+      <div class="stat-card"><div class="n">{{ crawl_settings.greenhouse_boards|length }}</div><div class="l">Greenhouse-бордов</div></div>
+    </div>
+
+    <div class="source-head"><div><span class="kicker">Настройки</span><h2>Что собираем</h2></div><p class="source-note">Greenhouse-борды добавляются одной строкой в GREENHOUSE_BOARDS (server/crawler.py). Статусы источников — во вкладке «Источники».</p></div>
+    <div class="card" style="margin-bottom: var(--sp-5);">
+      <b style="font-size:.85rem;">Greenhouse-борды ({{ crawl_settings.greenhouse_boards|length }}):</b>
+      <p style="color:var(--ink-dim); font-size:.88rem; margin-top:6px;">{{ crawl_settings.greenhouse_boards|join(' · ') }}</p>
+    </div>
+
+    <div class="source-head"><div><span class="kicker">Журнал</span><h2>Последние запуски</h2></div><p class="source-note">История сборов: сколько собрали, добавили и обновили; ошибки по источникам видны во вкладке «Источники».</p></div>
+    <div class="table-wrap"><table class="adm">
+      <tr><th>Когда</th><th>Собрано</th><th>Новых</th><th>Обновлено</th><th>Ошибка</th></tr>
+      {% for run in crawl_history %}
+      <tr>
+        <td>{{ (run.get('last_run') or run.get('finished_at') or '')[:16]|replace('T',' ') }}</td>
+        <td>{{ run.get('collected', '—') }}</td>
+        <td>{{ run.get('added', '—') }}</td>
+        <td>{{ run.get('updated', '—') }}</td>
+        <td style="color:var(--pink); font-size:.8rem;">{{ run.get('error') or '' }}</td>
+      </tr>
+      {% else %}<tr><td colspan="5" style="color:var(--ink-dim);">Журнал появится после первого запуска с этой версией.</td></tr>{% endfor %}
+    </table></div>
+
   {% elif tab == 'sources' %}
     <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: var(--sp-5); border-color: var(--acid);">
       <div>
@@ -265,6 +334,11 @@
       <div class="stat-card"><div class="n">{{ source_summary.talent_profiles }}</div><div class="l">Профилей кандидатов</div></div>
     </div>
 
+    <div class="subtabs" role="tablist">
+      <button type="button" class="on" data-pane="jobs">Источники вакансий</button>
+      <button type="button" data-pane="cv">Источники резюме</button>
+    </div>
+    <div class="subpane" data-pane="jobs">
     <div class="source-head"><div><span class="kicker">Вакансии</span><h2>Источники вакансий</h2></div><p class="source-note">Количество считается по опубликованным вакансиям в базе.</p></div>
     <div class="table-wrap"><table class="adm">
       <tr><th>Источник</th><th>Способ сбора</th><th>Статус</th><th>Последняя проверка</th><th>В базе</th><th>Подключение</th></tr>
@@ -281,6 +355,8 @@
       {% endfor %}
     </table></div>
 
+    </div>
+    <div class="subpane" data-pane="cv" hidden>
     <div class="source-head"><div><span class="kicker" style="color:var(--pink)">Кандидаты</span><h2>Источники резюме</h2></div><p class="source-note">Только собственные анкеты и партнёрские профили с явным согласием кандидата.</p></div>
     <div class="table-wrap"><table class="adm">
       <tr><th>Источник</th><th>Способ сбора</th><th>Статус</th><th>Профилей</th><th>Ограничения</th></tr>
@@ -297,5 +373,7 @@
     <p style="color: var(--ink-faint); font-size: 0.82rem; margin-top: var(--sp-4); max-width: 80ch;">
       <b>Как расширять:</b> новые Greenhouse, Lever и SmartRecruiters подключаются через публичный ATS API. Для источников резюме нужны договор, разрешение на повторное использование данных и явное согласие кандидата.
     </p>
+    </div>
+    <script>document.querySelectorAll('.subtabs button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.subtabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.subpane').forEach(p=>p.hidden=p.dataset.pane!==b.dataset.pane);}));</script>
   {% endif %}
 {% endblock %}

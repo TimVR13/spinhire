@@ -746,3 +746,41 @@ main > .section:nth-of-type(even) {
 .event-hero__promo { color: var(--emerald, var(--acid)); font-size: 0.86rem; font-weight: 700; }
 .event-hero__actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: auto; padding-top: 6px; }
 @media (max-width: 860px) { .event-hero { grid-template-columns: 1fr; } .event-hero__media { min-height: 180px; } }
+
+/* ============================================================
+   Workspace — светлые спокойные кабинеты (админка, ЛК).
+   Люди сидят тут часами: минимум неона, мягкие контрасты,
+   фирменный изумруд остаётся, но приглушён.
+   ============================================================ */
+body.workspace {
+  --bg: oklch(0.972 0.004 165);
+  --bg-deep: oklch(0.945 0.006 165);
+  --surface: oklch(0.995 0.002 165);
+  --surface-2: oklch(0.958 0.005 165);
+  --line: oklch(0.885 0.008 165);
+  --line-strong: oklch(0.70 0.014 168);
+  --ink: oklch(0.26 0.014 172);
+  --ink-dim: oklch(0.44 0.014 172);
+  --ink-faint: oklch(0.53 0.012 172);
+  --acid: oklch(0.55 0.115 165);
+  --acid-deep: oklch(0.46 0.10 166);
+  --emerald: oklch(0.55 0.115 165);
+  --pink: oklch(0.55 0.16 352);
+  --yellow: oklch(0.55 0.10 92);
+  --violet: oklch(0.52 0.12 300);
+  --on-acid: oklch(0.99 0.002 165);
+  --on-pink: oklch(0.99 0.002 350);
+  --shadow-acid: 0 4px 14px oklch(0.55 0.115 165 / 0.18);
+  --shadow-pink: 0 4px 14px oklch(0.55 0.16 352 / 0.15);
+  --shadow-dark: 0 8px 22px oklch(0.3 0.01 170 / 0.10);
+  --shadow-lift: 0 8px 22px oklch(0.3 0.01 170 / 0.12);
+  --bezel: inset 0 1px 0 oklch(1 0 0 / 0.9);
+  background: var(--bg); color: var(--ink);
+}
+body.workspace::after { display: none; }                 /* без киношного зерна на рабочих экранах */
+body.workspace .site-header { background: color-mix(in oklch, var(--surface) 92%, transparent); border-bottom-width: 1px; }
+body.workspace .site-footer { background: var(--bg-deep); }
+body.workspace .kicker::before { box-shadow: none; }
+body.workspace .btn-acid:hover, body.workspace .btn-pink:hover { box-shadow: var(--shadow-dark); }
+body.workspace h1, body.workspace h2 { letter-spacing: 0; }
+body.workspace .theme-toggle { display: none; }          /* тема кабинета фиксирована */
