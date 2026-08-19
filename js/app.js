@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (lang === 'ru') return;
     let complete = {};
     try {
-      const response = await fetch(`/js/i18n-${lang}.js?v=20260819c`, { credentials: 'same-origin' });
+      const response = await fetch(`/js/i18n-${lang}.js?v=20260819d`, { credentials: 'same-origin' });
       if (response.ok) complete = await response.json();
     } catch (_) {}
     const dict = Object.assign({}, complete, UI_COPY[lang]);
@@ -50,13 +50,23 @@ document.addEventListener('DOMContentLoaded', () => {
       const parent = walker.currentNode.parentElement;
       if (parent && !parent.closest('script, style, textarea, [data-no-translate], .job-card, .job-body')) nodes.push(walker.currentNode);
     }
+    // Периоды в вилке приходят из базы вместе с числом («$350 000 в год»),
+    // поэтому словарь их не ловит — переводим подписью к сумме
+    const PERIODS = {
+      en: [[' в год', '/year'], [' в час', '/hour'], [' в месяц', '/month']],
+      uk: [[' в год', ' на рік'], [' в час', ' на годину'], [' в месяц', ' на місяць']]
+    }[lang] || [];
+
     nodes.forEach(node => {
       const raw = node.nodeValue, key = raw.trim().replace(/\s+/g, ' ');
       if (dict[key]) {
         const leading = (raw.match(/^\s*/) || [''])[0];
         const trailing = (raw.match(/\s*$/) || [''])[0];
         node.nodeValue = leading + dict[key] + trailing;
+        return;
       }
+      const period = PERIODS.find(([russian]) => raw.includes(russian));
+      if (period) node.nodeValue = raw.replace(period[0], period[1]);
     });
     document.querySelectorAll('[placeholder],[aria-label],[title]').forEach(el => {
       if (el.closest('[data-no-translate], .job-card, .job-body')) return;
@@ -436,6 +446,11 @@ if (window.matchMedia('(pointer: fine)').matches &&
    на любой странице, достаточно повесить data-copy с адресом. */
 (() => {
   const LABEL_RESET = 1800;
+  // Подписи ставит скрипт, в разметке их нет — словарь перевода до них не дойдёт
+  const SAY = {
+    en: { done: 'Copied ✓', failed: 'Copy failed — select the link' },
+    uk: { done: 'Скопійовано ✓', failed: 'Не вийшло — скопіюйте вручну' }
+  }[document.documentElement.lang] || { done: 'Скопировано ✓', failed: 'Не вышло — скопируйте вручную' };
 
   function copyBySelection(text) {
     // Запасной путь: http-страницы, старые браузеры и случаи, когда
@@ -473,9 +488,9 @@ if (window.matchMedia('(pointer: fine)').matches &&
     try {
       await copy(button.dataset.copy);
       button.classList.add('is-copied');
-      action.textContent = 'Скопировано ✓';
+      action.textContent = SAY.done;
     } catch {
-      action.textContent = 'Не вышло — скопируйте вручную';
+      action.textContent = SAY.failed;
     }
     clearTimeout(button._copyTimer);
     button._copyTimer = setTimeout(() => {

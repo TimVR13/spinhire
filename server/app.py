@@ -276,6 +276,26 @@ class Job(Base):
         return "FULL_TIME"
 
     @property
+    def preview_description(self):
+        """Описание для карточки ссылки — на языке самой вакансии.
+
+        Карточку в ленте рисует робот соцсети: он приходит без браузера, и
+        клиентский переключатель языка до него не доходит. Англоязычную
+        вакансию с подписью «в год · офис» в англоязычной ленте принимают
+        за чужой сайт, поэтому язык превью берём из текста самой вакансии.
+        """
+        lang, _ = script_language(f"{self.title} {self.description}")
+        salary, fmt = self.salary or "", self.fmt or ""
+        if lang == "en":
+            for russian, english in ((" в год", "/year"), (" в час", "/hour"),
+                                     (" в месяц", "/month"), ("по запросу", "on request"),
+                                     ("от ", "from ")):
+                salary = salary.replace(russian, english)
+            fmt = {"удалёнка": "remote", "офис": "on-site",
+                   "гибрид": "hybrid"}.get(fmt, fmt)
+        return " · ".join(part for part in (salary, self.location, fmt) if part)
+
+    @property
     def logo_url(self):
         """Фото/логотип компании через favicon-сервис по домену (если известен)."""
         normalized = " ".join((self.company_name or "").lower().replace("_", " ").split())
