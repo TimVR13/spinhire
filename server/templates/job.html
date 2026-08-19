@@ -50,6 +50,17 @@
   .copy-link.is-copied { border-color: var(--emerald, var(--acid)); }
   .copy-link.is-copied .copy-link__action { color: var(--emerald, var(--acid)); }
   @media (max-width: 900px) { .job-layout { grid-template-columns: 1fr; } }
+  @media (max-width: 760px) {
+    /* телефон: шапка вакансии плотнее, строка «компания · город · формат» переносится как текст,
+       а дублирующую карточку отклика под описанием не показываем — кнопка уже в шапке */
+    .job-hero { padding: var(--sp-4); }
+    .job-hero__meta { display: block !important; line-height: 1.5; font-size: 0.9rem; }
+    .job-hero__meta img { vertical-align: middle; margin-right: 6px; }
+    .job-hero h1 { font-size: 1.25rem; }
+    .apply-card { display: none; }
+    .job-hero .btn-lg { width: 100%; justify-content: center; font-size: 0.85rem; padding-inline: 12px; }
+    .side-card { padding: var(--sp-4); }
+  }
 {% endblock %}
 {% block content %}
   <nav class="crumbs" aria-label="Хлебные крошки"><a href="/">Главная</a> / <a href="/jobs">Вакансии</a> / {{ job.title }}</nav>
@@ -64,7 +75,7 @@
             Вакансия закрыта{% if job.closed_at %} {{ job.closed_at }}{% endif %}. Ниже есть похожие актуальные предложения.
           </div>
         {% endif %}
-        <p style="color: var(--ink-dim); display: flex; align-items: center; gap: 10px;">
+        <p class="job-hero__meta" style="color: var(--ink-dim); display: flex; align-items: center; gap: 10px;">
           {% if job.logo_url %}<img src="{{ job.logo_url }}" alt="" width="28" height="28" style="border-radius: 6px; object-fit: contain;" onerror="this.style.display='none'">{% endif %}
           {# название компании и город не переводим, а формат работы — это слово интерфейса #}
           <a data-no-translate href="/company/{{ job.company_slug }}" style="color: var(--ink); font-weight: 700; text-decoration: none;">{{ job.company_name }}</a>

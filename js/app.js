@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const UI_COPY = {
     uk: {
       'Вакансии':'Вакансії','Резюме':'Резюме','Компании':'Компанії','Блог':'Блог','Работодателям':'Роботодавцям',
-      'Войти':'Увійти','Выйти':'Вийти','Показать календарь →':'Показати календар →','Фильтры':'Фільтри','Добавить CV':'Додати CV','+ Добавить CV':'+ Додати CV','Мой профиль':'Мій профіль',
+      'Войти':'Увійти','Выйти':'Вийти','Показать календарь →':'Показати календар →','Фильтры':'Фільтри','Показать ещё':'Показати ще','из':'з','Читать дальше ↓':'Читати далі ↓','Свернуть ↑':'Згорнути ↑','Добавить CV':'Додати CV','+ Добавить CV':'+ Додати CV','Мой профиль':'Мій профіль',
       'Кандидатам':'Кандидатам','Анонимные резюме':'Анонімні резюме','Гид по зарплатам':'Гід із зарплат','Игровая зона':'Ігрова зона','🎡 Игровая зона':'🎡 Ігрова зона','Карьерный блог':'Кар’єрний блог',
       'Игровая зона SpinHire':'Ігрова зона SpinHire','Крути, копи SC и забирай призы':'Крути, накопичуй SC та забирай призи','ВСЕ ИГРЫ →':'УСІ ІГРИ →','ПРАВИЛА':'ПРАВИЛА','Своя ставка':'Своя ставка','Своя ставка в SC':'Своя ставка в SC','Выбрать':'Обрати',
       'Разместить вакансию':'Розмістити вакансію','Кабинет работодателя':'Кабінет роботодавця','Тарифы':'Тарифи','База резюме':'База резюме','О проекте':'Про проєкт','О нас':'Про нас','Методология':'Методологія','Контакты':'Контакти','Конфиденциальность':'Конфіденційність','Условия':'Умови','Правила игр':'Правила ігор',
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     en: {
       'Вакансии':'Jobs','Резюме':'Resumes','Компании':'Companies','Блог':'Blog','Работодателям':'For employers',
-      'Войти':'Log in','Выйти':'Log out','Показать календарь →':'Show calendar →','Фильтры':'Filters','Добавить CV':'Add CV','+ Добавить CV':'+ Add CV','Мой профиль':'My profile',
+      'Войти':'Log in','Выйти':'Log out','Показать календарь →':'Show calendar →','Фильтры':'Filters','Показать ещё':'Show more','из':'of','Читать дальше ↓':'Read more ↓','Свернуть ↑':'Collapse ↑','Добавить CV':'Add CV','+ Добавить CV':'+ Add CV','Мой профиль':'My profile',
       'Кандидатам':'For candidates','Анонимные резюме':'Anonymous resumes','Гид по зарплатам':'Salary guide','Игровая зона':'Game zone','🎡 Игровая зона':'🎡 Game zone','Карьерный блог':'Career blog',
       'Игровая зона SpinHire':'SpinHire game zone','Крути, копи SC и забирай призы':'Spin, collect SC and claim rewards','ВСЕ ИГРЫ →':'ALL GAMES →','ПРАВИЛА':'RULES','Своя ставка':'Custom bet','Своя ставка в SC':'Custom bet in SC','Выбрать':'Set bet',
       'Разместить вакансию':'Post a job','Кабинет работодателя':'Employer dashboard','Тарифы':'Pricing','База резюме':'Resume database','О проекте':'About','О нас':'About us','Методология':'Methodology','Контакты':'Contacts','Конфиденциальность':'Privacy','Условия':'Terms','Правила игр':'Game rules',
@@ -417,7 +417,7 @@ if (window.matchMedia('(pointer: fine)').matches &&
         const el = document.querySelector(`[data-market-kpi="${key}"]`);
         if (el) el.textContent = num(value);
       });
-      renderBars('directions', (data.directions || []).slice(0, 7));
+      renderBars('directions', (data.directions || []).slice(0, 5));
       // География — чипами, а не второй колонкой полосок: иначе две карточки сливаются.
       const chips = document.querySelector('[data-market="countries"]');
       if (chips && (data.countries || []).length) {
@@ -427,7 +427,7 @@ if (window.matchMedia('(pointer: fine)').matches &&
 
       const roles = document.querySelector('[data-market="professions"]');
       if (roles && (data.professions || []).length) {
-        roles.innerHTML = data.professions.slice(0, 8).map(role => `
+        roles.innerHTML = data.professions.slice(0, 6).map(role => `
           <li><a href="/profession/${role.slug}">
             <span class="mkt-name">${role.title}<br><span class="mkt-count">${num(role.jobs)} вакансий · ${role.family}</span></span>
             <span class="mkt-pay">${role.salary}</span>

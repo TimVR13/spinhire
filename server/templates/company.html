@@ -25,6 +25,14 @@
   .co-about p { color: var(--ink-dim); line-height: 1.7; white-space: pre-line; }
   .co-src { color: var(--ink-faint); font-size: 0.8rem; margin-top: 12px; }
   .co-src a { color: var(--ink-dim); }
+  @media (max-width: 760px) {
+    .co-head { padding: var(--sp-4); gap: 12px; flex-direction: column; align-items: flex-start; }
+    .co-logo { width: 56px; height: 56px; }
+    .co-about p.co-text { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+    .co-about.open p.co-text { display: block; }
+    .co-about .co-toggle { display: inline-block; }
+  }
+  .co-toggle { display: none; background: none; border: 0; color: var(--acid); font: inherit; font-weight: 700; padding: 6px 0; cursor: pointer; }
 {% endblock %}
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / <a href="/companies.html">Компании</a> / {{ company }}</nav>
@@ -48,7 +56,8 @@
   {% if about %}
   <section class="co-about">
     <h2>О компании</h2>
-    <p>{{ about }}</p>
+    <p class="co-text">{{ about }}</p>
+    <button class="co-toggle" type="button" onclick="this.closest('.co-about').classList.toggle('open');this.textContent=this.closest('.co-about').classList.contains('open')?'Свернуть ↑':'Читать дальше ↓'">Читать дальше ↓</button>
     {% if public and not (company_profile and company_profile.company_description) %}
     <p class="co-src">Описание из публичного профиля работодателя. Компания может <a href="/register?role=employer">забрать страницу себе</a> и отредактировать её.</p>
     {% endif %}
@@ -56,9 +65,9 @@
   {% endif %}
 
   <h2 style="font-size: 1.1rem; color: var(--acid); margin-bottom: 14px;">▮ Вакансии {{ company }}</h2>
-  <div class="jobs-list">
+  <div class="jobs-list" id="coJobs">
     {% for j in jobs %}
-    <a class="job-card" href="/job/{{ j.id }}">
+    <a class="job-card" href="/job/{{ j.id }}"{% if loop.index > 20 %} hidden{% endif %}>
       <div class="job-card__logo" style="background: var(--surface-2); overflow: hidden;" aria-hidden="true">
         {% if j.logo_url %}<img src="{{ j.logo_url }}" alt="" style="width:32px;height:32px;object-fit:contain" onerror="this.replaceWith(document.createTextNode('{{ j.initials }}'))">{% else %}<span style="color: var(--acid);">{{ j.initials }}</span>{% endif %}
       </div>
@@ -73,4 +82,13 @@
     </a>
     {% endfor %}
   </div>
+  {% if jobs|length > 20 %}
+  <button class="btn btn-ghost co-more" id="coMore" type="button" style="margin-top: 14px; width: 100%;">Показать ещё <span data-no-translate>{{ [jobs|length - 20, 20]|min }}</span> из <span data-no-translate>{{ jobs|length - 20 }}</span> ↓</button>
+  <script>
+  // Длинные списки (у крупных работодателей по 100+ вакансий) раскрываем порциями по 20
+  (function(){const list=document.getElementById('coJobs'),btn=document.getElementById('coMore');if(!btn)return;
+  btn.addEventListener('click',()=>{const hidden=[...list.querySelectorAll('.job-card[hidden]')];hidden.slice(0,20).forEach(c=>c.hidden=false);
+  const left=hidden.length-20;if(left<=0){btn.remove();return;}btn.querySelector('span').textContent=Math.min(20,left);btn.querySelectorAll('span')[1].textContent=left;});})();
+  </script>
+  {% endif %}
 {% endblock %}

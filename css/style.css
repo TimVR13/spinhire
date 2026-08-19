@@ -271,6 +271,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 .job-card:hover {
   border-color: var(--acid);
 }
+.job-card[hidden] { display: none; }
 .job-card__logo {
   width: 56px; height: 56px;
   display: grid; place-items: center;
