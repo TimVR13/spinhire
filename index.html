@@ -62,7 +62,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet">
 <script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="css/style.css?v=20260819b">
+<link rel="stylesheet" href="css/style.css?v=20260819c">
 <style>
 
   .hero {
@@ -342,6 +342,127 @@
   .ev-btn { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg-deep); color: var(--ink-dim); font-size: 0.78rem; font-weight: 600; padding: 7px 11px; cursor: pointer; text-decoration: none; }
   .ev-btn:hover { border-color: var(--acid); color: var(--acid); }
   .ev-btn.saved { border-color: var(--acid); color: var(--acid); background: oklch(0.86 0.19 128 / 0.1); }
+
+  /* ===== Мобильная главная: короче, плотнее, по одной мысли на экран ===== */
+  .cat-more { display: none; }
+  .mkt-chips { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+  .mkt-chips a { display: inline-flex; align-items: baseline; gap: 6px; padding: 7px 12px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: 0.82rem; color: var(--ink); text-decoration: none; background: var(--bg-deep); }
+  .mkt-chips a:hover { border-color: var(--acid); color: var(--acid); }
+  .mkt-chips b { color: var(--acid); font-variant-numeric: tabular-nums; }
+  @media (max-width: 760px) {
+    .section { padding-block: var(--sp-6); }
+    .section-head { margin-bottom: var(--sp-4); }
+    .section-head h2 { font-size: clamp(1.45rem, 6.4vw, 1.9rem); }
+    .section-head .link-more { font-size: 0.82rem; }
+
+    /* герой: подводка короче, 2 цифры сверху + 1 широкая снизу */
+    .hero { padding-block: var(--sp-6) var(--sp-6); }
+    .hero__grid > div:first-child { min-height: 0; }
+    .hero .lead { font-size: 0.98rem; margin-block: var(--sp-4); }
+    .hero-hints { margin-top: var(--sp-3); }
+    .hero-hints .tag { font-size: 0.68rem; }
+    .hero-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: var(--sp-5); }
+    .stat-block { min-width: 0; padding: 14px 16px; gap: 0; }
+    .stat-block .num { font-size: 1.7rem; line-height: 1.1; }
+    .stat-block .lbl { font-size: 0.64rem; }
+    .stat-block:nth-child(3) { grid-column: 1 / -1; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .stat-block:nth-child(3) .lbl { text-align: right; }
+
+    /* направления: 5 на виду, остальное по кнопке */
+    .cat-grid { grid-template-columns: 1fr; gap: 8px; }
+    .cat-grid.is-collapsed .cat-card:nth-child(n+6) { display: none; }
+    .cat-card { padding: 10px 12px; gap: 12px; }
+    .cat-card .cat-ico { width: 44px; height: 44px; border-radius: 12px; }
+    .cat-card .cat-ico svg { width: 24px; height: 24px; }
+    .cat-card b { font-size: 0.95rem; }
+    .cat-more { display: flex; width: 100%; justify-content: center; align-items: center; min-height: 46px; margin-top: 10px;
+      border: 1px dashed var(--line-strong); border-radius: var(--radius); background: transparent; color: var(--acid); font-weight: 800; font-size: 0.82rem; letter-spacing: 0.04em; }
+    .cat-more[hidden] { display: none; }
+
+    /* вакансии дня: максимум 3 */
+    #featured-jobs .job-card:nth-child(n+4) { display: none; }
+    .jobs-list { gap: 10px; }
+
+    /* игровая: барабаны, баланс, ставка, крутить, все игры — и всё */
+    .hp-slot { padding: 16px; gap: 14px; border-radius: 18px; }
+    .hp-slot::before, .hp-jackpot, .hp-custom-bet, .hp-paytable, .hp-rules, .hp-live { display: none; }
+    .hp-section-head { margin-bottom: var(--sp-4); }
+    .hp-controls { gap: 12px; align-items: stretch; }
+    .hp-balance { font-size: 1.2rem; }
+    .hp-bets { justify-content: space-between; }
+    .hp-bets > span { margin-right: auto; }
+    .hp-bet { min-width: 58px; }
+    .hp-slot__msg { margin: 0; min-height: 1.3em; font-size: 0.88rem; }
+    #hpSpin { width: 100%; }
+    .hp-links { justify-content: stretch; }
+    .hp-games-link { flex: 1; }
+
+    /* события: только ближайшее, дальше — в календарь */
+    .events-grid, .link-more--desktop { display: none; }
+    .event-hero { margin-bottom: 0; }
+    .event-hero__media { min-height: 150px; max-height: 170px; }
+    .event-hero__body { padding: 16px; gap: 8px; }
+    .event-hero__desc, .event-hero__who { display: none; }
+    .event-hero__actions { flex-direction: column; }
+    .event-hero__actions .btn { width: 100%; justify-content: center; }
+
+    /* «большие деньги»: три факта строками */
+    .facts-grid { grid-template-columns: 1fr; gap: 8px; }
+    .fact:nth-child(3), .fact:nth-child(5), .fact:nth-child(6) { display: none; }
+    .fact { display: flex; align-items: center; gap: 14px; padding: 12px 14px; }
+    .fact b { margin: 0; font-size: 1.25rem; min-width: 86px; }
+    .fact span { font-size: 0.84rem; line-height: 1.35; }
+
+    /* рынок: 3 KPI в ряд, направления 5, география чипами, профессии 5 */
+    .mkt-intro { display: none; }
+    .mkt-top { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+    .mkt-kpi { padding: 12px 10px; }
+    .mkt-kpi:nth-child(4) { display: none; }
+    .mkt-kpi b { font-size: 1.35rem; }
+    .mkt-kpi span { font-size: 0.6rem; margin-top: 4px; letter-spacing: 0.04em; }
+    .mkt-grid { gap: 8px; }
+    .mkt-card { padding: 14px; }
+    .mkt-sub { margin-bottom: 10px; }
+    [data-market="directions"] li:nth-child(n+6) { display: none; }
+    [data-market="professions"] li:nth-child(n+6) { display: none; }
+    .mkt-roles a { padding: 6px 0; }
+    .mkt-upd { margin-top: 8px; }
+
+    /* зарплаты: карусель со снапом */
+    .salary-strip { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+      margin-inline: calc(-1 * var(--sp-5)); padding: 2px var(--sp-5) 6px; scrollbar-width: none; }
+    .salary-strip::-webkit-scrollbar { display: none; }
+    .salary-tile { flex: 0 0 62%; scroll-snap-align: start; }
+    .salary-tile:nth-child(n+7) { display: none; }
+
+    /* как это работает: только шаги, без расшифровки */
+    .how-grid { gap: 10px; }
+    .how-col { padding: 16px; }
+    .how-col h3 { font-size: 1rem; margin-bottom: 12px; }
+    .how-col ol { gap: 8px; }
+    .how-col li { grid-template-columns: 34px 1fr; gap: 10px; align-items: baseline; }
+    .how-col li::before { font-size: 0.95rem; }
+    .how-col li p { display: none; }
+    .how-col li b { font-size: 0.95rem; }
+    .how-col .btn { margin-top: 12px; width: 100%; justify-content: center; }
+
+    /* компании: плотная сетка 2×3 */
+    .company-strip { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .company-tile { padding: 12px; }
+    .company-tile:nth-child(n+7), .company-tile__hq { display: none; }
+    .company-tile .job-card__logo { margin-bottom: 8px; }
+    .company-tile b { font-size: 0.88rem; line-height: 1.2; }
+    .company-tile span { font-size: 0.74rem; }
+
+    /* CTA + популярные запросы */
+    .cta-banner { padding: 20px; gap: 16px; }
+    .cta-banner h2 { font-size: 1.35rem; }
+    .cta-banner p { font-size: 0.92rem; }
+    .cta-banner .btn { width: 100%; justify-content: center; font-size: 0.82rem; padding-inline: 12px; }
+    .seo-links { margin-top: var(--sp-6); padding-top: var(--sp-5); }
+    .seo-links ul { grid-template-columns: 1fr; gap: 6px; }
+    .seo-links li:nth-child(n+8) { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -432,7 +553,7 @@
         </div>
         <a class="link-more" href="jobs.html">Все вакансии →</a>
       </div>
-      <nav class="cat-grid" aria-label="Категории вакансий">
+      <nav class="cat-grid" id="catGrid" aria-label="Категории вакансий">
         <a class="cat-card" href="jobs.html"><span class="cat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></span><b>Операции казино</b><span class="count">→</span></a>
         <a class="cat-card" href="jobs.html"><span class="cat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M16 7h5v5"/></svg></span><b>Беттинг и трейдинг</b><span class="count">→</span></a>
         <a class="cat-card" href="jobs.html"><span class="cat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M7 11v2M6 12h2"/><circle cx="16" cy="11.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="18.5" cy="13" r="0.9" fill="currentColor" stroke="none"/></svg></span><b>Разработка игр</b><span class="count">→</span></a>
@@ -446,6 +567,7 @@
         <a class="cat-card" href="jobs.html"><span class="cat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3.3 2.5-5.5 5.5-5.5s5.5 2.2 5.5 5.5"/><path d="M16 5.2a3 3 0 010 5.6"/><path d="M17.5 14.2c2.3.6 3.5 2.4 3.5 4.8"/></svg></span><b>HR и рекрутинг</b><span class="count">→</span></a>
         <a class="cat-card" href="jobs.html"><span class="cat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l3.5 8h9L20 8l-4.5 3.2L12 5 8.5 11.2 4 8z"/><path d="M6.5 19h11"/></svg></span><b>Топ-менеджмент</b><span class="count">→</span></a>
       </nav>
+      <button class="cat-more" id="catMore" type="button" aria-controls="catGrid" aria-expanded="false" hidden>Ещё 7 направлений ↓</button>
     </div>
   </section>
 
@@ -508,7 +630,7 @@
     <div class="container">
       <div class="section-head">
         <div><span class="kicker">Куда идти нетворкать</span><h2>Календарь событий iGaming</h2></div>
-        <a class="link-more" href="events.html">Весь календарь →</a>
+        <a class="link-more link-more--desktop" href="events.html">Весь календарь →</a>
       </div>
       <article class="event-hero" id="event-hero" hidden>
         <div class="event-hero__media"><img id="eventHeroImg" src="" alt="" loading="lazy"></div>
@@ -521,7 +643,7 @@
           <p class="event-hero__promo" id="eventHeroPromo" hidden></p>
           <div class="event-hero__actions">
             <a class="btn btn-acid btn-sm" id="eventHeroLink" href="events.html" target="_blank" rel="nofollow noopener external">Сайт события ↗</a>
-            <a class="btn btn-ghost btn-sm" href="events.html">Весь календарь →</a>
+            <a class="btn btn-ghost btn-sm" href="events.html">Показать календарь →</a>
           </div>
         </div>
       </article>
@@ -554,7 +676,7 @@
         </div>
         <a class="link-more" href="/professions">Все профессии и зарплаты →</a>
       </div>
-      <p style="color: var(--ink-dim); max-width: 76ch; margin-bottom: 22px;">Цифры считаются по нашей живой базе вакансий и обновляются при каждом обходе источников. Никаких округлённых «более 10 000» — сколько есть, столько и показываем.</p>
+      <p class="mkt-intro" style="color: var(--ink-dim); max-width: 76ch; margin-bottom: 22px;">Цифры считаются по нашей живой базе вакансий и обновляются при каждом обходе источников. Никаких округлённых «более 10 000» — сколько есть, столько и показываем.</p>
 
       <div class="mkt-top" data-market="top">
         <div class="mkt-kpi"><b data-market-kpi="live_jobs">—</b><span>Живых вакансий</span></div>
@@ -572,7 +694,7 @@
         <div class="mkt-card">
           <h3>География</h3>
           <p class="mkt-sub">Где нанимают прямо сейчас</p>
-          <ul class="mkt-bars" data-market="countries"></ul>
+          <ul class="mkt-chips" data-market="countries"></ul>
         </div>
         <div class="mkt-card">
           <h3>Профессии по спросу</h3>
@@ -971,6 +1093,27 @@
   box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); spin(); } });
 })();
 
+// Направления на мобильном: пять на виду, остальные — по кнопке
+(function () {
+  const grid = document.getElementById('catGrid'), more = document.getElementById('catMore');
+  if (!grid || !more) return;
+  const mq = window.matchMedia('(max-width: 760px)');
+  const hidden = grid.children.length - 5;
+  const lang = document.documentElement.lang;
+  const labels = lang === 'uk' ? ['Ще ' + hidden + ' напрямків ↓', 'Згорнути ↑']
+    : lang === 'en' ? [hidden + ' more areas ↓', 'Show less ↑'] : ['Ещё ' + hidden + ' направлений ↓', 'Свернуть ↑'];
+  function sync() {
+    if (mq.matches) { grid.classList.add('is-collapsed'); more.hidden = false; more.textContent = labels[0]; more.setAttribute('aria-expanded', 'false'); }
+    else { grid.classList.remove('is-collapsed'); more.hidden = true; }
+  }
+  more.addEventListener('click', () => {
+    const open = grid.classList.toggle('is-collapsed') === false;
+    more.textContent = labels[open ? 1 : 0]; more.setAttribute('aria-expanded', String(open));
+    if (!open) grid.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
+  mq.addEventListener('change', sync); sync();
+})();
+
 // Масштабируемый выбор локации на главной
 (function () {
   const picker = document.getElementById('locationPicker'); if (!picker) return;
@@ -999,6 +1142,6 @@
   document.addEventListener('keydown', event => { if (event.key === 'Escape') { setOpen(false); trigger.focus(); } });
 })();
 </script>
-<script src="js/app.js?v=20260819d"></script>
+<script src="js/app.js?v=20260819e"></script>
 </body>
 </html>

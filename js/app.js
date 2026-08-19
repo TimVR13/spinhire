@@ -418,7 +418,12 @@ if (window.matchMedia('(pointer: fine)').matches &&
         if (el) el.textContent = num(value);
       });
       renderBars('directions', (data.directions || []).slice(0, 7));
-      renderBars('countries', (data.countries || []).slice(0, 8));
+      // География — чипами, а не второй колонкой полосок: иначе две карточки сливаются.
+      const chips = document.querySelector('[data-market="countries"]');
+      if (chips && (data.countries || []).length) {
+        chips.innerHTML = data.countries.slice(0, 8).map(row => `
+          <li><a href="/jobs?loc=${encodeURIComponent(row.name)}">${row.name} <b>${num(row.jobs)}</b></a></li>`).join('');
+      }
 
       const roles = document.querySelector('[data-market="professions"]');
       if (roles && (data.professions || []).length) {

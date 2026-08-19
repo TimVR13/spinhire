@@ -480,6 +480,7 @@ main > .section:nth-of-type(even) {
   .main-nav a { padding: 14px 0; border-bottom: 1px solid var(--line); min-height: 44px; }
   .nav-burger { display: block; margin-left: auto; width: 44px; height: 44px; }
   .site-footer .footer-grid { grid-template-columns: 1fr 1fr; }
+  .footer-bottom { flex-wrap: wrap; gap: 10px 18px; justify-content: flex-start; }
   .job-card { grid-template-columns: 44px 1fr; }
   .job-card > * { min-width: 0; }
   .job-card__logo { width: 44px; height: 44px; font-size: 1rem; }
@@ -496,6 +497,19 @@ main > .section:nth-of-type(even) {
   .logo { font-size: 1.2rem; gap: 8px; }
   .site-header .logo__mark { width: 50px; height: 30px; flex-basis: 50px; }
   .salary { font-size: 1rem; }
+  /* футер: одна колонка, ссылки — пилюлями, нижняя строка — по порядку, а не вперемешку */
+  .site-footer { margin-top: var(--sp-7); }
+  .site-footer .footer-grid { grid-template-columns: 1fr; gap: var(--sp-5); padding-block: var(--sp-6) var(--sp-5); }
+  .site-footer h4 { margin-bottom: 10px; }
+  .footer-tagline { margin-top: 10px !important; font-size: 0.82rem; }
+  .site-footer ul { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+  .site-footer li a { display: inline-flex; align-items: center; min-height: 36px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; font-size: 0.82rem; background: var(--surface); }
+  .footer-bottom { display: grid; grid-template-columns: 1fr auto; gap: 10px 14px; align-items: center; padding-block: var(--sp-4) var(--sp-5); font-size: 0.76rem; }
+  .footer-bottom > span:first-child { grid-column: 1 / -1; order: 1; }
+  .footer-bottom > span:nth-child(2) { order: 2; }
+  .footer-bottom .consent-settings { order: 3; justify-self: end; }
+  .footer-bottom .footer-language { order: 4; }
+  .footer-bottom .theme-toggle { order: 5; justify-self: end; }
 }
 
 /* 3d tilt */
