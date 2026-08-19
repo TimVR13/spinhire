@@ -3,3 +3,8 @@
 .impeccable.md
 data/spinhire.db
 __pycache__/
+
+# внутренние дизайн-раскладки — не для публичного сайта
+brand-board.html
+logo-concepts.html
+logo-round3.html
