@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (lang === 'ru') return;
     let complete = {};
     try {
-      const response = await fetch(`/js/i18n-${lang}.js?v=20260818`, { credentials: 'same-origin' });
+      const response = await fetch(`/js/i18n-${lang}.js?v=20260819`, { credentials: 'same-origin' });
       if (response.ok) complete = await response.json();
     } catch (_) {}
     const dict = Object.assign({}, complete, UI_COPY[lang]);
@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const label = document.createElement('label'); label.className = 'footer-language';
     const caption = document.createElement('span'); caption.textContent = 'Язык';
     const select = document.createElement('select');
-    select.setAttribute('data-native-select', ''); select.setAttribute('aria-label', 'Язык сайта');
+    select.setAttribute('data-native-select', ''); select.setAttribute('data-no-translate', ''); select.setAttribute('aria-label', 'Язык сайта');
     select.innerHTML = '<option value="ru">Русский</option><option value="uk">Українська</option><option value="en">English</option>';
     select.value = uiLang;
     select.addEventListener('change', () => {
@@ -374,3 +374,60 @@ if (window.matchMedia('(pointer: fine)').matches &&
 })();
 
 // (переключатель палитры удалён — фиксированная зелёная гамма)
+
+// Живая статистика рынка на главной: цифры считает сервер по нашей же базе вакансий.
+(function () {
+  const host = document.querySelector('[data-market="top"]');
+  if (!host) return;
+
+  const num = value => Number(value || 0).toLocaleString('ru-RU');
+
+  const renderBars = (selector, rows) => {
+    const list = document.querySelector(`[data-market="${selector}"]`);
+    if (!list || !rows.length) return;
+    const max = Math.max(...rows.map(r => r.jobs)) || 1;
+    list.innerHTML = rows.map(row => `
+      <li>
+        <span class="mkt-name">${row.name}</span>
+        <span class="mkt-val">${num(row.jobs)}</span>
+        <span class="mkt-track"><span class="mkt-fill" style="width:${Math.round(row.jobs / max * 100)}%"></span></span>
+      </li>`).join('');
+  };
+
+  fetch('/api/market-stats', { credentials: 'same-origin' })
+    .then(response => response.ok ? response.json() : Promise.reject())
+    .then(data => {
+      const kpi = {
+        live_jobs: data.live_jobs,
+        new_this_week: data.new_this_week,
+        companies: data.companies,
+        countries_count: (data.countries || []).length,
+      };
+      Object.entries(kpi).forEach(([key, value]) => {
+        const el = document.querySelector(`[data-market-kpi="${key}"]`);
+        if (el) el.textContent = num(value);
+      });
+      renderBars('directions', (data.directions || []).slice(0, 7));
+      renderBars('countries', (data.countries || []).slice(0, 8));
+
+      const roles = document.querySelector('[data-market="professions"]');
+      if (roles && (data.professions || []).length) {
+        roles.innerHTML = data.professions.slice(0, 8).map(role => `
+          <li><a href="/profession/${role.slug}">
+            <span class="mkt-name">${role.title}<br><span class="mkt-count">${num(role.jobs)} вакансий · ${role.family}</span></span>
+            <span class="mkt-pay">${role.salary}</span>
+          </a></li>`).join('');
+      }
+
+      const updated = document.querySelector('[data-market="updated"]');
+      if (updated && data.updated) {
+        const when = new Date(data.updated);
+        updated.textContent = 'Обновлено ' + when.toLocaleString('ru-RU', {
+          day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+      }
+    })
+    .catch(() => {
+      const section = document.getElementById('market');
+      if (section) section.hidden = true;   // не показываем пустой скелет
+    });
+})();

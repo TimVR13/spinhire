@@ -88,6 +88,8 @@ SOURCE_REGISTRY = [
      "note": "Сайт и внутренний API закрыты Cloudflare. Коннектор готов к официальному feed URL."},
     {"key": "hh.ru", "name": "HeadHunter (hh.ru / hh.ua)", "type": "Публичный API — требует настройки",
      "status": "не подключён", "note": "api.hh.ru бесплатный (зарплата+город+работодатель), но из облака отдаёт 403 — нужен зарегистрированный app-токен ИЛИ запуск с разрешённого IP. Покрывает RU/UA/СНГ. Готов подключить."},
+    {"key": "igamingcareers", "name": "iGamingCareers.co", "type": "Публичный JSON API агрегатора",
+     "status": "подключён", "note": "~1 360 вакансий, 14 страниц по 100. Ссылка ведёт на карьерную страницу работодателя (applicationUrl), заглушки «No job postings» отбрасываем"},
     {"key": "casino-discovery", "name": "Казино: 9 рынков", "type": "Career/hiring discovery",
      "status": "подключён", "note": "2 134 бренда из Blask; ежедневный пакетный обход официальных career/job страниц"},
 ]
@@ -632,6 +634,73 @@ def crawl_partner_feed(url, source):
     return out
 
 
+
+IGC_API = "https://www.igamingcareers.co/api/jobs"
+IGC_MAX_PAGES = 14           # 1 364 вакансии по 100 на страницу
+IGC_PLACEHOLDER = "no job postings currently open"
+
+
+def crawl_igamingcareers(max_pages=IGC_MAX_PAGES):
+    """Агрегатор iGamingCareers: открытый JSON API со ссылкой на карьерную страницу работодателя.
+
+    Ссылку ведём на applicationUrl — это ATS или сайт самой компании, а не борд-посредник,
+    поэтому кандидат попадает к работодателю напрямую, как и по остальным нашим источникам.
+    """
+    out = []
+    for page in range(1, max_pages + 1):
+        payload = json.loads(_fetch(f"{IGC_API}?limit=100&page={page}"))
+        jobs = payload.get("jobs") or []
+        if not jobs:
+            break
+        for j in jobs:
+            title = (j.get("title") or "").strip()
+            company = (j.get("company") or "").strip()
+            link = (j.get("applicationUrl") or "").strip()
+            if not title or not link or not j.get("isActive"):
+                continue
+            if IGC_PLACEHOLDER in title.lower():
+                continue          # компания-заглушка без реальных вакансий
+            description = _clean_html(j.get("descriptionHtml") or j.get("description") or "")
+            requirements = _clean_html(j.get("requirementsHtml") or j.get("requirements") or "")
+            if requirements:
+                description = f"{description}\n\nТребования\n{requirements}".strip()
+            location = (j.get("location") or j.get("country") or "").strip()
+            lang = detect_lang(title, description)
+            out.append({
+                "title": title,
+                "company_name": company or "iGaming-компания",
+                "location": location,
+                "fmt": _fmt_from(location, description),
+                "tags": _tags_from(title, description, lang),
+                "description": description,
+                "source_url": link,
+                "source": "igamingcareers",
+                "ext_id": str(j.get("id") or j.get("slug") or link[-80:]),
+                "salary": _igc_salary(j),
+                "posted_at": str(j.get("postedDate") or "")[:10],
+                "deadline": str(j.get("expiresAt") or "")[:10],
+            })
+        if not (payload.get("pagination") or {}).get("hasNextPage"):
+            break
+        time.sleep(0.4)
+    return out
+
+
+def _igc_salary(job):
+    """Собрать вилку из отдельных полей API — строкового поля salary там почти нет."""
+    if job.get("salary"):
+        return str(job["salary"])[:120]
+    low, high = job.get("salaryMin"), job.get("salaryMax")
+    if not low and not high:
+        return "по запросу"
+    currency = {"EUR": "€", "USD": "$", "GBP": "£"}.get(job.get("salaryCurrency") or "EUR", "")
+    period = {"year": "/ год", "month": "/ мес", "day": "/ день", "hour": "/ час"}.get(
+        job.get("salaryPeriod") or "", "")
+    if low and high and low != high:
+        return f"{currency}{int(low):,} – {currency}{int(high):,} {period}".replace(",", " ").strip()
+    return f"{currency}{int(low or high):,} {period}".replace(",", " ").strip()
+
+
 def company_snapshot(items):
     """Агрегировать публичные данные компаний из вакансий без отдельного скрейпинга."""
     companies = {}
@@ -740,6 +809,7 @@ def collect(with_metadata=False):
         if not url:
             continue
         fetch_source(f"partner:{source}", lambda u=url, s=source: crawl_partner_feed(u, s), complete=True)
+    fetch_source("igamingcareers", crawl_igamingcareers)
     fetch_source("casino-discovery", crawl_casino_seed_registry)
     return (items, complete_sources, health) if with_metadata else items
 

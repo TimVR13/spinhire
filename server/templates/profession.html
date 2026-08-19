@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% set active = 'professions' %}
+{% set mid = role.salary.mt_cy.middle %}
+{% block title %}{{ role.title }} в iGaming: обязанности, навыки и зарплата {{ salary_headline }} | SpinHire{% endblock %}
+{% block desc %}{{ role.title }} ({{ role.title_en }}) в iGaming: чем занимается, за что отвечает, какие навыки нужны и сколько платят — {{ salary_headline }} на Мальте и Кипре, вилки по грейдам и регионам.{% endblock %}
+{% block robots %}<link rel="canonical" href="https://spinhire.io/profession/{{ role.slug }}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="{{ role.title }} в iGaming — обязанности и зарплата">
+<meta property="og:description" content="{{ role.lead }}">
+<meta property="og:url" content="https://spinhire.io/profession/{{ role.slug }}">
+<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
+<script type="application/ld+json">{{ {
+  "@context": "https://schema.org",
+  "@type": "Occupation",
+  "name": role.title,
+  "alternateName": [role.title_en] + role.aliases,
+  "description": role.about,
+  "occupationalCategory": role.family,
+  "url": "https://spinhire.io/profession/" + role.slug,
+  "responsibilities": role.responsibilities | join("; "),
+  "skills": (role.hard_skills + role.soft_skills) | join("; "),
+  "estimatedSalary": [
+    {
+      "@type": "MonetaryAmountDistribution",
+      "name": "Мальта и Кипр",
+      "currency": "EUR",
+      "duration": "P1M",
+      "percentile10": role.salary.mt_cy.junior[0],
+      "median": ((role.salary.mt_cy.middle[0] + role.salary.mt_cy.middle[1]) / 2) | round | int,
+      "percentile90": role.salary.mt_cy.lead[1]
+    },
+    {
+      "@type": "MonetaryAmountDistribution",
+      "name": "Восточная Европа",
+      "currency": "EUR",
+      "duration": "P1M",
+      "percentile10": role.salary.eu.junior[0],
+      "median": ((role.salary.eu.middle[0] + role.salary.eu.middle[1]) / 2) | round | int,
+      "percentile90": role.salary.eu.lead[1]
+    }
+  ]
+} | tojson }}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{% for f in role.faq %}{"@type":"Question","name":{{ f.q | tojson }},"acceptedAnswer":{"@type":"Answer","text":{{ f.a | tojson }}}}{% if not loop.last %},{% endif %}{% endfor %}]}</script>
+<script type="application/ld+json">{{ {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Главная", "item": "https://spinhire.io/"},
+    {"@type": "ListItem", "position": 2, "name": "Профессии", "item": "https://spinhire.io/professions"},
+    {"@type": "ListItem", "position": 3, "name": role.title, "item": "https://spinhire.io/profession/" + role.slug}
+  ]
+} | tojson }}</script>{% endblock %}
+{% block style %}
+  .p-wrap { max-width: 900px; margin: 0 auto; }
+  .p-head .en { font-size: 0.8rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.08em; }
+  .p-lead { font-size: 1.05rem; color: var(--ink-dim); line-height: 1.6; margin: 12px 0 var(--sp-5); }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-6); }
+  .fact { border: 2px solid var(--line); padding: 12px 16px; }
+  .fact span { display: block; font-size: 0.7rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .fact b { font-family: var(--font-display); font-size: 1.15rem; color: var(--acid); }
+  .fact.pay b { color: var(--emerald, var(--acid)); }
+  .p-section { margin-bottom: var(--sp-6); }
+  .p-section > h2 { font-family: var(--font-display); font-size: 1.2rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--line); }
+  .p-section p { color: var(--ink-dim); line-height: 1.65; }
+  .p-list { list-style: none; display: flex; flex-direction: column; gap: 8px; color: var(--ink-dim); line-height: 1.5; }
+  .p-list li { padding-left: 20px; position: relative; }
+  .p-list li::before { content: "▸"; position: absolute; left: 0; color: var(--acid); font-weight: 800; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid var(--line-strong); padding: 5px 11px; font-size: 0.82rem; color: var(--ink-dim); }
+  .two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--sp-5); }
+  .pay-table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  .pay-table th { background: var(--bg-deep); color: var(--acid); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.08em; text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--line); }
+  .pay-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); color: var(--ink-dim); white-space: nowrap; }
+  .pay-table td:first-child { color: var(--ink); font-weight: 600; white-space: normal; }
+  .faq-item { border-bottom: 1px solid var(--line); padding: 14px 0; }
+  .faq-item h3 { font-size: 0.98rem; margin-bottom: 6px; }
+  .faq-item p { color: var(--ink-dim); font-size: 0.92rem; line-height: 1.6; }
+  .rel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; }
+  .rel { border: 2px solid var(--line); padding: 12px 14px; text-decoration: none; display: block; }
+  .rel:hover { border-color: var(--acid); }
+  .rel b { display: block; color: var(--ink); font-size: 0.92rem; }
+  .rel span { font-size: 0.78rem; color: var(--ink-faint); }
+{% endblock %}
+{% block content %}
+<div class="p-wrap">
+  <nav class="crumbs"><a href="/">Главная</a> / <a href="/professions">Профессии</a> / {{ role.title }}</nav>
+
+  <div class="p-head">
+    <span class="en">{{ role.title_en }} · {{ role.family }}</span>
+    <h1 style="font-size: clamp(1.6rem, 4vw, 2.6rem); margin: 8px 0 0;">{{ role.title }}</h1>
+    <p class="p-lead">{{ role.lead }}</p>
+  </div>
+
+  <div class="facts">
+    <div class="fact pay"><span>Middle · Мальта и Кипр</span><b>{{ salary_headline }}</b></div>
+    <div class="fact"><span>Направление</span><b style="font-size: 0.95rem;">{{ role.family }}</b></div>
+    <div class="fact"><span>Живых вакансий</span><b>{{ jobs_count }}</b></div>
+    <div class="fact"><span>Похожие названия</span><b style="font-size: 0.9rem;">{{ role.aliases[0] }}</b></div>
+  </div>
+
+  <section class="p-section">
+    <h2>Кто это и чем занимается</h2>
+    <p>{{ role.about }}</p>
+  </section>
+
+  <section class="p-section">
+    <h2>За что отвечает</h2>
+    <ul class="p-list">{% for r in role.responsibilities %}<li>{{ r }}</li>{% endfor %}</ul>
+  </section>
+
+  <section class="p-section">
+    <h2>По каким метрикам оценивают</h2>
+    <ul class="p-list">{% for k in role.kpis %}<li>{{ k }}</li>{% endfor %}</ul>
+  </section>
+
+  <section class="p-section">
+    <h2>Что должен уметь</h2>
+    <div class="two-col">
+      <div>
+        <h3 style="font-size: 0.95rem; margin-bottom: 10px;">Профессиональные навыки</h3>
+        <ul class="p-list">{% for s in role.hard_skills %}<li>{{ s }}</li>{% endfor %}</ul>
+      </div>
+      <div>
+        <h3 style="font-size: 0.95rem; margin-bottom: 10px;">Личные качества</h3>
+        <ul class="p-list">{% for s in role.soft_skills %}<li>{{ s }}</li>{% endfor %}</ul>
+        <h3 style="font-size: 0.95rem; margin: 18px 0 10px;">Инструменты</h3>
+        <div class="chips">{% for t in role.tools %}<span class="chip">{{ t }}</span>{% endfor %}</div>
+      </div>
+    </div>
+    <p style="margin-top: 16px;"><b style="color: var(--ink);">Языки:</b> {{ role.languages }}</p>
+  </section>
+
+  <section class="p-section" id="salary">
+    <h2>Сколько платят: зарплаты по грейдам</h2>
+    <p style="margin-bottom: 14px;">Вилки указаны в евро на руки в месяц, без бонусной части. Данные собраны по вакансиям индустрии и офферам, о которых сообщают кандидаты; цифры — ориентир, а не гарантия.</p>
+    {% for key, region_name in regions.items() %}
+    <h3 style="font-size: 0.98rem; margin: 18px 0 8px;">{{ region_name }}</h3>
+    <div class="table-wrap">
+      <table class="pay-table">
+        <thead><tr><th>Грейд</th><th>Вилка, € / мес</th><th>Медиана</th></tr></thead>
+        <tbody>
+          {% for skey, sname in seniority %}
+          {% set band = role.salary[key][skey] %}
+          <tr>
+            <td>{{ sname }}</td>
+            <td>€{{ '{:,}'.format(band[0]).replace(',', ' ') }} – €{{ '{:,}'.format(band[1]).replace(',', ' ') }}</td>
+            <td>€{{ '{:,}'.format(((band[0] + band[1]) // 2)).replace(',', ' ') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endfor %}
+    <p style="margin-top: 16px;"><b style="color: var(--ink);">Бонусы:</b> {{ role.bonus }}</p>
+  </section>
+
+  <section class="p-section">
+    <h2>Как войти в профессию</h2>
+    <p>{{ role.entry }}</p>
+    <p style="margin-top: 12px;"><b style="color: var(--ink);">График работы:</b> {{ role.schedule }}</p>
+    <p style="margin-top: 12px;"><b style="color: var(--ink);">Спрос на рынке:</b> {{ role.demand }}</p>
+  </section>
+
+  <section class="p-section">
+    <h2>Куда расти дальше</h2>
+    <div class="chips">{% for g in role.growth %}<span class="chip">{{ g }}</span>{% endfor %}</div>
+  </section>
+
+  {% if jobs %}
+  <section class="p-section">
+    <h2>Живые вакансии: {{ role.title }}</h2>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      {% for j in jobs %}
+      <a href="/job/{{ j.id }}" class="rel" style="display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+        <span><b>{{ j.title }}</b><span>{{ j.company_name }}{% if j.location %} · {{ j.location }}{% endif %}</span></span>
+        <span style="color: var(--emerald, var(--acid)); font-weight: 700; font-size: 0.85rem;">{{ j.salary }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    <a href="/jobs?q={{ role.title | urlencode }}" class="btn btn-ghost btn-sm" style="margin-top: 14px;">Все вакансии по этой роли →</a>
+  </section>
+  {% else %}
+  <section class="p-section">
+    <h2>Вакансии по этой роли</h2>
+    <p>Сейчас открытых вакансий по точному названию нет. Загляните в <a href="/jobs" style="color: var(--acid);">общий список</a> или подпишитесь на уведомления — роль появляется в среднем несколько раз в месяц.</p>
+  </section>
+  {% endif %}
+
+  <section class="p-section">
+    <h2>Частые вопросы</h2>
+    {% for f in role.faq %}
+    <div class="faq-item"><h3>{{ f.q }}</h3><p>{{ f.a }}</p></div>
+    {% endfor %}
+  </section>
+
+  <section class="p-section">
+    <h2>Смежные профессии</h2>
+    <div class="rel-grid">
+      {% for r in related %}
+      <a class="rel" href="/profession/{{ r.slug }}"><b>{{ r.title }}</b><span>{{ r.title_en }}</span></a>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if same_family %}
+  <section class="p-section">
+    <h2>Ещё в направлении «{{ role.family }}»</h2>
+    <div class="chips">
+      {% for r in same_family %}<a class="chip" href="/profession/{{ r.slug }}" style="text-decoration: none;">{{ r.title }}</a>{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="card" style="text-align: center; margin-top: var(--sp-6);">
+    <h2 style="font-size: 1.15rem; margin-bottom: 10px;">Ищете {{ role.title | lower }}а в команду?</h2>
+    <p style="color: var(--ink-dim); margin-bottom: 18px;">Разместите вакансию за €49 — она попадёт в поиск, в направление «{{ role.family }}» и на эту страницу.</p>
+    <a href="/post-job" class="btn btn-pink">Разместить вакансию →</a>
+  </div>
+</div>
+{% endblock %}

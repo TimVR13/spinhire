@@ -637,3 +637,26 @@ main > .section:nth-of-type(even) {
   .consent-banner { align-items: stretch; flex-direction: column; }
   .consent-banner__actions { display: grid; grid-template-columns: 1fr 1fr; }
 }
+
+/* ---------- Рынок труда в цифрах (главная) ---------- */
+.mkt-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-5); }
+.mkt-kpi { border: 2px solid var(--line); border-radius: var(--radius); padding: 16px 20px; background: var(--surface); }
+.mkt-kpi b { display: block; font-family: var(--font-display); font-size: clamp(1.6rem, 3vw, 2.2rem); color: var(--acid); line-height: 1.05; }
+.mkt-kpi span { display: block; margin-top: 6px; font-size: 0.76rem; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.07em; }
+.mkt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--sp-3); }
+.mkt-card { border: 2px solid var(--line); border-radius: var(--radius); padding: var(--sp-4); background: var(--surface); }
+.mkt-card h3 { font-family: var(--font-display); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.mkt-sub { color: var(--ink-faint); font-size: 0.8rem; margin: 4px 0 14px; }
+.mkt-bars { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.mkt-bars li { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: baseline; font-size: 0.86rem; color: var(--ink-dim); }
+.mkt-bars .mkt-name { color: var(--ink); }
+.mkt-bars .mkt-val { color: var(--acid); font-weight: 800; font-variant-numeric: tabular-nums; }
+.mkt-bars .mkt-track { grid-column: 1 / -1; height: 4px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.mkt-bars .mkt-fill { display: block; height: 100%; background: var(--acid); border-radius: 3px; }
+.mkt-roles { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.mkt-roles a { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: baseline; text-decoration: none; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 0.86rem; }
+.mkt-roles a:last-child { border-bottom: none; }
+.mkt-roles .mkt-name { color: var(--ink); }
+.mkt-roles .mkt-pay { color: var(--emerald, var(--acid)); font-weight: 700; font-size: 0.8rem; }
+.mkt-roles .mkt-count { color: var(--ink-faint); font-size: 0.78rem; }
+.mkt-upd { color: var(--ink-faint); font-size: 0.75rem; margin-top: 14px; }

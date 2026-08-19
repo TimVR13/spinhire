@@ -96,6 +96,8 @@ class User(Base):
     company_size = Column(String, default="")
     cv_credits = Column(Integer, default=0)         # оплаченные открытия контактов
     cv_access_until = Column(String, default="")   # ISO-дата безлимитного доступа
+    job_credits = Column(Integer, default=0)        # оплаченные размещения вакансий
+    job_access_until = Column(String, default="")  # ISO-дата безлимитного размещения
     coins = Column(Integer, default=0)              # SpinCoins на аккаунте
     avatar_file_name = Column(String, default="")
     avatar_file_path = Column(String, default="")
@@ -148,9 +150,25 @@ class Job(Base):
 
     @property
     def tag_list(self):
-        language_labels = {label.lower() for _, label, _ in JOB_LANGUAGES}
-        return [t.strip() for t in self.tags.split(",")
-                if t.strip() and t.strip().lower() not in language_labels][:3]
+        """Обычные теги вакансии.
+
+        Языки выводятся отдельными чипами через language_list, поэтому любой тег,
+        который на самом деле является названием языка («Украинский», «English»,
+        «Українська»), отсюда выбрасываем — иначе язык дублируется в карточке.
+        """
+        language_words = {label.lower() for _, label, _ in JOB_LANGUAGES}
+        for _, _, aliases in JOB_LANGUAGES:
+            language_words.update(alias.lower() for alias in aliases)
+        out = []
+        for tag in self.tags.split(","):
+            tag = tag.strip()
+            if not tag:
+                continue
+            low = tag.lower()
+            if low in language_words or any(low.startswith(w) for w in language_words if len(w) > 4):
+                continue
+            out.append(tag)
+        return out[:3]
 
     @property
     def has_salary(self):
@@ -365,16 +383,31 @@ class Event(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+# Тарифы. Базовая цена одной вакансии выровнена по рынку iGaming-джоб-бордов
+# (igamingcareers.co — Single Job €50, Starter Pack €150, Professional €599).
+# list_price — «старая»/полная цена для честной подачи «было → стало»,
+# job_credits — сколько размещений начисляется, access_days — безлимитный период.
 PLANS = {
-    "single": ("Одна вакансия", 99, "Размещение вакансии на 30 дней — скидка 50%"),
-    "featured": ("Featured ⚡", 199, "Топ поиска + главная, 60 дней — скидка 50%"),
-    "pack5": ("Пакет 5 вакансий", 799, "5 размещений по 30 дней"),
+    "single": ("Одна вакансия", 49, "Размещение вакансии на 30 дней"),
+    "featured": ("Продвижение ⚡", 99, "Топ поиска, главная и Telegram — 60 дней"),
+    "pack3": ("Пакет 3 вакансии", 129, "Три размещения по 30 дней, €43 за вакансию"),
+    "pack10": ("Пакет 10 вакансий", 349, "Десять размещений по 30 дней, €35 за вакансию"),
+    "unlim30": ("Безлимит на месяц", 599, "Сколько угодно вакансий 30 дней подряд"),
+    "always": ("Годовой безлимит", 3990, "Безлимит вакансий на 12 месяцев и бренд-профиль"),
     "cv1": ("1 контакт из базы", 5, "Открытие одного контакта резюме"),
     "cv10": ("10 контактов из базы", 50, "Открытие 10 контактов резюме (€5/контакт)"),
     "cv40": ("40 контактов из базы", 200, "Открытие 40 контактов резюме (€5/контакт)"),
     "cvunlim": ("База резюме — безлимит / мес", 349, "Безлимитные контакты на 30 дней"),
     "hunt": ("Подбор под ключ — предоплата", 1000, "Итоговая стоимость — 1 зарплата кандидата"),
 }
+
+# Полная (некупонная) цена: показываем зачёркнутой рядом с текущей.
+PLAN_LIST_PRICE = {"single": 99, "featured": 199, "pack3": 297,
+                   "pack10": 990, "unlim30": 1190, "always": 11880}
+
+# Что начисляется работодателю после оплаты.
+PLAN_JOB_CREDITS = {"single": 1, "featured": 1, "pack3": 3, "pack10": 10}
+PLAN_ACCESS_DAYS = {"unlim30": 30, "always": 365}
 
 
 class Order(Base):
@@ -514,6 +547,10 @@ def migrate(db: Session):
         db.execute(text("ALTER TABLE users ADD COLUMN cv_credits INTEGER DEFAULT 0"))
     if "cv_access_until" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN cv_access_until VARCHAR DEFAULT ''"))
+    if "job_credits" not in ucols:
+        db.execute(text("ALTER TABLE users ADD COLUMN job_credits INTEGER DEFAULT 0"))
+    if "job_access_until" not in ucols:
+        db.execute(text("ALTER TABLE users ADD COLUMN job_access_until VARCHAR DEFAULT ''"))
     for _sql in (
         "ALTER TABLE users ADD COLUMN location VARCHAR DEFAULT ''",
         "ALTER TABLE users ADD COLUMN job_search_status VARCHAR DEFAULT 'active'",
@@ -1752,15 +1789,49 @@ def employer(request: Request, stage: str = "", assigned: int = 0,
     applications = [application for job in jobs for application in job.applications]
     ats_apps = [a for a in applications if (not stage or a.status == stage)
                 and (not assigned or a.assigned_to == assigned)]
+    total_views = sum(job.views or 0 for job in jobs)
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    job_ids = [job.id for job in jobs]
+    views_7d = 0
+    if job_ids:
+        views_7d = (db.query(func.count(AnalyticsEvent.id))
+                    .filter(AnalyticsEvent.name == "job_view",
+                            AnalyticsEvent.entity_type == "job",
+                            AnalyticsEvent.entity_id.in_(job_ids),
+                            AnalyticsEvent.created_at >= week_ago).scalar() or 0)
+    applications_7d = sum(1 for a in applications if a.created_at and a.created_at >= week_ago)
+    unlocks_total = (db.query(func.count(ResumeUnlock.id))
+                     .filter(ResumeUnlock.employer_id == account.id).scalar() or 0)
     stats = {
         "active_jobs": sum(job.status == "approved" for job in jobs),
         "pending_jobs": sum(job.status == "pending" for job in jobs),
-        "views": sum(job.views or 0 for job in jobs),
+        "views": total_views,
         "applications": len(applications),
         "new_applications": sum(application.status == "new" for application in applications),
         "offers": sum(application.status == "offer" for application in applications),
         "hired": sum(application.status == "hired" for application in applications),
+        "views_7d": views_7d,
+        "applications_7d": applications_7d,
+        "unlocks": unlocks_total,
+        "conversion": round(len(applications) / total_views * 100, 1) if total_views else 0.0,
     }
+    # построчная статистика: что именно работает, а что висит без откликов
+    now = datetime.utcnow()
+    job_stats = []
+    for job in jobs:
+        job_apps = job.applications
+        views = job.views or 0
+        first_app = min((a.created_at for a in job_apps if a.created_at), default=None)
+        job_stats.append({
+            "job": job,
+            "views": views,
+            "applications": len(job_apps),
+            "new": sum(a.status == "new" for a in job_apps),
+            "conversion": round(len(job_apps) / views * 100, 1) if views else 0.0,
+            "days_live": max((now - job.created_at).days, 0) if job.created_at else 0,
+            "days_to_first": (first_app - job.created_at).days if first_app and job.created_at else None,
+        })
+    job_stats.sort(key=lambda row: row["views"], reverse=True)
     company_checks = [account.company_name, account.company_website, account.company_description,
                       account.company_location, account.company_size]
     company_progress = round(sum(bool(value) for value in company_checks) / len(company_checks) * 100)
@@ -1771,7 +1842,8 @@ def employer(request: Request, stage: str = "", assigned: int = 0,
     return render(request, db, "employer.html", jobs=jobs, unlocked_resumes=unlocked,
                   credit_ledger=ledger, stats=stats, company_progress=company_progress,
                   account=account, team_role=team_role, team=team, invites=invites,
-                  ats_apps=ats_apps, stage=stage, assigned=assigned)
+                  ats_apps=ats_apps, stage=stage, assigned=assigned,
+                  job_stats=job_stats)
 
 
 @app.post("/employer/profile")
@@ -2324,6 +2396,11 @@ def admin_order_action(order_id: int, action: str, request: Request, db: Session
                 if job:
                     job.featured = True
                     job.status = "approved"
+            if not already_paid and o.user and o.plan in PLAN_JOB_CREDITS:
+                o.user.job_credits = (o.user.job_credits or 0) + PLAN_JOB_CREDITS[o.plan]
+            if not already_paid and o.user and o.plan in PLAN_ACCESS_DAYS:
+                o.user.job_access_until = (
+                    datetime.utcnow() + timedelta(days=PLAN_ACCESS_DAYS[o.plan])).isoformat()
             if not already_paid and o.user and o.plan == "cv1":
                 o.user.cv_credits = (o.user.cv_credits or 0) + 1
                 db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=1,
@@ -2436,6 +2513,194 @@ def indexnow_key():
         raise HTTPException(404)
     return PlainTextResponse(key)
 
+
+# ---------- картотека профессий iGaming ----------
+
+PROFESSIONS_PATH = os.path.join(ROOT, "data", "professions.json")
+_PROFESSIONS_CACHE: dict = {"mtime": 0.0, "data": None}
+
+SENIORITY = (("junior", "Junior"), ("middle", "Middle"), ("senior", "Senior"), ("lead", "Head / Lead"))
+
+
+def professions_data() -> dict:
+    """Читаем картотеку с диска, перечитывая только при изменении файла."""
+    try:
+        mtime = os.path.getmtime(PROFESSIONS_PATH)
+    except OSError:
+        return {"regions": {}, "roles": []}
+    if _PROFESSIONS_CACHE["data"] is None or _PROFESSIONS_CACHE["mtime"] != mtime:
+        with open(PROFESSIONS_PATH, encoding="utf-8") as fh:
+            _PROFESSIONS_CACHE["data"] = json.load(fh)
+        _PROFESSIONS_CACHE["mtime"] = mtime
+    return _PROFESSIONS_CACHE["data"]
+
+
+def profession_by_slug(slug: str) -> Optional[dict]:
+    return next((r for r in professions_data()["roles"] if r["slug"] == slug), None)
+
+
+def role_keywords(role: dict) -> list[str]:
+    """Слова для сопоставления профессии с живыми вакансиями.
+
+    Курируемый список `match` в data/professions.json важнее сгенерированного:
+    названия вакансий в индустрии разнородные («VIP Supervisor», «VIP Team Manager»),
+    и поиск по полному названию профессии находит слишком мало.
+    """
+    words = [*role.get("match", []), role["title_en"], *role.get("aliases", [])]
+    out: list[str] = []
+    for word in words:
+        word = re.sub(r"\s*\(.*?\)", "", word or "").lower().strip()
+        if word and word not in out:
+            out.append(word)
+    return out
+
+
+def role_matched_jobs(db: Session, role: dict, limit: int = 6):
+    """Живые вакансии, чьё название похоже на эту профессию."""
+    needles = role_keywords(role)[:8]
+    query = db.query(Job).filter(Job.status == "approved")
+    query = query.filter(or_(*[Job.title.ilike(f"%{n}%") for n in needles]))
+    return query.order_by(Job.featured.desc(), Job.id.desc()).limit(limit).all()
+
+
+def role_jobs_count(db: Session, role: dict) -> int:
+    needles = role_keywords(role)[:8]
+    return (db.query(func.count(Job.id)).filter(Job.status == "approved")
+            .filter(or_(*[Job.title.ilike(f"%{n}%") for n in needles])).scalar() or 0)
+
+
+def role_salary_headline(role: dict) -> str:
+    """Вилка middle по Мальте и Кипру — она идёт в карточку и в описание."""
+    band = role["salary"]["mt_cy"]["middle"]
+    return f"€{band[0]:,}–{band[1]:,}".replace(",", " ")
+
+
+@app.get("/professions", response_class=HTMLResponse)
+def professions_index(request: Request, db: Session = Depends(db_session)):
+    data = professions_data()
+    families: dict[str, list] = {}
+    for role in data["roles"]:
+        families.setdefault(role["family"], []).append({
+            "slug": role["slug"], "title": role["title"], "title_en": role["title_en"],
+            "lead": role["lead"], "salary": role_salary_headline(role),
+            "jobs": role_jobs_count(db, role),
+        })
+    total_jobs = db.query(func.count(Job.id)).filter(Job.status == "approved").scalar() or 0
+    return render(request, db, "professions.html", families=families,
+                  roles_total=len(data["roles"]), total_jobs=total_jobs,
+                  regions=data["regions"], seniority=SENIORITY)
+
+
+@app.get("/profession/{slug}", response_class=HTMLResponse)
+def profession_page(slug: str, request: Request, db: Session = Depends(db_session)):
+    role = profession_by_slug(slug)
+    if not role:
+        raise HTTPException(404)
+    data = professions_data()
+    related = [r for r in (profession_by_slug(s) for s in role.get("related", [])) if r]
+    same_family = [r for r in data["roles"]
+                   if r["family"] == role["family"] and r["slug"] != role["slug"]][:6]
+    jobs = role_matched_jobs(db, role)
+    return render(request, db, "profession.html", role=role, regions=data["regions"],
+                  seniority=SENIORITY, related=related, same_family=same_family,
+                  jobs=jobs, jobs_count=role_jobs_count(db, role),
+                  salary_headline=role_salary_headline(role))
+
+
+COUNTRY_ALIASES = {
+    "malta": "Мальта", "мальта": "Мальта", "sliema": "Мальта", "st julian": "Мальта",
+    "cyprus": "Кипр", "кипр": "Кипр", "limassol": "Кипр", "nicosia": "Кипр",
+    "poland": "Польша", "польша": "Польша", "warsaw": "Польша", "krakow": "Польша", "poznan": "Польша",
+    "ukraine": "Украина", "украина": "Украина", "kyiv": "Украина", "kiev": "Украина", "київ": "Украина",
+    "united kingdom": "Великобритания", "uk": "Великобритания", "london": "Великобритания",
+    "gibraltar": "Гибралтар", "romania": "Румыния", "bucharest": "Румыния",
+    "bulgaria": "Болгария", "sofia": "Болгария", "greece": "Греция", "athens": "Греция",
+    "spain": "Испания", "madrid": "Испания", "barcelona": "Испания",
+    "portugal": "Португалия", "lisbon": "Португалия", "germany": "Германия", "berlin": "Германия",
+    "brazil": "Бразилия", "sao paulo": "Бразилия", "são paulo": "Бразилия",
+    "united states": "США", "usa": "США", "new jersey": "США", "las vegas": "США",
+    "canada": "Канада", "toronto": "Канада", "georgia": "Грузия", "tbilisi": "Грузия",
+    "armenia": "Армения", "yerevan": "Армения", "serbia": "Сербия", "belgrade": "Сербия",
+    "philippines": "Филиппины", "manila": "Филиппины", "india": "Индия",
+    "south africa": "ЮАР", "uae": "ОАЭ", "dubai": "ОАЭ", "sweden": "Швеция", "stockholm": "Швеция",
+    "latvia": "Латвия", "riga": "Латвия", "estonia": "Эстония", "lithuania": "Литва",
+    "netherlands": "Нидерланды", "amsterdam": "Нидерланды", "ireland": "Ирландия", "dublin": "Ирландия",
+    "italy": "Италия", "milan": "Италия", "mexico": "Мексика", "colombia": "Колумбия",
+    "peru": "Перу", "chile": "Чили", "argentina": "Аргентина", "turkey": "Турция",
+    "australia": "Австралия", "china": "Китай", "japan": "Япония", "kazakhstan": "Казахстан",
+}
+
+
+def country_of(location: str) -> str:
+    """Свести свободный текст локации к стране. Удалёнку считаем отдельной «страной»."""
+    low = (location or "").lower()
+    if not low.strip():
+        return "Не указана"
+    if "remote" in low or "удал" in low or "віддал" in low:
+        return "Удалёнка"
+    for alias, name in COUNTRY_ALIASES.items():
+        if alias in low:
+            return name
+    tail = low.split(",")[-1].strip()
+    return tail.title()[:24] or "Другое"
+
+
+@app.get("/api/market-stats")
+def api_market_stats(db: Session = Depends(db_session)):
+    """Живые цифры рынка для блока статистики на главной и в картотеке профессий."""
+    jobs = db.query(Job).filter(Job.status == "approved").all()
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    directions: dict[str, int] = {}
+    countries: dict[str, int] = {}
+    languages: dict[str, int] = {}
+    formats: dict[str, int] = {}
+    with_salary = 0
+    fresh = 0
+    for job in jobs:
+        directions[job.category or "Другое"] = directions.get(job.category or "Другое", 0) + 1
+        country = country_of(job.location)
+        countries[country] = countries.get(country, 0) + 1
+        formats[job.fmt or "не указан"] = formats.get(job.fmt or "не указан", 0) + 1
+        for _, label in job.language_list:
+            languages[label] = languages.get(label, 0) + 1
+        if job.has_salary:
+            with_salary += 1
+        # «новые за неделю» считаем по дате публикации у источника: у импортированных
+        # вакансий created_at — это дата нашего импорта, а не появления вакансии
+        posted = job.posted_at if re.match(r"^\d{4}-\d{2}-\d{2}$", job.posted_at or "") else ""
+        published = datetime.fromisoformat(posted) if posted else job.created_at
+        if published and published >= week_ago:
+            fresh += 1
+    companies = len({job.company_slug for job in jobs})
+
+    def top(source: dict, limit: int):
+        return [{"name": name, "jobs": count}
+                for name, count in sorted(source.items(), key=lambda kv: -kv[1])[:limit]]
+
+    professions = []
+    for role in professions_data()["roles"]:
+        count = role_jobs_count(db, role)
+        if count:
+            professions.append({"slug": role["slug"], "title": role["title"],
+                                "family": role["family"], "jobs": count,
+                                "salary": role_salary_headline(role)})
+    professions.sort(key=lambda r: -r["jobs"])
+
+    return JSONResponse({
+        "live_jobs": len(jobs),
+        "new_this_week": fresh,
+        "companies": companies,
+        "with_salary": with_salary,
+        "with_salary_pct": round(with_salary / len(jobs) * 100) if jobs else 0,
+        "directions": top(directions, 10),
+        "countries": top(countries, 12),
+        "languages": top(languages, 8),
+        "formats": top(formats, 4),
+        "professions": professions[:12],
+        "updated": datetime.utcnow().isoformat(timespec="minutes") + "Z",
+    })
+
+
 @app.get("/sitemap.xml")
 def sitemap(db: Session = Depends(db_session)):
     from fastapi.responses import Response
@@ -2451,6 +2716,9 @@ def sitemap(db: Session = Depends(db_session)):
               ("blog/compliance-career", "0.7"), ("blog/crypto-salary", "0.7"),
               ("privacy.html", "0.3"), ("terms.html", "0.3"), ("game-rules.html", "0.3")]
     static.append(("editorial.html", "0.5"))
+    static.append(("professions", "0.9"))
+    for role in professions_data()["roles"]:
+        static.append((f"profession/{role['slug']}", "0.8"))
     rows = [f"  <url><loc>{base}/{p}</loc><priority>{pr}</priority></url>" for p, pr in static]
     for j in db.query(Job).filter(Job.status == "approved").all():
         lastmod = j.posted_at if re.match(r"^\d{4}-\d{2}-\d{2}$", j.posted_at or "") else j.created_at.strftime("%Y-%m-%d")

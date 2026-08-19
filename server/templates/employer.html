@@ -15,6 +15,12 @@
   .cv-plans { display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end; }
   .unlocked-row { display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 0;border-top:1px solid var(--line); }
   .ledger { color:var(--ink-faint);font-size:.8rem;margin-top:var(--sp-5); }
+  .job-stats{margin-bottom:var(--sp-6)}
+  .js-head{display:flex;justify-content:space-between;align-items:baseline;gap:var(--sp-4);flex-wrap:wrap;margin-bottom:var(--sp-3)}
+  .js-head h2{font-family:var(--font-display);font-size:1.1rem;text-transform:uppercase;letter-spacing:.04em}
+  .js-week{display:flex;gap:var(--sp-4);flex-wrap:wrap;color:var(--ink-dim);font-size:.85rem}
+  .js-week b{color:var(--acid)}
+  .js-note{color:var(--ink-faint);font-size:.82rem;line-height:1.6;margin-top:10px;max-width:80ch}
   .company-stats{display:grid;grid-template-columns:1.2fr repeat(7,minmax(80px,.55fr));border-block:2px solid var(--line);margin-bottom:var(--sp-6)}
   .company-stat{padding:16px;border-right:1px solid var(--line)}.company-stat:last-child{border-right:0}.company-stat b{display:block;color:var(--acid);font-family:var(--font-display);font-size:1.25rem}.company-stat span{color:var(--ink-faint);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em}
   .profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.profile-grid .wide{grid-column:1/-1}
@@ -50,6 +56,44 @@
     <div class="company-stat"><span>Новые</span><b>{{ stats.new_applications }}</b></div>
     <div class="company-stat"><span>Офферы</span><b>{{ stats.offers }}</b></div>
     <div class="company-stat"><span>Наняты</span><b>{{ stats.hired }}</b></div>
+  </section>
+
+  <section class="job-stats" aria-label="Статистика по вакансиям">
+    <div class="js-head">
+      <h2>Статистика по вакансиям</h2>
+      <div class="js-week">
+        <span>За 7 дней: <b>{{ stats.views_7d }}</b> просмотров · <b>{{ stats.applications_7d }}</b> откликов</span>
+        <span>Конверсия просмотр → отклик: <b>{{ stats.conversion }}%</b></span>
+        <span>Открыто контактов из базы: <b>{{ stats.unlocks }}</b></span>
+      </div>
+    </div>
+    {% if job_stats %}
+    <div class="table-wrap">
+      <table class="adm">
+        <thead><tr>
+          <th>Вакансия</th><th>Статус</th><th>Дней в публикации</th><th>Просмотры</th>
+          <th>Отклики</th><th>Новые</th><th>Конверсия</th><th>Первый отклик</th>
+        </tr></thead>
+        <tbody>
+        {% for row in job_stats %}
+          <tr>
+            <td><a href="/job/{{ row.job.id }}" style="color:inherit;">{{ row.job.title }}</a></td>
+            <td><span class="status {{ row.job.status }}">{{ row.job.status }}</span></td>
+            <td>{{ row.days_live }}</td>
+            <td>{{ row.views }}</td>
+            <td>{{ row.applications }}</td>
+            <td>{% if row.new %}<b style="color:var(--acid);">{{ row.new }}</b>{% else %}0{% endif %}</td>
+            <td>{{ row.conversion }}%</td>
+            <td>{% if row.days_to_first is not none %}через {{ row.days_to_first }} дн.{% else %}—{% endif %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="js-note">Просмотр засчитывается один раз на открытие страницы вакансии. Конверсия ниже 2% при заметном числе просмотров обычно означает, что не хватает зарплатной вилки, деталей о команде или сам заголовок слишком общий.</p>
+    {% else %}
+    <p class="js-note">Пока нет размещённых вакансий — статистика появится сразу после первой публикации.</p>
+    {% endif %}
   </section>
 
   <details class="card" style="margin-bottom:var(--sp-6);" {% if company_progress < 60 %}open{% endif %}>

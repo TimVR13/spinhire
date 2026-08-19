@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% set active = 'professions' %}
+{% block title %}Профессии в iGaming — кто чем занимается и сколько зарабатывает | SpinHire{% endblock %}
+{% block desc %}Картотека профессий iGaming: {{ roles_total }} должностей от VIP-менеджера до COO. Обязанности, KPI, навыки, зарплаты по грейдам на Мальте, в Восточной Европе и на удалёнке.{% endblock %}
+{% block robots %}<link rel="canonical" href="https://spinhire.io/professions">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Профессии в iGaming — обязанности и зарплаты">
+<meta property="og:description" content="{{ roles_total }} должностей индустрии: чем занимается каждая роль, какие навыки нужны и сколько платят по грейдам.">
+<meta property="og:url" content="https://spinhire.io/professions">
+<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
+<script type="application/ld+json">{{ {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "Профессии в iGaming",
+  "description": "Картотека профессий iGaming-индустрии с обязанностями и зарплатными вилками.",
+  "url": "https://spinhire.io/professions"
+} | tojson }}</script>{% endblock %}
+{% block style %}
+  .prof-hero { text-align: center; max-width: 74ch; margin: 0 auto var(--sp-6); }
+  .prof-stats { display: flex; gap: var(--sp-4); justify-content: center; flex-wrap: wrap; margin: var(--sp-5) 0 var(--sp-7); }
+  .prof-stat { border: 2px solid var(--line); padding: 14px 22px; min-width: 150px; }
+  .prof-stat b { display: block; font-family: var(--font-display); font-size: 1.8rem; color: var(--acid); line-height: 1.1; }
+  .prof-stat span { font-size: 0.78rem; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .fam { margin-bottom: var(--sp-7); }
+  .fam > h2 { font-family: var(--font-display); font-size: 1.15rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--sp-3); }
+  .prof-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--sp-3); }
+  .prof-card { border: 2px solid var(--line); background: var(--surface); padding: var(--sp-4); display: flex; flex-direction: column; gap: 8px; text-decoration: none; transition: border-color .15s; }
+  .prof-card:hover, .prof-card:focus-visible { border-color: var(--acid); }
+  .prof-card h3 { font-size: 1rem; color: var(--ink); }
+  .prof-card .en { font-size: 0.76rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+  .prof-card p { font-size: 0.85rem; color: var(--ink-dim); line-height: 1.5; flex: 1; }
+  .prof-card .foot { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 0.82rem; }
+  .prof-card .pay { color: var(--emerald, var(--acid)); font-weight: 800; }
+  .prof-card .live { color: var(--ink-faint); }
+{% endblock %}
+{% block content %}
+  <nav class="crumbs"><a href="/">Главная</a> / Профессии</nav>
+  <div class="prof-hero">
+    <span class="kicker">Картотека индустрии</span>
+    <h1 style="font-size: clamp(1.7rem, 4vw, 2.8rem); margin: 10px 0 14px;">Профессии в iGaming</h1>
+    <p style="color: var(--ink-dim);">{{ roles_total }} должностей — от агента поддержки до операционного директора. По каждой: чем человек занимается на самом деле, по каким метрикам его оценивают, какие навыки спрашивают на собеседовании и сколько платят по грейдам в трёх регионах.</p>
+  </div>
+
+  <div class="prof-stats">
+    <div class="prof-stat"><b>{{ roles_total }}</b><span>Профессий</span></div>
+    <div class="prof-stat"><b>{{ total_jobs }}</b><span>Живых вакансий</span></div>
+    <div class="prof-stat"><b>3</b><span>Региона зарплат</span></div>
+    <div class="prof-stat"><b>4</b><span>Грейда</span></div>
+  </div>
+
+  {% for family, roles in families.items() %}
+  <section class="fam">
+    <h2>{{ family }} <span style="color: var(--ink-faint); font-weight: 400;">· {{ roles|length }}</span></h2>
+    <div class="prof-grid">
+      {% for r in roles %}
+      <a class="prof-card" href="/profession/{{ r.slug }}">
+        <span class="en">{{ r.title_en }}</span>
+        <h3>{{ r.title }}</h3>
+        <p>{{ r.lead }}</p>
+        <span class="foot"><span class="pay">{{ r.salary }} / мес</span>{% if r.jobs %}<span class="live">{{ r.jobs }} вакансий</span>{% endif %}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+
+  <section class="card" style="text-align: center; max-width: 680px; margin: var(--sp-7) auto 0;">
+    <h2 style="font-size: 1.25rem; margin-bottom: 10px;">Не нашли свою роль?</h2>
+    <p style="color: var(--ink-dim); margin-bottom: 20px;">Картотека пополняется. Напишите, какой профессии не хватает — добавим и разберём её так же подробно.</p>
+    <a href="/jobs" class="btn btn-acid">Смотреть все вакансии →</a>
+  </section>
+{% endblock %}

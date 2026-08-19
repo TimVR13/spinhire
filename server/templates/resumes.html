@@ -26,6 +26,9 @@
   .cv-skill { border:1px solid var(--line); padding:5px 8px; color:var(--ink-dim); font-size:.75rem; }
   .cv-arrow { color:var(--pink); font-size:1.4rem; }
   .cv-empty { padding:60px 0; color:var(--ink-dim); border-bottom:1px solid var(--line); }
+  .cv-cta { display:flex; align-items:center; justify-content:space-between; gap:var(--sp-4); flex-wrap:wrap; margin-top:var(--sp-6); padding:var(--sp-5); border:1px solid var(--line); border-radius:var(--radius); background:color-mix(in oklch,var(--surface) 82%,transparent); }
+  .cv-cta b { font-family:var(--font-display); font-size:1rem; }
+  .cv-cta p { color:var(--ink-dim); font-size:.9rem; max-width:60ch; margin-top:6px; }
   @media(max-width:900px){.cv-hero{grid-template-columns:1fr;gap:var(--sp-5)}.cv-hero h1{font-size:clamp(1.8rem,7.5vw,3.2rem);max-width:18ch}.cv-aside{max-width:560px}.cv-search{grid-template-columns:1fr}.cv-row{grid-template-columns:1fr auto}.cv-code,.cv-skills{grid-column:1/-1}.cv-arrow{grid-column:2;grid-row:1}.cv-row>div:nth-child(3){grid-column:1/-1}}
 {% endblock %}
 {% block content %}
@@ -36,8 +39,8 @@
       <h1><span class="cv-hero-title-line">Специалисты iGaming</span><span class="cv-hero-title-line">Контакты закрыты</span></h1>
     </div>
     <div class="cv-aside">
-      <p class="cv-note">Опыт и навыки видны всем. Имя, email и Telegram открываются работодателю только после оплаты.</p>
-      <a href="/profile#cv" class="btn btn-acid" style="margin-top:18px;">Добавить своё CV</a>
+      <p class="cv-note">Опыт, навыки и зарплатные ожидания видны бесплатно. Имя, email и Telegram открываются работодателю за €5 за контакт — и возвращаются на баланс, если кандидат не ответил.</p>
+      <a href="/post-job#pricing" class="btn btn-acid" style="margin-top:18px;">Тарифы на контакты</a>
     </div>
   </section>
 
@@ -60,4 +63,12 @@
     <div class="cv-empty"><b>По этим параметрам резюме пока нет.</b><p style="margin-top:8px;">Измените фильтры или добавьте первое CV.</p></div>
     {% endfor %}
   </div>
+
+  <section class="cv-cta">
+    <div>
+      <b>Вы специалист iGaming?</b>
+      <p>Добавьте анонимное CV — работодатели увидят опыт и навыки, но не узнают, кто вы, пока сами не согласитесь на диалог.</p>
+    </div>
+    <a href="/profile#cv" class="btn btn-ghost">Добавить своё CV →</a>
+  </section>
 {% endblock %}

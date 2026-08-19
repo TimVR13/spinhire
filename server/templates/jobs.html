@@ -64,7 +64,7 @@
         <div class="job-card__tags">
           {% if j.category %}<span class="tag">{{ j.category }}</span>{% endif %}
           {% for t in j.tag_list %}<span class="tag">{{ t }}</span>{% endfor %}
-          {% for code, label in j.language_list %}<span class="tag tag-acid" title="Язык работы">{{ label }}</span>{% endfor %}
+          {% for code, label in j.language_list[:3] %}<span class="tag tag-acid" title="Язык работы">{{ label }}</span>{% endfor %}
           {% if j.source and j.source != 'ручная' %}<span class="tag" style="color: var(--ink-faint);" title="Агрегировано из {{ j.source }}">↗ агрегатор</span>{% endif %}
         </div>
       </div>

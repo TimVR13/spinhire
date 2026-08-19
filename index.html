@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet">
 <script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=20260819">
 <style>
 
   .hero {
@@ -356,6 +356,7 @@
     <a href="index.html" class="logo" aria-label="SpinHire — главная"><img class="logo__mark" src="/img/spinhire-slot.svg" alt="" width="60" height="36">spin<b>hire</b></a>
     <nav class="main-nav" aria-label="Основная навигация">
       <a href="jobs.html">Вакансии</a>
+      <a href="/professions">Профессии</a>
       <a href="companies.html">Компании</a>
       <a href="blog.html">Блог</a>
       <a href="post-job.html">Работодателям</a>
@@ -525,6 +526,46 @@
     </div>
   </section>
 
+  <!-- РЫНОК В ЦИФРАХ -->
+  <section class="section" id="market" style="padding-top: 0;">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="kicker">Живые данные</span>
+          <h2>Рынок труда iGaming в цифрах</h2>
+        </div>
+        <a class="link-more" href="/professions">Все профессии и зарплаты →</a>
+      </div>
+      <p style="color: var(--ink-dim); max-width: 76ch; margin-bottom: 22px;">Цифры считаются по нашей живой базе вакансий и обновляются при каждом обходе источников. Никаких округлённых «более 10 000» — сколько есть, столько и показываем.</p>
+
+      <div class="mkt-top" data-market="top">
+        <div class="mkt-kpi"><b data-market-kpi="live_jobs">—</b><span>Живых вакансий</span></div>
+        <div class="mkt-kpi"><b data-market-kpi="new_this_week">—</b><span>Опубликовано за неделю</span></div>
+        <div class="mkt-kpi"><b data-market-kpi="companies">—</b><span>Компаний нанимают</span></div>
+        <div class="mkt-kpi"><b data-market-kpi="countries_count">—</b><span>Стран и рынков</span></div>
+      </div>
+
+      <div class="mkt-grid">
+        <div class="mkt-card">
+          <h3>Направления</h3>
+          <p class="mkt-sub">Сколько ролей открыто в каждой вертикали</p>
+          <ul class="mkt-bars" data-market="directions"></ul>
+        </div>
+        <div class="mkt-card">
+          <h3>География</h3>
+          <p class="mkt-sub">Где нанимают прямо сейчас</p>
+          <ul class="mkt-bars" data-market="countries"></ul>
+        </div>
+        <div class="mkt-card">
+          <h3>Профессии по спросу</h3>
+          <p class="mkt-sub">Роль, открытые вакансии и вилка middle на Мальте</p>
+          <ul class="mkt-roles" data-market="professions"></ul>
+        </div>
+      </div>
+      <p class="mkt-upd" data-market="updated"></p>
+    </div>
+  </section>
+
   <!-- SALARIES -->
   <section class="section" id="salaries" style="padding-top: 0;">
     <div class="container">
@@ -651,6 +692,7 @@
         <ul>
           <li><a href="jobs.html">Вакансии</a></li>
           <li><a href="profile.html">Мой профиль</a></li>
+          <li><a href="/professions">Профессии и зарплаты</a></li>
           <li><a href="index.html#salaries">Гид по зарплатам</a></li>
           <li><a href="games.html">🎡 Игровая зона</a></li>
           <li><a href="blog.html">Карьерный блог</a></li>
@@ -891,6 +933,6 @@
   document.addEventListener('keydown', event => { if (event.key === 'Escape') { setOpen(false); trigger.focus(); } });
 })();
 </script>
-<script src="js/app.js"></script>
+<script src="js/app.js?v=20260819"></script>
 </body>
 </html>

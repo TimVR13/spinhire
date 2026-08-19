@@ -22,9 +22,18 @@ CYRILLIC = re.compile(r"[А-Яа-яЁё]")
 QUOTED = re.compile(r"(?P<quote>['\"`])(?P<value>[^'\"`\n]*[А-Яа-яЁё][^'\"`\n]*)\1")
 SPLIT = "\n__SPINHIRE_TRANSLATION_SPLIT__\n"
 
+# Названия языков остаются на языке оригинала: машинный перевод переворачивал
+# «Українська» в «Русский» и ломал переключатель языка в футере.
+LANGUAGE_NAMES = {
+    "Русский", "Українська", "Російська", "Українською", "Английский",
+    "Украинский", "Русском",
+}
+
 
 def is_copy(value: str) -> bool:
     value = " ".join(value.split())
+    if value in LANGUAGE_NAMES:
+        return False
     return bool(value and CYRILLIC.search(value) and "{{" not in value and "{%" not in value)
 
 
