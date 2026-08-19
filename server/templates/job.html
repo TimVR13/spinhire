@@ -70,12 +70,14 @@
           <a data-no-translate href="/company/{{ job.company_slug }}" style="color: var(--ink); font-weight: 700; text-decoration: none;">{{ job.company_name }}</a>
           <span data-no-translate>· {{ job.location or '—' }} ·</span> {{ job.fmt }}</p>
         <h1 data-no-translate>{{ job.title }}</h1>
-        <div class="job-card__tags" data-no-translate style="margin-bottom: var(--sp-4);">
+        <div class="job-card__tags" style="margin-bottom: var(--sp-4);">
           {% if job.featured %}<span class="tag tag-hot">⚡ Featured</span>{% endif %}
+          {# направление — наш собственный справочник, его переводим;
+             теги работодателя оставляем как есть #}
           {% if job.category %}<span class="tag">{{ job.category }}</span>{% endif %}
-          {% for t in job.tag_list %}<span class="tag tag-acid">{{ t }}</span>{% endfor %}
+          {% for t in job.tag_list %}<span class="tag tag-acid" data-no-translate>{{ t }}</span>{% endfor %}
         </div>
-        <p class="salary" data-no-translate style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}вилка по запросу{% endif %}</p>
+        <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}вилка по запросу{% endif %}</p>
         <div style="display: flex; flex-direction: column; gap: 12px; margin-top: var(--sp-4);">
           {% if is_closed %}
             <a class="btn btn-acid btn-lg" href="/jobs?cat={{ job.category|urlencode }}">Смотреть актуальные вакансии →</a>
