@@ -54,7 +54,7 @@
         <h2 style="margin:10px 0 20px;">Связаться с кандидатом</h2>
         <p><b>Email</b><br><a style="color:var(--acid);" href="mailto:{{ resume.contact_email }}">{{ resume.contact_email }}</a></p>
         {% if resume.contact_telegram %}<p style="margin-top:14px;"><b>Telegram</b><br>{{ resume.contact_telegram }}</p>{% endif %}
-        {% if resume.portfolio_url %}<p style="margin-top:14px;"><b>Портфолио</b><br><a style="color:var(--acid);" href="{{ resume.portfolio_url }}" target="_blank" rel="noopener">Открыть ↗</a></p>{% endif %}
+        {% if resume.portfolio_url %}<p style="margin-top:14px;"><b>Портфолио</b><br><a style="color:var(--acid);" href="{{ resume.portfolio_url }}" target="_blank" rel="nofollow noopener ugc">Открыть ↗</a></p>{% endif %}
         {% if resume.cv_file_name %}<a href="/resume/{{ resume.id }}/file" class="btn btn-ghost" style="width:100%;margin-top:18px;">Скачать исходный CV</a>{% endif %}
       {% else %}
         <span class="kicker pink">Контакты закрыты</span>

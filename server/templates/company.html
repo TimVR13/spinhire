@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% set active = 'jobs' %}
 {% block title %}{{ company }} — вакансии компании | SpinHire{% endblock %}
-{% block desc %}{{ company }}: {{ jobs|length }} открытых iGaming-вакансий на SpinHire. {{ locations|join(', ') }}.{% endblock %}
+{% block desc %}{% if public and (public.description_ru or public.description) %}{{ (public.description_ru or public.description)[:150] }}{% else %}{{ company }}: {{ jobs|length }} открытых iGaming-вакансий на SpinHire. {{ locations|join(', ') }}.{% endif %}{% endblock %}
 {% block robots %}<link rel="canonical" href="https://spinhire.io/company/{{ jobs[0].company_slug }}">
 <meta property="og:type" content="website"><meta property="og:title" content="{{ company }} — вакансии iGaming">
 <meta property="og:description" content="{{ jobs|length }} открытых вакансий {{ company }} на SpinHire.">
 <meta property="og:url" content="https://spinhire.io/company/{{ jobs[0].company_slug }}">
 <meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":{{ company|tojson }},"url":"https://spinhire.io/company/{{ jobs[0].company_slug }}"{% if domain %},"sameAs":"https://{{ domain }}"{% endif %}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":{{ company|tojson }},"url":"https://spinhire.io/company/{{ jobs[0].company_slug }}"{% if public and public.description %},"description":{{ public.description|tojson }}{% endif %}{% if public and public.headquarters %},"address":{{ public.headquarters|tojson }}{% endif %}{% if public and public.founded_year %},"foundingDate":"{{ public.founded_year }}"{% endif %}{% if logo %},"logo":{{ logo|tojson }}{% endif %}{% if domain %},"sameAs":"https://{{ domain }}"{% endif %}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Главная","item":"https://spinhire.io/"},{"@type":"ListItem","position":2,"name":"Компании","item":"https://spinhire.io/companies.html"},{"@type":"ListItem","position":3,"name":{{ company|tojson }} }]}</script>{% endblock %}
 {% block style %}
   .co-head { display: flex; align-items: center; gap: var(--sp-4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: var(--sp-6); margin-bottom: var(--sp-5); flex-wrap: wrap; }
@@ -17,6 +17,13 @@
   .co-head h1 { font-size: clamp(1.4rem, 3vw, 2rem); }
   .co-head .meta { color: var(--ink-dim); font-size: 0.92rem; margin-top: 4px; }
   .jobs-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+  .co-head .tagline { color: var(--acid); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.07em; margin-top: 6px; }
+  .co-links { display: flex; gap: 8px; flex-wrap: wrap; }
+  .co-about { max-width: 78ch; margin: 0 0 var(--sp-6); }
+  .co-about h2 { font-size: 1rem; color: var(--acid); margin-bottom: 10px; }
+  .co-about p { color: var(--ink-dim); line-height: 1.7; white-space: pre-line; }
+  .co-src { color: var(--ink-faint); font-size: 0.8rem; margin-top: 12px; }
+  .co-src a { color: var(--ink-dim); }
 {% endblock %}
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / <a href="/companies.html">Компании</a> / {{ company }}</nav>
@@ -27,12 +34,25 @@
     </div>
     <div style="flex: 1; min-width: 200px;">
       <h1>{{ company }}</h1>
-      <p class="meta">{{ jobs|length }} открытых вакансий{% if company_profile and company_profile.company_location %} · {{ company_profile.company_location }}{% elif locations %} · {{ locations|join(' · ') }}{% endif %}{% if company_profile and company_profile.company_size %} · команда {{ company_profile.company_size }}{% endif %}</p>
+      {% if public and public.tagline %}<p class="tagline">{{ public.tagline }}</p>{% endif %}
+      <p class="meta">{{ jobs|length }} открытых вакансий{% if company_profile and company_profile.company_location %} · {{ company_profile.company_location }}{% elif public and public.headquarters %} · {{ public.headquarters }}{% elif locations %} · {{ locations|join(' · ') }}{% endif %}{% if company_profile and company_profile.company_size %} · команда {{ company_profile.company_size }}{% elif public and public.size %} · команда {{ public.size }}{% endif %}{% if public and public.founded_year %} · с {{ public.founded_year }} года{% endif %}</p>
     </div>
-    {% if domain %}<a class="btn btn-ghost" href="https://{{ domain }}" target="_blank" rel="noopener nofollow">Сайт компании ↗</a>{% endif %}
+    <div class="co-links">
+      {% if domain %}<a class="btn btn-ghost btn-sm" href="https://{{ domain }}" target="_blank" rel="nofollow noopener external">Сайт компании ↗</a>{% endif %}
+      {% if public and public.careers_url %}<a class="btn btn-ghost btn-sm" href="{{ public.careers_url }}" target="_blank" rel="nofollow noopener external">Карьерная страница ↗</a>{% endif %}
+    </div>
   </div>
 
-  {% if company_profile and company_profile.company_description %}<section style="max-width:75ch;margin:0 0 var(--sp-6);"><h2 style="font-size:1rem;color:var(--acid);margin-bottom:10px;">О компании</h2><p style="color:var(--ink-dim);line-height:1.7;white-space:pre-line;">{{ company_profile.company_description }}</p></section>{% endif %}
+  {% set about = (company_profile.company_description if company_profile and company_profile.company_description else ((public.description_ru or public.description) if public else '')) %}
+  {% if about %}
+  <section class="co-about">
+    <h2>О компании</h2>
+    <p>{{ about }}</p>
+    {% if public and not (company_profile and company_profile.company_description) %}
+    <p class="co-src">Описание из публичного профиля работодателя. Компания может <a href="/register?role=employer">забрать страницу себе</a> и отредактировать её.</p>
+    {% endif %}
+  </section>
+  {% endif %}
 
   <h2 style="font-size: 1.1rem; color: var(--acid); margin-bottom: 14px;">▮ Вакансии {{ company }}</h2>
   <div class="jobs-list">

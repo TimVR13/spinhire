@@ -360,6 +360,69 @@ class ApplicationEvent(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+
+class CompanyProfile(Base):
+    """Публичная карточка работодателя: описание, сайт, карьерная страница, HQ.
+
+    Заполняется краулером из открытых профилей агрегаторов. Контактные данные
+    сотрудников сюда сознательно не попадают.
+    """
+    __tablename__ = "company_profiles"
+    id = Column(Integer, primary_key=True)
+    slug = Column(String, unique=True, nullable=False)   # наш слаг (company_slug вакансии)
+    name = Column(String, default="")
+    description = Column(Text, default="")     # оригинал источника (обычно английский)
+    description_ru = Column(Text, default="")  # машинный перевод для русской витрины
+    tagline = Column(String, default="")
+    website = Column(String, default="")
+    careers_url = Column(String, default="")
+    headquarters = Column(String, default="")
+    founded_year = Column(Integer, nullable=True)
+    industry = Column(String, default="")
+    size = Column(String, default="")
+    source = Column(String, default="")
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+def slugify_company(name: str) -> str:
+    """Тот же слаг, что и у Job.company_slug — чтобы профиль сходился с вакансиями."""
+    return re.sub(r"[^a-zа-я0-9]+", "-", (name or "").lower()).strip("-") or "company"
+
+
+def upsert_company_profiles(db: Session, rows) -> int:
+    """Сохранить профили работодателей, не затирая заполненные поля пустыми."""
+    saved = 0
+    for row in rows or ():
+        slug = slugify_company(row.get("name") or row.get("slug") or "")
+        if slug == "company":
+            continue
+        profile = db.query(CompanyProfile).filter_by(slug=slug).first()
+        if not profile:
+            profile = CompanyProfile(slug=slug)
+            db.add(profile)
+        website = (row.get("website") or "").strip()
+        careers = (row.get("careers_url") or "").strip()
+        if website and not is_company_host(host_of(website)):
+            # у части компаний в источнике вместо сайта стоит ссылка на Workday/Recruitee
+            careers = careers or website
+            website = ""
+        row = dict(row, website=website, careers_url=careers)
+        for field in ("name", "description", "description_ru", "tagline", "website", "careers_url",
+                      "headquarters", "industry", "size", "source"):
+            value = (row.get(field) or "").strip()
+            if value:
+                setattr(profile, field, value)
+        if not website and profile.website and not is_company_host(host_of(profile.website)):
+            profile.website = ""          # чистим ранее сохранённый ATS-адрес
+        if row.get("founded_year"):
+            profile.founded_year = int(row["founded_year"])
+        profile.updated_at = datetime.utcnow()
+        saved += 1
+    db.commit()
+    refresh_company_domains(db)
+    return saved
+
+
 class AnalyticsEvent(Base):
     __tablename__ = "analytics_events"
     id = Column(Integer, primary_key=True)
@@ -440,13 +503,36 @@ COMPANY_DOMAINS = {
 }
 
 
+# Хосты ATS и агрегаторов: их фавикон — логотип платформы найма, а не бренда,
+# поэтому логотип берём из сайта компании (CompanyProfile.website).
 NON_COMPANY_HOSTS = {
+    "myworkdayjobs.com", "wd1.myworkdayjobs.com", "wd3.myworkdayjobs.com",
+    "recruitee.com", "teamtailor.com", "workable.com", "apply.workable.com",
+    "ashbyhq.com", "jobs.ashbyhq.com", "bamboohr.com", "jobs.jobvite.com",
+    "jobvite.com", "personio.de", "join.com", "breezy.hr", "recruiterbox.com",
+    "icims.com", "taleo.net", "successfactors.com", "eightfold.ai",
     "linkedin.com", "www.linkedin.com", "djinni.co", "www.djinni.co",
     "greenhouse.io", "boards.greenhouse.io", "job-boards.greenhouse.io",
     "smartrecruiters.com", "www.smartrecruiters.com", "jobs.smartrecruiters.com",
     "lever.co", "jobs.lever.co", "work.ua", "www.work.ua", "robota.ua",
     "www.robota.ua", "grc.ua", "www.grc.ua", "hh.ru", "www.hh.ru",
 }
+
+
+def is_company_host(host: str) -> bool:
+    """Хост принадлежит самой компании, а не ATS/агрегатору."""
+    host = (host or "").lower().removeprefix("www.")
+    if not host:
+        return False
+    return host not in NON_COMPANY_HOSTS and not any(
+        host.endswith(f".{blocked}") for blocked in NON_COMPANY_HOSTS)
+
+
+def host_of(url: str) -> str:
+    try:
+        return (urllib.parse.urlparse(url or "").hostname or "").lower().removeprefix("www.")
+    except ValueError:
+        return ""
 
 
 def company_domain(name: str, source_url: str = "") -> str:
@@ -459,15 +545,27 @@ def company_domain(name: str, source_url: str = "") -> str:
             return dom
     # Для прямых вакансий используем домен сайта работодателя автоматически.
     # Домены агрегаторов и ATS исключаем: их favicon не является логотипом компании.
-    try:
-        host = urllib.parse.urlparse(source_url or "").hostname or ""
-        host = host.lower().removeprefix("www.")
-        if host and host not in NON_COMPANY_HOSTS and not any(
-                host.endswith(f".{blocked}") for blocked in NON_COMPANY_HOSTS):
-            return host
-    except ValueError:
-        pass
-    return ""
+    host = host_of(source_url)
+    return host if is_company_host(host) else ""
+
+
+
+def refresh_company_domains(db: Session) -> int:
+    """Подмешать домены из импортированных профилей в карту логотипов.
+
+    company_domain() иначе берёт хост из ссылки на вакансию, а это часто ATS
+    (casumocareers.com, recruitee.com) — фавикон оттуда не логотип бренда.
+    """
+    added = 0
+    for profile in db.query(CompanyProfile).filter(CompanyProfile.website != "").all():
+        host = host_of(profile.website)
+        if not is_company_host(host):
+            continue
+        key = (profile.name or "").lower().strip()
+        if key and key not in COMPANY_DOMAINS:
+            COMPANY_DOMAINS[key] = host
+            added += 1
+    return added
 
 
 def db_session():
@@ -550,6 +648,9 @@ def migrate(db: Session):
         db.execute(text("ALTER TABLE users ADD COLUMN job_credits INTEGER DEFAULT 0"))
     if "job_access_until" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN job_access_until VARCHAR DEFAULT ''"))
+    ccols = {r[1] for r in db.execute(text("PRAGMA table_info(company_profiles)")).fetchall()}
+    if ccols and "description_ru" not in ccols:
+        db.execute(text("ALTER TABLE company_profiles ADD COLUMN description_ru TEXT DEFAULT ''"))
     for _sql in (
         "ALTER TABLE users ADD COLUMN location VARCHAR DEFAULT ''",
         "ALTER TABLE users ADD COLUMN job_search_status VARCHAR DEFAULT 'active'",
@@ -698,11 +799,13 @@ def _startup():
         seed(db)
         purge_thin_external(db)
         backfill_categories(db)
+        refresh_company_domains(db)
         # первичный сбор клонов, если вакансий ещё нет (best-effort, не валит старт)
         if db.query(Job).count() == 0:
             try:
                 from server import crawler
-                crawler.run(db, Job, guess_category)
+                crawler.run(db, Job, guess_category,
+                            upsert_companies=lambda rows: upsert_company_profiles(db, rows))
             except Exception as e:
                 print(f"[startup] первичный crawl не удался: {str(e)[:120]}")
     if os.environ.get("CRAWLER_DAILY_ENABLED", "1").lower() not in ("0", "false", "no"):
@@ -719,7 +822,8 @@ def _crawler_scheduler():
             from server import crawler
             if crawler.crawl_is_due(interval_hours):
                 with SessionLocal() as db:
-                    crawler.run(db, Job, guess_category)
+                    crawler.run(db, Job, guess_category,
+                            upsert_companies=lambda rows: upsert_company_profiles(db, rows))
         except Exception as e:
             print(f"[scheduler] crawl failed: {str(e)[:160]}")
         time.sleep(check_seconds)
@@ -988,8 +1092,12 @@ def api_top_companies(db: Session = Depends(db_session)):
         sample = (db.query(Job).filter(Job.status == "approved", Job.company_name == name)
                   .order_by(Job.created_at.desc()).first())
         if sample:
+            profile = db.query(CompanyProfile).filter_by(slug=sample.company_slug).first()
             result.append({"name": name, "jobs": jobs_count, "slug": sample.company_slug,
-                           "logo_url": sample.logo_url, "initials": sample.initials})
+                           "logo_url": sample.logo_url, "initials": sample.initials,
+                           "tagline": (profile.tagline if profile else ""),
+                           "headquarters": (profile.headquarters if profile else ""),
+                           "about": (profile.description[:160] if profile and profile.description else "")})
     return JSONResponse(result)
 
 
@@ -1004,9 +1112,12 @@ def company_page(slug: str, request: Request, db: Session = Depends(db_session))
     matched.sort(key=lambda j: j.created_at, reverse=True)
     locs = sorted({j.location for j in matched if j.location})
     company_profile = next((j.owner for j in matched if j.owner_id), None)
+    public = db.query(CompanyProfile).filter_by(slug=slug).first()
+    if public and public.website and not dom:
+        dom = (urllib.parse.urlparse(public.website).hostname or "").removeprefix("www.")
     return render(request, db, "company.html", company=company, jobs=matched,
                   domain=dom, logo=matched[0].logo_url, locations=locs[:6],
-                  company_profile=company_profile)
+                  company_profile=company_profile, public=public)
 
 
 @app.get("/api/events")
@@ -2166,7 +2277,8 @@ def admin_crawl(request: Request, db: Session = Depends(db_session)):
     need_admin(request, db)
     try:
         from server import crawler
-        res = crawler.run(db, Job, guess_category)
+        res = crawler.run(db, Job, guess_category,
+                      upsert_companies=lambda rows: upsert_company_profiles(db, rows))
         msg = f"Собрано {res['collected']}, добавлено {res['added']}, обновлено {res['updated']}"
     except Exception as e:
         msg = f"Ошибка краулера: {str(e)[:150]}"

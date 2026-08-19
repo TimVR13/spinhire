@@ -26,6 +26,7 @@ import re
 import sys
 import threading
 import time
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -679,6 +680,7 @@ def crawl_igamingcareers(max_pages=IGC_MAX_PAGES):
                 "salary": _igc_salary(j),
                 "posted_at": str(j.get("postedDate") or "")[:10],
                 "deadline": str(j.get("expiresAt") or "")[:10],
+                "company_ref": (j.get("companySlug") or "").strip(),
             })
         if not (payload.get("pagination") or {}).get("hasNextPage"):
             break
@@ -699,6 +701,70 @@ def _igc_salary(job):
     if low and high and low != high:
         return f"{currency}{int(low):,} – {currency}{int(high):,} {period}".replace(",", " ").strip()
     return f"{currency}{int(low or high):,} {period}".replace(",", " ").strip()
+
+
+
+IGC_COMPANY_API = "https://www.igamingcareers.co/api/companies/by-slug/"
+
+# Из профиля берём только публичные данные компании. Контактные и биллинговые поля
+# (contactEmail, billingEmail, contactPhone, contactName) сознательно не импортируем:
+# это персональные данные сотрудников, а не описание работодателя.
+IGC_COMPANY_FIELDS = ("name", "slug", "description", "tagline", "website", "careersUrl",
+                      "headquarters", "foundedYear", "industry", "employeeCount", "logoUrl")
+
+
+
+def _translate_ru(text: str) -> str:
+    """Перевести описание компании на русский. Молча возвращает пустую строку при сбое —
+    страница тогда покажет оригинал."""
+    text = (text or "").strip()
+    if not text or not re.search(r"[A-Za-z]", text):
+        return ""
+    try:
+        params = urllib.parse.urlencode({"client": "gtx", "sl": "auto", "tl": "ru",
+                                         "dt": "t", "q": text[:4000]})
+        request = urllib.request.Request(
+            "https://translate.googleapis.com/translate_a/single?" + params,
+            headers={"User-Agent": UA})
+        with urllib.request.urlopen(request, timeout=20) as response:
+            payload = json.loads(response.read())
+        return "".join(part[0] for part in payload[0]).strip()
+    except Exception:
+        return ""
+
+
+def crawl_igamingcareers_companies(slugs, limit=250):
+    """Публичные профили работодателей: описание, сайт, карьерная страница, HQ, год основания."""
+    out = []
+    for slug in list(dict.fromkeys(s for s in slugs if s))[:limit]:
+        try:
+            raw = json.loads(_fetch(IGC_COMPANY_API + quote_plus(slug)))
+        except Exception:
+            continue
+        if not isinstance(raw, dict) or raw.get("error") or not raw.get("name"):
+            continue
+        profile = {key: raw.get(key) for key in IGC_COMPANY_FIELDS}
+        description = _clean_html(profile.get("description") or raw.get("aboutHtml") or "")
+        website = (profile.get("website") or "").strip()
+        careers = (profile.get("careersUrl") or "").strip()
+        if not description and not website:
+            continue          # пустышка без полезных данных — не заводим профиль
+        out.append({
+            "name": (profile["name"] or "").strip(),
+            "slug": (profile["slug"] or slug).strip(),
+            "description": description[:4000],
+            "description_ru": _translate_ru(description[:4000]),
+            "tagline": (profile.get("tagline") or "").strip()[:200],
+            "website": website[:300],
+            "careers_url": careers[:300],
+            "headquarters": (profile.get("headquarters") or "").strip()[:120],
+            "founded_year": profile.get("foundedYear") or None,
+            "industry": (profile.get("industry") or "").strip()[:80],
+            "size": (profile.get("employeeCount") or "").strip()[:40],
+            "source": "igamingcareers",
+        })
+        time.sleep(0.25)
+    return out
 
 
 def company_snapshot(items):
@@ -928,7 +994,7 @@ def notify_search_engines(changed_ids, closed_ids):
         print(f"[indexing] Google failed: {str(exc)[:120]}")
 
 
-def run(db, Job, guess_category, approve=True):
+def run(db, Job, guess_category, approve=True, upsert_companies=None):
     if not _RUN_LOCK.acquire(blocking=False):
         return {"skipped": "already_running", "at": datetime.utcnow().isoformat()}
     try:
@@ -938,6 +1004,12 @@ def run(db, Job, guess_category, approve=True):
             db, Job, guess_category, items, approve=approve, complete_sources=complete_sources)
         notify_search_engines(changed_ids, closed_ids)
         profiles = company_snapshot(items)
+        company_rows = 0
+        if upsert_companies:
+            # публичные профили работодателей: описание, сайт, карьерная страница, HQ
+            slugs = [item.get("company_ref") for item in items if item.get("company_ref")]
+            company_rows = upsert_companies(crawl_igamingcareers_companies(slugs))
+            print(f"[crawl] профилей компаний обновлено: {company_rows}")
         snapshot_path = Path(__file__).resolve().parent.parent / "data" / "companies.json"
         snapshot_path.write_text(json.dumps(profiles, ensure_ascii=False, indent=2), encoding="utf-8")
         source_counts = {}
@@ -954,14 +1026,16 @@ def run(db, Job, guess_category, approve=True):
             "last_run": datetime.utcnow().isoformat() + "Z", "ok": True,
             "collected": len(items), "added": added, "updated": updated,
             "closed": closed,
-            "companies": len(profiles), "source_counts": source_counts, "sources": health,
+            "companies": len(profiles), "company_profiles": company_rows,
+            "source_counts": source_counts, "sources": health,
             "failed_sources": len(failed), "stale_candidates": stale_candidates,
             "duration_ms": round((time.monotonic() - started) * 1000),
         }
         save_status(status)
         print(f"[crawl] готово: +{added} новых, {updated} обновлено, {closed} закрыто, собрано {len(items)}")
         return {"collected": len(items), "added": added, "updated": updated,
-                "closed": closed, "companies": len(profiles), "failed_sources": len(failed),
+                "closed": closed, "companies": len(profiles),
+                "company_profiles": company_rows, "failed_sources": len(failed),
                 "at": datetime.utcnow().isoformat()}
     finally:
         _RUN_LOCK.release()
@@ -969,8 +1043,10 @@ def run(db, Job, guess_category, approve=True):
 
 if __name__ == "__main__":
     sys.path.insert(0, __file__.rsplit("/server/", 1)[0])
-    from server.app import SessionLocal, Job, guess_category, migrate, Base, engine
+    from server.app import (SessionLocal, Job, guess_category, migrate, Base, engine,
+                            upsert_company_profiles)
     Base.metadata.create_all(engine)
     with SessionLocal() as _db:
         migrate(_db)
-        print(run(_db, Job, guess_category))
+        print(run(_db, Job, guess_category,
+                  upsert_companies=lambda rows: upsert_company_profiles(_db, rows)))

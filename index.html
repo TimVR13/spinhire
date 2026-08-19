@@ -834,7 +834,13 @@
       } else logo.textContent = company.initials;
       const name = document.createElement('b'); name.textContent = company.name;
       const count = document.createElement('span'); count.textContent = company.jobs + ' ' + (company.jobs === 1 ? 'вакансия' : company.jobs < 5 ? 'вакансии' : 'вакансий');
-      card.append(logo, name, count); return card;
+      card.append(logo, name, count);
+      if (company.headquarters) {
+        const hq = document.createElement('span'); hq.className = 'company-tile__hq'; hq.textContent = company.headquarters;
+        card.appendChild(hq);
+      }
+      if (company.about) { card.title = company.about; }
+      return card;
     }));
   }).catch(() => {});
 })();

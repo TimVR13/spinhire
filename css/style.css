@@ -660,3 +660,4 @@ main > .section:nth-of-type(even) {
 .mkt-roles .mkt-pay { color: var(--emerald, var(--acid)); font-weight: 700; font-size: 0.8rem; }
 .mkt-roles .mkt-count { color: var(--ink-faint); font-size: 0.78rem; }
 .mkt-upd { color: var(--ink-faint); font-size: 0.75rem; margin-top: 14px; }
+.company-tile__hq { display: block; color: var(--ink-faint); font-size: 0.72rem; margin-top: 2px; }
