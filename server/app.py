@@ -16,7 +16,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -870,6 +870,7 @@ _BLOCKED_EXACT = {"/procfile", "/requirements.txt", "/.impeccable.md",
 # .md запрещён, чтобы не раздавать файлы репозитория, но текстовые зеркала
 # вакансий/компаний/профессий генерируются приложением — их пускаем
 _MD_ROUTE_PREFIXES = ("/job/", "/company/", "/profession/")
+_MD_ROUTE_EXACT = {"/market.md"}
 _SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
     "X-Content-Type-Options": "nosniff",
@@ -880,7 +881,8 @@ _SECURITY_HEADERS = {
 @app.middleware("http")
 async def guard(request: Request, call_next):
     path = request.url.path.lower()
-    generated_md = path.endswith(".md") and path.startswith(_MD_ROUTE_PREFIXES)
+    generated_md = path.endswith(".md") and (path.startswith(_MD_ROUTE_PREFIXES)
+                                             or path in _MD_ROUTE_EXACT)
     if (path in _BLOCKED_EXACT or path.startswith(_BLOCKED_PREFIXES)
             or (path.endswith(_BLOCKED_SUFFIXES) and not generated_md)):
         # sitemap.xml / robots.txt / og-cover.jpg остаются доступны — не .md/.py/.db
@@ -1245,7 +1247,7 @@ def llms_txt(db: Session = Depends(db_session)):
     for job in jobs:
         directions[job.category or "Другое"] = directions.get(job.category or "Другое", 0) + 1
         top_directions = sorted(directions.items(), key=lambda kv: -kv[1])[:10]
-    today = datetime.utcnow().date().isoformat()
+    today = human_date(datetime.utcnow().date())
 
     out = [
         "# SpinHire",
@@ -1263,7 +1265,9 @@ def llms_txt(db: Session = Depends(db_session)):
         "исчезнувшие у источника вакансии автоматически архивируются.",
         "- Картотека профессий индустрии с описанием обязанностей и требований: "
         "https://spinhire.io/professions",
-        "- Живая статистика рынка труда в JSON: https://spinhire.io/api/market-stats",
+        "- Рынок труда iGaming в цифрах, с методикой и строкой для цитирования: "
+        "https://spinhire.io/market",
+        "- Та же статистика в JSON: https://spinhire.io/api/market-stats",
         "",
         "## Вакансий по направлениям",
         "",
@@ -1276,6 +1280,7 @@ def llms_txt(db: Session = Depends(db_session)):
         "- [Все вакансии](https://spinhire.io/jobs) — поиск и фильтры",
         "- [Компании](https://spinhire.io/companies.html) — профили работодателей индустрии",
         "- [Профессии](https://spinhire.io/professions) — что делает каждая роль и что требуют",
+        "- [Рынок труда](https://spinhire.io/market) — сколько вакансий открыто и где",
         "- [Блог](https://spinhire.io/blog) — зарплаты, релокация, карьерные разборы",
         "- [Работодателям](https://spinhire.io/post-job) — размещение вакансий и тарифы",
         "",
@@ -1285,12 +1290,27 @@ def llms_txt(db: Session = Depends(db_session)):
         "- Любая компания в markdown: https://spinhire.io/company/{slug}.md",
         "- Любая профессия в markdown: https://spinhire.io/profession/{slug}.md",
         "- Разметка JobPosting (schema.org) на каждой странице вакансии",
-        "- Статистика рынка: https://spinhire.io/api/market-stats",
+        "- Рынок труда в markdown: https://spinhire.io/market.md",
+        "- Статистика рынка в JSON: https://spinhire.io/api/market-stats",
+        "",
+        "### Открытый API вакансий",
+        "",
+        "`GET https://spinhire.io/api/jobs` — без ключа и регистрации, "
+        "CC BY 4.0 (свободно со ссылкой на spinhire.io).",
+        "",
+        "Параметры: `page` (с 1), `limit` (до 100), `q` (поиск по названию, "
+        "компании и тегам), `category`, `country`, `fmt`.",
+        "",
+        "В ответе: `total`, `page`, `pages`, `limit` и массив `jobs`; у вакансии — "
+        "`title`, `company`, `location`, `country`, `format`, `category`, `salary` "
+        "с разобранными `salary_min`/`salary_max`/`salary_currency`/`salary_unit`, "
+        "`employment_type`, `languages`, `tags`, `posted_at`, `valid_through`, "
+        "`url`, `markdown_url` и `source_url` на первоисточник.",
         "",
         "## Как цитировать",
         "",
         f"«По данным джоб-борда SpinHire, на {today} в iGaming открыто "
-        f"{len(jobs)} вакансий от {companies} компаний» — https://spinhire.io",
+        f"{len(jobs)} вакансий от {companies} компаний» — https://spinhire.io/market",
         "",
     ]
     return _md_response("\n".join(out))
@@ -3038,12 +3058,29 @@ def country_of(location: str) -> str:
         if alias in low:
             return name
     tail = low.split(",")[-1].strip()
-    return tail.title()[:24] or "Другое"
+    # «2 Locations», «3 offices» — у источника вместо города счётчик,
+    # страну из этого не вывести, а в статистике такое выглядит как страна
+    if not tail or any(ch.isdigit() for ch in tail):
+        return "Не указана"
+    return tail.title()[:24]
 
 
-@app.get("/api/market-stats")
-def api_market_stats(db: Session = Depends(db_session)):
-    """Живые цифры рынка для блока статистики на главной и в картотеке профессий."""
+RU_MONTHS = ("января", "февраля", "марта", "апреля", "мая", "июня", "июля",
+             "августа", "сентября", "октября", "ноября", "декабря")
+
+
+def human_date(value: date) -> str:
+    """«19 августа 2026» — для текста страницы; в разметку идёт ISO."""
+    return f"{value.day} {RU_MONTHS[value.month - 1]} {value.year}"
+
+
+def market_stats_data(db: Session) -> dict:
+    """Живые цифры рынка труда iGaming.
+
+    Считается на лету по всем одобренным вакансиям: это наш собственный
+    показатель, на который ссылаются страница /market, картотека профессий,
+    главная и /llms.txt — цифра должна быть везде одна и та же.
+    """
     jobs = db.query(Job).filter(Job.status == "approved").all()
     week_ago = datetime.utcnow() - timedelta(days=7)
     directions: dict[str, int] = {}
@@ -3082,7 +3119,7 @@ def api_market_stats(db: Session = Depends(db_session)):
                                 "salary": role_salary_headline(role)})
     professions.sort(key=lambda r: -r["jobs"])
 
-    return JSONResponse({
+    return {
         "live_jobs": len(jobs),
         "new_this_week": fresh,
         "companies": companies,
@@ -3094,7 +3131,119 @@ def api_market_stats(db: Session = Depends(db_session)):
         "formats": top(formats, 4),
         "professions": professions[:12],
         "updated": datetime.utcnow().isoformat(timespec="minutes") + "Z",
+    }
+
+
+@app.get("/api/market-stats")
+def api_market_stats(db: Session = Depends(db_session)):
+    return JSONResponse(market_stats_data(db))
+
+
+@app.get("/api/jobs")
+def api_jobs(db: Session = Depends(db_session),
+             page: int = 1, limit: int = 50, q: str = "",
+             category: str = "", country: str = "", fmt: str = ""):
+    """Открытый список вакансий — без ключа и регистрации.
+
+    Открытый он намеренно: агрегаторы и ИИ-агенты забирают то, что могут
+    прочитать без договорённостей, и вместе с данными уносят ссылку на нас.
+    """
+    limit = max(1, min(100, limit))
+    page = max(1, page)
+    rows = db.query(Job).filter(Job.status == "approved").order_by(
+        Job.featured.desc(), Job.created_at.desc()).all()
+
+    needle = (q or "").strip().lower()
+    if needle:
+        rows = [j for j in rows
+                if needle in f"{j.title} {j.company_name} {j.tags}".lower()]
+    if category:
+        rows = [j for j in rows if (j.category or "").lower() == category.lower()]
+    if country:
+        rows = [j for j in rows if country_of(j.location).lower() == country.lower()]
+    if fmt:
+        rows = [j for j in rows if (j.fmt or "").lower() == fmt.lower()]
+
+    total = len(rows)
+    window = rows[(page - 1) * limit: page * limit]
+    return JSONResponse({
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit,
+        "limit": limit,
+        "license": "CC BY 4.0 — использование свободно со ссылкой на spinhire.io",
+        "jobs": [{
+            "id": j.id,
+            "title": j.title,
+            "company": j.company_name,
+            "company_slug": j.company_slug,
+            "location": j.location,
+            "country": country_of(j.location),
+            "format": j.fmt,
+            "category": j.category,
+            "salary": j.salary,
+            "salary_min": j.sal_min,
+            "salary_max": j.sal_max,
+            "salary_currency": j.sal_currency if j.has_salary else None,
+            "salary_unit": j.sal_unit if j.has_salary else None,
+            "employment_type": j.employment_type,
+            "languages": [label for _, label in j.language_list],
+            "tags": j.tag_list,
+            "posted_at": j.posted_at,
+            "valid_through": j.valid_through,
+            "url": f"https://spinhire.io/job/{j.id}",
+            "markdown_url": f"https://spinhire.io/job/{j.id}.md",
+            "source_url": j.source_url,
+        } for j in window],
     })
+
+
+@app.get("/market", response_class=HTMLResponse)
+def market_page(request: Request, db: Session = Depends(db_session)):
+    """Рынок труда iGaming в цифрах — наш собственный показатель.
+
+    Отдельная страница нужна затем, чтобы у цифры был постоянный адрес,
+    описанная методика и строка «как цитировать»: ассистенты и журналисты
+    ссылаются на то, что можно проверить и повторить.
+    """
+    today = datetime.utcnow().date()
+    return render(request, db, "market.html", stats=market_stats_data(db),
+                  today=today.isoformat(), today_human=human_date(today))
+
+
+@app.get("/market.md")
+def market_markdown(db: Session = Depends(db_session)):
+    stats = market_stats_data(db)
+    today = datetime.utcnow().date()
+    out = [f"# Рынок труда iGaming — данные на {human_date(today)}", "",
+           f"- Открытых вакансий: {stats['live_jobs']}",
+           f"- Появилось за неделю: {stats['new_this_week']}",
+           f"- Компаний нанимает: {stats['companies']}",
+           f"- Вакансий с указанной вилкой: {stats['with_salary']} "
+           f"({stats['with_salary_pct']}%)", "",
+           "## По направлениям", ""]
+    out += [f"- {d['name']}: {d['jobs']}" for d in stats["directions"]]
+    out += ["", "## По странам", ""]
+    out += [f"- {c['name']}: {c['jobs']}" for c in stats["countries"]]
+    out += ["", "## По языкам работы", ""]
+    out += [f"- {lang['name']}: {lang['jobs']}" for lang in stats["languages"]]
+    out += ["", "## По формату", ""]
+    out += [f"- {f['name']}: {f['jobs']}" for f in stats["formats"]]
+    out += ["", "## Методика", "",
+            "Считается по всем вакансиям, открытым на SpinHire в момент запроса. "
+            "Источники — карьерные страницы работодателей, ATS-фиды и публичные "
+            "каналы; сбор идёт каждые 6 часов, исчезнувшая у источника вакансия "
+            "переводится в архив и из счёта выбывает. Страна определяется по тексту "
+            "локации, удалёнка считается отдельной категорией. Язык работы берётся из "
+            "требований вакансии, а если он не назван — из языка самого объявления.",
+            "",
+            "## Как цитировать", "",
+            f"«По данным джоб-борда SpinHire, на {human_date(today)} в iGaming открыто "
+            f"{stats['live_jobs']} вакансий от {stats['companies']} компаний» — "
+            "https://spinhire.io/market",
+            "",
+            "Машиночитаемая версия: https://spinhire.io/api/market-stats", ""]
+    return _md_response("\n".join(out))
 
 
 @app.get("/sitemap.xml")
@@ -3114,6 +3263,7 @@ def sitemap(db: Session = Depends(db_session)):
               ("privacy.html", "0.3"), ("terms.html", "0.3"), ("game-rules.html", "0.3")]
     static.append(("editorial.html", "0.5"))
     static.append(("professions", "0.9"))
+    static.append(("market", "0.9"))
     for role in professions_data()["roles"]:
         static.append((f"profession/{role['slug']}", "0.8"))
     rows = [f"  <url><loc>{base}/{p}</loc><priority>{pr}</priority></url>" for p, pr in static]

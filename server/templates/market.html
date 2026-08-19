@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% set active = 'market' %}
+{% block title %}Рынок труда iGaming в цифрах — {{ stats.live_jobs }} вакансий на {{ today }} | SpinHire{% endblock %}
+{% block desc %}Сколько вакансий открыто в iGaming прямо сейчас: {{ stats.live_jobs }} позиций от {{ stats.companies }} компаний, разбивка по направлениям, странам, языкам и формату работы. Обновляется каждые 6 часов.{% endblock %}
+{% block robots %}<link rel="canonical" href="https://spinhire.io/market">
+<link rel="alternate" type="text/markdown" href="https://spinhire.io/market.md" title="Текстовая версия для языковых моделей">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Рынок труда iGaming в цифрах">
+<meta property="og:description" content="{{ stats.live_jobs }} открытых вакансий от {{ stats.companies }} компаний. Разбивка по направлениям, странам и языкам.">
+<meta property="og:url" content="https://spinhire.io/market">
+<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
+<script type="application/ld+json">{{ {
+  "@context": "https://schema.org",
+  "@type": "Dataset",
+  "name": "Рынок труда iGaming — открытые вакансии",
+  "description": "Число открытых вакансий в iGaming-индустрии с разбивкой по направлениям, странам, языкам работы и формату занятости. Считается по агрегированному индексу вакансий SpinHire, обновление каждые 6 часов.",
+  "url": "https://spinhire.io/market",
+  "license": "https://creativecommons.org/licenses/by/4.0/",
+  "creator": {"@type": "Organization", "name": "SpinHire", "url": "https://spinhire.io/"},
+  "dateModified": today,
+  "temporalCoverage": today,
+  "isAccessibleForFree": True,
+  "keywords": ["iGaming", "вакансии", "рынок труда", "гемблинг", "беттинг", "казино"],
+  "variableMeasured": [
+    {"@type": "PropertyValue", "name": "Открытых вакансий", "value": stats.live_jobs},
+    {"@type": "PropertyValue", "name": "Компаний нанимает", "value": stats.companies},
+    {"@type": "PropertyValue", "name": "Появилось за неделю", "value": stats.new_this_week}
+  ],
+  "distribution": {
+    "@type": "DataDownload",
+    "encodingFormat": "application/json",
+    "contentUrl": "https://spinhire.io/api/market-stats"
+  }
+} | tojson }}</script>{% endblock %}
+{% block style %}
+  .mk-hero { max-width: 76ch; margin: 0 auto var(--sp-6); text-align: center; }
+  .mk-lead { color: var(--ink-dim); line-height: 1.7; font-size: 1.02rem; }
+  .mk-figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: var(--sp-3); margin: var(--sp-6) 0 var(--sp-7); }
+  .mk-figure { border: 2px solid var(--line); background: var(--surface); padding: var(--sp-4) var(--sp-4) var(--sp-3); }
+  .mk-figure b { display: block; font-family: var(--font-display); font-size: 2.1rem; line-height: 1.05; color: var(--acid); }
+  .mk-figure span { display: block; margin-top: 6px; font-size: 0.78rem; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .mk-cuts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: var(--sp-5); }
+  .mk-cut h2 { font-family: var(--font-display); font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--sp-3); }
+  .mk-bar { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
+  .mk-bar:last-child { border-bottom: 0; }
+  .mk-bar i { grid-column: 1 / -1; height: 4px; background: var(--line-strong); display: block; }
+  .mk-bar i span { display: block; height: 100%; background: var(--acid); }
+  .mk-bar b { color: var(--ink); font-weight: 800; font-variant-numeric: tabular-nums; }
+  .mk-note { margin-top: var(--sp-7); border: 2px solid var(--line); background: var(--surface); padding: var(--sp-5); }
+  .mk-note h2 { font-family: var(--font-display); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--sp-3); }
+  .mk-note p { color: var(--ink-dim); line-height: 1.7; font-size: 0.92rem; margin-bottom: var(--sp-3); max-width: 78ch; }
+  .mk-quote { border-left: 3px solid var(--acid); padding: 10px 0 10px 16px; color: var(--ink); font-size: 0.95rem; line-height: 1.6; }
+  .mk-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: var(--sp-4); font-size: 0.85rem; }
+  .mk-links a { border: 1px solid var(--line-strong); padding: 7px 12px; text-decoration: none; color: var(--ink); }
+  .mk-links a:hover, .mk-links a:focus-visible { border-color: var(--acid); color: var(--acid); }
+{% endblock %}
+{% block content %}
+  <nav class="crumbs" aria-label="Хлебные крошки"><a href="/">Главная</a> / Рынок труда</nav>
+
+  <div class="mk-hero">
+    <span class="kicker">Обновлено {{ today_human }}</span>
+    <h1 style="font-size: clamp(1.7rem, 4vw, 2.8rem); margin: 10px 0 14px;">Рынок труда iGaming в цифрах</h1>
+    <p class="mk-lead">
+      На {{ today_human }} в индустрии открыто <b>{{ stats.live_jobs }}</b> вакансий от
+      <b>{{ stats.companies }}</b> компаний, из них <b>{{ stats.new_this_week }}</b> появились за последнюю неделю.
+      Считаем по собственному индексу вакансий: сбор идёт каждые 6 часов, закрытые позиции из счёта выбывают.
+    </p>
+  </div>
+
+  <div class="mk-figures">
+    <div class="mk-figure"><b>{{ stats.live_jobs }}</b><span>открытых вакансий</span></div>
+    <div class="mk-figure"><b>{{ stats.companies }}</b><span>компаний нанимает</span></div>
+    <div class="mk-figure"><b>{{ stats.new_this_week }}</b><span>новых за неделю</span></div>
+    <div class="mk-figure"><b>{{ stats.with_salary_pct }}%</b><span>с указанной вилкой</span></div>
+  </div>
+
+  <div class="mk-cuts">
+    {% for title, rows in [('По направлениям', stats.directions), ('По странам', stats.countries),
+                           ('По языкам работы', stats.languages), ('По формату', stats.formats)] %}
+      {% if rows %}
+        {% set top = rows[0].jobs %}
+        <section class="mk-cut">
+          <h2>{{ title }}</h2>
+          {% for row in rows %}
+            <div class="mk-bar">
+              <span>{{ row.name }}</span><b>{{ row.jobs }}</b>
+              <i><span style="width: {{ (row.jobs / top * 100) | round(1) }}%"></span></i>
+            </div>
+          {% endfor %}
+        </section>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <div class="mk-note">
+    <h2>Как мы это считаем</h2>
+    <p>
+      В счёт идут все вакансии, открытые на SpinHire в момент запроса страницы. Источники —
+      карьерные страницы работодателей, ATS-фиды и публичные отраслевые каналы. Сбор идёт каждые
+      6 часов; если вакансия исчезла у источника, она уходит в архив и из статистики выбывает,
+      поэтому цифра показывает живой спрос, а не накопленный архив.
+    </p>
+    <p>
+      Страна определяется по тексту локации, удалённые вакансии вынесены в отдельную категорию.
+      Язык работы берётся из требований вакансии, а если он там не назван — из языка самого
+      объявления: для кандидата это тот же сигнал. Доля вакансий с вилкой низкая не по нашей
+      вине — большинство работодателей индустрии зарплату в объявлении не публикуют.
+    </p>
+
+    <h2 style="margin-top: var(--sp-5);">Как цитировать</h2>
+    <p class="mk-quote">
+      По данным джоб-борда SpinHire, на {{ today_human }} в iGaming открыто {{ stats.live_jobs }}
+      вакансий от {{ stats.companies }} компаний.
+    </p>
+    <p style="margin-top: var(--sp-3);">
+      Данные открыты для цитирования со ссылкой на источник. Ссылаться лучше на этот адрес —
+      он не меняется, а цифры на нём обновляются сами.
+    </p>
+    <div class="mk-links">
+      <a href="/api/market-stats">JSON для машин</a>
+      <a href="/market.md">Текстовая версия</a>
+      <a href="/professions">Профессии и зарплаты</a>
+      <a href="/jobs">Все вакансии</a>
+    </div>
+  </div>
+{% endblock %}
