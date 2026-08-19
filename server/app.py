@@ -60,6 +60,7 @@ BASE_URL = os.environ.get("BASE_URL", "").rstrip("/")
 CV_UPLOAD_DIR = os.environ.get("CV_UPLOAD_DIR", os.path.join(ROOT, "data", "cv_uploads"))
 CV_MAX_BYTES = 5 * 1024 * 1024
 AVATAR_UPLOAD_DIR = os.environ.get("AVATAR_UPLOAD_DIR", os.path.join(ROOT, "data", "avatars"))
+COMPANY_LOGO_DIR = os.environ.get("COMPANY_LOGO_DIR", os.path.join(ROOT, "data", "company-logos"))
 AVATAR_MAX_BYTES = 3 * 1024 * 1024
 SIGNUP_COIN_BONUS = 20
 # Подтверждение почты включается автоматически, когда настроен Resend.
@@ -102,6 +103,7 @@ class User(Base):
     job_search_status = Column(String, default="active")  # active | open | paused
     incognito = Column(Boolean, default=True)
     company_website = Column(String, default="")
+    company_logo_path = Column(String, default="")
     company_description = Column(Text, default="")
     company_location = Column(String, default="")
     company_size = Column(String, default="")
@@ -298,6 +300,8 @@ class Job(Base):
     @property
     def logo_url(self):
         """Фото/логотип компании через favicon-сервис по домену (если известен)."""
+        if self.owner_id and self.owner and self.owner.company_logo_path:
+            return f"/company-logo/{self.owner_id}"
         normalized = " ".join((self.company_name or "").lower().replace("_", " ").split())
         if normalized == "gr8 tech":
             return "/img/company-logos/gr8tech.png"
@@ -767,6 +771,7 @@ def migrate(db: Session):
         "ALTER TABLE users ADD COLUMN location VARCHAR DEFAULT ''",
         "ALTER TABLE users ADD COLUMN job_search_status VARCHAR DEFAULT 'active'",
         "ALTER TABLE users ADD COLUMN company_website VARCHAR DEFAULT ''",
+        "ALTER TABLE users ADD COLUMN company_logo_path VARCHAR DEFAULT ''",
         "ALTER TABLE users ADD COLUMN company_description TEXT DEFAULT ''",
         "ALTER TABLE users ADD COLUMN company_location VARCHAR DEFAULT ''",
         "ALTER TABLE users ADD COLUMN company_size VARCHAR DEFAULT ''",
@@ -1213,13 +1218,13 @@ def api_featured(db: Session = Depends(db_session)):
     from fastapi.responses import JSONResponse
     jobs = (db.query(Job).filter(Job.status == "approved")
             .order_by(Job.featured.desc(), Job.created_at.desc()).limit(30).all())
-    # приоритет — с зарплатой, потом свежие; берём 6
+    # приоритет — с зарплатой, потом свежие; берём 5
     jobs.sort(key=lambda j: (not j.has_salary,))
     out = [{"id": j.id, "title": j.title, "company": j.company_name,
             "location": j.location or "—", "fmt": j.fmt,
             "salary": j.salary if j.has_salary else "по запросу",
             "cat": j.category, "initials": j.initials,
-            "logo_url": j.logo_url} for j in jobs[:6]]
+            "logo_url": j.logo_url} for j in jobs[:5]]
     return JSONResponse(out)
 
 
@@ -2058,6 +2063,17 @@ def valid_avatar_payload(payload: bytes, ext: str) -> bool:
     return signatures.get(ext, False)
 
 
+@app.get("/company-logo/{account_id}")
+def company_logo(account_id: int, db: Session = Depends(db_session)):
+    """Загруженный работодателем логотип — публичный, кэшируется."""
+    account = db.get(User, account_id)
+    path = os.path.abspath((account and account.company_logo_path) or "")
+    root = os.path.abspath(COMPANY_LOGO_DIR) + os.sep
+    if not path.startswith(root) or not os.path.isfile(path):
+        raise HTTPException(404)
+    return FileResponse(path, headers={"Cache-Control": "public, max-age=86400"})
+
+
 @app.get("/profile/avatar")
 def profile_avatar(request: Request, db: Session = Depends(db_session)):
     user = get_user(request, db)
@@ -2279,7 +2295,7 @@ def employer(request: Request, stage: str = "", assigned: int = 0,
         })
     job_stats.sort(key=lambda row: row["views"], reverse=True)
     company_checks = [account.company_name, account.company_website, account.company_description,
-                      account.company_location, account.company_size]
+                      account.company_location, account.company_size, account.company_logo_path]
     company_progress = round(sum(bool(value) for value in company_checks) / len(company_checks) * 100)
     team = (db.query(CompanyMember, User).join(User, User.id == CompanyMember.user_id)
             .filter(CompanyMember.account_id == account.id).order_by(CompanyMember.created_at).all())
@@ -2293,9 +2309,10 @@ def employer(request: Request, stage: str = "", assigned: int = 0,
 
 
 @app.post("/employer/profile")
-def employer_profile_save(request: Request, company_name: str = Form(""),
+async def employer_profile_save(request: Request, company_name: str = Form(""),
                           company_website: str = Form(""), company_description: str = Form(""),
                           company_location: str = Form(""), company_size: str = Form(""),
+                          company_logo: UploadFile = File(None),
                           db: Session = Depends(db_session)):
     user, account, _ = require_company_user(request, db, owner_only=True)
     website = company_website.strip()
@@ -2308,6 +2325,21 @@ def employer_profile_save(request: Request, company_name: str = Form(""),
     account.company_description = company_description.strip()[:3000]
     account.company_location = company_location.strip()[:180]
     account.company_size = company_size.strip()[:80]
+    if company_logo and company_logo.filename:
+        ext = os.path.splitext(company_logo.filename)[1].lower()
+        payload = await company_logo.read()
+        if ext in (".png", ".jpg", ".jpeg", ".webp") and len(payload) <= 2 * 1024 * 1024 and valid_avatar_payload(payload, ext):
+            os.makedirs(COMPANY_LOGO_DIR, exist_ok=True)
+            path = os.path.join(COMPANY_LOGO_DIR, f"{account.id}-{secrets.token_hex(8)}{ext}")
+            with open(path, "wb") as handle:
+                handle.write(payload)
+            previous = account.company_logo_path
+            account.company_logo_path = path
+            if previous and previous != path:
+                try:
+                    os.remove(previous)
+                except FileNotFoundError:
+                    pass
     for job in db.query(Job).filter(Job.owner_id == account.id).all():
         if account.company_name:
             job.company_name = account.company_name
@@ -2545,9 +2577,10 @@ def post_job_page(request: Request, db: Session = Depends(db_session)):
     user = get_user(request, db)
     can_post = bool(user and user.role in ("employer", "admin")
                     and company_context(user, db)[1] != "viewer")
+    live_jobs = db.query(Job).filter(Job.status == "approved").count()
     return render(request, db, "post_job.html", categories=CATEGORIES, formats=FORMATS,
                   posted=False, need_login=not user or user.role == "talent",
-                  can_post=can_post)
+                  can_post=can_post, live_jobs=f"{live_jobs:,}".replace(",", " "))
 
 
 @app.post("/post-job")
@@ -2922,6 +2955,143 @@ def admin_user(user_id: int, action: str, request: Request, db: Session = Depend
     return RedirectResponse("/admin?tab=users", status_code=303)
 
 
+
+# ---------- быстрый вход с готовым CV (PDF) ----------
+
+CV_LANG_MAP = {
+    "английск": "Английский", "english": "Английский",
+    "немецк": "Немецкий", "german": "Немецкий", "deutsch": "Немецкий",
+    "французск": "Французский", "french": "Французский",
+    "испанск": "Испанский", "spanish": "Испанский",
+    "итальянск": "Итальянский", "italian": "Итальянский",
+    "португальск": "Португальский", "portuguese": "Португальский",
+    "польск": "Польский", "polish": "Польский",
+    "финск": "Финский", "finnish": "Финский",
+    "шведск": "Шведский", "swedish": "Шведский",
+    "японск": "Японский", "japanese": "Японский",
+    "турецк": "Турецкий", "turkish": "Турецкий",
+    "греческ": "Греческий", "greek": "Греческий",
+    "украинск": "Украинский", "ukrainian": "Украинский",
+    "русск": "Русский", "russian": "Русский",
+}
+CV_SKILL_WORDS = [
+    "Excel", "SQL", "Python", "Jira", "Tableau", "Power BI", "Google Analytics",
+    "CRM", "Salesforce", "HubSpot", "Zendesk", "Intercom", "Optimove", "Customer.io",
+    "KYC", "AML", "Compliance", "Chargeback", "Antifraud", "Fraud",
+    "Retention", "Reactivation", "VIP", "Affiliate", "Media Buying", "PPC", "SEO", "ASO",
+    "Unity", "JavaScript", "TypeScript", "React", "Node.js", "PHP", "Java", "C#", "Go",
+    "QA", "Selenium", "Playwright", "Postman", "API", "Figma", "Photoshop",
+]
+CV_LOCATION_WORDS = ["Мальта", "Malta", "Кипр", "Cyprus", "Лимассол", "Limassol", "Варшава",
+                     "Warsaw", "Тбилиси", "Tbilisi", "Киев", "Kyiv", "Минск", "Вильнюс",
+                     "Рига", "Барселона", "Лиссабон", "Прага", "Prague", "Белград", "Belgrade",
+                     "Ереван", "Yerevan", "Батуми", "Batumi", "Remote", "Удалённо", "Удаленно"]
+
+
+def parse_cv_pdf(payload: bytes) -> dict:
+    """Черновой разбор PDF-резюме: имя, роль, языки, скиллы, контакты.
+
+    Эвристики сознательно осторожные: лучше пустое поле, чем мусор —
+    кандидат проверяет черновик перед публикацией.
+    """
+    import re as _re
+    out = {"name": "", "title": "", "languages": "", "skills": "", "about": "",
+           "location": "", "experience_years": 0, "contact_telegram": "", "email": ""}
+    try:
+        from io import BytesIO
+        from pypdf import PdfReader
+        reader = PdfReader(BytesIO(payload))
+        text = "\n".join((page.extract_text() or "") for page in reader.pages[:5])
+    except Exception:
+        return out
+    text = text.strip()
+    if not text:
+        return out
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    # имя: первая короткая строка из 2–3 слов с заглавных, без цифр и @
+    for ln in lines[:6]:
+        words = ln.split()
+        if (1 < len(words) <= 3 and len(ln) < 60 and not any(c.isdigit() for c in ln)
+                and "@" not in ln and all(w[:1].isupper() for w in words)):
+            out["name"] = ln
+            break
+    # роль: строка с ключевым словом профессии из картотеки либо вторая строка
+    role_words = ("manager", "менеджер", "developer", "разработчик", "engineer", "инженер",
+                  "analyst", "аналитик", "specialist", "специалист", "designer", "дизайнер",
+                  "lead", "head", "officer", "агент", "agent", "support", "recruiter", "qa")
+    for ln in lines[:12]:
+        low = ln.lower()
+        if ln != out["name"] and len(ln) < 80 and any(w in low for w in role_words):
+            out["title"] = ln
+            break
+    low_text = text.lower()
+    langs = []
+    for key, label in CV_LANG_MAP.items():
+        if key in low_text and label not in langs:
+            langs.append(label)
+    out["languages"] = ", ".join(langs[:6])
+    skills = [w for w in CV_SKILL_WORDS if _re.search(r"(?i)(?<![a-zа-я])" + _re.escape(w.lower()) + r"(?![a-zа-я])", low_text)]
+    out["skills"] = ", ".join(dict.fromkeys(skills))[:400]
+    for loc in CV_LOCATION_WORDS:
+        if loc.lower() in low_text:
+            out["location"] = {"malta": "Мальта", "cyprus": "Кипр", "limassol": "Лимассол",
+                               "warsaw": "Варшава", "tbilisi": "Тбилиси", "kyiv": "Киев",
+                               "prague": "Прага", "belgrade": "Белград", "yerevan": "Ереван",
+                               "batumi": "Батуми", "remote": "Удалённо", "удаленно": "Удалённо"}.get(loc.lower(), loc)
+            break
+    m = _re.search(r"(?i)(\d{1,2})\+?\s*(?:лет|года?|years?)", text)
+    if m:
+        out["experience_years"] = min(int(m.group(1)), 40)
+    m = _re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", text)
+    if m:
+        out["email"] = m.group(0).lower()
+    m = (_re.search(r"(?i)(?:t\.me/|телеграм[:\s]*@?|telegram[:\s]*@?)([A-Za-z0-9_]{5,32})", text)
+         or _re.search(r"(?<![\w.])@([A-Za-z0-9_]{5,32})(?!\.[a-z])", text))
+    if m:
+        out["contact_telegram"] = "@" + m.group(1)
+    out["about"] = " ".join(text.split())[:600]
+    return out
+
+
+@app.post("/resumes/quick")
+async def resumes_quick(request: Request, email: str = Form(...),
+                        cv: UploadFile = File(...), consent: str = Form(""),
+                        db: Session = Depends(db_session)):
+    """Быстрый вход: готовый PDF + почта → черновик профиля с автозаполнением."""
+    email = email.strip().lower()
+    if not consent:
+        return RedirectResponse("/resumes?quick_error=consent", status_code=303)
+    if "@" not in email or len(email) > 200:
+        return RedirectResponse("/resumes?quick_error=email", status_code=303)
+    payload = await cv.read()
+    if not payload.startswith(b"%PDF") or len(payload) > 5 * 1024 * 1024:
+        return RedirectResponse("/resumes?quick_error=file", status_code=303)
+    existing = db.query(User).filter(func.lower(User.email) == email).first()
+    if existing:
+        return RedirectResponse(f"/login?next=%2Fprofile%23cv&email={urllib.parse.quote(email)}&e=quick_exists",
+                                status_code=303)
+    parsed = parse_cv_pdf(payload)
+    user = User(email=email, password_hash=hash_pw(secrets.token_urlsafe(18)),
+                name=parsed["name"], role="talent", coins=SIGNUP_COIN_BONUS)
+    db.add(user)
+    db.flush()
+    os.makedirs(CV_UPLOAD_DIR, exist_ok=True)
+    stored_path = os.path.join(CV_UPLOAD_DIR, f"{user.id}-{secrets.token_hex(12)}.pdf")
+    with open(stored_path, "wb") as handle:
+        handle.write(payload)
+    safe_name = os.path.basename(cv.filename or "resume.pdf")[:240]
+    row = Resume(user_id=user.id, title=parsed["title"], location=parsed["location"],
+                 experience_years=parsed["experience_years"], skills=parsed["skills"],
+                 about=parsed["about"], languages=parsed["languages"],
+                 contact_email=parsed["email"] or email,
+                 contact_telegram=parsed["contact_telegram"],
+                 cv_file_name=safe_name, cv_file_path=stored_path,
+                 published=False, status="draft")
+    db.add(row)
+    db.commit()
+    return set_session(RedirectResponse("/profile?quick=1#cv", status_code=303), user)
+
+
 # ---------- sitemap (динамический, включает живые вакансии) ----------
 
 ARTICLE_FILES = {
@@ -2931,6 +3101,7 @@ ARTICLE_FILES = {
     "limassol-vs-warsaw": "post-limassol-vs-warsaw.html",
     "compliance-career": "post-compliance-career.html",
     "crypto-salary": "post-crypto-salary.html",
+    "igaming-bez-opyta": "post-igaming-bez-opyta.html",
 }
 
 
@@ -3292,9 +3463,7 @@ def sitemap(db: Session = Depends(db_session)):
               ("jobs-vip-manager.html", "0.8"), ("jobs-affiliate.html", "0.8"), ("jobs-aml.html", "0.8"),
               ("jobs-crypto.html", "0.8"), ("jobs-warsaw.html", "0.8"), ("jobs-tbilisi.html", "0.8"),
               ("jobs-gamedev.html", "0.8"),
-              ("blog/salaries-igaming-2026", "0.7"), ("blog/relocation-malta", "0.7"),
-              ("blog/vip-manager", "0.7"), ("blog/limassol-vs-warsaw", "0.7"),
-              ("blog/compliance-career", "0.7"), ("blog/crypto-salary", "0.7"),
+              *[(f"blog/{slug}", "0.7") for slug in ARTICLE_FILES],
               ("privacy.html", "0.3"), ("terms.html", "0.3"), ("game-rules.html", "0.3")]
     static.append(("editorial.html", "0.5"))
     static.append(("professions", "0.9"))

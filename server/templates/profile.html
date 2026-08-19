@@ -22,6 +22,7 @@
 {% endblock %}
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Мой профиль</nav>
+  {% if request.query_params.get('quick') %}<div class="flash">✓ Мы разобрали ваше CV и заполнили черновик. Проверьте поля ниже, поправьте что нужно — и опубликуйте. Пароль для входа задайте через «Забыли пароль» или продолжайте по этой сессии.</div>{% endif %}
   {% if request.query_params.get('ok') %}<div class="flash">✓ Профиль сохранён</div>{% endif %}
   {% if request.query_params.get('cv_ok') %}<div class="flash">CV сохранено{% if resume and resume.status == 'pending' %} и отправлено на модерацию{% elif resume and resume.status == 'approved' %} и опубликовано анонимно{% elif resume and resume.status == 'paused' %}; публикация приостановлена{% endif %}.</div>{% endif %}
   {% if request.query_params.get('cv_error') == 'consent' %}<div class="flash err">Оба подтверждения обязательны: публикация в базе и согласие на обработку контактов.</div>

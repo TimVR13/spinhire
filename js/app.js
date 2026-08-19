@@ -447,6 +447,40 @@ if (window.matchMedia('(pointer: fine)').matches &&
     });
 })();
 
+// Scroll-reveal: карточки и заголовки секций всплывают при входе в вьюпорт.
+// Прогрессивно: класс вешаем только из JS, без JS всё видно сразу.
+(function () {
+  if (!('IntersectionObserver' in window) ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const SELECTOR = '.section-head, .job-card, .cat-card, .fact, .mkt-card, .mkt-kpi, ' +
+    '.event-card, .salary-tile, .company-tile, .how-col, .co-card, .post-card, ' +
+    '.prof-card, .plan, .perk, .game-card, .evc, .cta-banner, .event-hero';
+  const seen = new WeakSet();
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('io-in');
+      io.unobserve(entry.target);
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+  const prime = root => {
+    root.querySelectorAll(SELECTOR).forEach(el => {
+      if (seen.has(el)) return;
+      seen.add(el);
+      const rect = el.getBoundingClientRect();
+      if (rect.top < innerHeight) { return; }         // то, что уже на экране, не прячем
+      const siblings = el.parentElement ? [...el.parentElement.children] : [el];
+      el.style.setProperty('--io-i', Math.min(siblings.indexOf(el), 5));
+      el.classList.add('io-reveal');
+      io.observe(el);
+    });
+  };
+  prime(document);
+  // Списки, которые дорисовывает JS (вакансии дня, события), подхватываем позже
+  new MutationObserver(muts => muts.forEach(m => m.target.nodeType === 1 && prime(m.target)))
+    .observe(document.body, { childList: true, subtree: true });
+})();
+
 /* Копирование ссылки. Один обработчик на документ: кнопка может появиться
    на любой странице, достаточно повесить data-copy с адресом. */
 (() => {

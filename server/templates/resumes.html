@@ -9,11 +9,20 @@
 <meta property="og:url" content="https://spinhire.io/resumes">
 <meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">{% endblock %}
 {% block style %}
-  .cv-hero { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(300px,.55fr); gap:clamp(var(--sp-6),5vw,var(--sp-8)); align-items:end; padding:var(--sp-5) 0 var(--sp-6); }
-  .cv-hero h1 { display:grid; gap:.08em; max-width:16ch; font-size:clamp(2rem,3.2vw,3rem); line-height:1.04; }
-  .cv-hero-title-line { display:block; white-space:normal; }
-  .cv-aside { align-self:end; border:1px solid color-mix(in oklch,var(--acid) 38%,var(--line)); border-radius:var(--radius); background:color-mix(in oklch,var(--surface) 82%,transparent); padding:var(--sp-5); }
-  .cv-note { color:var(--ink-dim); max-width:36ch; line-height:1.6; }
+  .cv-hero { padding:var(--sp-5) 0 var(--sp-6); }
+  .cv-hero h1 { font-size:clamp(2rem,3.2vw,3rem); line-height:1.04; margin-bottom:14px; }
+  .cv-note { color:var(--ink-dim); max-width:70ch; line-height:1.6; }
+  .cv-rules { display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin-top:14px; font-size:0.86rem; color:var(--ink-dim); }
+  .cv-rules span { display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border:1px solid var(--line-strong); border-radius:999px; background:var(--bg-deep); }
+  .cv-rules b { color:var(--acid); }
+  .cv-rules a { color:var(--acid); font-weight:700; text-decoration:none; }
+  .cv-rules a:hover { text-decoration:underline; }
+  .cv-quick { margin-top:16px; border:1px dashed var(--line-strong); border-radius:var(--radius); background:var(--surface); }
+  .cv-quick summary { cursor:pointer; padding:12px 16px; font-weight:700; color:var(--acid); list-style:none; }
+  .cv-quick summary::-webkit-details-marker { display:none; }
+  .cv-quick form { display:flex; flex-wrap:wrap; gap:10px; padding:0 16px 16px; }
+  .cv-quick input[type=email] { flex:1 1 200px; }
+  .cv-quick input[type=file] { flex:2 1 260px; }
   .cv-search { display:grid; grid-template-columns:1.5fr 1fr 1fr auto; gap:10px; margin-bottom:var(--sp-5); }
   .cv-list { border-top:2px solid var(--line); }
   .cv-row { display:grid; grid-template-columns:150px minmax(0,1.4fr) minmax(180px,.7fr) auto; gap:var(--sp-4); align-items:center; padding:var(--sp-5) 0; border-bottom:1px solid var(--line); color:inherit; text-decoration:none; transition:transform .25s cubic-bezier(.16,1,.3,1),border-color .25s; }
@@ -29,19 +38,27 @@
   .cv-cta { display:flex; align-items:center; justify-content:space-between; gap:var(--sp-4); flex-wrap:wrap; margin-top:var(--sp-6); padding:var(--sp-5); border:1px solid var(--line); border-radius:var(--radius); background:color-mix(in oklch,var(--surface) 82%,transparent); }
   .cv-cta b { font-family:var(--font-display); font-size:1rem; }
   .cv-cta p { color:var(--ink-dim); font-size:.9rem; max-width:60ch; margin-top:6px; }
-  @media(max-width:900px){.cv-hero{grid-template-columns:1fr;gap:var(--sp-5)}.cv-hero h1{font-size:clamp(1.8rem,7.5vw,3.2rem);max-width:18ch}.cv-aside{max-width:560px}.cv-search{grid-template-columns:1fr}.cv-row{grid-template-columns:1fr auto}.cv-code,.cv-skills{grid-column:1/-1}.cv-arrow{grid-column:2;grid-row:1}.cv-row>div:nth-child(3){grid-column:1/-1}}
+  @media(max-width:900px){.cv-hero h1{font-size:clamp(1.8rem,7.5vw,3.2rem)}.cv-search{grid-template-columns:1fr}.cv-row{grid-template-columns:1fr auto}.cv-code,.cv-skills{grid-column:1/-1}.cv-arrow{grid-column:2;grid-row:1}.cv-row>div:nth-child(3){grid-column:1/-1}}
 {% endblock %}
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Резюме</nav>
   <section class="cv-hero">
-    <div>
-      <span class="kicker">Закрытая база талантов</span>
-      <h1><span class="cv-hero-title-line">Специалисты iGaming</span><span class="cv-hero-title-line">Контакты закрыты</span></h1>
-    </div>
-    <div class="cv-aside">
-      <p class="cv-note">Опыт, навыки и зарплатные ожидания видны бесплатно. Имя, email и Telegram открываются работодателю за €5 за контакт — и возвращаются на баланс, если кандидат не ответил.</p>
-      <a href="/post-job#pricing" class="btn btn-acid" style="margin-top:18px;">Тарифы на контакты</a>
-    </div>
+    <span class="kicker">Закрытая база талантов</span>
+    <h1>Специалисты iGaming</h1>
+    <p class="cv-note">Опыт, навыки и зарплатные ожидания видны бесплатно. Имя, email и Telegram открываются работодателю за контакт — и возвращаются на баланс, если кандидат не ответил.</p>
+    <p class="cv-rules"><span>Контакты <b>закрыты</b></span><span>Профиль — <b>бесплатно</b></span><span>Контакт — <b>€5</b></span><span>Не ответил — <b>возврат</b></span><a href="/post-job#pricing">Тарифы на контакты →</a></p>
+    {% if request.query_params.get('quick_error') == 'consent' %}<div class="flash err" style="margin-top:14px;">Нужно согласие на обработку данных.</div>
+    {% elif request.query_params.get('quick_error') == 'email' %}<div class="flash err" style="margin-top:14px;">Проверьте адрес почты.</div>
+    {% elif request.query_params.get('quick_error') == 'file' %}<div class="flash err" style="margin-top:14px;">Принимаем PDF до 5 МБ.</div>{% endif %}
+    <details class="cv-quick" {% if request.query_params.get('quick_error') %}open{% endif %}>
+      <summary>📄 У меня есть готовое CV — загрузить PDF</summary>
+      <form method="post" action="/resumes/quick" enctype="multipart/form-data">
+        <input class="input" type="email" name="email" placeholder="Почта" required>
+        <input class="input" type="file" name="cv" accept=".pdf" required>
+        <button class="btn btn-acid" type="submit">Загрузить →</button>
+        <label class="check" style="flex-basis:100%;font-size:0.82rem;color:var(--ink-dim);"><input type="checkbox" name="consent" value="1" required> Согласен на обработку данных. Мы разберём PDF, соберём черновик профиля — публикуете его вы сами.</label>
+      </form>
+    </details>
   </section>
 
   <form class="cv-search" method="get" action="/resumes">

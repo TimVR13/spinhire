@@ -10,8 +10,43 @@
 <meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">{% endblock %}
 {% block content %}
   <nav class="crumbs" style="text-align: center;"><a href="/">Главная</a> / Разместить вакансию</nav>
+  {% if need_login %}
+  <style>
+    .pj-hero { display:grid; grid-template-columns: minmax(0,1.1fr) minmax(0,.9fr); gap: clamp(24px,4vw,56px); align-items:center; margin: 4px 0 var(--sp-6); }
+    .pj-hero h1 { font-size: clamp(1.9rem, 3.6vw, 3rem); line-height:1.04; margin: 8px 0 14px; }
+    .pj-hero p { color: var(--ink-dim); max-width: 52ch; line-height:1.6; }
+    .pj-hero__art { position:relative; border-radius: var(--radius); overflow:hidden; border:1px solid var(--line); aspect-ratio: 4/3; background: var(--bg-deep); }
+    .pj-hero__art img { width:100%; height:100%; object-fit:cover; display:block; }
+    .pj-hero__art::after { content:''; position:absolute; inset:0; background: linear-gradient(180deg, transparent 60%, oklch(0.1 0.02 160 / .7)); pointer-events:none; }
+    .pj-hero__stats { display:flex; gap: 18px; flex-wrap:wrap; margin-top: 18px; }
+    .pj-hero__stats b { display:block; font-family: var(--font-display); font-size: 1.4rem; color: var(--acid); }
+    .pj-hero__stats span { font-size: .78rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; }
+    .tariff { position:relative; }
+    .tariff-ico { width: 84px; height: 84px; border-radius: 18px; overflow:hidden; margin: 0 0 12px; box-shadow: 0 10px 30px oklch(0 0 0 / .45); }
+    .tariff-ico img { width:100%; height:100%; object-fit:cover; display:block; }
+    .perk { display:grid; grid-template-columns: 52px 1fr; gap: 14px; align-items:start; }
+    .perk-ico { width:52px; height:52px; border-radius: 12px; overflow:hidden; }
+    .perk-ico img { width:100%; height:100%; object-fit:cover; display:block; }
+    @media (max-width: 860px) { .pj-hero { grid-template-columns: 1fr; } .pj-hero__art { order:-1; aspect-ratio: 16/9; } .tariff-ico { width: 64px; height: 64px; } }
+    @media (max-width: 760px) { .perk { grid-template-columns: 36px 1fr; align-items:center; gap:10px; } .perk-ico { width:36px; height:36px; } .perk b::before { content:""; } }
+  </style>
+  <section class="pj-hero">
+    <div>
+      <span class="kicker pink">Сдавай карты</span>
+      <h1>Разместить вакансию в iGaming</h1>
+      <p>Кандидаты из казино, беттинга, геймдева и платежей уже здесь. Вакансия уходит в поиск, категории, Google Jobs и Telegram — вы работаете с откликами в кабинете.</p>
+      <div class="pj-hero__stats">
+        <div><b>{{ live_jobs|default('1 900+') }}</b><span>живых вакансий</span></div>
+        <div><b>до 2 ч</b><span>модерация</span></div>
+        <div><b>€49</b><span>за размещение</span></div>
+      </div>
+    </div>
+    <div class="pj-hero__art"><img src="/img/pricing/hero.jpg" alt="Дилер сдаёт карту-вакансию на зелёном сукне" width="800" height="600"></div>
+  </section>
+  {% else %}
   <div style="text-align: center;"><span class="kicker pink">Сдавай карты</span></div>
   <h1 style="font-size: clamp(1.6rem, 3.5vw, 2.6rem); margin: 8px 0 24px; text-align: center;">Разместить вакансию</h1>
+  {% endif %}
 
   {% if posted %}
     <div class="flash">✓ Вакансия отправлена на модерацию. Обычно проверяем за пару часов — статус виден в <a href="/employer" style="color: inherit; font-weight: 800;">кабинете</a>.</div>
@@ -77,7 +112,7 @@
     <h2 class="tariff-group-title" style="margin-top: 0;">Разместить вакансию</h2>
     <p class="tariff-group-sub">Разовое размещение стоит €49. Пакеты не сгорают месяц в месяц — вакансии из пакета можно публиковать в течение года.</p>
     <div class="tariff-grid row-3">
-      <div class="card tariff"><b style="font-family: var(--font-display);">Одна вакансия</b>
+      <div class="card tariff"><div class="tariff-ico"><img src="/img/pricing/t-single.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">Одна вакансия</b>
         <div class="salary">€49</div>
         <span class="was">Было <s>€99</s> — сейчас <b>€49</b></span>
         <span class="per">Размещение вакансии на 30 дней</span>
@@ -89,7 +124,7 @@
         </ul>
         <form method="post" action="/checkout/single"><button class="btn btn-ghost btn-sm btn-block" type="submit">Разместить за €49</button></form></div>
 
-      <div class="card tariff" style="border-color: var(--acid);"><b style="font-family: var(--font-display);">Продвижение ⚡</b>
+      <div class="card tariff" style="border-color: var(--acid);"><div class="tariff-ico"><img src="/img/pricing/t-promo.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">Продвижение ⚡</b>
         <div class="salary">€99</div>
         <span class="was">Было <s>€199</s> — сейчас <b>€99</b></span>
         <span class="per">Продвижение вакансии на 60 дней</span>
@@ -101,7 +136,7 @@
         </ul>
         <form method="post" action="/checkout/featured"><button class="btn btn-acid btn-sm btn-block" type="submit">Продвинуть за €99</button></form></div>
 
-      <div class="card tariff"><b style="font-family: var(--font-display);">Безлимит на месяц</b>
+      <div class="card tariff"><div class="tariff-ico"><img src="/img/pricing/t-unlimited.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">Безлимит на месяц</b>
         <div class="salary">€599</div>
         <span class="was">Выгоднее пакета на 10, если публикуете от 15 вакансий в месяц</span>
         <span class="per">Сколько угодно вакансий 30 дней подряд</span>
@@ -114,7 +149,7 @@
     </div>
 
     <div class="tariff-grid row-2" style="margin-top: var(--sp-3);">
-      <div class="card tariff"><b style="font-family: var(--font-display);">Пакет 3 вакансии</b>
+      <div class="card tariff"><div class="tariff-ico"><img src="/img/pricing/t-pack3.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">Пакет 3 вакансии</b>
         <div class="salary">€138</div>
         <span class="was">Поштучно вышло бы <s>€147</s> — в пакете <b>€138</b></span>
         <span class="per">Три размещения по 30 дней каждое</span>
@@ -126,7 +161,7 @@
         </ul>
         <form method="post" action="/checkout/pack3"><button class="btn btn-ghost btn-sm btn-block" type="submit">Взять 3 за €138</button></form></div>
 
-      <div class="card tariff"><b style="font-family: var(--font-display);">Пакет 10 вакансий</b>
+      <div class="card tariff"><div class="tariff-ico"><img src="/img/pricing/t-pack10.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">Пакет 10 вакансий</b>
         <div class="salary">€420</div>
         <span class="was">Поштучно вышло бы <s>€490</s> — в пакете <b>€420</b></span>
         <span class="per">Десять размещений по 30 дней каждое</span>
@@ -142,14 +177,14 @@
     <h2 class="tariff-group-title">Что входит в любое размещение</h2>
     <p class="tariff-group-sub">Цена — это не только строчка в списке вакансий. Вот что работодатель получает по умолчанию, на любом тарифе.</p>
     <div class="perk-grid">
-      <div class="perk"><b>Мини-ATS в кабинете</b><p>Все отклики в одном месте со статусами: новый, просмотрен, интервью, оффер, отказ. Заметки по кандидату и история переписки.</p></div>
-      <div class="perk"><b>Индексация в Google Jobs</b><p>Каждая вакансия отдаётся с разметкой JobPosting и попадает в поиск Google по вакансиям — это дополнительный поток кандидатов помимо самого сайта.</p></div>
-      <div class="perk"><b>Попадание в гео- и SEO-страницы</b><p>Вакансия автоматически появляется в подборках по стране, городу, направлению и языку, а также на странице профессии в картотеке.</p></div>
-      <div class="perk"><b>Страница компании</b><p>Логотип, описание, сайт и все открытые вакансии на одной брендированной странице — её видно и в разделе «Компании», и в поиске.</p></div>
-      <div class="perk"><b>Статистика по вакансии</b><p>Просмотры, отклики, конверсия из просмотра в отклик и источники переходов — видно в кабинете по каждой вакансии.</p></div>
-      <div class="perk"><b>Ручная модерация</b><p>Живой человек проверяет вакансию перед публикацией и подсказывает, что поправить. Обычно занимает до двух часов в рабочее время.</p></div>
-      <div class="perk"><b>Обязательная зарплатная вилка</b><p>Мы не публикуем вакансии без вилки. Это правило поднимает отклик — кандидаты открывают такие вакансии заметно чаще.</p></div>
-      <div class="perk"><b>Анонс в Telegram</b><p>Вакансии с продвижением уходят отдельным постом в канал SpinHire, где сидит аудитория, которая не мониторит сайты каждый день.</p></div>
+      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-ats.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Мини-ATS в кабинете</b><p>Все отклики в одном месте со статусами: новый, просмотрен, интервью, оффер, отказ. Заметки по кандидату и история переписки.</p></div></div>
+      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-google.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Индексация в Google Jobs</b><p>Каждая вакансия отдаётся с разметкой JobPosting и попадает в поиск Google по вакансиям — это дополнительный поток кандидатов помимо самого сайта.</p></div></div>
+      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-seo.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Попадание в гео- и SEO-страницы</b><p>Вакансия автоматически появляется в подборках по стране, городу, направлению и языку, а также на странице профессии в картотеке.</p></div></div>
+      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-company.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Страница компании</b><p>Логотип, описание, сайт и все открытые вакансии на одной брендированной странице — её видно и в разделе «Компании», и в поиске.</p></div></div>
+      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-stats.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Статистика по вакансии</b><p>Просмотры, отклики, конверсия из просмотра в отклик и источники переходов — видно в кабинете по каждой вакансии.</p></div></div>
+      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-moderation.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Ручная модерация</b><p>Живой человек проверяет вакансию перед публикацией и подсказывает, что поправить. Обычно занимает до двух часов в рабочее время.</p></div></div>
+      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-salary.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Обязательная зарплатная вилка</b><p>Мы не публикуем вакансии без вилки. Это правило поднимает отклик — кандидаты открывают такие вакансии заметно чаще.</p></div></div>
+      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-telegram.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Анонс в Telegram</b><p>Вакансии с продвижением уходят отдельным постом в канал SpinHire, где сидит аудитория, которая не мониторит сайты каждый день.</p></div></div>
     </div>
 
     <h2 class="tariff-group-title">Как это работает</h2>
@@ -173,7 +208,7 @@
     <h2 class="tariff-group-title">База резюме и подбор</h2>
     <p class="tariff-group-sub">Профили видно бесплатно. Платите только за открытие контакта — цена на уровне рынка (Indeed ~€5 за контакт).</p>
     <div class="tariff-grid">
-      <div class="card tariff"><b style="font-family: var(--font-display);">1 контакт</b>
+      <div class="card tariff"><div class="tariff-ico"><img src="/img/pricing/t-cv1.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">1 контакт</b>
         <div class="salary">€5</div><span class="per">Одно открытие контактов кандидата</span>
         <ul>
           <li>Telegram и e-mail каждого кандидата</li>
@@ -183,7 +218,7 @@
         </ul>
         <form method="post" action="/checkout/cv1"><button class="btn btn-ghost btn-sm btn-block" type="submit">Открыть 1 контакт за €5</button></form></div>
 
-      <div class="card tariff"><b style="font-family: var(--font-display);">40 контактов</b>
+      <div class="card tariff"><div class="tariff-ico"><img src="/img/pricing/t-cv40.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">40 контактов</b>
         <div class="salary">€200</div><span class="per">Пакет открытий для активного найма</span>
         <span class="unit">€5 за контакт</span>
         <ul>
@@ -193,7 +228,7 @@
         </ul>
         <form method="post" action="/checkout/cv40"><button class="btn btn-ghost btn-sm btn-block" type="submit">Взять 40 контактов</button></form></div>
 
-      <div class="card tariff pinkc" style="border-color: var(--pink);"><b style="font-family: var(--font-display);">Подбор под ключ</b>
+      <div class="card tariff pinkc" style="border-color: var(--pink);"><div class="tariff-ico"><img src="/img/pricing/t-hunt.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">Подбор под ключ</b>
         <div class="salary" style="color: var(--pink);">1 зарплата</div><span class="per">Полный поиск и найм одного сотрудника</span>
         <ul>
           <li>Предоплата €1 000 для начала поиска</li>

@@ -43,6 +43,13 @@
 
   --container: 1240px;
   --radius: 14px;
+
+  /* моторика: пружинистые кривые вместо дефолтного ease */
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  /* внутренний световой кант сверху — карточка читается как «стекло на подложке» */
+  --bezel: inset 0 1px 0 oklch(1 0 0 / 0.05);
+  --shadow-lift: 0 14px 34px oklch(0.02 0.01 170 / 0.45);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -57,6 +64,15 @@
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 html { scroll-behavior: smooth; }
+
+::selection { background: var(--acid); color: var(--on-acid); }
+
+/* киношное зерно поверх всего — убирает «плоскую цифру», почти незаметно */
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 120; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.028; mix-blend-mode: overlay;
+}
 
 body {
   font-family: var(--font-body);
@@ -116,16 +132,20 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 .kicker {
   font-family: var(--font-body);
   font-weight: 700;
-  font-size: 0.72rem;
-  letter-spacing: 0.22em;
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--acid);
   display: inline-flex;
   align-items: center;
-  gap: var(--sp-2);
+  gap: 8px;
+  padding: 5px 12px;
+  border: 1px solid color-mix(in oklch, var(--acid) 32%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--acid) 7%, transparent);
 }
-.kicker::before { content: "▮▮"; font-size: 0.6rem; letter-spacing: 0.1em; }
-.kicker.pink { color: var(--pink); }
+.kicker::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+.kicker.pink { color: var(--pink); border-color: color-mix(in oklch, var(--pink) 34%, transparent); background: color-mix(in oklch, var(--pink) 8%, transparent); }
 
 .lead { font-size: 1.12rem; color: var(--ink-dim); max-width: 62ch; }
 
@@ -210,17 +230,18 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   text-decoration: none; text-transform: uppercase; letter-spacing: 0.03em;
   padding: 12px 22px;
   border: 1px solid transparent;
-  border-radius: 10px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease, border-color 0.15s;
+  border-radius: 12px;
+  transition: transform 0.45s var(--ease-spring), box-shadow 0.45s var(--ease-spring), filter 0.2s var(--ease), border-color 0.2s var(--ease), background-color 0.2s var(--ease), color 0.2s var(--ease);
 }
+.btn:active { transform: scale(0.97); transition-duration: 0.1s; }
 .btn-acid {
   background: var(--acid); color: var(--on-acid);
   box-shadow: var(--shadow-acid);
 }
-.btn-acid:hover { transform: translateY(-1px); filter: brightness(1.06); }
+.btn-acid:hover { transform: translateY(-2px); filter: brightness(1.07); box-shadow: 0 14px 38px oklch(0.80 0.19 162 / 0.30); }
 .btn-acid:active { transform: translateY(0); }
 .btn-pink { background: var(--pink); color: var(--on-pink); box-shadow: var(--shadow-pink); }
-.btn-pink:hover { transform: translateY(-1px); filter: brightness(1.06); }
+.btn-pink:hover { transform: translateY(-2px); filter: brightness(1.07); box-shadow: 0 14px 38px oklch(0.68 0.25 350 / 0.28); }
 .btn-ghost {
   background: transparent; color: var(--ink);
   border-color: var(--line-strong);
@@ -235,8 +256,8 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   display: inline-block;
   font-size: 0.72rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.05em;
-  padding: 3px 10px;
-  border-radius: 6px;
+  padding: 3px 11px;
+  border-radius: 999px;
   border: 1px solid var(--line);
   color: var(--ink-dim);
   background: var(--surface-2);
@@ -252,6 +273,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: var(--sp-5);
+  box-shadow: var(--bezel);
 }
 
 /* job card */
@@ -265,11 +287,14 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   gap: var(--sp-4);
   align-items: start;
   text-decoration: none;
-  transition: border-color 0.15s ease;
+  box-shadow: var(--bezel);
+  transition: border-color 0.25s var(--ease), transform 0.45s var(--ease-spring), box-shadow 0.45s var(--ease-spring);
   position: relative;
 }
 .job-card:hover {
-  border-color: var(--acid);
+  border-color: color-mix(in oklch, var(--acid) 55%, var(--line));
+  transform: translateY(-2px);
+  box-shadow: var(--bezel), var(--shadow-lift);
 }
 .job-card[hidden] { display: none; }
 .job-card__logo {
@@ -315,7 +340,8 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 }
 .input:focus, .select:focus, textarea.input:focus {
   outline: none; border-color: var(--acid);
-  box-shadow: 3px 3px 0 oklch(from var(--acid) l c h / 0.35);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--acid) 22%, transparent);
+  transition: border-color 0.2s var(--ease), box-shadow 0.3s var(--ease);
 }
 .input::placeholder { color: var(--ink-faint); }
 .select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--acid) 50%), linear-gradient(135deg, var(--acid) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 12px) 50%; background-size: 6px 6px; background-repeat: no-repeat; padding-right: 36px; }
@@ -519,6 +545,29 @@ main > .section:nth-of-type(even) {
   .footer-bottom .consent-settings { order: 3; justify-self: end; }
   .footer-bottom .footer-language { order: 4; }
   .footer-bottom .theme-toggle { order: 5; justify-self: end; }
+}
+
+
+/* ---------- scroll-reveal: тяжёлое мягкое всплытие при входе в вьюпорт ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .io-reveal { opacity: 0; transform: translateY(18px); filter: blur(5px);
+    transition: opacity 0.8s var(--ease), transform 0.8s var(--ease-spring), filter 0.8s var(--ease);
+    transition-delay: calc(var(--io-i, 0) * 70ms); will-change: transform, opacity; }
+  .io-reveal.io-in { opacity: 1; transform: none; filter: none; will-change: auto; }
+}
+
+
+/* ---------- микро-моторика: стрелки и плитки живут под курсором ---------- */
+.cat-card .count, .link-more { transition: transform 0.4s var(--ease-spring), color 0.2s var(--ease); }
+.cat-card:hover .count { transform: translateX(5px); color: var(--acid); }
+.link-more:hover { transform: translateX(3px); }
+.cat-card, .company-tile, .event-card, .mkt-card, .fact, .salary-tile, .co-card, .post-card, .prof-card, .game-card, .evc {
+  transition: border-color 0.25s var(--ease), transform 0.45s var(--ease-spring), box-shadow 0.45s var(--ease-spring);
+  box-shadow: var(--bezel);
+}
+.cat-card:hover, .company-tile:hover, .event-card:hover, .co-card:hover, .post-card:hover, .prof-card:hover, .game-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--bezel), var(--shadow-lift);
 }
 
 /* 3d tilt */

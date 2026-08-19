@@ -62,7 +62,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet">
 <script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="css/style.css?v=20260819c">
+<link rel="stylesheet" href="css/style.css?v=20260820a">
 <style>
 
   .hero {
@@ -157,11 +157,12 @@
   .company-tile {
     border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
     padding: var(--sp-5);
-    text-decoration: none; text-align: left;
+    text-decoration: none; text-align: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
     transition: transform 0.12s cubic-bezier(0.22,1,0.36,1), border-color 0.12s, box-shadow 0.12s;
   }
   .company-tile:hover { border-color: var(--acid); }
-  .company-tile .job-card__logo { margin-bottom: var(--sp-3); background:#fff; overflow:hidden; }
+  .company-tile .job-card__logo { margin: 0 auto var(--sp-3); background:#fff; overflow:hidden; }
   .company-tile .job-card__logo img { width:100%; height:100%; padding:7px; object-fit:contain; display:block; }
   .company-tile b { display: block; font-size: 1rem; }
   .company-tile span { color: var(--ink-faint); font-size: 0.8rem; }
@@ -214,8 +215,9 @@
   .hp-slot__msg { color: var(--ink-dim); margin: 8px 0 14px; min-height: 1.4em; }
   .hp-slot__btns { display: flex; gap: 10px; flex-wrap: wrap; }
   .hp-controls { position:relative; z-index:1; display:flex; flex-direction:column; align-items:flex-start; gap:16px; }
-  .hp-section-head { margin-bottom:var(--sp-5); max-width:900px; }
-  .hp-section-head h2 { margin-top:8px; font-size:clamp(1.65rem,3.4vw,3rem); }
+  .hp-section-head { margin-bottom:var(--sp-5); }
+  .hp-section-head h2 { margin-top:8px; font-size:clamp(1.65rem,3vw,2.75rem); }
+  @media (min-width: 761px) { .hp-section-head h2 { white-space:nowrap; } }
   .hp-balance { font-family:var(--font-display); font-size:clamp(1.35rem,3vw,2rem); font-weight:800; }
   .hp-balance b { color:var(--acid); }
   .hp-links { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
@@ -331,6 +333,11 @@
   }
 
   /* события */
+  .event-hero__top { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .event-org { display:inline-flex; align-items:center; gap:7px; font-size:0.74rem; font-weight:700; color:var(--ink-dim); letter-spacing:0.04em; text-transform:uppercase; }
+  .event-org img { width:22px; height:22px; border-radius:5px; background:#fff; padding:2px; object-fit:contain; display:block; }
+  .event-hero__top .event-org img { width:28px; height:28px; }
+  .event-card .event-org { margin-bottom:2px; }
   .events-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); }
   @media (max-width: 860px) { .events-grid { grid-template-columns: 1fr; } }
   .event-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-2); }
@@ -481,7 +488,6 @@
     <a href="index.html" class="logo" aria-label="SpinHire — главная"><img class="logo__mark" src="/img/spinhire-slot.svg" alt="" width="60" height="36">spin<b>hire</b></a>
     <nav class="main-nav" aria-label="Основная навигация">
       <a href="jobs.html">Вакансии</a>
-      <a href="/professions">Профессии</a>
       <a href="companies.html">Компании</a>
       <a href="blog.html">Блог</a>
       <a href="post-job.html">Работодателям</a>
@@ -636,7 +642,7 @@
       <article class="event-hero" id="event-hero" hidden>
         <div class="event-hero__media"><img id="eventHeroImg" alt="" loading="lazy"></div>
         <div class="event-hero__body">
-          <span class="event-hero__badge" id="eventHeroBadge">Ближайшее событие</span>
+          <div class="event-hero__top"><span class="event-hero__badge" id="eventHeroBadge">Ближайшее событие</span><span class="event-org" id="eventHeroOrg" hidden><img alt="" width="20" height="20"><b></b></span></div>
           <h3 id="eventHeroTitle"></h3>
           <p class="event-hero__when" id="eventHeroWhen"></p>
           <p class="event-hero__desc" id="eventHeroDesc"></p>
@@ -901,7 +907,7 @@
   const colors = ['var(--pink)', 'var(--acid)', 'var(--yellow)', 'var(--violet)', 'var(--surface-2)', 'var(--acid)'];
   fetch('/api/featured-jobs').then(r => r.ok ? r.json() : []).then(jobs => {
     if (!jobs.length) { box.innerHTML = '<p style="color: var(--ink-faint); padding: 16px;">Смотрите <a href="/jobs" style="color: var(--acid);">все вакансии →</a></p>'; return; }
-    box.innerHTML = jobs.map((j, i) => `
+    box.innerHTML = jobs.slice(0, 5).map((j, i) => `
       <a class="job-card" href="/job/${j.id}">
         <div class="job-card__logo" style="background: ${j.logo_url ? 'var(--surface-2)' : colors[i % 6]}; color: var(--bg-deep); overflow: hidden;" aria-hidden="true">
           ${j.logo_url
@@ -910,8 +916,7 @@
         </div>
         <div>
           <h3 class="job-card__title">${j.title}</h3>
-          <p class="job-card__meta"><b>${j.company}</b> · ${j.location} · ${j.fmt}</p>
-          <div class="job-card__tags">${j.cat ? `<span class="tag">${j.cat}</span>` : ''}</div>
+          <p class="job-card__meta" style="margin-bottom:0"><b>${j.company}</b> · ${j.location} · ${j.fmt}${j.cat ? ' · ' + j.cat : ''}</p>
         </div>
         <div class="job-card__side">
           <span class="salary"${j.salary === 'по запросу' ? ' style="color: var(--ink-faint); font-size: 0.9rem;"' : ''}>${j.salary}</span>
@@ -941,6 +946,14 @@
       image: '/img/events/sigma-europe-malta.jpg', cat: 'Конференция', attendees: 'мальтийские операторы и десятки сайд-ивентов',
       desc: 'Мальтийская неделя iGaming: конференция плюс десятки сайд-ивентов. Лучшее место для тех, кто планирует релокацию на остров.' },
   ];
+  // Организатор события — логотип берём с сайта организатора (как фавиконки компаний)
+  const ORGS = [[/sbc/i,'SBC Events','/img/events/org/sbc.png'],[/sigma/i,'SiGMA','/img/events/org/sigma.png'],[/\bice\b/i,'ICE · Clarion','/img/events/org/ice.png'],[/igb|affiliate/i,'iGB','/img/events/org/igb.png']];
+  function organizer(e) {
+    for (const [re, name, logo] of ORGS) if (re.test(e.t || '')) return { name, logo };
+    try { if (e.url) { const host = new URL(e.url).hostname.replace(/^www\./, ''); return { name: host, logo: 'https://www.google.com/s2/favicons?domain=' + host + '&sz=64' }; } } catch (_) {}
+    return null;
+  }
+  const orgHTML = e => { const o = organizer(e); return o ? `<span class="event-org"><img src="${o.logo}" alt="" width="20" height="20" onerror="this.remove()"><b>${o.name}</b></span>` : ''; };
   function promoCode(t){ let h=0; for(const c of (t||'')) h=(h*31+c.charCodeAt(0))>>>0; return 'SPINHIRE-'+h.toString(36).toUpperCase().slice(0,5); }
 
   // Ближайшее событие показываем крупно: обложка, описание и кто там будет.
@@ -953,6 +966,8 @@
     else { media.hidden = true; hero.style.gridTemplateColumns = '1fr'; }
     document.getElementById('eventHeroBadge').textContent = event.cat || 'Ближайшее событие';
     document.getElementById('eventHeroTitle').textContent = event.t;
+    const orgEl = document.getElementById('eventHeroOrg'), org = organizer(event);
+    if (org) { orgEl.hidden = false; orgEl.querySelector('img').src = org.logo; orgEl.querySelector('img').onerror = function(){ this.remove(); }; orgEl.querySelector('b').textContent = org.name; }
     const until = Math.ceil((new Date(event.dt) - new Date()) / 86400000);
     document.getElementById('eventHeroWhen').textContent =
       `${event.d} ${event.mon} ${event.y}${event.city ? ' · ' + event.city : ''}` +
@@ -977,6 +992,7 @@
     events = list.slice(1, 4);   // под крупным блоком — только три ближайших
     grid.innerHTML = events.map((e, i) => `
       <div class="event-card">
+        ${orgHTML(e)}
         <span class="ev-date">${e.d} <span class="mon">${e.mon} ${e.y}</span></span>
         <h3>${e.t}</h3>
         <p class="ev-place">${e.city || ''}</p>
@@ -1163,6 +1179,6 @@
   document.addEventListener('keydown', event => { if (event.key === 'Escape') { setOpen(false); trigger.focus(); } });
 })();
 </script>
-<script src="js/app.js?v=20260819e"></script>
+<script src="js/app.js?v=20260820a"></script>
 </body>
 </html>
