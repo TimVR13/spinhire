@@ -63,6 +63,7 @@
       <a href="/blog.html">Блог</a>
       <a href="/post-job" {% if active == 'employer' %}class="active"{% endif %}>Работодателям</a>
       <a href="/profile#cv" class="nav-cta-mobile" style="color: var(--acid); font-weight: 700;">+ Добавить CV</a>
+      {% if not user %}<a href="/login" class="nav-cta-mobile">Войти</a>{% endif %}
     </nav>
     <div class="header-actions">
       {% if user %}

@@ -214,6 +214,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const burger = document.querySelector('.nav-burger');
   const nav = document.querySelector('.main-nav');
   if (burger && nav) {
+    // «Войти» живёт в бургере: в шапке на мобиле его нет
+    if (!nav.querySelector('[data-auth], a[href^="/login"]')) {
+      const loginLink = document.createElement('a');
+      loginLink.href = '/login';
+      loginLink.className = 'nav-cta-mobile';
+      if (document.querySelector('.modal-backdrop#auth-modal')) loginLink.setAttribute('data-auth', '');
+      loginLink.textContent = 'Войти';
+      nav.appendChild(loginLink);
+    }
     burger.setAttribute('aria-expanded', 'false');
     burger.setAttribute('aria-controls', 'main-nav');
     nav.id = nav.id || 'main-nav';
