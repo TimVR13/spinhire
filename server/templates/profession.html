@@ -4,6 +4,7 @@
 {% block title %}{{ role.title }} в iGaming: обязанности, навыки и зарплата {{ salary_headline }} | SpinHire{% endblock %}
 {% block desc %}{{ role.title }} ({{ role.title_en }}) в iGaming: чем занимается, за что отвечает, какие навыки нужны и сколько платят — {{ salary_headline }} на Мальте и Кипре, вилки по грейдам и регионам.{% endblock %}
 {% block robots %}<link rel="canonical" href="https://spinhire.io/profession/{{ role.slug }}">
+<link rel="alternate" type="text/markdown" href="https://spinhire.io/profession/{{ role.slug }}.md" title="Текстовая версия для языковых моделей">
 <meta property="og:type" content="article">
 <meta property="og:title" content="{{ role.title }} в iGaming — обязанности и зарплата">
 <meta property="og:description" content="{{ role.lead }}">

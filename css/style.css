@@ -265,13 +265,11 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   gap: var(--sp-4);
   align-items: start;
   text-decoration: none;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s;
+  transition: border-color 0.15s ease;
   position: relative;
 }
 .job-card:hover {
-  border-color: var(--line-strong);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-dark);
+  border-color: var(--acid);
 }
 .job-card__logo {
   width: 56px; height: 56px;
@@ -661,3 +659,18 @@ main > .section:nth-of-type(even) {
 .mkt-roles .mkt-count { color: var(--ink-faint); font-size: 0.78rem; }
 .mkt-upd { color: var(--ink-faint); font-size: 0.75rem; margin-top: 14px; }
 .company-tile__hq { display: block; color: var(--ink-faint); font-size: 0.72rem; margin-top: 2px; }
+
+/* ---------- Ближайшее событие на главной ---------- */
+.event-hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 0; border: 2px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); margin-bottom: var(--sp-4); }
+.event-hero__media { position: relative; min-height: 260px; background: var(--bg-deep); }
+.event-hero__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.event-hero__body { padding: var(--sp-5); display: flex; flex-direction: column; gap: 10px; }
+.event-hero__badge { align-self: flex-start; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--on-acid); background: var(--acid); padding: 4px 10px; border-radius: 4px; }
+.event-hero__body h3 { font-family: var(--font-display); font-size: clamp(1.2rem, 2.4vw, 1.8rem); line-height: 1.15; }
+.event-hero__when { color: var(--acid); font-weight: 700; font-size: 0.92rem; }
+.event-hero__desc { color: var(--ink-dim); line-height: 1.6; font-size: 0.92rem; }
+.event-hero__who { color: var(--ink); font-size: 0.88rem; }
+.event-hero__who b { color: var(--acid); }
+.event-hero__promo { color: var(--emerald, var(--acid)); font-size: 0.86rem; font-weight: 700; }
+.event-hero__actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: auto; padding-top: 6px; }
+@media (max-width: 860px) { .event-hero { grid-template-columns: 1fr; } .event-hero__media { min-height: 180px; } }

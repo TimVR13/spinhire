@@ -24,7 +24,11 @@
     <span class="kicker">Цена запуска · действует до 30 сентября 2026</span>
     <p style="color: var(--ink-dim); max-width: 74ch; margin: 10px 0 var(--sp-4); font-size: 0.95rem;">Одна вакансия стоит столько же, сколько у международных iGaming-бордов, но чем больше вы нанимаете, тем дешевле выходит каждое размещение. Всё раздельно и прозрачно: разместить вакансию, открыть контакты кандидатов из базы или отдать поиск нам под ключ.</p>
     <style>
+      /* Первый ряд — три разовых тарифа, второй — два пакетных по центру. */
       .tariff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: var(--sp-3); margin-top: var(--sp-4); }
+      .tariff-grid.row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .tariff-grid.row-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: calc((100% - 2 * var(--sp-3)) / 3 * 2 + var(--sp-3)); margin-inline: auto; }
+      @media (max-width: 900px) { .tariff-grid.row-3, .tariff-grid.row-2 { grid-template-columns: 1fr; max-width: 480px; margin-inline: auto; } }
       .tariff { display: flex; flex-direction: column; }
       .tariff .salary { font-size: 1.7rem; margin: 6px 0 2px; }
       .tariff .was { display: block; color: var(--ink-faint); font-size: 0.82rem; margin-bottom: 6px; }
@@ -55,7 +59,7 @@
 
     <h2 class="tariff-group-title" style="margin-top: 0;">Разместить вакансию</h2>
     <p class="tariff-group-sub">Разовое размещение стоит €49. Пакеты не сгорают месяц в месяц — вакансии из пакета можно публиковать в течение года.</p>
-    <div class="tariff-grid">
+    <div class="tariff-grid row-3">
       <div class="card tariff"><b style="font-family: var(--font-display);">Одна вакансия</b>
         <div class="salary">€49</div>
         <span class="was">Было <s>€99</s> — сейчас <b>€49</b></span>
@@ -80,6 +84,19 @@
         </ul>
         <form method="post" action="/checkout/featured"><button class="btn btn-acid btn-sm btn-block" type="submit">Продвинуть за €99</button></form></div>
 
+      <div class="card tariff"><b style="font-family: var(--font-display);">Безлимит на месяц</b>
+        <div class="salary">€599</div>
+        <span class="was">Выгоднее пакета на 10, если публикуете от 15 вакансий в месяц</span>
+        <span class="per">Сколько угодно вакансий 30 дней подряд</span>
+        <ul>
+          <li>Для активного набора смен и саппорта</li>
+          <li>Все вакансии сразу с брендом компании</li>
+          <li>Приоритетная модерация в течение часа</li>
+        </ul>
+        <form method="post" action="/checkout/unlim30"><button class="btn btn-ghost btn-sm btn-block" type="submit">Открыть безлимит</button></form></div>
+    </div>
+
+    <div class="tariff-grid row-2" style="margin-top: var(--sp-3);">
       <div class="card tariff"><b style="font-family: var(--font-display);">Пакет 3 вакансии</b>
         <div class="salary">€138</div>
         <span class="was">Поштучно вышло бы <s>€147</s> — в пакете <b>€138</b></span>
@@ -103,18 +120,6 @@
           <li>Страница компании со всеми открытыми ролями</li>
         </ul>
         <form method="post" action="/checkout/pack10"><button class="btn btn-ghost btn-sm btn-block" type="submit">Взять 10 за €420</button></form></div>
-
-      <div class="card tariff"><b style="font-family: var(--font-display);">Безлимит на месяц</b>
-        <div class="salary">€599</div>
-        <span class="was">Выгоднее пакета на 10, если публикуете от 15 вакансий в месяц</span>
-        <span class="per">Сколько угодно вакансий 30 дней подряд</span>
-        <ul>
-          <li>Для активного набора смен и саппорта</li>
-          <li>Все вакансии сразу с брендом компании</li>
-          <li>Приоритетная модерация в течение часа</li>
-        </ul>
-        <form method="post" action="/checkout/unlim30"><button class="btn btn-ghost btn-sm btn-block" type="submit">Открыть безлимит</button></form></div>
-
     </div>
 
     <h2 class="tariff-group-title">Что входит в любое размещение</h2>

@@ -3,6 +3,7 @@
 {% block title %}{{ company }} — вакансии компании | SpinHire{% endblock %}
 {% block desc %}{% if public and (public.description_ru or public.description) %}{{ (public.description_ru or public.description)[:150] }}{% else %}{{ company }}: {{ jobs|length }} открытых iGaming-вакансий на SpinHire. {{ locations|join(', ') }}.{% endif %}{% endblock %}
 {% block robots %}<link rel="canonical" href="https://spinhire.io/company/{{ jobs[0].company_slug }}">
+<link rel="alternate" type="text/markdown" href="https://spinhire.io/company/{{ jobs[0].company_slug }}.md" title="Текстовая версия для языковых моделей">
 <meta property="og:type" content="website"><meta property="og:title" content="{{ company }} — вакансии iGaming">
 <meta property="og:description" content="{{ jobs|length }} открытых вакансий {{ company }} на SpinHire.">
 <meta property="og:url" content="https://spinhire.io/company/{{ jobs[0].company_slug }}">

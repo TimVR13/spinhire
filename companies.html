@@ -16,6 +16,8 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/img/favicons/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="/img/favicons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/img/favicons/apple-touch-icon.png">
 <meta name="description" content="Каталог iGaming-работодателей: Betsson Group, SOFTSWISS, Evolution, GR8 Tech и другие. Открытые вакансии с прямыми ссылками на источники, типы компаний и хабы.">
 <link rel="canonical" href="https://spinhire.io/companies.html">
 <meta property="og:type" content="website">
@@ -37,7 +39,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20260819">
+<link rel="stylesheet" href="css/style.css?v=20260819b">
 <style>
   .co-filters { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-block: var(--sp-5); }
   .co-filters .tag { padding: 7px 14px; font-size: 0.8rem; cursor: pointer; }
@@ -50,7 +52,7 @@
     display: flex; flex-direction: column; min-height: 100%;
     transition: transform 0.12s cubic-bezier(0.22,1,0.36,1), border-color 0.12s, box-shadow 0.12s;
   }
-  .co-card:hover { border-color: var(--acid); transform: translate(-3px,-3px); box-shadow: var(--shadow-dark); }
+  .co-card:hover { border-color: var(--acid); }
   .co-card__head { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); }
   .co-card__head .job-card__logo { width:56px; height:56px; flex:0 0 56px; aspect-ratio:1; overflow:hidden; border-radius:12px; }
   .co-card b { font-family: var(--font-display); font-size: 1rem; }
@@ -193,6 +195,7 @@
           <li><a href="jobs.html">Вакансии</a></li>
           <li><a href="profile.html">Мой профиль</a></li>
           <li><a href="/professions">Профессии и зарплаты</a></li>
+          <li><a href="events.html">Календарь событий</a></li>
           <li><a href="index.html#salaries">Гид по зарплатам</a></li>
           <li><a href="games.html">🎡 Игровая зона</a></li>
           <li><a href="blog.html">Карьерный блог</a></li>
@@ -248,6 +251,6 @@
 <script>
 (function(){const table=document.getElementById('companyTable');if(!table)return;const rows=[...table.querySelectorAll('.co-row')],search=document.getElementById('companySearch'),sort=document.getElementById('companySort'),empty=document.getElementById('companyEmpty');function render(){const q=search.value.trim().toLocaleLowerCase('ru');const ordered=[...rows].sort((a,b)=>sort.value==='name'?a.dataset.name.localeCompare(b.dataset.name,'ru'):Number(b.dataset.jobs)-Number(a.dataset.jobs)||a.dataset.name.localeCompare(b.dataset.name,'ru'));let shown=0;ordered.forEach(row=>{const ok=row.textContent.toLocaleLowerCase('ru').includes(q);row.hidden=!ok;if(ok){table.insertBefore(row,empty);shown++}});empty.hidden=shown!==0}search.addEventListener('input',render);sort.addEventListener('change',render);render()})();
 </script>
-<script src="js/app.js?v=20260819"></script>
+<script src="js/app.js?v=20260819b"></script>
 </body>
 </html>

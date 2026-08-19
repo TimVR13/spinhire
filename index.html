@@ -16,6 +16,8 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/img/favicons/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="/img/favicons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/img/favicons/apple-touch-icon.png">
 <meta name="description" content="Самый дерзкий джоб-борд iGaming-индустрии. живые вакансии: казино, беттинг, геймдев, аффилейты, комплаенс, платежи. Зарплаты открыты, релокация и крипто-оплата отмечены.">
 <link rel="canonical" href="https://spinhire.io/">
 <link rel="alternate" hreflang="ru" href="https://spinhire.io/">
@@ -60,7 +62,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet">
 <script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="css/style.css?v=20260819">
+<link rel="stylesheet" href="css/style.css?v=20260819b">
 <style>
 
   .hero {
@@ -136,14 +138,14 @@
     display: flex; align-items: center; gap: var(--sp-3);
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s;
   }
-  .cat-card:hover { border-color: var(--line-strong); transform: translateY(-2px); box-shadow: var(--shadow-dark); }
+  .cat-card:hover { border-color: var(--acid); }
   .cat-card { padding: var(--sp-4); gap: var(--sp-4); }
   .cat-card .cat-ico { width: 60px; height: 60px; flex-shrink: 0; border-radius: 15px; display: grid; place-items: center;
     background: color-mix(in oklch, var(--acid) 12%, var(--surface-2));
     border: 1px solid color-mix(in oklch, var(--acid) 34%, transparent);
     color: var(--acid); transition: box-shadow 0.15s, transform 0.15s; }
   .cat-card .cat-ico svg { width: 34px; height: 34px; display: block; }
-  .cat-card:hover .cat-ico { box-shadow: 0 0 22px color-mix(in oklch, var(--acid) 45%, transparent); transform: scale(1.06); }
+  .cat-card:hover .cat-ico { box-shadow: 0 0 22px color-mix(in oklch, var(--acid) 45%, transparent); }
   .cat-card b { font-weight: 600; font-size: 1rem; flex: 1; }
   .cat-card .count { font-family: var(--font-display); font-weight: 800; color: var(--ink-faint); font-size: 1rem; }
 
@@ -158,7 +160,7 @@
     text-decoration: none; text-align: left;
     transition: transform 0.12s cubic-bezier(0.22,1,0.36,1), border-color 0.12s, box-shadow 0.12s;
   }
-  .company-tile:hover { border-color: var(--line-strong); transform: translate(-2px,-2px); box-shadow: var(--shadow-dark); }
+  .company-tile:hover { border-color: var(--acid); }
   .company-tile .job-card__logo { margin-bottom: var(--sp-3); background:#fff; overflow:hidden; }
   .company-tile .job-card__logo img { width:100%; height:100%; padding:7px; object-fit:contain; display:block; }
   .company-tile b { display: block; font-size: 1rem; }
@@ -169,7 +171,7 @@
   @media (max-width: 760px) { .game-cards { grid-template-columns: 1fr; } }
   .game-card { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
     background: var(--surface); text-decoration: none; color: inherit; transition: transform .15s, border-color .15s, box-shadow .15s; }
-  .game-card:hover { transform: translateY(-3px); border-color: var(--acid); box-shadow: 0 0 26px color-mix(in oklch, var(--acid) 32%, transparent); }
+  .game-card:hover { border-color: var(--acid); }
   .game-card__img { height: 156px; background-size: cover; background-position: center; position: relative; }
   .game-card__img::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 45%, oklch(0.10 0.006 285 / 0.85)); }
   .game-card__body { padding: var(--sp-4); }
@@ -507,6 +509,21 @@
         <div><span class="kicker">Куда идти нетворкать</span><h2>Календарь событий iGaming</h2></div>
         <a class="link-more" href="events.html">Весь календарь →</a>
       </div>
+      <article class="event-hero" id="event-hero" hidden>
+        <div class="event-hero__media"><img id="eventHeroImg" src="" alt="" loading="lazy"></div>
+        <div class="event-hero__body">
+          <span class="event-hero__badge" id="eventHeroBadge">Ближайшее событие</span>
+          <h3 id="eventHeroTitle"></h3>
+          <p class="event-hero__when" id="eventHeroWhen"></p>
+          <p class="event-hero__desc" id="eventHeroDesc"></p>
+          <p class="event-hero__who" id="eventHeroWho" hidden></p>
+          <p class="event-hero__promo" id="eventHeroPromo" hidden></p>
+          <div class="event-hero__actions">
+            <a class="btn btn-acid btn-sm" id="eventHeroLink" href="events.html" target="_blank" rel="nofollow noopener external">Сайт события ↗</a>
+            <a class="btn btn-ghost btn-sm" href="events.html">Весь календарь →</a>
+          </div>
+        </div>
+      </article>
       <div class="events-grid" id="events-grid"></div>
     </div>
   </section>
@@ -693,6 +710,7 @@
           <li><a href="jobs.html">Вакансии</a></li>
           <li><a href="profile.html">Мой профиль</a></li>
           <li><a href="/professions">Профессии и зарплаты</a></li>
+          <li><a href="events.html">Календарь событий</a></li>
           <li><a href="index.html#salaries">Гид по зарплатам</a></li>
           <li><a href="games.html">🎡 Игровая зона</a></li>
           <li><a href="blog.html">Карьерный блог</a></li>
@@ -791,7 +809,38 @@
     { d: '21', mon: 'сен', y: '2027', t: 'SBC Summit Lisbon', city: '🇵🇹 Лиссабон, Португалия', dt: '2027-09-21', end: '2027-09-23' },
   ];
   function promoCode(t){ let h=0; for(const c of (t||'')) h=(h*31+c.charCodeAt(0))>>>0; return 'SPINHIRE-'+h.toString(36).toUpperCase().slice(0,5); }
+
+  // Ближайшее событие показываем крупно: обложка, описание и кто там будет.
+  function renderHero(event) {
+    const hero = document.getElementById('event-hero');
+    if (!hero || !event) return null;
+    const img = document.getElementById('eventHeroImg');
+    if (event.image) { img.src = event.image; img.alt = event.t; }
+    else { hero.querySelector('.event-hero__media').hidden = true; hero.style.gridTemplateColumns = '1fr'; }
+    document.getElementById('eventHeroBadge').textContent = event.cat || 'Ближайшее событие';
+    document.getElementById('eventHeroTitle').textContent = event.t;
+    const until = Math.ceil((new Date(event.dt) - new Date()) / 86400000);
+    document.getElementById('eventHeroWhen').textContent =
+      `${event.d} ${event.mon} ${event.y}${event.city ? ' · ' + event.city : ''}` +
+      (until > 0 ? ` · через ${until} ${until % 10 === 1 && until % 100 !== 11 ? 'день' : until % 10 >= 2 && until % 10 <= 4 && (until % 100 < 10 || until % 100 >= 20) ? 'дня' : 'дней'}` : '');
+    document.getElementById('eventHeroDesc').textContent = event.desc ||
+      'Профильная встреча индустрии: операторы, провайдеры и аффилейты в одном месте. Лучший способ найти работу в iGaming без резюме — вживую.';
+    const who = document.getElementById('eventHeroWho');
+    if (event.attendees) { who.hidden = false; who.innerHTML = 'Ожидается: <b>' + event.attendees + '</b>'; }
+    const promo = document.getElementById('eventHeroPromo');
+    const code = event.promo || promoCode(event.t) + ' — −10% на билет';
+    promo.hidden = false; promo.textContent = '🎟 ' + code;
+    const link = document.getElementById('eventHeroLink');
+    if (event.url) { link.href = event.url; } else { link.hidden = true; }
+    hero.hidden = false;
+    return event;
+  }
+
   function render(events) {
+    const upcoming = events.filter(e => !e.dt || new Date(e.end || e.dt) >= new Date());
+    const list = upcoming.length ? upcoming : events;
+    renderHero(list[0]);
+    events = list.slice(1);
     grid.innerHTML = events.map((e, i) => `
       <div class="event-card">
         <span class="ev-date">${e.d} <span class="mon">${e.mon} ${e.y}</span></span>
@@ -939,6 +988,6 @@
   document.addEventListener('keydown', event => { if (event.key === 'Escape') { setOpen(false); trigger.focus(); } });
 })();
 </script>
-<script src="js/app.js?v=20260819"></script>
+<script src="js/app.js?v=20260819b"></script>
 </body>
 </html>

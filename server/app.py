@@ -72,8 +72,19 @@ signer = URLSafeSerializer(SECRET, salt="session")
 
 CATEGORIES = ["Операции казино", "Беттинг и трейдинг", "Разработка игр",
               "Аффилейты и медиабаинг", "Комплаенс и AML", "Платежи и антифрод",
-              "Саппорт (языки)", "Маркетинг и CRM", "Данные и BI", "Топ-менеджмент"]
-FORMATS = ["офис", "гибрид", "удалёнка", "удалёнка ЕС"]
+              "Поддержка игроков", "Маркетинг и CRM", "Данные и BI", "Топ-менеджмент"]
+FORMATS = ["офис", "гибрид", "удалёнка"]
+
+
+
+def script_language(text: str):
+    """Определить язык текста вакансии по алфавиту: украинский → русский → английский."""
+    sample = (text or "")[:4000].lower()
+    if re.search(r"[іїєґ]", sample):
+        return ("uk", "Українська")
+    if re.search(r"[а-яё]", sample):
+        return ("ru", "Русский")
+    return ("en", "English")
 
 
 class User(Base):
@@ -139,14 +150,18 @@ class Job(Base):
 
     @property
     def language_list(self):
-        """Языки работы из явных тегов и текста вакансии."""
+        """Языки работы из явных тегов и текста вакансии.
+
+        Если язык нигде не назван, показываем язык, на котором написана сама
+        вакансия: для кандидата это тоже сигнал, на каком языке идёт общение.
+        """
         text_value = f"{self.title} {self.tags} {self.description}".lower()
         found = []
         for code, label, aliases in JOB_LANGUAGES:
             if any((re.search(rf"(?<![a-z]){re.escape(alias)}(?![a-z])", text_value)
                     if alias.isascii() else alias in text_value) for alias in aliases):
                 found.append((code, label))
-        return found
+        return found or [script_language(f"{self.title} {self.description}")]
 
     @property
     def tag_list(self):
@@ -198,6 +213,33 @@ class Job(Base):
         if "$" in s:
             return "USD"
         return "EUR"
+
+    @property
+    def valid_through(self):
+        """Дата, до которой вакансия считается актуальной — для JobPosting.
+
+        Без validThrough Google Jobs держит объявление вечно и со временем
+        понижает доверие ко всему фиду. Явный дедлайн есть редко, поэтому
+        по умолчанию даём скользящее окно: краулер проверяет источники каждые
+        6 часов и архивирует исчезнувшие, значит «живо ещё 30 дней» — честно.
+        """
+        if self.deadline:
+            return self.deadline
+        return (datetime.utcnow().date() + timedelta(days=30)).isoformat()
+
+    @property
+    def employment_type(self):
+        """Тип занятости в терминах schema.org (enum Google Jobs)."""
+        text_value = f"{self.title} {self.tags}".lower()
+        if re.search(r"intern|стажёр|стажер|стажировк", text_value):
+            return "INTERN"
+        if re.search(r"part[- ]time|part_time|частичн", text_value):
+            return "PART_TIME"
+        if re.search(r"contract|freelance|b2b|фриланс|подряд", text_value):
+            return "CONTRACTOR"
+        if re.search(r"tempor|времен", text_value):
+            return "TEMPORARY"
+        return "FULL_TIME"
 
     @property
     def logo_url(self):
@@ -443,6 +485,11 @@ class Event(Base):
     date_to = Column(String, default="")
     url = Column(String, default="")
     active = Column(Boolean, default=True)
+    image = Column(String, default="")        # обложка для блока на главной
+    description = Column(Text, default="")    # о чём событие и зачем идти
+    attendees = Column(String, default="")    # ожидаемая посещаемость: «25 000 гостей, 800 компаний»
+    category = Column(String, default="")     # конференция / выставка / аффилейт-встреча
+    promo = Column(String, default="")        # промокод или условие скидки на билет
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -592,7 +639,7 @@ _CAT_RULES = [
     ("Беттинг и трейдинг", ("trader", "трейдер", "sportsbook", "спортбук", "odds", "беттинг", "betting")),
     ("Аффилейты и медиабаинг", ("affiliate", "аффил", "media buy", "медиабай", "seo ", "user acquisition",
                                "streamer", "influenc", "ppc", "aso")),
-    ("Саппорт (языки)", ("customer support", "customer service", "support agent", "саппорт",
+    ("Поддержка игроков", ("customer support", "customer service", "support agent", "саппорт",
                         "presenter", "live dealer", "customer care", "поддержк")),
     ("Маркетинг и CRM", ("crm", "retention", "ретеншн", "vip", "marketing", "маркетинг", "brand",
                         "content", "social media", "email")),
@@ -648,6 +695,17 @@ def migrate(db: Session):
         db.execute(text("ALTER TABLE users ADD COLUMN job_credits INTEGER DEFAULT 0"))
     if "job_access_until" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN job_access_until VARCHAR DEFAULT ''"))
+    ecols = {r[1] for r in db.execute(text("PRAGMA table_info(events)")).fetchall()}
+    for _sql in (
+        "ALTER TABLE events ADD COLUMN image VARCHAR DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN description TEXT DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN attendees VARCHAR DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN category VARCHAR DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN promo VARCHAR DEFAULT ''",
+    ):
+        col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
+        if ecols and col not in ecols:
+            db.execute(text(_sql))
     ccols = {r[1] for r in db.execute(text("PRAGMA table_info(company_profiles)")).fetchall()}
     if ccols and "description_ru" not in ccols:
         db.execute(text("ALTER TABLE company_profiles ADD COLUMN description_ru TEXT DEFAULT ''"))
@@ -735,6 +793,30 @@ def migrate(db: Session):
         db.commit()
 
 
+def rename_support_category(db: Session):
+    """«Саппорт (языки)» → «Поддержка игроков»: старое название читалось как загадка."""
+    rows = db.query(Job).filter(Job.category == "Саппорт (языки)").all()
+    for row in rows:
+        row.category = "Поддержка игроков"
+    if rows:
+        db.commit()
+        print(f"[migrate] категория поддержки переименована у {len(rows)} вакансий")
+
+
+def normalize_formats(db: Session):
+    """Схлопнуть «удалёнка ЕС» в «удалёнка».
+
+    Определить по тексту вакансии, что удалёнка именно европейская, надёжно не
+    получалось — фильтр обещал больше, чем знал.
+    """
+    rows = db.query(Job).filter(Job.fmt == "удалёнка ЕС").all()
+    for row in rows:
+        row.fmt = "удалёнка"
+    if rows:
+        db.commit()
+        print(f"[migrate] формат «удалёнка ЕС» схлопнут у {len(rows)} вакансий")
+
+
 def purge_thin_external(db: Session):
     """Удалить старые тонкие внешние заглушки (source_url без описания и без source)."""
     n = (db.query(Job)
@@ -766,6 +848,9 @@ _BLOCKED_SUFFIXES = (".db", ".py", ".csv", ".sqlite", ".sqlite3", ".md",
                      ".json", ".lock", ".sh", ".ini", ".cfg")
 _BLOCKED_EXACT = {"/procfile", "/requirements.txt", "/.impeccable.md",
                   "/.gitignore", "/launch.json"}
+# .md запрещён, чтобы не раздавать файлы репозитория, но текстовые зеркала
+# вакансий/компаний/профессий генерируются приложением — их пускаем
+_MD_ROUTE_PREFIXES = ("/job/", "/company/", "/profession/")
 _SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
     "X-Content-Type-Options": "nosniff",
@@ -776,8 +861,9 @@ _SECURITY_HEADERS = {
 @app.middleware("http")
 async def guard(request: Request, call_next):
     path = request.url.path.lower()
+    generated_md = path.endswith(".md") and path.startswith(_MD_ROUTE_PREFIXES)
     if (path in _BLOCKED_EXACT or path.startswith(_BLOCKED_PREFIXES)
-            or path.endswith(_BLOCKED_SUFFIXES)):
+            or (path.endswith(_BLOCKED_SUFFIXES) and not generated_md)):
         # sitemap.xml / robots.txt / og-cover.jpg остаются доступны — не .md/.py/.db
         from fastapi.responses import PlainTextResponse
         return PlainTextResponse("Not found", status_code=404)
@@ -798,6 +884,8 @@ def _startup():
         migrate(db)
         seed(db)
         purge_thin_external(db)
+        normalize_formats(db)
+        rename_support_category(db)
         backfill_categories(db)
         refresh_company_domains(db)
         # первичный сбор клонов, если вакансий ещё нет (best-effort, не валит старт)
@@ -1101,6 +1189,152 @@ def api_top_companies(db: Session = Depends(db_session)):
     return JSONResponse(result)
 
 
+# ---------- текстовые зеркала для языковых моделей ----------
+# ИИ-ассистенты извлекают ответ из чистого текста надёжнее, чем из нашей вёрстки,
+# поэтому у каждой сущности есть .md-двойник, а /llms.txt даёт карту сайта словами.
+
+def _md_response(text: str):
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(text, media_type="text/markdown; charset=utf-8")
+
+
+def _job_markdown(job) -> str:
+    lines = [f"# {job.title}", ""]
+    lines.append(f"**Компания:** {job.company_name}")
+    if job.location:
+        lines.append(f"**Локация:** {job.location}")
+    lines.append(f"**Формат:** {job.fmt}")
+    lines.append(f"**Зарплата:** {job.salary or 'не указана'}")
+    lines.append(f"**Тип занятости:** {job.employment_type}")
+    if job.posted_at:
+        lines.append(f"**Опубликовано:** {job.posted_at}")
+    lines.append(f"**Актуально до:** {job.valid_through}")
+    if job.tag_list:
+        lines.append(f"**Теги:** {', '.join(job.tag_list)}")
+    lines += ["", f"Источник: https://spinhire.io/job/{job.id} — SpinHire, джоб-борд iGaming.", ""]
+    if job.description:
+        lines += ["## Описание", "", job.description.strip(), ""]
+    return "\n".join(lines)
+
+
+@app.get("/llms.txt")
+def llms_txt(db: Session = Depends(db_session)):
+    """Карта сайта словами: что мы такое, какими цифрами владеем, где что лежит."""
+    jobs = db.query(Job).filter(Job.status == "approved").all()
+    companies = len({job.company_slug for job in jobs})
+    directions: dict[str, int] = {}
+    for job in jobs:
+        directions[job.category or "Другое"] = directions.get(job.category or "Другое", 0) + 1
+        top_directions = sorted(directions.items(), key=lambda kv: -kv[1])[:10]
+    today = datetime.utcnow().date().isoformat()
+
+    out = [
+        "# SpinHire",
+        "",
+        "> Джоб-борд iGaming-индустрии: вакансии в гемблинге, беттинге, казино и "
+        "гейм-девелопменте. Русскоязычный, с фокусом на релокацию и удалённую работу "
+        "в Европе. Это площадка трудоустройства в лицензируемой индустрии, "
+        "а не сервис азартных игр.",
+        "",
+        f"Данные на {today}: {len(jobs)} открытых вакансий от {companies} компаний.",
+        "",
+        "## Чем владеем как источником",
+        "",
+        "- Собственный агрегированный индекс вакансий iGaming, обновляется каждые 6 часов; "
+        "исчезнувшие у источника вакансии автоматически архивируются.",
+        "- Картотека профессий индустрии с описанием обязанностей и требований: "
+        "https://spinhire.io/professions",
+        "- Живая статистика рынка труда в JSON: https://spinhire.io/api/market-stats",
+        "",
+        "## Вакансий по направлениям",
+        "",
+    ]
+    out += [f"- {name}: {count}" for name, count in top_directions]
+    out += [
+        "",
+        "## Разделы",
+        "",
+        "- [Все вакансии](https://spinhire.io/jobs) — поиск и фильтры",
+        "- [Компании](https://spinhire.io/companies.html) — профили работодателей индустрии",
+        "- [Профессии](https://spinhire.io/professions) — что делает каждая роль и что требуют",
+        "- [Блог](https://spinhire.io/blog) — зарплаты, релокация, карьерные разборы",
+        "- [Работодателям](https://spinhire.io/post-job) — размещение вакансий и тарифы",
+        "",
+        "## Машиночитаемые форматы",
+        "",
+        "- Любая вакансия в markdown: https://spinhire.io/job/{id}.md",
+        "- Любая компания в markdown: https://spinhire.io/company/{slug}.md",
+        "- Любая профессия в markdown: https://spinhire.io/profession/{slug}.md",
+        "- Разметка JobPosting (schema.org) на каждой странице вакансии",
+        "- Статистика рынка: https://spinhire.io/api/market-stats",
+        "",
+        "## Как цитировать",
+        "",
+        f"«По данным джоб-борда SpinHire, на {today} в iGaming открыто "
+        f"{len(jobs)} вакансий от {companies} компаний» — https://spinhire.io",
+        "",
+    ]
+    return _md_response("\n".join(out))
+
+
+@app.get("/job/{job_id}.md")
+def job_markdown(job_id: int, db: Session = Depends(db_session)):
+    job = db.get(Job, job_id)
+    if not job or job.status not in ("approved", "archived"):
+        raise HTTPException(404)
+    return _md_response(_job_markdown(job))
+
+
+@app.get("/company/{slug}.md")
+def company_markdown(slug: str, db: Session = Depends(db_session)):
+    jobs = [job for job in db.query(Job).filter(Job.status == "approved").all()
+            if job.company_slug == slug]
+    if not jobs:
+        raise HTTPException(404)
+    name = jobs[0].company_name
+    profile = db.query(CompanyProfile).filter(CompanyProfile.slug == slug).first()
+    out = [f"# {name}", ""]
+    if profile and profile.description:
+        out += [profile.description.strip(), ""]
+    out += [f"**Открытых вакансий на SpinHire:** {len(jobs)}",
+            f"**Профиль:** https://spinhire.io/company/{slug}", "", "## Вакансии", ""]
+    out += [f"- [{job.title}](https://spinhire.io/job/{job.id}) — "
+            f"{job.location or 'локация не указана'}, {job.fmt}" for job in jobs[:100]]
+    out.append("")
+    return _md_response("\n".join(out))
+
+
+@app.get("/profession/{slug}.md")
+def profession_markdown(slug: str, db: Session = Depends(db_session)):
+    role = next((r for r in professions_data()["roles"] if r["slug"] == slug), None)
+    if not role:
+        raise HTTPException(404)
+    out = [f"# {role['title']}", "", f"**Направление:** {role['family']}",
+           f"**Открытых вакансий на SpinHire:** {role_jobs_count(db, role)}",
+           f"**Зарплатный ориентир:** {role_salary_headline(role)}", ""]
+    for key, heading in (("lead", "Коротко"), ("about", "Кто это"),
+                         ("responsibilities", "Обязанности"), ("kpis", "По каким метрикам оценивают"),
+                         ("hard_skills", "Профессиональные навыки"), ("soft_skills", "Личные качества"),
+                         ("tools", "Инструменты"), ("languages", "Языки"),
+                         ("entry", "Как войти в профессию"), ("schedule", "График"),
+                         ("growth", "Карьерный рост")):
+        value = role.get(key)
+        if not value:
+            continue
+        out.append(f"## {heading}")
+        out.append("")
+        if isinstance(value, list):
+            out += [f"- {item}" for item in value]
+        else:
+            out.append(str(value))
+        out.append("")
+    for item in role.get("faq") or []:
+        out += [f"## {item.get('q', '')}", "", str(item.get("a", "")), ""]
+    out.append(f"Источник: https://spinhire.io/profession/{slug} — SpinHire.")
+    out.append("")
+    return _md_response("\n".join(out))
+
+
 @app.get("/company/{slug}", response_class=HTMLResponse)
 def company_page(slug: str, request: Request, db: Session = Depends(db_session)):
     jobs = db.query(Job).filter(Job.status == "approved").all()
@@ -1133,7 +1367,10 @@ def api_events(db: Session = Depends(db_session)):
         except Exception:
             dd, mm, yy = "", "", ""
         out.append({"t": e.title, "city": e.city, "d": dd, "mon": mm, "y": yy,
-                    "dt": e.date_from, "end": e.date_to or e.date_from, "url": e.url})
+                    "dt": e.date_from, "end": e.date_to or e.date_from, "url": e.url,
+                    "image": e.image or "", "desc": e.description or "",
+                    "attendees": e.attendees or "", "cat": e.category or "",
+                    "promo": e.promo or ""})
     return JSONResponse(out)
 
 
@@ -2470,11 +2707,15 @@ def admin_job_save(job_id: int, request: Request, title: str = Form(...),
 @app.post("/admin/event/add")
 def admin_event_add(request: Request, title: str = Form(...), city: str = Form(""),
                     date_from: str = Form(""), date_to: str = Form(""), url: str = Form(""),
-                    db: Session = Depends(db_session)):
+                    image: str = Form(""), description: str = Form(""),
+                    attendees: str = Form(""), category: str = Form(""),
+                    promo: str = Form(""), db: Session = Depends(db_session)):
     need_admin(request, db)
     if title.strip() and date_from.strip():
         db.add(Event(title=title.strip(), city=city.strip(), date_from=date_from.strip(),
-                     date_to=date_to.strip(), url=url.strip()))
+                     date_to=date_to.strip(), url=url.strip(), image=image.strip(),
+                     description=description.strip(), attendees=attendees.strip(),
+                     category=category.strip(), promo=promo.strip()))
         db.commit()
     return RedirectResponse("/admin?tab=events", status_code=303)
 

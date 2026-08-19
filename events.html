@@ -16,6 +16,8 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/img/favicons/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="/img/favicons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/img/favicons/apple-touch-icon.png">
 <meta name="description" content="Полный календарь международных событий iGaming 2026–2027: SiGMA Europe (Рим), ICE Барселона, SBC Summit Лиссабон, G2E Лас-Вегас, Affiliate World, iGB L!VE и другие. Даты, города, промокоды на билеты и шеринг.">
 <link rel="canonical" href="https://spinhire.io/events.html">
 <link rel="alternate" hreflang="ru" href="https://spinhire.io/events">
@@ -215,7 +217,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet">
 <script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="css/style.css?v=20260819">
+<link rel="stylesheet" href="css/style.css?v=20260819b">
 <style>
   /* ==== Events page ==== */
   .ev-hero {
@@ -272,7 +274,7 @@
     border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s;
   }
-  .evc:hover { transform: translateY(-3px); border-color: var(--line-strong); box-shadow: var(--shadow-dark); }
+  .evc:hover { border-color: var(--acid); }
   .evc.is-flagship { border-color: color-mix(in oklch, var(--acid) 55%, var(--line)); }
 
   /* Cover "afisha" — premium gradient banner (never uses var(--bg)) */
@@ -395,7 +397,7 @@
   .ev-month__head .yr { display:block; margin-top:5px; font-size:.72rem; }
   .ev-list { display:grid; grid-template-columns:1fr; gap:14px; }
   .evc { display:grid; grid-template-columns:minmax(270px,.72fr) 1fr; min-height:220px; border-radius:18px; }
-  .evc:hover { transform:translateX(4px); }
+  .evc:hover { border-color: var(--acid); }
   .evc__cover { min-height:220px; padding:24px; justify-content:flex-end; }
   .evc__cover-date { top:22px; right:auto; left:24px; padding:0; border:0; border-radius:0; background:transparent!important; color:var(--acid)!important; font-size:.78rem; letter-spacing:.1em; }
   .evc[data-cat="Выставка"] .evc__cover-date { color:var(--pink)!important; }
@@ -739,6 +741,7 @@
           <li><a href="jobs.html">Вакансии</a></li>
           <li><a href="profile.html">Мой профиль</a></li>
           <li><a href="/professions">Профессии и зарплаты</a></li>
+          <li><a href="events.html">Календарь событий</a></li>
           <li><a href="index.html#salaries">Гид по зарплатам</a></li>
           <li><a href="games.html">🎡 Игровая зона</a></li>
           <li><a href="blog.html">Карьерный блог</a></li>
@@ -921,6 +924,6 @@
   applyFilter();
 })();
 </script>
-<script src="js/app.js?v=20260819"></script>
+<script src="js/app.js?v=20260819b"></script>
 </body>
 </html>

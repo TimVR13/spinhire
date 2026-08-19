@@ -3,6 +3,7 @@
 {% block title %}{{ job.title }} — {{ job.company_name }}{% if is_closed %} — вакансия закрыта{% endif %} | SpinHire{% endblock %}
 {% block desc %}{{ job.title }} в {{ job.company_name }}: {{ job.salary }}, {{ job.location }}, {{ job.fmt }}. iGaming-вакансия на SpinHire.{% endblock %}
 {% block robots %}<link rel="canonical" href="https://spinhire.io/job/{{ job.id }}">
+<link rel="alternate" type="text/markdown" href="https://spinhire.io/job/{{ job.id }}.md" title="Текстовая версия для языковых моделей">
 {% if is_closed %}<meta name="robots" content="noindex,follow">{% endif %}
 <meta property="og:type" content="article">
 <meta property="og:title" content="{{ job.title }} — {{ job.company_name }}">
@@ -16,7 +17,8 @@
   "title": {{ job.title|tojson }},
   "description": {{ (job.description or (job.title ~ ' — ' ~ job.company_name ~ '. ' ~ job.tags))|tojson }},
   "datePosted": "{{ job.posted_at or job.created_at.strftime('%Y-%m-%d') }}",
-  {% if job.deadline %}"validThrough": "{{ job.deadline }}",{% endif %}
+  "validThrough": "{{ job.valid_through }}",
+  "employmentType": "{{ job.employment_type }}",
   "hiringOrganization": { "@type": "Organization", "name": {{ job.company_name|tojson }}{% if job.company_site %}, "sameAs": {{ job.company_site|tojson }}{% endif %} },
   {% if job.fmt in ('удалёнка', 'удалёнка ЕС') %}"jobLocationType": "TELECOMMUTE",{% endif %}
   {% if job.location %}"jobLocation": { "@type": "Place", "address": { "@type": "PostalAddress", "addressLocality": {{ job.location.split(',')[0].strip()|tojson }}{% if ',' in job.location %}, "addressCountry": {{ job.location.split(',')[-1].strip()|tojson }}{% endif %} } },{% endif %}

@@ -57,12 +57,12 @@ PARTNER_FEEDS = {
 }
 
 # Источники с JobPosting JSON-LD на странице листинга (url: (имя, source-ключ))
-JSONLD_LISTINGS = {
-    "https://djinni.co/jobs/?company_type=gambling":
-        ("Djinni · gambling (UA)", "djinni"),
-}
-
 # Реестр источников для отображения в админке (что настроено и статус)
+# hh.ru: публичный API отдаёт вилку, город и работодателя, но из дата-центров
+# отвечает 403 — нужен токен приложения с dev.hh.ru в HH_APP_TOKEN.
+# Определяем до SOURCE_REGISTRY: реестр читает токен, чтобы показать статус источника.
+HH_TOKEN = os.environ.get("HH_APP_TOKEN", "").strip()
+
 SOURCE_REGISTRY = [
     {"key": "softswiss", "name": "SOFTSWISS", "type": "WordPress REST API",
      "status": "работает", "note": "Все опубликованные вакансии и полные описания (до 100 за запуск)"},
@@ -76,8 +76,8 @@ SOURCE_REGISTRY = [
      "status": "подключён", "note": "Публичный JSON API; вакансии и метаданные компании"},
     {"key": "smartrecruiters:Evolution", "name": "Evolution", "type": "SmartRecruiters API",
      "status": "подключён", "note": "Публичный ATS API"},
-    {"key": "djinni", "name": "Djinni · gambling (Украина)", "type": "JSON-LD парсер",
-     "status": "подключён", "note": "15 вакансий/страница из JobPosting-разметки; зарплата/город в HTML (не в JSON-LD)"},
+    {"key": "djinni", "name": "Djinni · gambling (Украина)", "type": "JSON-LD парсер с пагинацией",
+     "status": "подключён", "note": "15 вакансий на страницу, обходим до 20 страниц (DJINNI_MAX_PAGES). Зарплата и город лежат в HTML, а не в JSON-LD"},
     {"key": "partner:grc.ua", "name": "GRC.UA", "type": "Партнёрский JSON-фид",
      "status": "подключён" if PARTNER_FEEDS["grc.ua"] else "нужен доступ",
      "note": "Сайт блокирует серверный сбор (403). Коннектор готов; нужен официальный feed URL от GRC.UA."},
@@ -87,8 +87,12 @@ SOURCE_REGISTRY = [
     {"key": "partner:robota.ua", "name": "robota.ua", "type": "Партнёрский JSON-фид",
      "status": "подключён" if PARTNER_FEEDS["robota.ua"] else "нужен доступ",
      "note": "Сайт и внутренний API закрыты Cloudflare. Коннектор готов к официальному feed URL."},
-    {"key": "hh.ru", "name": "HeadHunter (hh.ru / hh.ua)", "type": "Публичный API — требует настройки",
-     "status": "не подключён", "note": "api.hh.ru бесплатный (зарплата+город+работодатель), но из облака отдаёт 403 — нужен зарегистрированный app-токен ИЛИ запуск с разрешённого IP. Покрывает RU/UA/СНГ. Готов подключить."},
+    {"key": "hh.ru", "name": "HeadHunter (hh.ru)", "type": "Публичный API — нужен токен приложения",
+     "status": "подключён" if HH_TOKEN else "нужен токен",
+     "note": "Коннектор готов: 5 отраслевых запросов, вилка/город/работодатель. api.hh.ru отвечает 403 и из облака, и с обычного IP — нужен токен приложения с dev.hh.ru в переменной HH_APP_TOKEN, после чего источник включается сам."},
+    {"key": "telegram", "name": "Telegram: betting_job, igaming_work, igamingjobs, GamblingServices",
+     "type": "Веб-превью t.me/s/", "status": "подключён",
+     "note": "Открытые страницы каналов без авторизации. Разбираем «Должность в Компания» из первой строки, формат и вилку — из второй. Каналы с резюме не берём"},
     {"key": "vendor-seeds", "name": "B2B-вендоры iGaming (55 компаний)", "type": "Карьерные страницы по списку",
      "status": "подключён", "note": "data/vendor-seeds.json: провайдеры слотов, платформы и агрегаторы. У 27 из 55 найдена карьерная страница; описания компаний идут в карточки"},
     {"key": "bamboohr", "name": "BambooHR: Altenar, Kalamba, Hacksaw", "type": "Публичный карьерный портал",
@@ -202,6 +206,33 @@ def crawl_jsonld(url, source):
                 "posted_at": (it.get("datePosted") or "")[:10],
                 "deadline": (it.get("validThrough") or "")[:10],
             })
+    return out
+
+
+
+# Djinni: страница листинга отдаёт 15 JobPosting в JSON-LD, страницы пагинируются.
+DJINNI_LISTINGS = {
+    "https://djinni.co/jobs/?company_type=gambling": "djinni",
+}
+DJINNI_MAX_PAGES = int(os.environ.get("DJINNI_MAX_PAGES", "20"))
+
+
+def crawl_jsonld_paged(url, source, max_pages=DJINNI_MAX_PAGES):
+    """Пройти листинг постранично, пока приходят новые вакансии."""
+    out, seen = [], set()
+    separator = "&" if "?" in url else "?"
+    for page in range(1, max_pages + 1):
+        page_url = url if page == 1 else f"{url}{separator}page={page}"
+        try:
+            items = crawl_jsonld(page_url, source)
+        except Exception:
+            break
+        fresh = [item for item in items if item["ext_id"] not in seen]
+        if not fresh:
+            break                       # страница без новых вакансий — листинг закончился
+        seen.update(item["ext_id"] for item in fresh)
+        out.extend(fresh)
+        time.sleep(0.6)                 # не долбим чужой сайт
     return out
 
 
@@ -467,6 +498,16 @@ def crawl_casino_seed_registry():
     return all_jobs
 
 
+def _clean_text(raw):
+    """Короткое поле (заголовок, компания, город) → чистый текст.
+
+    Часть источников отдаёт заголовки с HTML-сущностями (`&#8211;`, `&amp;`),
+    и они утекали в разметку JobPosting — Google показывал их буквально.
+    """
+    s = html.unescape(html.unescape(raw or ""))
+    return " ".join(s.replace("\xa0", " ").split())
+
+
 def _clean_html(raw):
     """HTML описания → чистый читаемый текст (клонируем контент, не верстку источника)."""
     s = raw or ""
@@ -491,9 +532,12 @@ def _clean_html(raw):
 def _fmt_from(location, content):
     loc = (location or "").lower()
     head = (content or "")[:600].lower()  # формат обычно указан в начале
-    if "remote" in loc or "удал" in loc or "fully remote" in head or "100% remote" in head or "remote-first" in head:
-        return "удалёнка ЕС" if ("eu" in loc or "europe" in loc or "europe" in head) else "удалёнка"
-    if "hybrid" in loc or "гибрид" in loc or "hybrid" in head:
+    if ("remote" in loc or "удал" in loc or "віддал" in loc
+            or re.search(r"(fully remote|100% remote|remote-first|remote work|"
+                         r"удал[её]нн?(ая|ка|о)|віддален|work mode:\s*remote)", head)):
+        return "удалёнка"
+    if ("hybrid" in loc or "гибрид" in loc
+            or re.search(r"(hybrid|гибрид|гібрид|work mode:\s*hybrid)", head)):
         return "гибрид"
     if "remote" in head:
         return "гибрид"  # упоминается remote, но не в локации — вероятно гибрид
@@ -704,6 +748,182 @@ def crawl_bamboohr(account, company):
             "salary": "по запросу", "posted_at": "", "deadline": "",
         })
         time.sleep(0.15)
+    return out
+
+
+
+# Публичные Telegram-каналы с вакансиями iGaming. Читаем веб-превью t.me/s/<канал> —
+# это открытая страница без авторизации. Каналы с резюме (igaming_cv) не берём:
+# резюме мы принципиально не клонируем, только вакансии.
+TELEGRAM_CHANNELS = {
+    "betting_job": "Работа в ставках",
+    "igaming_work": "iGaming jobs",
+    "igamingjobs": "iGaming Jobs",
+    "GamblingServices": "Гемблинг объявления",
+}
+TELEGRAM_PAGES = int(os.environ.get("TELEGRAM_PAGES", "4"))
+TG_JOB_WORDS = ("ваканс", "ищем", "ищет", "требуется", "в команду", "открыта позиция",
+                "зарплат", "оклад", "we are looking", "hiring", "join our team", "position")
+TG_SKIP_WORDS = ("резюме", "ищу работу", "cv:", "рассмотрю предложения", "ищу проект")
+TG_MONEY = re.compile(r"(?:от\s*)?[€$₴]\s?\d[\d\s.,]*(?:\s?[-–—]\s?[€$₴]?\s?\d[\d\s.,]*)?"
+                      r"(?:\s?(?:usdt|usd|eur|k))?", re.I)
+
+
+def _tg_messages(channel, pages=TELEGRAM_PAGES):
+    """Сообщения канала с конца ленты, постранично через ?before=."""
+    seen, out, before = set(), [], None
+    for _ in range(pages):
+        url = f"https://t.me/s/{channel}" + (f"?before={before}" if before else "")
+        try:
+            page = _fetch_html(url)
+        except Exception:
+            break
+        # Разбираем ленту по кускам: один пост = от data-post до следующего.
+        chunks = re.split(r'(?=<div class="tgme_widget_message[^"]*"[^>]*data-post=")', page)
+        ids = []
+        for chunk in chunks:
+            post_match = re.search(r'data-post="([^"]+)"', chunk)
+            if not post_match:
+                continue
+            post = post_match.group(1)
+            post_id = post.rsplit("/", 1)[-1]
+            if not post_id.isdigit() or post_id in seen:
+                continue
+            seen.add(post_id)
+            ids.append(int(post_id))
+            text_match = re.search(
+                r'(?is)<div class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>\s*(?:<div|</div>)',
+                chunk)
+            if not text_match:
+                continue
+            text = re.sub(r"(?i)<br\s*/?>", "\n", text_match.group(1))
+            text = html.unescape(re.sub(r"<[^>]+>", "", text)).strip()
+            when = re.search(r'<time datetime="([^"]+)"', chunk)
+            if text:
+                out.append({"id": post_id, "post": post, "text": text,
+                            "date": when.group(1)[:10] if when else ""})
+        if not chunks:
+            break
+        if not ids:
+            break
+        before = min(ids)
+        time.sleep(0.5)
+    return out
+
+
+def _tg_parse(message, channel_title):
+    """Разобрать пост-вакансию: заголовок, компания, формат, зарплата."""
+    text = message["text"]
+    low = text.lower()
+    if len(text) < 120 or any(word in low for word in TG_SKIP_WORDS):
+        return None
+    if not any(word in low for word in TG_JOB_WORDS):
+        return None
+    lines = [line.strip() for line in text.split("\n") if line.strip()]
+    if not lines:
+        return None
+    head = re.sub(r"^[#\W_]+", "", lines[0]).strip()[:160]
+    head = re.sub(r"\s*\|\s*ID:\s*\d+\s*$", "", head)      # «Payment manager | ID: 1802»
+    if not head:
+        return None
+    company = ""
+    # часть каналов пишет поля явно: Company / Work mode / Industry
+    field = re.search(r"(?im)^Company:\s*(.+)$", text)
+    if field:
+        value = field.group(1).strip()
+        if value.upper() not in ("NDA", "N/A", "-", "СКРЫТО"):
+            company = value[:60]
+    if not company:
+        match = re.search(r"\s+в\s+(?:в\s+)?([^,|(]{2,60})$", head)
+        if match:
+            company = match.group(1).strip(" .—–-")
+            head = head[: match.start()].strip()
+    salary_line = lines[1] if len(lines) > 1 else ""
+    money = TG_MONEY.search(salary_line) or TG_MONEY.search(text[:400])
+    salary = money.group(0).strip() if money else "по запросу"
+    body = "\n".join(lines[1:])[:6000]
+    location = ""
+    place = re.search(r"\(([^)]{3,40})\)", salary_line)
+    if place:
+        location = place.group(1).strip()
+    lang = detect_lang(head, body)
+    return {
+        "title": head,
+        "company_name": company or "Компания не указана",
+        "location": location,
+        "fmt": _fmt_from(location, salary_line + " " + body),
+        "tags": _tags_from(head, body, lang),
+        "description": body,
+        "source_url": f"https://t.me/{message['post']}",
+        "source": f"telegram:{message['post'].split('/')[0]}",
+        "ext_id": message["id"],
+        "salary": salary[:60],
+        "posted_at": message["date"],
+        "deadline": "",
+    }
+
+
+def crawl_telegram(channel, channel_title):
+    out = []
+    for message in _tg_messages(channel):
+        parsed = _tg_parse(message, channel_title)
+        if parsed:
+            out.append(parsed)
+    return out[:MAX_PER_BOARD]
+
+
+
+HH_QUERIES = ("гемблинг", "беттинг", "iGaming", "букмекер", "казино онлайн")
+HH_PER_PAGE = 50
+
+
+def crawl_hh(query, pages=2):
+    """Вакансии hh.ru по отраслевому запросу. Без токена источник пропускается."""
+    if not HH_TOKEN:
+        raise RuntimeError("HH_APP_TOKEN не задан — hh.ru отвечает 403 без токена приложения")
+    out = []
+    for page in range(pages):
+        url = (f"https://api.hh.ru/vacancies?text={quote_plus(query)}"
+               f"&per_page={HH_PER_PAGE}&page={page}&only_with_salary=false")
+        request = urllib.request.Request(url, headers={
+            "User-Agent": UA, "Authorization": f"Bearer {HH_TOKEN}", "Accept": "application/json"})
+        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            payload = json.loads(response.read())
+        items = payload.get("items") or []
+        if not items:
+            break
+        for item in items:
+            title = (item.get("name") or "").strip()
+            if not title:
+                continue
+            employer = ((item.get("employer") or {}).get("name") or "").strip()
+            area = ((item.get("area") or {}).get("name") or "").strip()
+            snippet = item.get("snippet") or {}
+            description = _clean_html(" ".join(filter(None, (snippet.get("responsibility"),
+                                                             snippet.get("requirement")))))
+            salary = "по запросу"
+            money = item.get("salary") or {}
+            if money.get("from") or money.get("to"):
+                currency = {"RUR": "₽", "USD": "$", "EUR": "€", "UAH": "₴"}.get(
+                    money.get("currency") or "", money.get("currency") or "")
+                low, high = money.get("from"), money.get("to")
+                salary = (f"{low:,}–{high:,} {currency}" if low and high
+                          else f"от {low:,} {currency}" if low else f"до {high:,} {currency}")
+                salary = salary.replace(",", " ")
+            schedule = ((item.get("schedule") or {}).get("name") or "")
+            lang = detect_lang(title, description)
+            out.append({
+                "title": title, "company_name": employer or "Компания не указана",
+                "location": area, "fmt": _fmt_from(area, schedule + " " + description),
+                "tags": _tags_from(title, description, lang), "description": description,
+                "source_url": item.get("alternate_url") or "",
+                "source": "hh.ru", "ext_id": str(item.get("id") or ""),
+                "salary": salary, "posted_at": (item.get("published_at") or "")[:10],
+                "deadline": "",
+            })
+        if page + 1 >= (payload.get("pages") or 1):
+            break
+        time.sleep(0.3)
     return out
 
 
@@ -964,8 +1184,8 @@ def collect(with_metadata=False):
     fetch_source("softswiss", crawl_softswiss, complete=True)
     for board, company in GREENHOUSE_BOARDS.items():
         fetch_source(f"greenhouse:{board}", lambda b=board, c=company: crawl_greenhouse(b, c), complete=True)
-    for url, (name, source) in JSONLD_LISTINGS.items():
-        fetch_source(source, lambda u=url, s=source: crawl_jsonld(u, s))
+    for url, source in DJINNI_LISTINGS.items():
+        fetch_source(source, lambda u=url, s=source: crawl_jsonld_paged(u, s))
     for site, company in LEVER_SITES.items():
         fetch_source(f"lever:{site}", lambda s=site, c=company: crawl_lever(s, c), complete=True)
     for account, company in BAMBOO_ACCOUNTS.items():
@@ -978,6 +1198,12 @@ def collect(with_metadata=False):
         if not url:
             continue
         fetch_source(f"partner:{source}", lambda u=url, s=source: crawl_partner_feed(u, s), complete=True)
+    if HH_TOKEN:
+        for query in HH_QUERIES:
+            fetch_source(f"hh.ru:{query}", lambda q=query: crawl_hh(q))
+    for channel, channel_title in TELEGRAM_CHANNELS.items():
+        fetch_source(f"telegram:{channel}",
+                     lambda c=channel, t=channel_title: crawl_telegram(c, t))
     fetch_source("vendor-seeds", crawl_vendor_seeds)
     fetch_source("igamingcareers", crawl_igamingcareers)
     fetch_source("casino-discovery", crawl_casino_seed_registry)
@@ -996,6 +1222,8 @@ def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
         if it["ext_id"]:
             row = db.query(Job).filter(Job.source == it["source"],
                                        Job.ext_id == it["ext_id"]).first()
+        for field in ("title", "company_name", "location"):
+            it[field] = _clean_text(it.get(field))
         cat = guess_category(it["title"], it["tags"])
         if row:
             before = (row.title, row.company_name, row.location, row.fmt, row.tags,
