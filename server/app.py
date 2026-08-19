@@ -1354,6 +1354,31 @@ def company_page(slug: str, request: Request, db: Session = Depends(db_session))
                   company_profile=company_profile, public=public)
 
 
+
+# Обложки событий: если админ не загрузил свою, подставляем фирменную по названию.
+EVENT_COVERS = (
+    (("sbc", "lisbon"), "/img/events/sbc-summit-lisbon.jpg"),
+    (("sigma", "rome"), "/img/events/sigma-world-rome.jpg"),
+    (("sigma", "central"), "/img/events/sigma-central-europe.jpg"),
+    (("sigma", "milan"), "/img/events/sigma-central-europe.jpg"),
+    (("ice",), "/img/events/ice-barcelona.jpg"),
+    (("sigma", "malta"), "/img/events/sigma-europe-malta.jpg"),
+    (("sigma",), "/img/events/sigma-world-rome.jpg"),
+    (("sbc",), "/img/events/sbc-summit-lisbon.jpg"),
+)
+EVENT_COVER_DEFAULT = "/img/events/default.jpg"
+
+
+def event_cover(event) -> str:
+    if (event.image or "").strip():
+        return event.image.strip()
+    haystack = f"{event.title} {event.city}".lower()
+    for words, cover in EVENT_COVERS:
+        if all(word in haystack for word in words):
+            return cover
+    return EVENT_COVER_DEFAULT
+
+
 @app.get("/api/events")
 def api_events(db: Session = Depends(db_session)):
     from fastapi.responses import JSONResponse
@@ -1368,7 +1393,7 @@ def api_events(db: Session = Depends(db_session)):
             dd, mm, yy = "", "", ""
         out.append({"t": e.title, "city": e.city, "d": dd, "mon": mm, "y": yy,
                     "dt": e.date_from, "end": e.date_to or e.date_from, "url": e.url,
-                    "image": e.image or "", "desc": e.description or "",
+                    "image": event_cover(e), "desc": e.description or "",
                     "attendees": e.attendees or "", "cat": e.category or "",
                     "promo": e.promo or ""})
     return JSONResponse(out)
@@ -3058,7 +3083,8 @@ def sitemap(db: Session = Depends(db_session)):
     from fastapi.responses import Response
     base = "https://spinhire.io"
     static = [("", "1.0"), ("jobs", "0.9"), ("resumes", "0.8"), ("companies.html", "0.8"), ("blog.html", "0.8"),
-              ("post-job", "0.5"), ("games.html", "0.5"),
+              ("post-job", "0.5"),  # games.html закрыт в robots — казино-механика
+                                    # мешает классифицировать нас как джоб-борд
               ("jobs-malta.html", "0.8"), ("jobs-cyprus.html", "0.8"), ("jobs-remote.html", "0.8"),
               ("jobs-vip-manager.html", "0.8"), ("jobs-affiliate.html", "0.8"), ("jobs-aml.html", "0.8"),
               ("jobs-crypto.html", "0.8"), ("jobs-warsaw.html", "0.8"), ("jobs-tbilisi.html", "0.8"),

@@ -331,7 +331,8 @@
   }
 
   /* события */
-  .events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--sp-3); }
+  .events-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); }
+  @media (max-width: 860px) { .events-grid { grid-template-columns: 1fr; } }
   .event-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-2); }
   .event-card .ev-date { display: inline-flex; align-items: baseline; gap: 6px; font-family: var(--font-display); font-weight: 800; color: var(--acid); font-size: 0.95rem; }
   .event-card .ev-date .mon { font-size: 0.7rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.1em; }
@@ -801,12 +802,21 @@
   const grid = document.getElementById('events-grid');
   if (!grid) return;
   const fallback = [
-    { d: '29', mon: 'сен', y: '2026', t: 'SBC Summit Lisbon', city: '🇵🇹 Лиссабон, Португалия', dt: '2026-09-29', end: '2026-10-01' },
-    { d: '2',  mon: 'ноя', y: '2026', t: 'SiGMA World Rome ★', city: '🇮🇹 Рим, Италия', dt: '2026-11-02', end: '2026-11-05' },
-    { d: '23', mon: 'ноя', y: '2026', t: 'SiGMA Central Europe', city: '🇮🇹 Милан, Италия', dt: '2026-11-23', end: '2026-11-26' },
-    { d: '18', mon: 'янв', y: '2027', t: 'ICE Barcelona', city: '🇪🇸 Барселона, Испания', dt: '2027-01-18', end: '2027-01-20' },
-    { d: '3',  mon: 'мая', y: '2027', t: 'SiGMA Europe (Malta)', city: '🇲🇹 Мальта', dt: '2027-05-03', end: '2027-05-05' },
-    { d: '21', mon: 'сен', y: '2027', t: 'SBC Summit Lisbon', city: '🇵🇹 Лиссабон, Португалия', dt: '2027-09-21', end: '2027-09-23' },
+    { d: '29', mon: 'сен', y: '2026', t: 'SBC Summit Lisbon', city: '🇵🇹 Лиссабон, Португалия', dt: '2026-09-29', end: '2026-10-01',
+      image: '/img/events/sbc-summit-lisbon.jpg', cat: 'Конференция', attendees: 'операторы, платформы, платёжки и аффилейты',
+      desc: 'Крупнейшая осенняя встреча индустрии: операторы, платформы, платёжки и аффилейты. Здесь закрывают партнёрства и здесь же собеседуют — половина стендов ищет людей на месте.' },
+    { d: '2',  mon: 'ноя', y: '2026', t: 'SiGMA World Rome ★', city: '🇮🇹 Рим, Италия', dt: '2026-11-02', end: '2026-11-05',
+      image: '/img/events/sigma-world-rome.jpg', cat: 'Выставка', attendees: 'выставка, награды и зона рекрутинга',
+      desc: 'Главное событие SiGMA в Европе: выставка, награды и отдельная зона рекрутинга. Хорошая точка входа для тех, кто ищет первую роль в iGaming.' },
+    { d: '23', mon: 'ноя', y: '2026', t: 'SiGMA Central Europe', city: '🇮🇹 Милан, Италия', dt: '2026-11-23', end: '2026-11-26',
+      image: '/img/events/sigma-central-europe.jpg', cat: 'Выставка', attendees: 'операторы Центральной и Восточной Европы',
+      desc: 'Фокус на Центральной и Восточной Европе: локальные операторы, регулирование рынков и много вакансий в саппорт и CRM с релокацией.' },
+    { d: '18', mon: 'янв', y: '2027', t: 'ICE Barcelona', city: '🇪🇸 Барселона, Испания', dt: '2027-01-18', end: '2027-01-20',
+      image: '/img/events/ice-barcelona.jpg', cat: 'Выставка', attendees: 'практически все крупные работодатели рынка',
+      desc: 'Самая большая выставка индустрии в мире. Если идти один раз в год — идти сюда: здесь представлены практически все крупные работодатели рынка.' },
+    { d: '3',  mon: 'мая', y: '2027', t: 'SiGMA Europe (Malta)', city: '🇲🇹 Мальта', dt: '2027-05-03', end: '2027-05-05',
+      image: '/img/events/sigma-europe-malta.jpg', cat: 'Конференция', attendees: 'мальтийские операторы и десятки сайд-ивентов',
+      desc: 'Мальтийская неделя iGaming: конференция плюс десятки сайд-ивентов. Лучшее место для тех, кто планирует релокацию на остров.' },
   ];
   function promoCode(t){ let h=0; for(const c of (t||'')) h=(h*31+c.charCodeAt(0))>>>0; return 'SPINHIRE-'+h.toString(36).toUpperCase().slice(0,5); }
 
@@ -815,8 +825,9 @@
     const hero = document.getElementById('event-hero');
     if (!hero || !event) return null;
     const img = document.getElementById('eventHeroImg');
-    if (event.image) { img.src = event.image; img.alt = event.t; }
-    else { hero.querySelector('.event-hero__media').hidden = true; hero.style.gridTemplateColumns = '1fr'; }
+    const media = hero.querySelector('.event-hero__media');
+    if (event.image) { img.src = event.image; img.alt = event.t; media.hidden = false; }
+    else { media.hidden = true; hero.style.gridTemplateColumns = '1fr'; }
     document.getElementById('eventHeroBadge').textContent = event.cat || 'Ближайшее событие';
     document.getElementById('eventHeroTitle').textContent = event.t;
     const until = Math.ceil((new Date(event.dt) - new Date()) / 86400000);
@@ -826,7 +837,7 @@
     document.getElementById('eventHeroDesc').textContent = event.desc ||
       'Профильная встреча индустрии: операторы, провайдеры и аффилейты в одном месте. Лучший способ найти работу в iGaming без резюме — вживую.';
     const who = document.getElementById('eventHeroWho');
-    if (event.attendees) { who.hidden = false; who.innerHTML = 'Ожидается: <b>' + event.attendees + '</b>'; }
+    if (event.attendees) { who.hidden = false; who.innerHTML = 'Кто будет: <b>' + event.attendees + '</b>'; }
     const promo = document.getElementById('eventHeroPromo');
     const code = event.promo || promoCode(event.t) + ' — −10% на билет';
     promo.hidden = false; promo.textContent = '🎟 ' + code;
@@ -840,7 +851,7 @@
     const upcoming = events.filter(e => !e.dt || new Date(e.end || e.dt) >= new Date());
     const list = upcoming.length ? upcoming : events;
     renderHero(list[0]);
-    events = list.slice(1);
+    events = list.slice(1, 4);   // под крупным блоком — только три ближайших
     grid.innerHTML = events.map((e, i) => `
       <div class="event-card">
         <span class="ev-date">${e.d} <span class="mon">${e.mon} ${e.y}</span></span>
