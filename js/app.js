@@ -431,3 +431,56 @@ if (window.matchMedia('(pointer: fine)').matches &&
       if (section) section.hidden = true;   // не показываем пустой скелет
     });
 })();
+
+/* Копирование ссылки. Один обработчик на документ: кнопка может появиться
+   на любой странице, достаточно повесить data-copy с адресом. */
+(() => {
+  const LABEL_RESET = 1800;
+
+  function copyBySelection(text) {
+    // Запасной путь: http-страницы, старые браузеры и случаи, когда
+    // clipboard API отказал (нет разрешения, документ не в фокусе)
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+    document.body.appendChild(area);
+    area.select();
+    const done = document.execCommand('copy');
+    area.remove();
+    if (!done) throw new Error('копирование недоступно');
+  }
+
+  async function copy(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return;
+      } catch {
+        // не сдаёмся: пробуем через выделение
+      }
+    }
+    copyBySelection(text);
+  }
+
+  document.addEventListener('click', async event => {
+    const button = event.target.closest('[data-copy]');
+    if (!button) return;
+    event.preventDefault();
+    const action = button.querySelector('.copy-link__action') || button;
+    const original = button.dataset.copyLabel || action.textContent;
+    button.dataset.copyLabel = original;
+    try {
+      await copy(button.dataset.copy);
+      button.classList.add('is-copied');
+      action.textContent = 'Скопировано ✓';
+    } catch {
+      action.textContent = 'Не вышло — скопируйте вручную';
+    }
+    clearTimeout(button._copyTimer);
+    button._copyTimer = setTimeout(() => {
+      button.classList.remove('is-copied');
+      action.textContent = original;
+    }, LABEL_RESET);
+  });
+})();

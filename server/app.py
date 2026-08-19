@@ -216,13 +216,28 @@ class Job(Base):
 
     @property
     def sal_unit(self):
-        """Период вилки для JobPosting: разметка не должна врать про месяц."""
+        """Период вилки для JobPosting, либо None, если период не определить.
+
+        Часть источников отдаёт вилку без периода («€50 000 – €85 000»).
+        Считать такое месячным нельзя — в разметку уйдёт заведомая ложь,
+        поэтому действует то же правило, что и в парсере описаний: до 10 000
+        это месяц, от 20 000 — год, а промежуток честнее оставить без ответа.
+        """
         text_value = self.salary or ""
         if "в час" in text_value:
             return "HOUR"
         if "в год" in text_value:
             return "YEAR"
-        return "MONTH"
+        if "в месяц" in text_value:
+            return "MONTH"
+        nums = self._sal_nums
+        if not nums:
+            return "MONTH"
+        if max(nums) < 10_000:
+            return "MONTH"
+        if min(nums) >= 20_000:
+            return "YEAR"
+        return None
 
     @property
     def sal_currency(self):

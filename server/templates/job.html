@@ -22,7 +22,7 @@
   "hiringOrganization": { "@type": "Organization", "name": {{ job.company_name|tojson }}{% if job.company_site %}, "sameAs": {{ job.company_site|tojson }}{% endif %} },
   {% if job.fmt in ('удалёнка', 'удалёнка ЕС') %}"jobLocationType": "TELECOMMUTE",{% endif %}
   {% if job.location %}"jobLocation": { "@type": "Place", "address": { "@type": "PostalAddress", "addressLocality": {{ job.location.split(',')[0].strip()|tojson }}{% if ',' in job.location %}, "addressCountry": {{ job.location.split(',')[-1].strip()|tojson }}{% endif %} } },{% endif %}
-  {% if job.has_salary and job.sal_min %}"baseSalary": { "@type": "MonetaryAmount", "currency": "{{ job.sal_currency }}", "value": { "@type": "QuantitativeValue", "minValue": {{ job.sal_min }}, "maxValue": {{ job.sal_max }}, "unitText": "{{ job.sal_unit }}" } },{% endif %}
+  {% if job.has_salary and job.sal_min and job.sal_unit %}"baseSalary": { "@type": "MonetaryAmount", "currency": "{{ job.sal_currency }}", "value": { "@type": "QuantitativeValue", "minValue": {{ job.sal_min }}, "maxValue": {{ job.sal_max }}, "unitText": "{{ job.sal_unit }}" } },{% endif %}
   "directApply": true,
   "identifier": { "@type": "PropertyValue", "name": "SpinHire", "value": "{{ job.id }}" }
 }
@@ -40,6 +40,15 @@
   .apply-card { position: sticky; top: 92px; border-color: var(--acid); }
   .apply-card .btn { width: 100%; }
   .apply-card p { color: var(--ink-dim); font-size: 0.82rem; margin-top: 10px; }
+  .copy-link { display: flex; width: 100%; align-items: center; gap: 10px; padding: 10px 12px;
+    background: var(--bg); border: 1px solid var(--line-strong); color: var(--ink);
+    font: inherit; font-size: 0.84rem; cursor: pointer; text-align: left; transition: border-color .15s, color .15s; }
+  .copy-link:hover, .copy-link:focus-visible { border-color: var(--acid); }
+  .copy-link__url { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+  .copy-link__action { flex: none; color: var(--acid); font-weight: 700; white-space: nowrap; }
+  .copy-link.is-copied { border-color: var(--emerald, var(--acid)); }
+  .copy-link.is-copied .copy-link__action { color: var(--emerald, var(--acid)); }
   @media (max-width: 900px) { .job-layout { grid-template-columns: 1fr; } }
 {% endblock %}
 {% block content %}
@@ -149,6 +158,14 @@
           {% if job.deadline %}<dt>Дедлайн</dt><dd>{{ job.deadline }}</dd>{% endif %}
           {% if is_closed %}<dt>Статус</dt><dd style="color: var(--yellow);">Закрыта</dd>{% endif %}
         </dl>
+      </div>
+      <div class="side-card">
+        <h3>Поделиться</h3>
+        <button type="button" class="copy-link" data-copy="https://spinhire.io/job/{{ job.id }}"
+                aria-label="Скопировать ссылку на вакансию">
+          <span class="copy-link__url" data-no-translate>spinhire.io/job/{{ job.id }}</span>
+          <span class="copy-link__action" aria-live="polite">Копировать</span>
+        </button>
       </div>
       <div class="side-card" style="border-style: dashed;">
         <h3 style="color: var(--yellow);">⚠ Будь начеку</h3>
