@@ -55,7 +55,24 @@
       .qa-item { border-bottom: 1px solid var(--line); padding: 14px 0; }
       .qa-item b { display: block; margin-bottom: 6px; font-size: 0.95rem; }
       .qa-item p { color: var(--ink-dim); font-size: 0.88rem; line-height: 1.6; }
+      @media (max-width: 760px) {
+        /* на телефоне — только суть: преимущества и шаги как список, ответы по тапу */
+        .perk-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
+        .perk { padding: 10px 14px; }
+        .perk p { display: none; }
+        .perk b { display: block; font-size: 0.92rem; margin: 0; }
+        .perk b::before { content: "✓ "; color: var(--acid); }
+        .steps { gap: 8px; }
+        .step p { display: none; }
+        .step b { margin-bottom: 0; }
+        .qa-item p { display: none; }
+        .qa-item { cursor: pointer; padding-block: 10px; }
+        .qa-item b::after { content: " ⌄"; color: var(--acid); }
+        .qa-item.open p { display: block; }
+        .qa-item.open b::after { content: " ⌃"; }
+      }
     </style>
+    <script>document.addEventListener('click',e=>{const q=e.target.closest('.qa-item');if(q&&matchMedia('(max-width:760px)').matches)q.classList.toggle('open');});</script>
 
     <h2 class="tariff-group-title" style="margin-top: 0;">Разместить вакансию</h2>
     <p class="tariff-group-sub">Разовое размещение стоит €49. Пакеты не сгорают месяц в месяц — вакансии из пакета можно публиковать в течение года.</p>

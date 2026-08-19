@@ -485,6 +485,14 @@ main > .section:nth-of-type(even) {
   .job-card > * { min-width: 0; }
   .job-card__logo { width: 44px; height: 44px; font-size: 1rem; }
   .job-card__side { grid-column: 2; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; width: 100%; text-align: left; }
+  /* карточка вакансии: короче заголовок, меньше воздуха, без служебных тегов */
+  .job-card { padding: 14px; gap: 12px; }
+  .job-card__title { font-size: 0.92rem; letter-spacing: 0; line-height: 1.25; }
+  .job-card__meta { font-size: 0.82rem; margin-bottom: 8px; }
+  .job-card__tags { gap: 6px; }
+  .job-card__tags .tag { font-size: 0.62rem; padding: 3px 8px; }
+  .job-card__tags .tag--src { display: none; }
+  .jobs-list { gap: 10px; }
   .section-head { flex-direction: column; align-items: flex-start; gap: var(--sp-3); }
 }
 

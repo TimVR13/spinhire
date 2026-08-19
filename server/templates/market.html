@@ -39,6 +39,12 @@
   .mk-figure { border: 2px solid var(--line); background: var(--surface); padding: var(--sp-4) var(--sp-4) var(--sp-3); }
   .mk-figure b { display: block; font-family: var(--font-display); font-size: 2.1rem; line-height: 1.05; color: var(--acid); }
   .mk-figure span { display: block; margin-top: 6px; font-size: 0.78rem; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  @media (max-width: 760px) {
+    .mk-figures { grid-template-columns: 1fr 1fr; gap: 8px; margin: var(--sp-4) 0 var(--sp-6); }
+    .mk-figure { padding: 12px 14px; }
+    .mk-figure b { font-size: 1.5rem; }
+    .mk-figure span { font-size: 0.66rem; }
+  }
   .mk-cuts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: var(--sp-5); }
   .mk-cut h2 { font-family: var(--font-display); font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--sp-3); }
   .mk-bar { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 0.9rem; }

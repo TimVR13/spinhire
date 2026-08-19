@@ -381,10 +381,6 @@
     .ev-list { grid-template-columns: 1fr; }
     .ev-cta { grid-template-columns: 1fr; }
   }
-  @media (max-width: 420px) {
-    .evc__actions { flex-direction: column; }
-    .evc__btn { width: 100%; }
-  }
 
   /* Route calendar — months form one continuous industry itinerary */
   body > .ticker { display: none; }
@@ -409,6 +405,15 @@
   .evc__actions { max-width:430px; }
   .evc__ribbon { top:54px; background:transparent; color:var(--acid); padding-left:24px; border-radius:0; }
   @media(max-width:760px){
+    .ev-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:var(--sp-5)}
+    .ev-stat{min-width:0}
+    .ev-stat:nth-child(3){grid-column:1/-1;display:flex;align-items:baseline;justify-content:space-between}
+    .evc__cover{min-height:150px;padding:16px}
+    .evc__body{padding:14px 16px}
+    .evc__desc{font-size:.9rem}
+    .evc__actions{flex-direction:row;gap:8px;max-width:none}
+    .evc__btn{flex:1;width:auto;font-size:.72rem;white-space:nowrap;padding-inline:8px}
+    .ev-month{margin-bottom:var(--sp-6)}
     #ev-calendar::before{left:7px}.ev-month{grid-template-columns:1fr;gap:12px;padding-left:28px}.ev-month::before{left:1px;top:9px}.ev-month__head{text-align:left;position:static;padding-top:4px}.ev-month__head .yr{display:inline;margin-left:8px}.evc{grid-template-columns:1fr}.evc__cover{min-height:180px}.evc:hover{transform:none}
   }
 </style>

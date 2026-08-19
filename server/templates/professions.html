@@ -32,6 +32,15 @@
   .prof-card .foot { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 0.82rem; }
   .prof-card .pay { color: var(--emerald, var(--acid)); font-weight: 800; }
   .prof-card .live { color: var(--ink-faint); }
+  @media (max-width: 760px) {
+    .prof-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: var(--sp-4) 0 var(--sp-5); }
+    .prof-stat { min-width: 0; padding: 12px 14px; }
+    .prof-stat b { font-size: 1.5rem; }
+    .prof-stat span { font-size: 0.66rem; }
+    .prof-card { padding: 12px 14px; gap: 4px; }
+    .prof-card p { display: none; }   /* расшифровка — на странице профессии */
+    .prof-card .foot { margin-top: 4px; }
+  }
 {% endblock %}
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Профессии</nav>

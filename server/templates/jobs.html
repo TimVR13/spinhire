@@ -17,6 +17,20 @@
   .filter-bar { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-block: var(--sp-4) var(--sp-5); align-items: center; }
   .filter-bar .input, .filter-bar .select { width: auto; padding-block: 9px; }
   .filter-bar .input[name=q] { flex: 1 1 220px; }
+  .filter-more { display: contents; }
+  .filter-toggle { display: none; }
+  @media (max-width: 760px) {
+    /* На телефоне: строка поиска + «Найти», остальные фильтры — по кнопке */
+    .filter-bar { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .filter-bar .input[name=q] { grid-column: 1 / -1; }
+    .filter-toggle { display: inline-flex; justify-content: center; }
+    .filter-bar > .btn[type=submit] { justify-self: stretch; }
+    .filter-more { display: none; grid-column: 1 / -1; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .filter-bar.is-open .filter-more { display: grid; }
+    .filter-more .select { width: 100%; min-width: 0; }
+    .filter-more .check { grid-column: 1 / -1; }
+    .filter-bar > .tag { grid-column: 1 / -1; justify-self: start; }
+  }
   .pager { display: flex; align-items: center; justify-content: center; gap: var(--sp-2); margin-top: var(--sp-6); flex-wrap: wrap; }
   .pager__nums { display: flex; gap: 6px; flex-wrap: wrap; }
   .pager__num { min-width: 38px; height: 38px; display: grid; place-items: center; padding: 0 8px; border: 1px solid var(--line-strong); border-radius: 10px; color: var(--ink-dim); font-weight: 700; font-size: 0.9rem; text-decoration: none; }
@@ -31,6 +45,8 @@
 
   <form class="filter-bar" method="get" action="/jobs" role="search">
     <input class="input" type="search" name="q" value="{{ q }}" placeholder="Должность, компания, тег…" aria-label="Поиск вакансий">
+    <button class="btn btn-ghost btn-sm filter-toggle" type="button" aria-expanded="false" aria-controls="filterMore">Фильтры{% if fmt or cat or loc or lang or salary_only %} · вкл{% endif %}</button>
+    <div class="filter-more" id="filterMore">
     <select class="select input" name="fmt" aria-label="Формат работы — онлайн, офис, гибрид">
       <option value="">Онлайн / офис — любой</option>
       {% for f in formats %}<option value="{{ f }}" {% if fmt == f %}selected{% endif %}>{{ f }}</option>{% endfor %}
@@ -48,6 +64,7 @@
       {% for code, label, aliases in job_languages %}<option value="{{ code }}" {% if lang == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
     <label class="check"><input type="checkbox" name="salary_only" value="1" {% if salary_only %}checked{% endif %}> с вилкой</label>
+    </div>
     <button class="btn btn-acid btn-sm" type="submit">Найти</button>
     {% if q or fmt or cat or loc or lang or salary_only %}<a class="tag" href="/jobs">Сбросить</a>{% endif %}
   </form>
@@ -65,7 +82,7 @@
           {% if j.category %}<span class="tag">{{ j.category }}</span>{% endif %}
           {% for t in j.tag_list %}<span class="tag">{{ t }}</span>{% endfor %}
           {% for code, label in j.language_list[:3] %}<span class="tag tag-acid" title="Язык работы">{{ label }}</span>{% endfor %}
-          {% if j.source and j.source != 'ручная' %}<span class="tag" style="color: var(--ink-faint);" title="Агрегировано из {{ j.source }}">↗ агрегатор</span>{% endif %}
+          {% if j.source and j.source != 'ручная' %}<span class="tag tag--src" style="color: var(--ink-faint);" title="Агрегировано из {{ j.source }}">↗ агрегатор</span>{% endif %}
         </div>
       </div>
       <div class="job-card__side">
@@ -97,4 +114,9 @@
   </nav>
   <p style="text-align:center; color: var(--ink-faint); font-size: 0.82rem; margin-top: 12px;">Страница {{ page }} из {{ total_pages }} · показано {{ jobs|length }} из {{ found }}</p>
   {% endif %}
+<script>
+(function(){const bar=document.querySelector('.filter-bar'),btn=bar&&bar.querySelector('.filter-toggle');if(!btn)return;
+const open=o=>{bar.classList.toggle('is-open',o);btn.setAttribute('aria-expanded',String(o));};
+open(/вкл/.test(btn.textContent));btn.addEventListener('click',()=>open(!bar.classList.contains('is-open')));})();
+</script>
 {% endblock %}
