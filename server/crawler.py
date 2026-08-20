@@ -1216,6 +1216,52 @@ def collect(with_metadata=False):
     return (items, complete_sources, health) if with_metadata else items
 
 
+# ---------- фильтр релевантности ----------
+# Борд — про карьеры в iGaming. Физические/сервисные роли наземных казино и
+# офисов (уборка, кухня, охрана, склад) не публикуем, даже если компания наша.
+_RELEVANT_OVERRIDE_RE = re.compile(r"game\s+(?:host|presenter)|croupier|dealer", re.I)
+_IRRELEVANT_TITLE_RE = re.compile(
+    r"\b("
+    r"housekeep\w*|cleaner|cleaning|janitor|steward\w*|laundry|"
+    r"security\s+(?:officer|guard)|guard\b|"
+    r"driver|courier|chauffeur|valet|"
+    r"chef|cook|kitchen|waiter|waitress|bartender|barista|barman|busser|"
+    r"food\s+(?:and|&)\s+beverage|f&b|"
+    r"gardener|landscap\w*|handyman|electrician|plumber|hvac|carpenter|painter|"
+    r"facilities\s+(?:technician|assistant|coordinator)|"
+    r"maintenance\s+(?:technician|engineer|worker|mechanic|man)\w*|"
+    r"nurse|paramedic|physician|"
+    r"(?<!data\s)warehouse|forklift|general\s+worker|porter|"
+    r"уборщи\w*|клинер|горничн\w*|охранник\w*|водитель\w*|курьер\w*|повар\w*|"
+    r"официант\w*|бармен\w*|сантехник\w*|электрик\w*|кладовщик\w*|грузчик\w*|"
+    r"разнорабоч\w*|медсестр\w*"
+    r")\b", re.I)
+
+
+def job_is_irrelevant(title: str) -> bool:
+    """Название говорит, что роль не про iGaming-карьеру."""
+    t = title or ""
+    if _RELEVANT_OVERRIDE_RE.search(t):
+        return False
+    return bool(_IRRELEVANT_TITLE_RE.search(t))
+
+
+def sweep_irrelevant(db, Job) -> int:
+    """Снять с публикации уже одобренные нерелевантные вакансии краулера.
+    Компании без живых вакансий сами исчезают из каталога и с /company/…"""
+    rows = (db.query(Job).filter(Job.status == "approved", Job.source != "")
+            .all())
+    rejected = 0
+    for row in rows:
+        if job_is_irrelevant(row.title):
+            row.status = "rejected"
+            row.closed_at = datetime.utcnow().date().isoformat()
+            rejected += 1
+    if rejected:
+        db.commit()
+    return rejected
+
+
 def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
     """Upsert jobs and archive IDs missing from successfully fetched complete sources."""
     added = updated = closed = 0
@@ -1251,7 +1297,11 @@ def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
                 row.salary = it["salary"]
             row.posted_at = it.get("posted_at", "") or row.posted_at
             row.deadline = it.get("deadline", "") or row.deadline
-            if row.status in ("archived", "rejected"):
+            if job_is_irrelevant(row.title):
+                if row.status == "approved":
+                    row.status = "rejected"
+                    row.closed_at = datetime.utcnow().date().isoformat()
+            elif row.status in ("archived", "rejected"):
                 row.status = "approved" if approve else "pending"
                 row.closed_at = ""
             after = (row.title, row.company_name, row.location, row.fmt, row.tags,
@@ -1267,7 +1317,8 @@ def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
                       source_url=it["source_url"], source=it["source"],
                       ext_id=it["ext_id"], category=cat,
                       posted_at=it.get("posted_at", ""), deadline=it.get("deadline", ""),
-                      status="approved" if approve else "pending")
+                      status="rejected" if job_is_irrelevant(it["title"])
+                             else ("approved" if approve else "pending"))
             db.add(row)
             changed_rows.append(row)
             added += 1
@@ -1350,6 +1401,9 @@ def run(db, Job, guess_category, approve=True, upsert_companies=None):
         items, complete_sources, health = collect(with_metadata=True)
         added, updated, closed, changed_ids, closed_ids = upsert(
             db, Job, guess_category, items, approve=approve, complete_sources=complete_sources)
+        swept = sweep_irrelevant(db, Job)
+        if swept:
+            print(f"[crawl] нерелевантных вакансий снято с публикации: {swept}")
         notify_search_engines(changed_ids, closed_ids)
         profiles = company_snapshot(items)
         company_rows = 0

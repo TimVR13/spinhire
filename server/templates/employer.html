@@ -47,6 +47,8 @@
   {% if request.query_params.get('invite_error') %}<div class="flash err">Не удалось создать приглашение: проверьте email и членство сотрудника.</div>{% endif %}
   {% if request.query_params.get('settings_ok') %}<div class="flash">Настройки аккаунта сохранены.</div>{% endif %}
   {% if request.query_params.get('settings_error') %}<div class="flash err">{{ request.query_params.get('settings_error') }}</div>{% endif %}
+  {% if request.query_params.get('promo_ok') %}<div class="flash">🎰 Промокод активирован — бесплатные размещения начислены на кабинет.</div>{% endif %}
+  {% if request.query_params.get('promo_error') %}<div class="flash err">{{ request.query_params.get('promo_error') }}</div>{% endif %}
   <div class="section-head" style="margin-bottom: var(--sp-5);">
     <div>
       <span class="kicker pink">Бэк-офис</span>
@@ -192,6 +194,30 @@
       <button class="btn btn-acid wide" type="submit">Сохранить настройки</button>
     </form>
   </div>
+  <div class="card" style="max-width:720px; margin-bottom:var(--sp-4);">
+    <b style="font-family:var(--font-display);">Промокод</b>
+    {% if account.promo_code %}
+    <p style="color:var(--ink-dim); font-size:.9rem; margin-top:8px;">Активирован код <b style="color:var(--acid);">{{ account.promo_code }}</b>. Осталось бесплатных размещений: <b style="color:var(--acid);">{{ account.job_credits or 0 }}</b>.</p>
+    {% else %}
+    <p style="color:var(--ink-dim); font-size:.9rem; margin:8px 0 14px;">Есть код от партнёра или с конференции? Он начислит бесплатные размещения вакансий.</p>
+    {% if team_role == 'owner' %}
+    <form method="post" action="/account/promo" style="display:flex; gap:10px; flex-wrap:wrap;">
+      <input class="input" name="code" placeholder="Например, FREESPINS5" style="flex:1; min-width:200px; text-transform:uppercase;" required>
+      <button class="btn btn-acid" type="submit">Активировать</button>
+    </form>
+    {% else %}<p style="color:var(--ink-faint); font-size:.85rem;">Промокод активирует владелец кабинета.</p>{% endif %}
+    {% endif %}
+  </div>
+  <div class="card" style="max-width:720px; margin-bottom:var(--sp-4); display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
+    <div>
+      <b style="font-family:var(--font-display);">Тема кабинета</b>
+      <p style="color:var(--ink-dim); font-size:.9rem; margin-top:6px;">Сайт остаётся тёмным, кабинет по умолчанию светлый. Выбор сохраняется в этом браузере.</p>
+    </div>
+    <div style="display:flex; gap:8px;" id="wsThemePick">
+      <button class="btn btn-ghost btn-sm" type="button" data-ws="light">☀️ Светлая</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-ws="dark">🌙 Тёмная</button>
+    </div>
+  </div>
   {% if user and user.role == 'employer' %}
   <div class="card" style="max-width:720px; display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
     <div>
@@ -249,6 +275,7 @@
     <div style="margin-bottom: var(--sp-4);">
       <span class="kicker pink">Новая вакансия</span>
       <p style="color: var(--ink-dim); margin-top: 8px;">Без зарплатной вилки не публикуем — правила заведения. Тарифы и условия — <a href="/post-job#pricing" style="color: var(--acid);">на странице для работодателей</a>.</p>
+      {% if account.job_credits and account.job_credits > 0 %}<p style="color: var(--acid); font-weight: 700; margin-top: 8px;">🎰 Доступно размещений: {{ account.job_credits }} — эта публикация спишет одно.</p>{% endif %}
     </div>
     <form method="post" action="/post-job" id="postJobForm" class="card" style="display: flex; flex-direction: column; gap: 18px;">
       <div class="field"><label>Название вакансии *</label><input class="input" name="title" required placeholder="например, Senior VIP-менеджер (немецкий)"></div>
@@ -302,6 +329,26 @@
     // кнопка «+ Разместить вакансию» в шапке кабинета ведёт на вкладку формы
     document.querySelectorAll('a[href="#post"]:not([data-pane])').forEach(a =>
       a.addEventListener('click', e => { e.preventDefault(); history.replaceState(null, '', '#post'); show('post'); }));
+
+    // тема кабинета из «Настроек»: тот же ключ wsTheme, что и у кнопки в подвале
+    const pick = document.getElementById('wsThemePick');
+    if (pick) {
+      const paint = () => {
+        const cur = document.documentElement.getAttribute('data-ws-theme') === 'dark' ? 'dark' : 'light';
+        pick.querySelectorAll('button').forEach(b => {
+          const on = b.dataset.ws === cur;
+          b.classList.toggle('btn-acid', on); b.classList.toggle('btn-ghost', !on);
+        });
+      };
+      pick.addEventListener('click', e => {
+        const b = e.target.closest('button[data-ws]'); if (!b) return;
+        if (b.dataset.ws === 'dark') document.documentElement.setAttribute('data-ws-theme', 'dark');
+        else document.documentElement.removeAttribute('data-ws-theme');
+        try { localStorage.setItem('wsTheme', b.dataset.ws); } catch (err) {}
+        paint();
+      });
+      paint();
+    }
 
     // вилка: «от» не больше «до» — ловим до отправки, чтобы не терять заполненную форму
     const form = document.getElementById('postJobForm');

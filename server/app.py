@@ -111,6 +111,7 @@ class User(Base):
     cv_access_until = Column(String, default="")   # ISO-дата безлимитного доступа
     job_credits = Column(Integer, default=0)        # оплаченные размещения вакансий
     job_access_until = Column(String, default="")  # ISO-дата безлимитного размещения
+    promo_code = Column(String, default="")        # активированный промокод (один на аккаунт)
     coins = Column(Integer, default=0)              # SpinCoins на аккаунте
     avatar_file_name = Column(String, default="")
     avatar_file_path = Column(String, default="")
@@ -580,6 +581,10 @@ PLAN_LIST_PRICE = {"single": 99, "featured": 199, "pack3": 147, "pack10": 490}
 PLAN_JOB_CREDITS = {"single": 1, "featured": 1, "pack3": 3, "pack10": 10}
 PLAN_ACCESS_DAYS = {"unlim30": 30}
 
+# Партнёрские промокоды: код → сколько бесплатных размещений начислить.
+# Раздаём в аутриче (HR брендов, конференции); один код на аккаунт.
+PROMO_CODES = {"FREESPINS5": 5}
+
 
 class Order(Base):
     __tablename__ = "orders"
@@ -804,6 +809,8 @@ def migrate(db: Session):
         db.execute(text("ALTER TABLE users ADD COLUMN job_credits INTEGER DEFAULT 0"))
     if "job_access_until" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN job_access_until VARCHAR DEFAULT ''"))
+    if "promo_code" not in ucols:
+        db.execute(text("ALTER TABLE users ADD COLUMN promo_code VARCHAR DEFAULT ''"))
     ecols = {r[1] for r in db.execute(text("PRAGMA table_info(events)")).fetchall()}
     for _sql in (
         "ALTER TABLE events ADD COLUMN image VARCHAR DEFAULT ''",
@@ -1752,6 +1759,27 @@ def account_settings(request: Request, name: str = Form(""),
         user.password_hash = hash_pw(new_password)
     db.commit()
     return RedirectResponse(back % "settings_ok=1", status_code=303)
+
+
+@app.post("/account/promo")
+def account_promo(request: Request, code: str = Form(""), db: Session = Depends(db_session)):
+    """Активация партнёрского промокода: начисляет бесплатные размещения на кабинет."""
+    from urllib.parse import quote
+    user = get_user(request, db)
+    if not user or user.role == "talent":
+        return login_redirect("/employer")
+    account, team_role = company_context(user, db)
+    if team_role != "owner":
+        return RedirectResponse("/employer?promo_error=" + quote("Промокод активирует владелец кабинета.") + "#settings", status_code=303)
+    normalized = code.strip().upper()
+    if normalized not in PROMO_CODES:
+        return RedirectResponse("/employer?promo_error=" + quote("Такого промокода нет — проверьте написание.") + "#settings", status_code=303)
+    if account.promo_code:
+        return RedirectResponse("/employer?promo_error=" + quote(f"На кабинете уже активирован код {account.promo_code}.") + "#settings", status_code=303)
+    account.promo_code = normalized
+    account.job_credits = (account.job_credits or 0) + PROMO_CODES[normalized]
+    db.commit()
+    return RedirectResponse("/employer?promo_ok=1#settings", status_code=303)
 
 
 @app.get("/logout")
@@ -2747,6 +2775,9 @@ def post_job(request: Request, title: str = Form(...), category: str = Form(""),
                location=location.strip(), fmt=fmt, salary=salary,
                tags=normalized_tags, description=description.strip(),
                owner_id=account.id, status="pending"))
+    # публикация списывает одно оплаченное/промо-размещение, если оно есть
+    if (account.job_credits or 0) > 0:
+        account.job_credits -= 1
     db.commit()
     return RedirectResponse("/employer?job_posted=1#jobs", status_code=303)
 
