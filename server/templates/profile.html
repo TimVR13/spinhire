@@ -20,9 +20,16 @@
   .recommend-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-3);margin-bottom:var(--sp-6)}
   .recommend-job{padding:16px;border:1px solid var(--line);text-decoration:none}.recommend-job:hover{border-color:var(--acid)}
   @media(max-width:700px){.cv-grid{grid-template-columns:1fr}.cv-grid .wide{grid-column:auto}.cv-start{grid-template-columns:1fr}.cv-choice{min-height:0;border-right:0;border-bottom:1px solid var(--line)}.cv-choice:last-child{border-bottom:0}.dash-strip{grid-template-columns:repeat(2,1fr)}.dash-cell:first-child{grid-column:1/-1}.recommend-grid{grid-template-columns:1fr}}
+  .cab-tabs { display:flex; gap:6px; flex-wrap:wrap; border-bottom:2px solid var(--line); margin-bottom:var(--sp-6); }
+  .cab-tabs a { padding:12px 18px; text-decoration:none; color:var(--ink-dim); font-family:var(--font-display); font-size:.8rem; text-transform:uppercase; letter-spacing:.06em; border:1px solid transparent; border-bottom:none; border-radius:10px 10px 0 0; position:relative; top:2px; }
+  .cab-tabs a b { color:var(--acid); margin-left:6px; }
+  .cab-tabs a.active { color:var(--ink); background:var(--surface); border-color:var(--line); border-bottom:2px solid var(--surface); }
+  .cab-tabs a:hover { color:var(--acid); }
+  .cab-pane { display:none; }
+  .cab-pane.active { display:block; }
+  @media(max-width:760px){.cab-tabs{gap:2px}.cab-tabs a{padding:10px 12px;font-size:.7rem}}
 {% endblock %}
 {% block content %}
-  {% if user and user.role == 'talent' %}<form method="post" action="/account/mode" style="float:right;margin-top:4px;"><input type="hidden" name="mode" value="employer"><button class="btn btn-ghost btn-sm" type="submit" title="Тот же аккаунт, данные обоих режимов сохраняются">⇄ Режим работодателя</button></form>{% endif %}
   <nav class="crumbs"><a href="/">Главная</a> / Мой профиль</nav>
   {% if request.query_params.get('quick') %}<div class="flash">✓ Мы разобрали ваше CV и заполнили черновик. Проверьте поля ниже, поправьте что нужно — и опубликуйте. Пароль для входа задайте через «Забыли пароль» или продолжайте по этой сессии.</div>{% endif %}
   {% if request.query_params.get('ok') %}<div class="flash">✓ Профиль сохранён</div>{% endif %}
@@ -42,9 +49,16 @@
   <span class="kicker">Кабинет соискателя</span>
   <div class="section-head" style="margin-block: 8px 24px;">
     <div style="display:flex;align-items:center;gap:16px;min-width:0;">{% if user.avatar_file_path %}<img class="profile-avatar" src="/profile/avatar" alt="Аватар {{ user.name or 'пользователя' }}">{% else %}<div class="profile-avatar" style="display:grid;place-items:center;font-family:var(--font-display);font-size:1.4rem;">{{ (user.name or user.email)[:2]|upper }}</div>{% endif %}<h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem);">{{ user.name or user.email }}</h1></div>
-    <form method="post" action="/account/role/employer"><button class="btn btn-pink btn-sm" type="submit">Я работодатель → сменить кабинет</button></form>
   </div>
 
+  <nav class="cab-tabs" id="cabTabs" aria-label="Разделы кабинета">
+    <a href="#overview" data-pane="overview">Обзор</a>
+    <a href="#cv" data-pane="cv">Моё CV{% if resume %}<b>{{ {'draft':'черновик','pending':'модерация','approved':'✓','rejected':'!','paused':'⏸'}.get(resume.status, '') }}</b>{% endif %}</a>
+    <a href="#apps" data-pane="apps">Отклики<b>{{ apps|length }}</b></a>
+    <a href="#settings" data-pane="settings">Настройки</a>
+  </nav>
+
+  <div class="cab-pane" data-pane="overview">
   <section class="dash-strip" aria-label="Состояние профиля и откликов">
     <div class="dash-cell"><span>Готовность профиля</span><b>{{ profile_progress }}%</b><div class="progress-track"><i style="width:{{ profile_progress }}%"></i></div></div>
     <div class="dash-cell"><span>Отклики</span><b>{{ apps|length }}</b></div>
@@ -75,6 +89,10 @@
     {% endif %}
   </div>
 
+  {% if recommendations %}<section><span class="kicker">Под ваш профиль</span><h2 style="font-size:1.25rem;margin:8px 0 16px;">Рекомендованные вакансии</h2><div class="recommend-grid">{% for job in recommendations %}<a class="recommend-job" href="/job/{{ job.id }}"><b>{{ job.title }}</b><p style="color:var(--ink-faint);font-size:.82rem;margin-top:6px;">{{ job.company_name }} · {{ job.location or job.fmt }}</p>{% if job.has_salary %}<span class="salary">{{ job.salary }}</span>{% endif %}</a>{% endfor %}</div></section>{% endif %}
+  </div><!-- /overview -->
+
+  <div class="cab-pane" data-pane="cv">
   <section id="cv" class="card cv-editor">
     <div class="section-head" style="margin-bottom:20px;">
       <div><span class="kicker">Анонимная база</span><h2 style="font-size:clamp(1.3rem,3vw,2rem);">{{ 'Редактировать CV' if resume else 'Добавить CV' }}</h2></div>
@@ -139,7 +157,26 @@
       panel.querySelector('input, textarea, select')?.focus();
     }));
   </script>{% endif %}
+  </div><!-- /cv -->
 
+  <div class="cab-pane" data-pane="apps">
+    <section>
+      <h2 style="font-size: 1rem; color: var(--acid); margin-bottom: 14px;">▮ Мои отклики ({{ apps|length }})</h2>
+      {% for a in apps %}
+      <div class="app-row">
+        <div>
+          <b><a href="/job/{{ a.job.id }}" style="text-decoration: none;">{{ a.job.title }}</a></b>
+          <p style="color: var(--ink-faint); font-size: 0.82rem;">{{ a.job.company_name }} · {{ a.created_at.strftime('%d.%m.%Y') }}</p>
+        </div>
+        <span class="status {{ a.status }}">{{ {'new': 'Отправлен', 'viewed': 'Просмотрен 👁', 'invited': 'Интервью →', 'offer': 'Оффер', 'hired': 'Нанят', 'rejected': 'Не в этот раз'}.get(a.status, a.status) }}</span>
+      </div>
+      {% else %}
+      <div class="card" style="border-style: dashed; color: var(--ink-dim);">🃏 Пока ни одного отклика — <a href="/jobs" style="color: var(--acid);">вперёд к вакансиям</a>.</div>
+      {% endfor %}
+    </section>
+  </div><!-- /apps -->
+
+  <div class="cab-pane" data-pane="settings">
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: var(--sp-5); align-items: start;">
     <form method="post" action="/profile" class="card" style="display: flex; flex-direction: column; gap: 14px;">
       <h2 style="font-size: 1rem; color: var(--acid);">▮ Профиль</h2>
@@ -153,21 +190,36 @@
       <button class="btn btn-acid" type="submit">Сохранить</button>
     </form>
 
-    <section>
-      <h2 style="font-size: 1rem; color: var(--acid); margin-bottom: 14px;">▮ Мои отклики ({{ apps|length }})</h2>
-      {% for a in apps %}
-      <div class="app-row">
-        <div>
-          <b><a href="/job/{{ a.job.id }}" style="text-decoration: none;">{{ a.job.title }}</a></b>
-          <p style="color: var(--ink-faint); font-size: 0.82rem;">{{ a.job.company_name }} · {{ a.created_at.strftime('%d.%m.%Y') }}</p>
-        </div>
-        <span class="status {{ a.status }}">{{ {'new': 'Отправлен', 'viewed': 'Просмотрен 👁', 'invited': 'Интервью →', 'offer': 'Оффер', 'hired': 'Нанят', 'rejected': 'Не в этот раз'}.get(a.status, a.status) }}</span>
-      </div>
-      {% else %}
-      <div class="card" style="border-style: dashed; color: var(--ink-dim);">Пока ни одного отклика — <a href="/jobs" style="color: var(--acid);">вперёд к вакансиям</a>.</div>
-      {% endfor %}
-    </section>
+    <div class="card" style="display:flex; flex-direction:column; gap:14px;">
+      <h2 style="font-size: 1rem; color: var(--pink);">▮ Режим аккаунта</h2>
+      <p style="color:var(--ink-dim); font-size:.9rem;">Один аккаунт — два режима. Данные соискателя и работодателя сохраняются при переключении.</p>
+      <form method="post" action="/account/mode"><input type="hidden" name="mode" value="employer"><button class="btn btn-ghost" type="submit">⇄ Я работодатель</button></form>
+    </div>
   </div>
+  </div><!-- /settings -->
 
-  {% if recommendations %}<section style="margin-top:var(--sp-7);"><span class="kicker">Под ваш профиль</span><h2 style="font-size:1.25rem;margin:8px 0 16px;">Рекомендованные вакансии</h2><div class="recommend-grid">{% for job in recommendations %}<a class="recommend-job" href="/job/{{ job.id }}"><b>{{ job.title }}</b><p style="color:var(--ink-faint);font-size:.82rem;margin-top:6px;">{{ job.company_name }} · {{ job.location or job.fmt }}</p>{% if job.has_salary %}<span class="salary">{{ job.salary }}</span>{% endif %}</a>{% endfor %}</div></section>{% endif %}
+  <script>
+  (function () {
+    const tabs = [...document.querySelectorAll('#cabTabs a')];
+    const panes = [...document.querySelectorAll('.cab-pane')];
+    const KNOWN = tabs.map(t => t.dataset.pane);
+    function show(name) {
+      if (!KNOWN.includes(name)) name = 'overview';
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.pane === name));
+      panes.forEach(p => p.classList.toggle('active', p.dataset.pane === name));
+    }
+    const params = new URLSearchParams(location.search);
+    let initial = (location.hash || '').slice(1);
+    if (initial === 'notifications') initial = 'overview';
+    if (!KNOWN.includes(initial)) {
+      if (params.get('cv_ok') || params.get('cv_error') || params.get('quick') || params.get('cv_source')
+          || params.get('linkedin_error') || params.get('cv_file_error') || params.get('avatar_error')) initial = 'cv';
+      else if (params.get('ok')) initial = 'settings';
+      else initial = 'overview';
+    }
+    show(initial);
+    tabs.forEach(t => t.addEventListener('click', e => { e.preventDefault(); history.replaceState(null, '', '#' + t.dataset.pane); show(t.dataset.pane); }));
+    window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+  })();
+  </script>
 {% endblock %}

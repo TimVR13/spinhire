@@ -54,6 +54,14 @@
   .mk-bar b { color: var(--ink); font-weight: 800; font-variant-numeric: tabular-nums; }
   .mk-note { margin-top: var(--sp-7); border: 2px solid var(--line); background: var(--surface); padding: var(--sp-5); }
   .mk-note h2 { font-family: var(--font-display); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--sp-3); }
+  .mk-archive { margin-top: var(--sp-7); }
+  .mk-archive h2 { font-family: var(--font-display); font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--sp-2); }
+  .mk-faq summary { cursor: pointer; font-family: var(--font-display); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink); list-style: none; }
+  .mk-faq summary::-webkit-details-marker { display: none; }
+  .mk-faq summary::after { content: " ⌄"; color: var(--acid); }
+  .mk-faq[open] summary::after { content: " ⌃"; }
+  .mk-faq[open] summary { margin-bottom: var(--sp-3); }
+  .mk-faq p { color: var(--ink-dim); line-height: 1.7; font-size: 0.92rem; margin-bottom: var(--sp-3); max-width: 78ch; }
   .mk-note p { color: var(--ink-dim); line-height: 1.7; font-size: 0.92rem; margin-bottom: var(--sp-3); max-width: 78ch; }
   .mk-quote { border-left: 3px solid var(--acid); padding: 10px 0 10px 16px; color: var(--ink); font-size: 0.95rem; line-height: 1.6; }
   .mk-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: var(--sp-4); font-size: 0.85rem; }
@@ -98,20 +106,49 @@
     {% endfor %}
   </div>
 
+  {% if archive %}
+  <section class="mk-archive">
+    <h2>Архив по месяцам</h2>
+    <p style="color: var(--ink-dim); font-size: 0.92rem; max-width: 78ch; margin-bottom: var(--sp-4);">Как менялся рынок: открытые вакансии на конец месяца, нанимающие компании и приток новых позиций. Текущий месяц — по состоянию на сегодня.</p>
+    <div class="table-wrap">
+      <table class="adm">
+        <thead><tr><th>Месяц</th><th>Открытых вакансий</th><th>Компаний нанимало</th><th>Новых за месяц</th><th>С вилкой</th></tr></thead>
+        <tbody>
+        {% for m in archive %}
+          <tr>
+            <td>{{ m.label }}{% if m.current %} <span style="color: var(--acid); font-size: 0.75rem;">· идёт</span>{% endif %}</td>
+            <td>{{ m.open_jobs }}</td>
+            <td>{{ m.companies }}</td>
+            <td>{{ m.new_jobs }}</td>
+            <td>{{ m.salary_pct }}%</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
   <div class="mk-note">
-    <h2>Как мы это считаем</h2>
-    <p>
-      В счёт идут все вакансии, открытые на SpinHire в момент запроса страницы. Источники —
-      карьерные страницы работодателей, ATS-фиды и публичные отраслевые каналы. Сбор идёт каждые
-      6 часов; если вакансия исчезла у источника, она уходит в архив и из статистики выбывает,
-      поэтому цифра показывает живой спрос, а не накопленный архив.
-    </p>
-    <p>
-      Страна определяется по тексту локации, удалённые вакансии вынесены в отдельную категорию.
-      Язык работы берётся из требований вакансии, а если он там не назван — из языка самого
-      объявления: для кандидата это тот же сигнал. Доля вакансий с вилкой низкая не по нашей
-      вине — большинство работодателей индустрии зарплату в объявлении не публикуют.
-    </p>
+    <details class="mk-faq">
+      <summary>Как мы это считаем?</summary>
+      <p>
+        В счёт идут все вакансии, открытые на SpinHire в момент запроса страницы. Источники —
+        карьерные страницы работодателей, ATS-фиды и публичные отраслевые каналы. Сбор идёт каждые
+        6 часов; если вакансия исчезла у источника, она уходит в архив и из статистики выбывает,
+        поэтому цифра показывает живой спрос, а не накопленный архив.
+      </p>
+      <p>
+        Страна определяется по тексту локации, удалённые вакансии вынесены в отдельную категорию.
+        Язык работы берётся из требований вакансии, а если он там не назван — из языка самого
+        объявления: для кандидата это тот же сигнал. Доля вакансий с вилкой низкая не по нашей
+        вине — большинство работодателей индустрии зарплату в объявлении не публикуют.
+      </p>
+      <p>
+        Архив по месяцам восстанавливается из истории каждой вакансии: когда она появилась и когда
+        закрылась. Нерелевантные для индустрии позиции в счёт не попадают ни в одном месяце.
+      </p>
+    </details>
 
     <h2 style="margin-top: var(--sp-5);">Как цитировать</h2>
     <p class="mk-quote">

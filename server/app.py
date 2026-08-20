@@ -3966,6 +3966,52 @@ def api_jobs(db: Session = Depends(db_session),
     })
 
 
+RU_MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля",
+             "августа", "сентября", "октября", "ноября", "декабря"]
+RU_MONTHS_NOM = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль",
+                 "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
+
+
+def market_archive(db, max_months: int = 12):
+    """Архив рынка по месяцам, восстановленный из истории вакансий.
+
+    «Открытых на конец месяца» = вакансии, созданные до конца месяца и не
+    закрытые к нему (closed_at пустой или позже). Снятые фильтром релевантности
+    (rejected) в рынок не считаются ни в одном месяце.
+    """
+    from calendar import monthrange
+    first = db.query(func.min(Job.created_at)).filter(Job.status.in_(("approved", "archived"))).scalar()
+    if not first:
+        return []
+    today = datetime.utcnow().date()
+    all_jobs = (db.query(Job).filter(Job.status.in_(("approved", "archived"))).all())
+    months = []
+    year, month = first.year, first.month
+    while (year, month) <= (today.year, today.month) and len(months) < max_months:
+        month_start = datetime(year, month, 1)
+        month_end_date = datetime(year, month, monthrange(year, month)[1]).date()
+        point = min(month_end_date, today)
+        point_iso = point.isoformat()
+        open_jobs = [j for j in all_jobs
+                     if j.created_at and j.created_at.date() <= point
+                     and (not j.closed_at or j.closed_at > point_iso)]
+        next_month = datetime(year + (month == 12), month % 12 + 1, 1)
+        new_in_month = sum(1 for j in all_jobs
+                           if j.created_at and month_start <= j.created_at < next_month)
+        with_salary = sum(1 for j in open_jobs if any(ch.isdigit() for ch in (j.salary or "")))
+        months.append({
+            "label": f"{RU_MONTHS_NOM[month - 1]} {year}",
+            "current": point == today,
+            "open_jobs": len(open_jobs),
+            "companies": len({j.company_slug for j in open_jobs}),
+            "new_jobs": new_in_month,
+            "salary_pct": round(with_salary / len(open_jobs) * 100) if open_jobs else 0,
+        })
+        year, month = next_month.year, next_month.month
+    months.reverse()
+    return months
+
+
 @app.get("/market", response_class=HTMLResponse)
 def market_page(request: Request, db: Session = Depends(db_session)):
     """Рынок труда iGaming в цифрах — наш собственный показатель.
@@ -3976,6 +4022,7 @@ def market_page(request: Request, db: Session = Depends(db_session)):
     """
     today = datetime.utcnow().date()
     return render(request, db, "market.html", stats=market_stats_data(db),
+                  archive=market_archive(db),
                   today=today.isoformat(), today_human=human_date(today))
 
 
