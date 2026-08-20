@@ -34,14 +34,19 @@
   .prof-card .live { color: var(--ink-faint); }
   .prof-card .more { color: var(--acid); font-size: 0.76rem; font-weight: 700; opacity: 0; transition: opacity .15s; }
   .prof-card:hover .more, .prof-card:focus-visible .more { opacity: 1; }
-  .prof-toolbar { position: sticky; top: 66px; z-index: 40; background: color-mix(in oklch, var(--bg) 92%, transparent); backdrop-filter: blur(14px); padding: 12px 0; margin-bottom: var(--sp-4); display: flex; flex-direction: column; gap: 10px; }
-  .prof-toolbar .input { max-width: 460px; }
+  .prof-toolbar { position: sticky; top: 66px; z-index: 40; padding: 10px 0; margin-bottom: var(--sp-5); }
+  .prof-panel { border: 1px solid var(--line); border-radius: var(--radius); background: color-mix(in oklch, var(--surface) 88%, transparent); backdrop-filter: blur(16px); padding: var(--sp-4); display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow-dark); }
+  .prof-search-row .input { width: 100%; background: var(--bg-deep); }
   .prof-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-  .prof-chips a { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--ink-dim); font-size: .78rem; font-weight: 700; border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px; }
-  .prof-chips a:hover { border-color: var(--acid); color: var(--acid); }
-  .prof-chips b { color: var(--acid); }
-  .fam h2 { display: flex; align-items: center; gap: 10px; }
-  .fam-ico { width: 34px; height: 34px; border-radius: 9px; object-fit: cover; }
+  .prof-chips a { display: inline-flex; align-items: baseline; gap: 7px; text-decoration: none; color: var(--ink-dim); font-size: .8rem; font-weight: 600; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; transition: border-color .15s, color .15s; }
+  .prof-chips a:hover { border-color: var(--acid); color: var(--ink); }
+  .prof-chips b { color: var(--acid); font-size: .74rem; }
+  .prof-nores { max-width: 560px; margin: 0 auto var(--sp-6); text-align: center; }
+  .prof-nores b { font-family: var(--font-display); }
+  .prof-nores p { color: var(--ink-dim); margin: 10px 0 18px; }
+  .prof-nores__btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .fam h2 { display: flex; align-items: center; gap: 12px; }
+  .fam-ico { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; box-shadow: 0 6px 18px oklch(0 0 0 / 0.45); }
   .prof-card[hidden] { display: none; }
   @media (max-width: 760px) {
     .prof-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: var(--sp-4) 0 var(--sp-5); }
@@ -68,21 +73,40 @@
     <div class="prof-stat"><b>4</b><span>Грейда</span></div>
   </div>
 
-  {% set fam_icons = {'Операции казино':'asset-roulette','Беттинг и трейдинг':'sym-horseshoe','Разработка игр':'sym-seven',
-                      'Аффилейты и медиабаинг':'sym-cherry','Комплаенс и AML':'sym-bar','Платежи и антифрод':'asset-chips',
-                      'Поддержка игроков':'sym-bell','Маркетинг и CRM':'sym-star','Данные и BI':'sym-diamond','Топ-менеджмент':'sym-crown'} %}
+  {# иконки — по смыслу семейства: рулетка = казино, график = трейдинг, слот = игры,
+     самолётик = трафик, щит = комплаенс, монеты = платежи, звонок = саппорт,
+     молния = маркетинг, лупа = данные, корона = топы #}
+  {% set fam_icons = {'Операции казино':'asset-roulette','Беттинг и трейдинг':'pricing/p-stats','Разработка игр':'asset-slot-cabinet',
+                      'Аффилейты и медиабаинг':'pricing/p-telegram','Комплаенс и AML':'pricing/p-moderation','Платежи и антифрод':'pricing/p-salary',
+                      'Поддержка игроков':'sym-bell','Маркетинг и CRM':'pricing/t-promo','Данные и BI':'pricing/p-google','Топ-менеджмент':'sym-crown'} %}
   <div class="prof-toolbar" id="profToolbar">
-    <input class="input" id="profSearch" type="search" placeholder="Найти должность: VIP, CRM, аналитик…" aria-label="Поиск по профессиям">
-    <div class="prof-chips">
-      {% for family, roles in families.items() %}
-      <a href="#fam-{{ loop.index }}">{{ family }} <b>{{ roles|length }}</b></a>
-      {% endfor %}
+    <div class="prof-panel">
+      <div class="prof-search-row">
+        <input class="input" id="profSearch" type="search" list="profRoles" placeholder="Должность: VIP, CRM, аналитик…" aria-label="Поиск по профессиям" autocomplete="off">
+        <datalist id="profRoles">
+          {% for family, roles in families.items() %}{% for r in roles %}<option value="{{ r.title }}">{{ r.title_en }}</option>{% endfor %}{% endfor %}
+        </datalist>
+      </div>
+      <div class="prof-chips">
+        {% for family, roles in families.items() %}
+        <a href="#fam-{{ loop.index }}">{{ family }}<b>{{ roles|length }}</b></a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="prof-nores card" id="profNoRes" hidden>
+    <b>🃏 По запросу «<span id="profNoResQ"></span>» в картотеке пусто</b>
+    <p>Оставьте запрос — разберём эту роль так же подробно и подберём живые вакансии под неё.</p>
+    <div class="prof-nores__btns">
+      <a class="btn btn-acid btn-sm" href="https://t.me/spinhire" target="_blank" rel="noopener">Запрос в Telegram</a>
+      <a class="btn btn-ghost btn-sm" id="profNoResMail" href="mailto:info@spinhire.io?subject=Запрос на подбор">Оставить запрос на почту</a>
     </div>
   </div>
 
   {% for family, roles in families.items() %}
   <section class="fam" id="fam-{{ loop.index }}">
-    <h2><img class="fam-ico" src="/img/{{ fam_icons.get(family, 'sym-star') }}.jpg" alt="" width="34" height="34" loading="lazy">{{ family }} <span style="color: var(--ink-faint); font-weight: 400;">· {{ roles|length }}</span></h2>
+    <h2><img class="fam-ico" src="/img/{{ fam_icons.get(family, 'sym-star') }}.jpg" alt="" width="48" height="48" loading="lazy">{{ family }} <span style="color: var(--ink-faint); font-weight: 400;">· {{ roles|length }}</span></h2>
     <div class="prof-grid">
       {% for r in roles %}
       <a class="prof-card" href="/profession/{{ r.slug }}">
@@ -101,8 +125,19 @@
   (function () {
     const input = document.getElementById('profSearch');
     if (!input) return;
-    input.addEventListener('input', () => {
+    const nores = document.getElementById('profNoRes');
+    const noresQ = document.getElementById('profNoResQ');
+    const noresMail = document.getElementById('profNoResMail');
+    // точное имя из выпадающего списка → сразу на страницу роли
+    const bySlug = {};
+    document.querySelectorAll('.prof-card').forEach(card => {
+      const title = card.querySelector('h3');
+      if (title) bySlug[title.textContent.trim().toLocaleLowerCase('ru')] = card.getAttribute('href');
+    });
+    const apply = () => {
       const q = input.value.trim().toLocaleLowerCase('ru');
+      if (bySlug[q]) { location.href = bySlug[q]; return; }
+      let total = 0;
       document.querySelectorAll('.fam').forEach(fam => {
         let shown = 0;
         fam.querySelectorAll('.prof-card').forEach(card => {
@@ -111,8 +146,19 @@
           if (ok) shown++;
         });
         fam.hidden = shown === 0;
+        total += shown;
       });
-    });
+      const empty = q && total === 0;
+      nores.hidden = !empty;
+      if (empty) {
+        noresQ.textContent = input.value.trim();
+        noresMail.href = 'mailto:info@spinhire.io?subject=' +
+          encodeURIComponent('Запрос на подбор: ' + input.value.trim()) +
+          '&body=' + encodeURIComponent('Ищу роль «' + input.value.trim() + '» в iGaming. Подберите, пожалуйста, вакансии или добавьте профессию в картотеку.');
+      }
+    };
+    input.addEventListener('input', apply);
+    input.addEventListener('change', apply);
   })();
   </script>
 
