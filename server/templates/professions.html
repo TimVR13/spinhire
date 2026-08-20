@@ -37,9 +37,8 @@
   .prof-toolbar { position: sticky; top: 66px; z-index: 40; background: color-mix(in oklch, var(--bg) 92%, transparent); backdrop-filter: blur(14px); padding: 12px 0; margin-bottom: var(--sp-4); display: flex; flex-direction: column; gap: 10px; }
   .prof-toolbar .input { max-width: 460px; }
   .prof-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-  .prof-chips a { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; color: var(--ink-dim); font-size: .78rem; font-weight: 700; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px 6px 7px; }
+  .prof-chips a { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--ink-dim); font-size: .78rem; font-weight: 700; border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px; }
   .prof-chips a:hover { border-color: var(--acid); color: var(--acid); }
-  .prof-chips img { width: 22px; height: 22px; border-radius: 6px; object-fit: cover; }
   .prof-chips b { color: var(--acid); }
   .fam h2 { display: flex; align-items: center; gap: 10px; }
   .fam-ico { width: 34px; height: 34px; border-radius: 9px; object-fit: cover; }
@@ -76,7 +75,7 @@
     <input class="input" id="profSearch" type="search" placeholder="Найти должность: VIP, CRM, аналитик…" aria-label="Поиск по профессиям">
     <div class="prof-chips">
       {% for family, roles in families.items() %}
-      <a href="#fam-{{ loop.index }}"><img src="/img/{{ fam_icons.get(family, 'sym-star') }}.jpg" alt="" width="22" height="22" loading="lazy">{{ family }} <b>{{ roles|length }}</b></a>
+      <a href="#fam-{{ loop.index }}">{{ family }} <b>{{ roles|length }}</b></a>
       {% endfor %}
     </div>
   </div>
