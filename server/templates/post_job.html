@@ -49,10 +49,11 @@
     <span class="kicker">Цена запуска · действует до 30 сентября 2026</span>
     <p style="color: var(--ink-dim); max-width: 74ch; margin: 10px 0 var(--sp-4); font-size: 0.95rem;">Одна вакансия стоит столько же, сколько у международных iGaming-бордов, но чем больше вы нанимаете, тем дешевле выходит каждое размещение. Всё раздельно и прозрачно: разместить вакансию, открыть контакты кандидатов из базы или отдать поиск нам под ключ.</p>
     <style>
-      /* Первый ряд — три разовых тарифа, второй — два пакетных по центру. */
+      /* Первый ряд — три разовых тарифа, второй — два пакетных на всю ширину,
+         чтобы края рядов совпадали и ничего не выглядело съехавшим. */
       .tariff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: var(--sp-3); margin-top: var(--sp-4); }
       .tariff-grid.row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .tariff-grid.row-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: calc((100% - 2 * var(--sp-3)) / 3 * 2 + var(--sp-3)); margin-inline: auto; }
+      .tariff-grid.row-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       @media (max-width: 900px) { .tariff-grid.row-3, .tariff-grid.row-2 { grid-template-columns: 1fr; max-width: 480px; margin-inline: auto; } }
       .tariff { display: flex; flex-direction: column; }
       .tariff .salary { font-size: 1.7rem; margin: 6px 0 2px; }

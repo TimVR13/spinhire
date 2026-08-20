@@ -59,7 +59,7 @@
     <nav class="main-nav" aria-label="Основная навигация">
       <a href="/jobs" {% if active == 'jobs' %}class="active"{% endif %}>Вакансии</a>
       <a href="/resumes" {% if active == 'resumes' %}class="active"{% endif %}>Резюме</a>
-      <a href="/companies.html">Компании</a>
+      <a href="/companies" {% if active == 'companies' %}class="active"{% endif %}>Компании</a>
       <a href="/blog.html">Блог</a>
       <a href="/post-job" {% if active == 'employer' %}class="active"{% endif %}>Работодателям</a>
       <a href="/profile#cv" class="nav-cta-mobile" style="color: var(--acid); font-weight: 700;">+ Добавить CV</a>

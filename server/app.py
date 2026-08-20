@@ -1369,7 +1369,7 @@ def llms_txt(db: Session = Depends(db_session)):
         "## Разделы",
         "",
         "- [Все вакансии](https://spinhire.io/jobs) — поиск и фильтры",
-        "- [Компании](https://spinhire.io/companies.html) — профили работодателей индустрии",
+        "- [Компании](https://spinhire.io/companies) — каталог работодателей со счётчиками вакансий",
         "- [Профессии](https://spinhire.io/professions) — что делает каждая роль и что требуют",
         "- [Рынок труда](https://spinhire.io/market) — сколько вакансий открыто и где",
         "- [Блог](https://spinhire.io/blog) — зарплаты, релокация, карьерные разборы",
@@ -1463,6 +1463,34 @@ def profession_markdown(slug: str, db: Session = Depends(db_session)):
     out.append(f"Источник: https://spinhire.io/profession/{slug} — SpinHire.")
     out.append("")
     return _md_response("\n".join(out))
+
+
+@app.get("/companies", response_class=HTMLResponse)
+def companies_page(request: Request, db: Session = Depends(db_session)):
+    """Каталог работодателей: все компании с живыми вакансиями, счётчики из базы."""
+    jobs = (db.query(Job).filter(Job.status == "approved", Job.company_name != "")
+            .order_by(Job.created_at.desc()).all())
+    by_slug = {}
+    for job in jobs:
+        row = by_slug.setdefault(job.company_slug, {"job": job, "count": 0})
+        row["count"] += 1
+    profiles = {p.slug: p for p in db.query(CompanyProfile).all()}
+    companies = []
+    for slug, row in by_slug.items():
+        profile = profiles.get(slug)
+        companies.append({
+            "slug": slug, "name": row["job"].company_name, "jobs": row["count"],
+            "logo": row["job"].logo_url, "initials": row["job"].initials,
+            "industry": (profile.industry or "") if profile else "",
+            "hq": (profile.headquarters or "") if profile else "",
+        })
+    companies.sort(key=lambda c: (-c["jobs"], c["name"].lower()))
+    return render(request, db, "companies.html", companies=companies, total_jobs=len(jobs))
+
+
+@app.get("/companies.html")
+def companies_html_redirect():
+    return RedirectResponse("/companies")
 
 
 @app.get("/company/{slug}", response_class=HTMLResponse)
@@ -3562,7 +3590,7 @@ def market_markdown(db: Session = Depends(db_session)):
 def sitemap(db: Session = Depends(db_session)):
     from fastapi.responses import Response
     base = "https://spinhire.io"
-    static = [("", "1.0"), ("jobs", "0.9"), ("resumes", "0.8"), ("companies.html", "0.8"), ("blog.html", "0.8"),
+    static = [("", "1.0"), ("jobs", "0.9"), ("resumes", "0.8"), ("companies", "0.8"), ("blog.html", "0.8"),
               ("post-job", "0.5"),  # games.html закрыт в robots — казино-механика
                                     # мешает классифицировать нас как джоб-борд
               ("jobs-malta.html", "0.8"), ("jobs-cyprus.html", "0.8"), ("jobs-remote.html", "0.8"),
