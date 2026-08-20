@@ -986,6 +986,53 @@ def backfill_categories(db: Session):
 app = FastAPI(title="SpinHire")
 templates = Jinja2Templates(directory=os.path.join(ROOT, "server", "templates"))
 
+# ---------- красивый рендер описаний вакансий ----------
+from markupsafe import Markup, escape  # noqa: E402
+
+_DESC_HEADING_RE = re.compile(
+    r".{0,60}[:：]$|^(requirements?|responsibilit\w+|qualifications?|benefits?|perks|"
+    r"what (you.ll do|we offer|to expect)|about (us|you|the role|the team)|nice to have|"
+    r"we offer|who you are|your (role|profile|mission)|обязанности|требования|условия|"
+    r"о компании|о роли|что делать|что нужно|мы предлагаем|будет плюсом)\b.{0,40}$", re.I)
+
+
+def pretty_desc(text: str) -> Markup:
+    """Плоский текст описания → аккуратный HTML: абзацы, списки, подзаголовки."""
+    out, bullets, para = [], [], []
+
+    def flush_para():
+        if para:
+            out.append("<p>" + "<br>".join(para) + "</p>")
+            para.clear()
+
+    def flush_bullets():
+        if bullets:
+            out.append("<ul>" + "".join(f"<li>{b}</li>" for b in bullets) + "</ul>")
+            bullets.clear()
+
+    for line in (text or "").split("\n"):
+        line = line.strip()
+        if not line:
+            flush_bullets()
+            flush_para()
+            continue
+        if line[:1] in "•-–" and len(line) > 2:
+            flush_para()
+            bullets.append(str(escape(line.lstrip("•-– ").strip())))
+        elif len(line) <= 70 and _DESC_HEADING_RE.match(line):
+            flush_bullets()
+            flush_para()
+            out.append(f'<p class="desc-h">{escape(line)}</p>')
+        else:
+            flush_bullets()
+            para.append(str(escape(line)))
+    flush_bullets()
+    flush_para()
+    return Markup("".join(out))
+
+
+templates.env.filters["pretty_desc"] = pretty_desc
+
 # ---------- security middleware ----------
 
 _BLOCKED_PREFIXES = ("/data", "/server", "/.git", "/scripts", "/.claude")

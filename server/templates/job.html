@@ -31,7 +31,13 @@
   .job-layout { display: grid; grid-template-columns: 1fr 300px; gap: var(--sp-6); align-items: start; }
   .job-hero { border: 1px solid var(--line-strong); background: var(--surface); box-shadow: 0 10px 30px oklch(0.02 0 0 / 0.5); padding: var(--sp-6); margin-bottom: var(--sp-5); }
   .job-hero h1 { font-size: clamp(1.4rem, 3vw, 2.2rem); margin-block: var(--sp-3); overflow-wrap: anywhere; }
-  .desc-block { color: oklch(0.9 0.006 285); line-height: 1.75; max-width: 74ch; white-space: pre-line; font-size: 1.02rem; }
+  .desc-block { color: oklch(0.9 0.006 285); line-height: 1.75; max-width: 74ch; font-size: 1.02rem; }
+  .desc-block p { margin: 0 0 14px; }
+  .desc-block ul { margin: 0 0 16px; padding: 0; list-style: none; }
+  .desc-block li { padding-left: 20px; position: relative; margin-bottom: 6px; }
+  .desc-block li::before { content: "▸"; position: absolute; left: 0; color: var(--acid); font-weight: 800; }
+  .desc-block .desc-h { font-weight: 800; color: var(--ink); margin: 22px 0 10px; font-size: 1.05rem; }
+  .desc-block .desc-h:first-child { margin-top: 0; }
   .side-card { border: 2px solid var(--line-strong); background: var(--surface); padding: var(--sp-5); margin-bottom: var(--sp-4); }
   .side-card h3 { font-size: 0.9rem; color: var(--acid); margin-bottom: var(--sp-3); }
   .side-card dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 0.88rem; }
@@ -118,7 +124,7 @@
 
       {% if job.description %}
         <h2 style="font-size: 1.1rem; color: var(--acid); margin-bottom: 12px;">▮ Описание</h2>
-        <div class="desc-block" data-no-translate>{{ job.description }}</div>
+        <div class="desc-block" data-no-translate>{{ job.description|pretty_desc }}</div>
       {% else %}
         <div class="desc-block" style="color: var(--ink-faint);">Работодатель не добавил подробное описание. Основное — в тегах и условиях выше{% if job.source_url %}, полный текст — у источника{% endif %}.</div>
       {% endif %}
