@@ -2950,6 +2950,26 @@ def team_role_change(membership_id: int, request: Request, role: str = Form(...)
     return RedirectResponse("/employer#team", status_code=303)
 
 
+@app.post("/employer/invite/{invite_id}/resend")
+def team_invite_resend(invite_id: int, request: Request, db: Session = Depends(db_session)):
+    """Повторно отправить письмо-приглашение: новый токен, срок продлевается."""
+    user, account, _ = require_company_user(request, db, owner_only=True)
+    invite = db.query(CompanyInvite).filter_by(id=invite_id, account_id=account.id,
+                                               status="pending").first()
+    if not invite:
+        return RedirectResponse("/employer?invite_error=1#team", status_code=303)
+    token = secrets.token_urlsafe(32)
+    invite.token_hash = hashlib.sha256(token.encode()).hexdigest()
+    invite.expires_at = (datetime.utcnow() + timedelta(days=7)).isoformat()
+    db.commit()
+    accept_url = f"{BASE_URL or 'https://spinhire.io'}/employer/invite/{token}/accept"
+    sent = resend_send(invite.email, f"Приглашение в команду {account.company_name or 'SpinHire'}",
+                       f"<p>Вас пригласили в кабинет компании <b>{html.escape(account.company_name or account.email)}</b>.</p>"
+                       f'<p><a href="{html.escape(accept_url)}">Принять приглашение</a></p><p>Ссылка действует 7 дней.</p>')
+    flag = "invite_resent=1" if sent else "invite_error=mail"
+    return RedirectResponse(f"/employer?{flag}#team", status_code=303)
+
+
 @app.post("/employer/invite/{invite_id}/revoke")
 def team_invite_revoke(invite_id: int, request: Request, db: Session = Depends(db_session)):
     _, account, _ = require_company_user(request, db, owner_only=True)
@@ -3711,6 +3731,49 @@ def professions_index(request: Request, db: Session = Depends(db_session)):
                   regions=data["regions"], seniority=SENIORITY)
 
 
+# Словарь метрик: подстрока в KPI → пояснение простыми словами.
+KPI_GLOSSARY = [
+    ("retention", "доля игроков, вернувшихся через N дней после регистрации или депозита"),
+    ("reactivation", "сколько «уснувших» игроков удалось вернуть в игру"),
+    ("bonus cost", "стоимость выданных бонусов относительно чистого игрового дохода"),
+    ("ngr", "Net Gaming Revenue — доход после выигрышей, бонусов и налогов"),
+    ("ggr", "Gross Gaming Revenue — ставки минус выигрыши, валовый игровой доход"),
+    ("arppu", "средний доход с одного платящего игрока за период"),
+    ("arpu", "средний доход с одного игрока за период"),
+    ("ltv", "суммарный доход с игрока за всё время его жизни в продукте"),
+    ("ftd", "First Time Deposit — первый депозит нового игрока"),
+    ("конверси", "какая доля игроков проходит на следующий шаг воронки"),
+    ("churn", "отток — доля игроков, переставших играть за период"),
+    ("cpa", "цена привлечения одного игрока"),
+    ("roi", "окупаемость — сколько дохода принёс каждый вложенный евро"),
+    ("ctr", "кликабельность — доля кликнувших среди увидевших"),
+    ("open rate", "доля открытых писем в рассылке"),
+    ("nps", "индекс лояльности — готовность игроков рекомендовать продукт"),
+    ("csat", "оценка удовлетворённости игрока после контакта с поддержкой"),
+    ("sla", "согласованный норматив скорости и качества реакции"),
+    ("aht", "среднее время обработки одного обращения"),
+    ("frt", "скорость первого ответа игроку"),
+    ("uptime", "доля времени, когда сервис работал без сбоев"),
+    ("rtp", "Return to Player — какой процент ставок возвращается игрокам"),
+    ("false positive", "доля ошибочных срабатываний проверок на честных игроках"),
+    ("chargeback", "возвраты платежей по требованию банка игрока"),
+    ("approval rate", "доля платежей, прошедших с первого раза"),
+    ("вейджер", "условия отыгрыша бонуса — сколько раз нужно прокрутить сумму"),
+    ("маржа", "доля прибыли в обороте ставок"),
+    ("margin", "доля прибыли в обороте ставок"),
+    ("turnover", "суммарный оборот ставок за период"),
+    ("депозит", "показатели по вносимым игроками деньгам"),
+]
+
+
+def kpi_note(text: str) -> str:
+    low = (text or "").lower()
+    for needle, note in KPI_GLOSSARY:
+        if needle in low:
+            return note
+    return ""
+
+
 @app.get("/profession/{slug}", response_class=HTMLResponse)
 def profession_page(slug: str, request: Request, db: Session = Depends(db_session)):
     role = profession_by_slug(slug)
@@ -3721,9 +3784,10 @@ def profession_page(slug: str, request: Request, db: Session = Depends(db_sessio
     same_family = [r for r in data["roles"]
                    if r["family"] == role["family"] and r["slug"] != role["slug"]][:6]
     jobs = role_matched_jobs(db, role)
+    kpi_notes = {k: kpi_note(k) for k in role.get("kpis", [])}
     return render(request, db, "profession.html", role=role, regions=data["regions"],
                   seniority=SENIORITY, related=related, same_family=same_family,
-                  jobs=jobs, jobs_count=role_jobs_count(db, role),
+                  jobs=jobs, jobs_count=role_jobs_count(db, role), kpi_notes=kpi_notes,
                   salary_headline=role_salary_headline(role))
 
 

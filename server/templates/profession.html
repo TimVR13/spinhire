@@ -52,7 +52,16 @@
   ]
 } | tojson }}</script>{% endblock %}
 {% block style %}
+  /* страница профессии светлее общего фона: зелёное свечение сверху, как на главной */
+  body { background-image:
+    radial-gradient(circle at 14% 0%, oklch(0.42 0.10 163 / 0.22), transparent 36rem),
+    radial-gradient(circle at 88% 24%, oklch(0.34 0.08 350 / 0.09), transparent 30rem),
+    linear-gradient(135deg, oklch(0.19 0.02 170), oklch(0.165 0.016 170) 52%, oklch(0.15 0.015 200)); }
   .p-wrap { max-width: 900px; margin: 0 auto; }
+  .facts a.fact { text-decoration: none; color: inherit; display: block; transition: border-color .15s, transform .15s; }
+  .facts a.fact:hover { border-color: var(--acid); transform: translateY(-2px); }
+  .fact i { display: block; font-style: normal; color: var(--acid); font-size: 0.72rem; font-weight: 700; margin-top: 6px; }
+  .kpi-note { display: block; color: var(--ink-faint); font-size: 0.82rem; margin-top: 3px; line-height: 1.45; }
   .p-head .en { font-size: 0.8rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.08em; }
   .p-lead { font-size: 1.05rem; color: var(--ink-dim); line-height: 1.6; margin: 12px 0 var(--sp-5); }
   .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-6); }
@@ -94,9 +103,9 @@
   </div>
 
   <div class="facts">
-    <div class="fact pay"><span>Middle · Мальта и Кипр</span><b>{{ salary_headline }}</b></div>
-    <div class="fact"><span>Направление</span><b style="font-size: 0.95rem;">{{ role.family }}</b></div>
-    <div class="fact"><span>Живых вакансий</span><b>{{ jobs_count }}</b></div>
+    <a class="fact pay" href="#salary"><span>Middle · Мальта и Кипр</span><b>{{ salary_headline }}</b><i>вилки по грейдам ↓</i></a>
+    <a class="fact" href="/professions"><span>Направление</span><b style="font-size: 0.95rem;">{{ role.family }}</b><i>вся картотека →</i></a>
+    <a class="fact" href="{% if jobs %}#live-jobs{% else %}/jobs?q={{ role.title | urlencode }}{% endif %}"><span>Живых вакансий</span><b>{{ jobs_count }}</b><i>смотреть ↓</i></a>
     <div class="fact"><span>Похожие названия</span><b style="font-size: 0.9rem;">{{ role.aliases[0] }}</b></div>
   </div>
 
@@ -112,7 +121,7 @@
 
   <section class="p-section">
     <h2>По каким метрикам оценивают</h2>
-    <ul class="p-list">{% for k in role.kpis %}<li>{{ k }}</li>{% endfor %}</ul>
+    <ul class="p-list">{% for k in role.kpis %}<li>{{ k }}{% if kpi_notes.get(k) %}<span class="kpi-note">{{ kpi_notes[k] }}</span>{% endif %}</li>{% endfor %}</ul>
   </section>
 
   <section class="p-section">
@@ -125,10 +134,10 @@
       <div>
         <h3 style="font-size: 0.95rem; margin-bottom: 10px;">Личные качества</h3>
         <ul class="p-list">{% for s in role.soft_skills %}<li>{{ s }}</li>{% endfor %}</ul>
-        <h3 style="font-size: 0.95rem; margin: 18px 0 10px;">Инструменты</h3>
-        <div class="chips">{% for t in role.tools %}<span class="chip">{{ t }}</span>{% endfor %}</div>
       </div>
     </div>
+    <h3 style="font-size: 0.95rem; margin: 22px 0 10px;">Инструменты</h3>
+    <div class="chips">{% for t in role.tools %}<span class="chip">{{ t }}</span>{% endfor %}</div>
     <p style="margin-top: 16px;"><b style="color: var(--ink);">Языки:</b> {{ role.languages }}</p>
   </section>
 
@@ -169,7 +178,7 @@
   </section>
 
   {% if jobs %}
-  <section class="p-section">
+  <section class="p-section" id="live-jobs">
     <h2>Живые вакансии: {{ role.title }}</h2>
     <div style="display: flex; flex-direction: column; gap: 10px;">
       {% for j in jobs %}
