@@ -66,6 +66,13 @@ SIGNUP_COIN_BONUS = 20
 # Подтверждение почты включается автоматически, когда настроен Resend.
 REQUIRE_VERIFY = bool(RESEND_API_KEY)
 
+# ---------- мультиязычность по хостам ----------
+# Целевая схема: spinhire.io — английский (базовый), ru.spinhire.io — русский,
+# ua.spinhire.io — украинский. Включается SPINHIRE_BASE_LANG=en, когда для
+# поддоменов добавлены DNS-записи и Caddy. До этого поведение прежнее (ru).
+BASE_LANG = os.environ.get("SPINHIRE_BASE_LANG", "ru")
+LANG_HOSTS = {"en": "spinhire.io", "ru": "ru.spinhire.io", "uk": "ua.spinhire.io"}
+
 engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
 Base = declarative_base()
@@ -1013,6 +1020,128 @@ async def guard(request: Request, call_next):
     if path.startswith(("/css/", "/js/", "/img/", "/assets/")):
         resp.headers.setdefault("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400")
     return resp
+
+
+# ---------- серверный перевод страниц (языки по хостам) ----------
+# Словари — те же, что использует клиентский переводчик (js/i18n-*.js — это JSON).
+# Логика зеркалит клиент: точное совпадение текстового узла — по полному словарю,
+# служебная лексика (категории, форматы, «по запросу», гео) — подстрочно везде.
+
+_SERVER_VOCAB = {
+    "en": {
+        "Операции казино": "Casino operations", "Беттинг и трейдинг": "Betting & trading",
+        "Разработка игр": "Game development", "Аффилейты и медиабаинг": "Affiliates & media buying",
+        "Комплаенс и AML": "Compliance & AML", "Платежи и антифрод": "Payments & antifraud",
+        "Поддержка игроков": "Player support", "Маркетинг и CRM": "Marketing & CRM",
+        "Данные и BI": "Data & BI", "Топ-менеджмент": "Executive",
+        "удалёнка": "remote", "Удалёнка": "Remote", "гибрид": "hybrid", "офис": "office",
+        "по запросу": "on request", "Не указана": "Not specified", "вакансий": "jobs",
+        "вакансии": "jobs", "вакансия": "job", "Обновлено": "Updated",
+        "лет опыта": "years of experience", "активность сегодня": "active today",
+        "активность вчера": "active yesterday", "активность на этой неделе": "active this week",
+        "хочет": "expects", "Мальта": "Malta", "США": "USA", "Великобритания": "United Kingdom",
+        "Греция": "Greece", "Польша": "Poland", "Бразилия": "Brazil", "Германия": "Germany",
+        "Кипр": "Cyprus", "Украина": "Ukraine", "Испания": "Spain", "Румыния": "Romania",
+        "Грузия": "Georgia", "Сербия": "Serbia", "Армения": "Armenia", "Чехия": "Czechia",
+        "Нидерланды": "Netherlands", "Филиппины": "Philippines", "Болгария": "Bulgaria",
+        "Швеция": "Sweden", "Гибралтар": "Gibraltar",
+    },
+    "uk": {
+        "Операции казино": "Операції казино", "Беттинг и трейдинг": "Бетинг і трейдинг",
+        "Разработка игр": "Розробка ігор", "Аффилейты и медиабаинг": "Афілейти та медіабаїнг",
+        "Комплаенс и AML": "Комплаєнс і AML", "Платежи и антифрод": "Платежі та антифрод",
+        "Поддержка игроков": "Підтримка гравців", "Маркетинг и CRM": "Маркетинг і CRM",
+        "Данные и BI": "Дані та BI", "Топ-менеджмент": "Топменеджмент",
+        "удалёнка": "віддалено", "Удалёнка": "Віддалено", "гибрид": "гібрид", "офис": "офіс",
+        "по запросу": "за запитом", "Не указана": "Не вказана", "вакансий": "вакансій",
+        "вакансии": "вакансії", "вакансия": "вакансія", "Обновлено": "Оновлено",
+        "лет опыта": "років досвіду", "хочет": "хоче",
+    },
+}
+
+_I18N_SERVER, _VOCAB_RE = {}, {}
+for _code in ("en", "uk"):
+    try:
+        with open(os.path.join(ROOT, "js", f"i18n-{_code}.js"), encoding="utf-8") as _fh:
+            _I18N_SERVER[_code] = json.load(_fh)
+    except Exception:
+        _I18N_SERVER[_code] = {}
+    _keys = sorted(_SERVER_VOCAB.get(_code, {}), key=len, reverse=True)
+    _VOCAB_RE[_code] = re.compile("|".join(re.escape(k) for k in _keys)) if _keys else None
+
+_HTML_TEXT_RE = re.compile(r">([^<>]+)<")
+_HTML_ATTR_RE = re.compile(r'((?:placeholder|aria-label|title|content|alt)=")([^"]+)(")')
+_SKIP_BLOCK_RE = re.compile(r"(<script\b.*?</script>|<style\b.*?</style>|<textarea\b.*?</textarea>)",
+                            re.S | re.I)
+_CYR_RE = re.compile(r"[А-Яа-яЁёІіЇїЄєҐґ]")
+
+
+def host_lang(host: str) -> str:
+    h = (host or "").split(":")[0].lower()
+    if h.startswith("ru."):
+        return "ru"
+    if h.startswith(("ua.", "uk.")):
+        return "uk"
+    return BASE_LANG
+
+
+def translate_html(html_text: str, lang: str) -> str:
+    """Перевести готовый HTML: точные узлы по словарю, служебные слова подстрочно."""
+    full = _I18N_SERVER.get(lang, {})
+    vocab = _SERVER_VOCAB.get(lang, {})
+    vocab_re = _VOCAB_RE.get(lang)
+
+    def translate_text(raw: str) -> str:
+        key = " ".join(raw.split())
+        if key in full:
+            lead = raw[:len(raw) - len(raw.lstrip())]
+            trail = raw[len(raw.rstrip()):]
+            return lead + full[key] + trail
+        if vocab_re and _CYR_RE.search(raw):
+            return vocab_re.sub(lambda m: vocab[m.group(0)], raw)
+        return raw
+
+    out = []
+    for part in _SKIP_BLOCK_RE.split(html_text):
+        low = part[:9].lower()
+        if low.startswith(("<script", "<style", "<textarea")):
+            out.append(part)
+            continue
+        part = _HTML_TEXT_RE.sub(lambda m: ">" + translate_text(m.group(1)) + "<", part)
+        part = _HTML_ATTR_RE.sub(lambda m: m.group(1) + translate_text(m.group(2)) + m.group(3), part)
+        out.append(part)
+    return "".join(out)
+
+
+def _hreflang_block(path: str) -> str:
+    links = [f'<link rel="alternate" hreflang="{code}" href="https://{host}{path}">'
+             for code, host in LANG_HOSTS.items()]
+    links.append(f'<link rel="alternate" hreflang="x-default" href="https://{LANG_HOSTS["en"]}{path}">')
+    return "".join(links)
+
+
+@app.middleware("http")
+async def language_layer(request: Request, call_next):
+    response = await call_next(request)
+    if BASE_LANG == "ru":                      # режим ещё не включён — ничего не трогаем
+        return response
+    ctype = response.headers.get("content-type", "")
+    if not ctype.startswith("text/html") or request.url.path.startswith("/admin"):
+        return response
+    lang = host_lang(request.headers.get("host", ""))
+    body = b""
+    async for chunk in response.body_iterator:
+        body += chunk
+    text = body.decode("utf-8", "replace")
+    if lang != "ru":
+        text = translate_html(text, lang)
+        text = text.replace('<html lang="ru">', f'<html lang="{lang}">', 1)
+    marker = (f'<meta name="sh-lang" content="{lang}" data-mode="host">'
+              + _hreflang_block(request.url.path))
+    text = text.replace("</head>", marker + "</head>", 1)
+    headers = dict(response.headers)
+    headers.pop("content-length", None)
+    return HTMLResponse(text, status_code=response.status_code, headers=headers)
 
 
 @app.on_event("startup")

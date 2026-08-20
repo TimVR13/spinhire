@@ -2,13 +2,25 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   // Язык автоматически следует за браузером; ручной выбор доступен в футере.
+  // В хост-режиме (spinhire.io = EN, ru./ua. — поддомены) язык диктует сервер
+  // метой sh-lang, а выбор языка меняет хост, сохраняя путь.
   const UI_LANGS = ['ru', 'uk', 'en'];
+  const langMeta = document.querySelector('meta[name="sh-lang"]');
+  const hostMode = !!(langMeta && langMeta.dataset.mode === 'host');
+  const LANG_HOSTS = { en: 'spinhire.io', ru: 'ru.spinhire.io', uk: 'ua.spinhire.io' };
   const savedUiLang = localStorage.getItem('uiLanguage');
   const browserUiLang = (navigator.languages || [navigator.language || 'ru'])
     .map(lang => String(lang).toLowerCase().split('-')[0])
     .map(lang => lang === 'ua' ? 'uk' : lang)
     .find(lang => UI_LANGS.includes(lang)) || 'ru';
-  const uiLang = UI_LANGS.includes(savedUiLang) ? savedUiLang : browserUiLang;
+  const uiLang = hostMode ? (langMeta.getAttribute('content') || 'en')
+    : (UI_LANGS.includes(savedUiLang) ? savedUiLang : browserUiLang);
+  // разовое автоподстраивание под язык браузера: только людям без явного выбора
+  if (hostMode && !localStorage.getItem('langHostChosen') && browserUiLang !== uiLang
+      && LANG_HOSTS[browserUiLang] && location.hostname.endsWith('spinhire.io')) {
+    localStorage.setItem('langHostChosen', '1');
+    location.host = LANG_HOSTS[browserUiLang];
+  }
   const UI_COPY = {
     uk: {
       'Вакансии':'Вакансії','Резюме':'Резюме','Компании':'Компанії','Блог':'Блог','Работодателям':'Роботодавцям',
@@ -156,6 +168,11 @@ document.addEventListener('DOMContentLoaded', () => {
     select.innerHTML = '<option value="ru">Русский</option><option value="uk">Українська</option><option value="en">English</option>';
     select.value = uiLang;
     select.addEventListener('change', () => {
+      if (hostMode) {
+        localStorage.setItem('langHostChosen', '1');
+        location.host = LANG_HOSTS[select.value] || LANG_HOSTS.en;
+        return;
+      }
       localStorage.setItem('uiLanguage', select.value); location.reload();
     });
     label.append(caption, select); languageHost.appendChild(label);
