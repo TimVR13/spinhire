@@ -28,10 +28,19 @@
   .cab-tabs { display:flex; gap:6px; flex-wrap:wrap; border-bottom:2px solid var(--line); margin-bottom:var(--sp-6); }
   .cab-tabs a { padding:12px 18px; text-decoration:none; color:var(--ink-dim); font-family:var(--font-display); font-size:.8rem; text-transform:uppercase; letter-spacing:.06em; border:1px solid transparent; border-bottom:none; border-radius:10px 10px 0 0; position:relative; top:2px; }
   .cab-tabs a b { color:var(--acid); margin-left:6px; }
+  .cab-tabs a .tab-new { color:var(--on-pink); background:var(--pink); border-radius:999px; padding:1px 7px; font-size:.68rem; }
   .cab-tabs a.active { color:var(--ink); background:var(--surface); border-color:var(--line); border-bottom:2px solid var(--surface); }
   .cab-tabs a:hover { color:var(--acid); }
   .cab-pane { display:none; }
   .cab-pane.active { display:block; }
+  .wallet-row { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:var(--sp-3); margin-bottom:var(--sp-4); }
+  .wallet-card { border:2px solid var(--line); background:var(--surface); border-radius:var(--radius); padding:var(--sp-4) var(--sp-5); }
+  .wallet-vals { display:flex; gap:26px; align-items:baseline; flex-wrap:wrap; margin-top:10px; }
+  .wallet-vals a { text-decoration:none; color:inherit; }
+  .wallet-vals b { font-family:var(--font-display); font-size:1.5rem; color:var(--acid); margin-right:6px; }
+  .wallet-vals span { color:var(--ink-faint); font-size:.78rem; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+  .wallet-promo { color:var(--pink) !important; }
+  @media(max-width:760px){ .wallet-row { grid-template-columns:1fr; } }
   @media(max-width:760px){.cab-tabs{gap:2px}.cab-tabs a{padding:10px 12px;font-size:.7rem}.cv-access{grid-template-columns:1fr}.cv-plans{justify-content:flex-start}.unlocked-row{grid-template-columns:1fr auto}.unlocked-row>div:nth-child(2){grid-column:1/-1}.company-stats{grid-template-columns:repeat(2,1fr)}.company-stat:first-child{grid-column:1/-1}.profile-grid{grid-template-columns:1fr}.profile-grid .wide{grid-column:auto}}
 {% endblock %}
 {% block content %}
@@ -41,6 +50,7 @@
   {% if request.query_params.get('job_posted') %}<div class="flash">✓ Вакансия отправлена на модерацию — обычно проверяем за пару часов. Статус виден во вкладке «Вакансии».</div>{% endif %}
   {% if request.query_params.get('job_error') %}<div class="flash err">{{ request.query_params.get('job_error') }}</div>{% endif %}
   {% if request.query_params.get('job_archived') %}<div class="flash">Вакансия закрыта и перенесена в архив.</div>{% endif %}
+  {% if request.query_params.get('job_republished') %}<div class="flash">Вакансия отправлена на повторную модерацию — скоро вернётся в поиск.</div>{% endif %}
   {% if request.query_params.get('invite_sent') %}<div class="flash">Приглашение отправлено. Ссылка действует 7 дней.</div>{% endif %}
   {% if request.query_params.get('invite_accepted') %}<div class="flash">Вы присоединились к командному кабинету.</div>{% endif %}
   {% if request.query_params.get('member_removed') %}<div class="flash">Сотрудник удалён из командного кабинета.</div>{% endif %}
@@ -65,7 +75,7 @@
     <a href="#overview" data-pane="overview">Обзор</a>
     <a href="#jobs" data-pane="jobs">Вакансии<b>{{ stats.active_jobs }}</b></a>
     {% if team_role != 'viewer' %}<a href="#post" data-pane="post">+ Новая вакансия</a>{% endif %}
-    <a href="#ats" data-pane="ats">Кандидаты<b>{{ ats_apps|length }}</b></a>
+    <a href="#ats" data-pane="ats">Кандидаты<b>{{ ats_apps|length }}</b>{% if stats.new_applications %}<b class="tab-new">+{{ stats.new_applications }}</b>{% endif %}</a>
     <a href="#talents" data-pane="talents">База резюме<b>{{ account.cv_credits or 0 }}</b></a>
     <a href="#company" data-pane="company">Компания{% if company_progress < 100 %}<b>{{ company_progress }}%</b>{% endif %}</a>
     <a href="#team" data-pane="team">Команда<b>{{ team|length + 1 }}</b></a>
@@ -73,6 +83,23 @@
   </nav>
 
   <div class="cab-pane" data-pane="overview">
+  <div class="wallet-row">
+    <div class="wallet-card">
+      <span class="kicker">Баланс кабинета</span>
+      <div class="wallet-vals">
+        <a href="#post"><b>{{ account.job_credits or 0 }}</b><span>размещений</span></a>
+        <a href="/resumes"><b>{{ account.cv_credits or 0 }}</b><span>контактов</span></a>
+        {% if account.promo_code %}<span class="wallet-promo">промокод {{ account.promo_code }} активен</span>{% endif %}
+      </div>
+    </div>
+    <div class="wallet-card wallet-card--support">
+      <span class="kicker pink">Поддержка SpinHire</span>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+        <a class="btn btn-ghost btn-sm" href="https://t.me/spinhire" target="_blank" rel="noopener">Telegram</a>
+        <a class="btn btn-ghost btn-sm" href="mailto:info@spinhire.io">info@spinhire.io</a>
+      </div>
+    </div>
+  </div>
   <section class="company-stats" aria-label="Статистика найма">
     <div class="company-stat"><span>Профиль компании</span><b>{{ company_progress }}%</b></div>
     <div class="company-stat"><span>Активные</span><b>{{ stats.active_jobs }}</b></div>
@@ -231,7 +258,7 @@
 
   <div class="cab-pane" data-pane="ats">
   <section style="margin:0 0 var(--sp-6);"><div class="section-head"><div><span class="kicker pink">Мини-ATS</span><h2 style="font-size:1.25rem;margin-top:6px;">Кандидаты · {{ ats_apps|length }}</h2></div><form method="get" action="/employer" style="display:flex;gap:8px;"><select class="input" name="stage"><option value="">Все этапы</option>{% for value,label in [('new','Новые'),('viewed','Просмотрены'),('invited','Интервью'),('offer','Оффер'),('hired','Наняты'),('rejected','Отказ')] %}<option value="{{ value }}" {% if stage==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="btn btn-ghost">Фильтр</button></form></div>
-  <div style="border-top:2px solid var(--line);">{% for a in ats_apps %}<a href="/employer/application/{{ a.id }}" style="display:grid;grid-template-columns:120px minmax(0,1fr) 180px auto;gap:14px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line);text-decoration:none;"><span class="status {{ a.status }}">{{ a.status }}</span><span><b>{% if a.user.incognito %}Аноним #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</b><small style="display:block;color:var(--ink-faint);margin-top:4px;">{{ a.job.title }}</small></span><span style="color:var(--ink-dim);font-size:.8rem;">{% if a.interview_at %}Интервью {{ a.interview_at|replace('T',' ') }}{% elif a.next_action_at %}Действие {{ a.next_action_at }}{% else %}План не задан{% endif %}</span><span style="color:var(--pink);">→</span></a>{% else %}<p style="padding:24px 0;color:var(--ink-dim);">По выбранному этапу кандидатов нет.</p>{% endfor %}</div></section>
+  <div style="border-top:2px solid var(--line);">{% for a in ats_apps %}<a href="/employer/application/{{ a.id }}" style="display:grid;grid-template-columns:120px minmax(0,1fr) 180px auto;gap:14px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line);text-decoration:none;"><span class="status {{ a.status }}">{{ a.status }}</span><span><b>{% if a.user.incognito %}Аноним #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</b><small style="display:block;color:var(--ink-faint);margin-top:4px;">{{ a.job.title }}</small></span><span style="color:var(--ink-dim);font-size:.8rem;">{% if a.interview_at %}Интервью {{ a.interview_at|replace('T',' ') }}{% elif a.next_action_at %}Действие {{ a.next_action_at }}{% else %}План не задан{% endif %}</span><span style="color:var(--pink);">→</span></a>{% else %}<p style="padding:24px 0;color:var(--ink-dim);">🃏 За этим столом пока тихо. Разместите вакансию или поднимите её в топ — отклики придут сами.</p>{% endfor %}</div></section>
 
   </div><!-- /ats -->
 
@@ -242,7 +269,7 @@
       <span>{{ j.title }} <span class="status {{ j.status }}">{{ {'pending': 'на модерации', 'approved': 'опубликована', 'rejected': 'отклонена', 'archived': 'в архиве'}[j.status] }}</span></span>
       <span style="color: var(--ink-faint); font-size: 0.8rem; font-weight: 400;">{{ j.views }} просмотров · {{ j.applications|length }} откликов{% if j.featured %} · ⚡ Featured{% endif %}</span>
     </h3>
-    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">{% if team_role != 'viewer' %}<a class="btn btn-ghost btn-sm" href="/employer/job/{{ j.id }}/edit">Редактировать</a>{% endif %}<a class="btn btn-ghost btn-sm" href="/job/{{ j.id }}">Открыть</a>{% if team_role != 'viewer' and j.status != 'archived' %}<form method="post" action="/employer/job/{{ j.id }}/archive" onsubmit="return confirm('Закрыть вакансию? Она исчезнет из активного поиска.')"><button class="btn btn-ghost btn-sm" type="submit">Закрыть вакансию</button></form>{% endif %}</div>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">{% if team_role != 'viewer' %}<a class="btn btn-ghost btn-sm" href="/employer/job/{{ j.id }}/edit">Редактировать</a>{% endif %}<a class="btn btn-ghost btn-sm" href="/job/{{ j.id }}">Открыть</a>{% if team_role != 'viewer' and j.status != 'archived' %}<form method="post" action="/employer/job/{{ j.id }}/archive" onsubmit="return confirm('Закрыть вакансию? Она исчезнет из активного поиска.')"><button class="btn btn-ghost btn-sm" type="submit">Закрыть вакансию</button></form>{% endif %}{% if team_role != 'viewer' and j.status == 'archived' %}<form method="post" action="/employer/job/{{ j.id }}/republish"><button class="btn btn-acid btn-sm" type="submit">↻ Опубликовать снова</button></form>{% endif %}</div>
     {% for a in j.applications %}
     <div class="cand-row" id="application-{{ a.id }}">
       <div class="who">

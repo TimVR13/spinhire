@@ -35,6 +35,23 @@
   .cv-skill { border:1px solid var(--line); padding:5px 8px; color:var(--ink-dim); font-size:.75rem; }
   .cv-arrow { color:var(--pink); font-size:1.4rem; }
   .cv-empty { padding:60px 0; color:var(--ink-dim); border-bottom:1px solid var(--line); }
+  .cv-toolbar { display:flex; justify-content:space-between; align-items:center; gap:var(--sp-4); flex-wrap:wrap; margin-bottom:var(--sp-4); }
+  .cv-tabs { display:flex; gap:6px; }
+  .cv-tabs a { text-decoration:none; color:var(--ink-dim); font-weight:700; font-size:.82rem; padding:8px 14px; border:1px solid var(--line); border-radius:999px; }
+  .cv-tabs a.on { background:var(--acid); color:var(--on-acid); border-color:var(--acid); }
+  .cv-saved { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .cv-saved__chip { display:inline-flex; align-items:center; gap:6px; border:1px dashed var(--line-strong); border-radius:999px; padding:5px 6px 5px 12px; font-size:.8rem; }
+  .cv-saved__chip a { color:var(--acid); text-decoration:none; font-weight:700; }
+  .cv-saved__chip button { background:none; border:0; color:var(--ink-faint); font-size:.8rem; padding:2px 6px; }
+  .cv-saved__chip button:hover { color:var(--pink); }
+  .cv-row-wrap { position:relative; }
+  .cv-actions { position:absolute; top:14px; right:44px; display:flex; gap:6px; }
+  .cv-actions button { background:var(--surface); border:1px solid var(--line); border-radius:8px; color:var(--ink-faint); width:32px; height:32px; font-size:.95rem; }
+  .cv-actions button:hover { border-color:var(--acid); color:var(--acid); }
+  .cv-actions button.on { color:var(--yellow); border-color:var(--yellow); }
+  .cv-fill { display:block; margin-top:6px; color:var(--ink-faint); font-size:.7rem; }
+  .cv-fresh { color:var(--emerald, var(--acid)); font-weight:600; }
+  .cv-salary { color:var(--yellow); }
   .cv-cta { display:flex; align-items:center; justify-content:space-between; gap:var(--sp-4); flex-wrap:wrap; margin-top:var(--sp-6); padding:var(--sp-5); border:1px solid var(--line); border-radius:var(--radius); background:color-mix(in oklch,var(--surface) 82%,transparent); }
   .cv-cta b { font-family:var(--font-display); font-size:1rem; }
   .cv-cta p { color:var(--ink-dim); font-size:.9rem; max-width:60ch; margin-top:6px; }
@@ -68,16 +85,49 @@
     <button class="btn btn-acid" type="submit">Найти</button>
   </form>
 
+  {% if is_employer %}
+  <div class="cv-toolbar">
+    <nav class="cv-tabs" aria-label="Фильтр по пометкам">
+      <a href="/resumes" {% if not view %}class="on"{% endif %}>Все</a>
+      <a href="/resumes?view=fav" {% if view=='fav' %}class="on"{% endif %}>★ Избранные{% if mark_counts.fav %} · {{ mark_counts.fav }}{% endif %}</a>
+      <a href="/resumes?view=hidden" {% if view=='hidden' %}class="on"{% endif %}>Скрытые{% if mark_counts.hidden %} · {{ mark_counts.hidden }}{% endif %}</a>
+    </nav>
+    <div class="cv-saved">
+      {% if q or location or fmt %}
+      <form method="post" action="/resumes/search/save">
+        <input type="hidden" name="q" value="{{ q }}"><input type="hidden" name="location" value="{{ location }}"><input type="hidden" name="fmt" value="{{ fmt }}">
+        <button class="btn btn-ghost btn-sm" type="submit">💾 Сохранить поиск</button>
+      </form>
+      {% endif %}
+      {% for s in saved_searches %}
+      <span class="cv-saved__chip"><a href="/resumes?{{ s.query_string }}">{{ s.name }}</a><form method="post" action="/resumes/search/{{ s.id }}/delete"><button type="submit" aria-label="Удалить сохранённый поиск">✕</button></form></span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   <div class="cv-list">
     {% for cv in resumes %}
+    <div class="cv-row-wrap">
     <a class="cv-row" href="/resume/{{ cv.id }}">
-      <div class="cv-code">{{ cv.public_code }}</div>
-      <div><div class="cv-title">{{ cv.title }}</div><p class="cv-meta">{{ cv.experience_years }} лет опыта · {{ cv.location or 'локация скрыта' }} · {{ cv.desired_format }} · {{ 'активно ищет' if cv.user.job_search_status=='active' else 'открыт предложениям' }}</p></div>
+      <div class="cv-code">{{ cv.public_code }}<span class="cv-fill" title="Заполненность профиля">{{ extras[cv.id].fill }}%</span></div>
+      <div>
+        <div class="cv-title">{{ cv.title }}</div>
+        <p class="cv-meta">{{ cv.experience_years }} лет опыта · {{ cv.location or 'локация скрыта' }} · {{ cv.desired_format }} · {{ 'активно ищет' if cv.user.job_search_status=='active' else 'открыт предложениям' }}</p>
+        <p class="cv-meta"><span class="cv-fresh">{{ extras[cv.id].fresh }}</span>{% if cv.salary_expect %} · хочет <b class="cv-salary">{{ cv.salary_expect }}</b>{% endif %}</p>
+      </div>
       <div class="cv-skills">{% for skill in cv.skill_list[:4] %}<span class="cv-skill">{{ skill }}</span>{% endfor %}</div>
       <span class="cv-arrow" aria-hidden="true">→</span>
     </a>
+    {% if is_employer %}
+    <div class="cv-actions">
+      <form method="post" action="/resumes/{{ cv.id }}/mark"><input type="hidden" name="back" value="{{ request.url.path }}?{{ request.url.query }}"><input type="hidden" name="kind" value="{{ 'none' if marks.get(cv.id)=='fav' else 'fav' }}"><button class="{{ 'on' if marks.get(cv.id)=='fav' }}" title="{{ 'Убрать из избранного' if marks.get(cv.id)=='fav' else 'В избранное' }}">★</button></form>
+      <form method="post" action="/resumes/{{ cv.id }}/mark"><input type="hidden" name="back" value="{{ request.url.path }}?{{ request.url.query }}"><input type="hidden" name="kind" value="{{ 'none' if marks.get(cv.id)=='hidden' else 'hidden' }}"><button title="{{ 'Вернуть в выдачу' if marks.get(cv.id)=='hidden' else 'Скрыть из выдачи' }}">{{ '↩' if marks.get(cv.id)=='hidden' else '✕' }}</button></form>
+    </div>
+    {% endif %}
+    </div>
     {% else %}
-    <div class="cv-empty"><b>По этим параметрам резюме пока нет.</b><p style="margin-top:8px;">Измените фильтры или добавьте первое CV.</p></div>
+    <div class="cv-empty"><b>🃏 {{ 'В избранном пока пусто.' if view=='fav' else ('Скрытых кандидатов нет.' if view=='hidden' else 'По этим параметрам резюме пока нет.') }}</b><p style="margin-top:8px;">{{ 'Отмечайте звёздочкой сильных кандидатов — они соберутся здесь.' if view=='fav' else 'Измените фильтры или добавьте первое CV.' }}</p></div>
     {% endfor %}
   </div>
 

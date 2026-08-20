@@ -408,6 +408,27 @@ class ResumeUnlock(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class ResumeMark(Base):
+    """Пометки работодателя в базе резюме: избранное и скрытое (общие на кабинет)."""
+    __tablename__ = "resume_marks"
+    __table_args__ = (UniqueConstraint("employer_id", "resume_id", name="uq_resume_mark"),)
+    id = Column(Integer, primary_key=True)
+    employer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=False)
+    kind = Column(String, default="fav")  # fav | hidden
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SavedSearch(Base):
+    """Сохранённые поиски по базе резюме."""
+    __tablename__ = "saved_searches"
+    id = Column(Integer, primary_key=True)
+    employer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String, default="")
+    query_string = Column(String, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class ResumeCreditLedger(Base):
     __tablename__ = "resume_credit_ledger"
     id = Column(Integer, primary_key=True)
@@ -2001,9 +2022,34 @@ def anonymize_resume_text(value: str) -> str:
     return text
 
 
+def resume_completeness(cv) -> int:
+    """Заполненность профиля: доля непустых содержательных полей."""
+    fields = [cv.title, cv.skills, cv.about, cv.salary_expect, cv.languages,
+              cv.location, cv.employment_history, cv.education, cv.cv_file_path,
+              cv.experience_years]
+    return round(sum(bool(v) for v in fields) / len(fields) * 100)
+
+
+def resume_freshness(cv) -> str:
+    """«Живость» профиля по дате обновления — человеческим языком."""
+    stamp = cv.updated_at or cv.created_at
+    if not stamp:
+        return ""
+    days = max((datetime.utcnow() - stamp).days, 0)
+    if days == 0:
+        return "активность сегодня"
+    if days == 1:
+        return "активность вчера"
+    if days <= 7:
+        return "активность на этой неделе"
+    if days <= 31:
+        return f"обновлено {days} дн. назад"
+    return f"обновлено {stamp.strftime('%d.%m.%Y')}"
+
+
 @app.get("/resumes", response_class=HTMLResponse)
 def resumes(request: Request, q: str = "", location: str = "", fmt: str = "",
-            db: Session = Depends(db_session)):
+            view: str = "", db: Session = Depends(db_session)):
     query = (db.query(Resume).join(User, User.id == Resume.user_id)
              .filter(Resume.published == True, Resume.status == "approved",  # noqa: E712
                      User.job_search_status != "paused"))
@@ -2016,8 +2062,75 @@ def resumes(request: Request, q: str = "", location: str = "", fmt: str = "",
     if fmt.strip():
         query = query.filter(Resume.desired_format == fmt.strip())
     rows = query.order_by(Resume.updated_at.desc()).all()
+
+    # пометки и сохранённые поиски — только для работодателей, общие на кабинет
+    user = get_user(request, db)
+    marks, saved_searches, is_employer = {}, [], False
+    if user and user.role in ("employer", "admin"):
+        is_employer = True
+        account, _ = company_context(user, db)
+        marks = {m.resume_id: m.kind for m in
+                 db.query(ResumeMark).filter_by(employer_id=account.id).all()}
+        saved_searches = (db.query(SavedSearch).filter_by(employer_id=account.id)
+                          .order_by(SavedSearch.created_at.desc()).limit(8).all())
+    if view == "fav":
+        rows = [cv for cv in rows if marks.get(cv.id) == "fav"]
+    elif view == "hidden":
+        rows = [cv for cv in rows if marks.get(cv.id) == "hidden"]
+    else:
+        rows = [cv for cv in rows if marks.get(cv.id) != "hidden"]
+    extras = {cv.id: {"fill": resume_completeness(cv), "fresh": resume_freshness(cv)}
+              for cv in rows}
+    counts = {"fav": sum(1 for k in marks.values() if k == "fav"),
+              "hidden": sum(1 for k in marks.values() if k == "hidden")}
     return render(request, db, "resumes.html", resumes=rows, q=q, location=location,
-                  fmt=fmt, formats=FORMATS, active="resumes")
+                  fmt=fmt, formats=FORMATS, active="resumes", view=view, marks=marks,
+                  extras=extras, mark_counts=counts, saved_searches=saved_searches,
+                  is_employer=is_employer)
+
+
+@app.post("/resumes/{resume_id}/mark")
+def resume_mark(resume_id: int, request: Request, kind: str = Form(...),
+                back: str = Form("/resumes"), db: Session = Depends(db_session)):
+    user, account, _ = require_company_user(request, db)
+    if kind not in ("fav", "hidden", "none") or not db.get(Resume, resume_id):
+        raise HTTPException(400)
+    mark = db.query(ResumeMark).filter_by(employer_id=account.id, resume_id=resume_id).first()
+    if kind == "none":
+        if mark:
+            db.delete(mark)
+    elif mark:
+        mark.kind = kind
+    else:
+        db.add(ResumeMark(employer_id=account.id, resume_id=resume_id, kind=kind))
+    db.commit()
+    return RedirectResponse(back if safe_next(back, "") else "/resumes", status_code=303)
+
+
+@app.post("/resumes/search/save")
+def resume_search_save(request: Request, q: str = Form(""), location: str = Form(""),
+                       fmt: str = Form(""), db: Session = Depends(db_session)):
+    user, account, _ = require_company_user(request, db)
+    parts = [p for p in (q.strip(), location.strip(), fmt.strip()) if p]
+    if not parts:
+        return RedirectResponse("/resumes", status_code=303)
+    name = " · ".join(parts)[:60]
+    qs = urllib.parse.urlencode({k: v for k, v in
+                                 (("q", q.strip()), ("location", location.strip()), ("fmt", fmt.strip())) if v})
+    if not db.query(SavedSearch).filter_by(employer_id=account.id, query_string=qs).first():
+        db.add(SavedSearch(employer_id=account.id, name=name, query_string=qs))
+        db.commit()
+    return RedirectResponse(f"/resumes?{qs}", status_code=303)
+
+
+@app.post("/resumes/search/{search_id}/delete")
+def resume_search_delete(search_id: int, request: Request, db: Session = Depends(db_session)):
+    user, account, _ = require_company_user(request, db)
+    row = db.query(SavedSearch).filter_by(id=search_id, employer_id=account.id).first()
+    if row:
+        db.delete(row)
+        db.commit()
+    return RedirectResponse("/resumes", status_code=303)
 
 
 @app.get("/resume/{resume_id}", response_class=HTMLResponse)
@@ -2720,6 +2833,21 @@ def employer_job_archive(job_id: int, request: Request, db: Session = Depends(db
     job.closed_at = datetime.utcnow().date().isoformat()
     db.commit()
     return RedirectResponse("/employer?job_archived=1", status_code=303)
+
+
+@app.post("/employer/job/{job_id}/republish")
+def employer_job_republish(job_id: int, request: Request, db: Session = Depends(db_session)):
+    """Вернуть закрытую вакансию в работу одним кликом: уходит на повторную модерацию."""
+    user, account, _ = require_company_user(request, db, write=True)
+    job = employer_job_or_404(job_id, user, db)
+    if job.status != "archived":
+        return RedirectResponse("/employer#jobs", status_code=303)
+    job.status = "pending"
+    job.closed_at = ""
+    if (account.job_credits or 0) > 0:
+        account.job_credits -= 1
+    db.commit()
+    return RedirectResponse("/employer?job_republished=1#jobs", status_code=303)
 
 
 @app.get("/post-job", response_class=HTMLResponse)

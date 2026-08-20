@@ -45,6 +45,9 @@ document.addEventListener('DOMContentLoaded', () => {
       'Поддержка игроков':'Player support','Маркетинг и CRM':'Marketing & CRM','Данные и BI':'Data & BI','Топ-менеджмент':'Executive',
       'удалёнка':'remote','Удалёнка':'Remote','гибрид':'hybrid','офис':'office','по запросу':'on request',
       'Не указана':'Not specified','вакансий':'jobs','вакансии':'jobs','вакансия':'job','Обновлено':'Updated',
+      'Избранные':'Starred','Скрытые':'Hidden','Сохранить поиск':'Save search','активность сегодня':'active today',
+      'активность вчера':'active yesterday','активность на этой неделе':'active this week','хочет':'expects',
+      'Баланс кабинета':'Account balance','размещений':'postings','контактов':'contacts','промокод':'promo code','активен':'active',
       'Саппорт (языки)':'Support (languages)','Мальта':'Malta','США':'USA','Великобритания':'United Kingdom','Греция':'Greece',
       'Польша':'Poland','Бразилия':'Brazil','Германия':'Germany','Кипр':'Cyprus','Украина':'Ukraine','Испания':'Spain',
       'Румыния':'Romania','Грузия':'Georgia','Сербия':'Serbia','Армения':'Armenia','Чехия':'Czechia','Нидерланды':'Netherlands',
@@ -56,6 +59,9 @@ document.addEventListener('DOMContentLoaded', () => {
       'Поддержка игроков':'Підтримка гравців','Маркетинг и CRM':'Маркетинг і CRM','Данные и BI':'Дані та BI','Топ-менеджмент':'Топменеджмент',
       'удалёнка':'віддалено','Удалёнка':'Віддалено','гибрид':'гібрид','офис':'офіс','по запросу':'за запитом',
       'Не указана':'Не вказана','вакансий':'вакансій','вакансии':'вакансії','вакансия':'вакансія','Обновлено':'Оновлено',
+      'Избранные':'Обрані','Скрытые':'Приховані','Сохранить поиск':'Зберегти пошук','активность сегодня':'активність сьогодні',
+      'активность вчера':'активність вчора','активность на этой неделе':'активність цього тижня','хочет':'хоче',
+      'Баланс кабинета':'Баланс кабінету','размещений':'розміщень','контактов':'контактів','промокод':'промокод','активен':'активний',
       'Саппорт (языки)':'Сапорт (мови)','Мальта':'Мальта','США':'США','Великобритания':'Велика Британія','Греция':'Греція',
       'Польша':'Польща','Бразилия':'Бразилія','Германия':'Німеччина','Кипр':'Кіпр','Украина':'Україна','Испания':'Іспанія',
       'Румыния':'Румунія','Грузия':'Грузія','Сербия':'Сербія','Армения':'Вірменія','Чехия':'Чехія','Нидерланды':'Нідерланди',
@@ -527,6 +533,37 @@ if (window.matchMedia('(pointer: fine)').matches &&
       const section = document.getElementById('market');
       if (section) section.hidden = true;   // не показываем пустой скелет
     });
+})();
+
+// Промо-полоса над шапкой: ближайшее событие индустрии. Закрывается на ✕
+// и не возвращается для этого события (localStorage).
+(function () {
+  const header = document.querySelector('.site-header');
+  if (!header || document.body.classList.contains('workspace')) return;
+  fetch('/api/events', { credentials: 'same-origin' })
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(events => {
+      const today = new Date().toISOString().slice(0, 10);
+      const next = (events || []).find(e => (e.end || e.dt) >= today && e.t);
+      if (!next) return;
+      const key = 'promoBarDismissed';
+      if (localStorage.getItem(key) === next.dt + next.t) return;
+      const bar = document.createElement('div');
+      bar.className = 'promo-bar';
+      const days = Math.max(0, Math.round((new Date(next.dt) - new Date(today)) / 864e5));
+      const when = days === 0 ? 'уже сегодня' : (days === 1 ? 'уже завтра' : 'через ' + days + ' дн.');
+      bar.innerHTML = '<span>🎪 <b></b> · ' + (next.city || '') + ' · ' + when + '</span>' +
+        (next.url ? '<a href="' + next.url + '" target="_blank" rel="noopener">Подробнее →</a>' : '') +
+        '<button aria-label="Скрыть">✕</button>';
+      bar.querySelector('b').textContent = next.t;
+      bar.querySelector('button').addEventListener('click', () => {
+        try { localStorage.setItem(key, next.dt + next.t); } catch (e) {}
+        bar.remove();
+      });
+      header.parentNode.insertBefore(bar, header);
+      if (window.__translateWithin) window.__translateWithin(bar);
+    })
+    .catch(() => {});
 })();
 
 // Scroll-reveal: карточки и заголовки секций всплывают при входе в вьюпорт.
