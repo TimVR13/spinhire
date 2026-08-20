@@ -80,7 +80,8 @@ signer = URLSafeSerializer(SECRET, salt="session")
 
 CATEGORIES = ["Операции казино", "Беттинг и трейдинг", "Разработка игр",
               "Аффилейты и медиабаинг", "Комплаенс и AML", "Платежи и антифрод",
-              "Поддержка игроков", "Маркетинг и CRM", "Данные и BI", "Топ-менеджмент"]
+              "Поддержка игроков", "Маркетинг и CRM", "Данные и BI",
+              "Финансы, право и HR", "Топ-менеджмент"]
 FORMATS = ["офис", "гибрид", "удалёнка"]
 
 
@@ -772,7 +773,13 @@ _CAT_RULES = [
     ("Комплаенс и AML", ("compliance", "aml", "kyc", "комплаенс", "anti-money", "responsible gambl",
                          "regulatory", "mlro", "лиценз")),
     ("Платежи и антифрод", ("payment", "psp", "платеж", "reconcil", "treasury", "fraud", "антифрод",
-                           "chargeback", "acquiring", "финанс", "accountant", "бухгалтер", "finance")),
+                           "chargeback", "acquiring")),
+    ("Финансы, право и HR", ("accountant", "accounting", "бухгалтер", "payroll", "auditor", "audit",
+                             "аудитор", "финанс", "finance", "legal", "lawyer", "counsel", "юрист",
+                             "recruiter", "recruitment", "рекрутер", "talent acquisition", "sourcer",
+                             "hr generalist", "hr manager", "hr business", "hr admin", "people partner",
+                             "people services", "people operations", "office manager", "офис-менеджер",
+                             "administrative assistant", "executive assistant")),
     ("Данные и BI", ("data engineer", "data analyst", "data scientist", "bi ", "business intelligence",
                      "analytics", "аналитик данных", "big data", "etl")),
     ("Разработка игр", ("software engineer", "developer", "разработчик", "java ", "python ", ".net",
