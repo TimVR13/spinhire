@@ -29,7 +29,7 @@
   --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
   --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px; --sp-9: 96px;
 
-  --font-display: "Unbounded", sans-serif;
+  --font-display: "Bricolage Grotesque", sans-serif;
   --font-body: "Golos Text", sans-serif;
 
   /* мягкие тени вместо жёстких неоновых оффсетов */
@@ -188,7 +188,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 }
 .logo {
   font-family: var(--font-display);
-  font-weight: 900; font-size: 1.55rem;
+  font-weight: 800; font-size: 1.55rem;
   text-decoration: none; text-transform: lowercase;
   display: flex; align-items: center; gap: 10px;
   flex-shrink: 0;
@@ -305,7 +305,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 .job-card__logo {
   width: 56px; height: 56px;
   display: grid; place-items: center;
-  font-family: var(--font-display); font-weight: 900; font-size: 1.3rem;
+  font-family: var(--font-display); font-weight: 800; font-size: 1.3rem;
   border-radius: 10px;
 }
 .job-card__title { margin-bottom: 2px; }
@@ -826,9 +826,9 @@ html[data-ws-theme="dark"] body.workspace {
 }
 body.workspace::after { display: none; }                 /* без киношного зерна на рабочих экранах */
 
-/* в кабинете дисплейная гарнитура строже: без широкого Unbounded, кроме логотипа */
+/* в кабинете дисплейная гарнитура строже: без широкого дисплейного шрифта, кроме логотипа */
 body.workspace { --font-display: "Golos Text", sans-serif; }
-body.workspace .logo { font-family: "Unbounded", sans-serif; }
+body.workspace .logo { font-family: "Bricolage Grotesque", sans-serif; }
 body.workspace h1, body.workspace h2, body.workspace h3, body.workspace .display { font-weight: 700; letter-spacing: 0.01em; }
 
 /* флеши в кабинете красим токенами, а не тёмными заливками сайта */
