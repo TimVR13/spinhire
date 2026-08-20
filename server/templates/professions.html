@@ -47,6 +47,7 @@
   .prof-nores__btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   .fam h2 { display: flex; align-items: center; gap: 12px; }
   .fam-ico { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; box-shadow: 0 6px 18px oklch(0 0 0 / 0.45); }
+  .fam-ico--emoji { display: inline-grid; place-items: center; font-size: 28px; background: var(--bg-deep); border: 1px solid var(--line); }
   .prof-card[hidden] { display: none; }
   @media (max-width: 760px) {
     .prof-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: var(--sp-4) 0 var(--sp-5); }
@@ -76,7 +77,7 @@
   {# иконки — по смыслу семейства: рулетка = казино, график = трейдинг, слот = игры,
      самолётик = трафик, щит = комплаенс, монеты = платежи, звонок = саппорт,
      молния = маркетинг, лупа = данные, корона = топы #}
-  {% set fam_icons = {'Операции казино':'asset-roulette','Беттинг и трейдинг':'pricing/p-stats','Разработка игр':'asset-slot-cabinet',
+  {% set fam_icons = {'Операции казино':'asset-roulette','Беттинг и трейдинг':'pricing/p-stats','Разработка игр':'emoji:🕹️',
                       'Аффилейты и медиабаинг':'pricing/p-telegram','Комплаенс и AML':'pricing/p-moderation','Платежи и антифрод':'pricing/p-salary',
                       'Поддержка игроков':'sym-bell','Маркетинг и CRM':'pricing/t-promo','Данные и BI':'pricing/p-google','Топ-менеджмент':'sym-crown'} %}
   <div class="prof-toolbar" id="profToolbar">
@@ -106,7 +107,8 @@
 
   {% for family, roles in families.items() %}
   <section class="fam" id="fam-{{ loop.index }}">
-    <h2><img class="fam-ico" src="/img/{{ fam_icons.get(family, 'sym-star') }}.jpg" alt="" width="48" height="48" loading="lazy">{{ family }} <span style="color: var(--ink-faint); font-weight: 400;">· {{ roles|length }}</span></h2>
+    {% set ico = fam_icons.get(family, 'sym-star') %}
+    <h2>{% if ico.startswith('emoji:') %}<span class="fam-ico fam-ico--emoji">{{ ico[6:] }}</span>{% else %}<img class="fam-ico" src="/img/{{ ico }}.jpg" alt="" width="48" height="48" loading="lazy">{% endif %}{{ family }} <span style="color: var(--ink-faint); font-weight: 400;">· {{ roles|length }}</span></h2>
     <div class="prof-grid">
       {% for r in roles %}
       <a class="prof-card" href="/profession/{{ r.slug }}">
@@ -159,6 +161,10 @@
     };
     input.addEventListener('input', apply);
     input.addEventListener('change', apply);
+    // чипы-категории работают и при активном поиске: сбрасываем фильтр и ведём к секции
+    document.querySelectorAll('.prof-chips a').forEach(chip => chip.addEventListener('click', () => {
+      if (input.value) { input.value = ''; apply(); }
+    }));
   })();
   </script>
 
