@@ -764,8 +764,8 @@ main > .section:nth-of-type(even) {
    ============================================================ */
 /* светлая тема кабинета — по умолчанию; тёмную человек включает сам (data-ws-theme) */
 html:not([data-ws-theme="dark"]) body.workspace {
-  --bg: oklch(0.938 0.045 166);          /* мятная подложка, насыщеннее — белые карточки и поля читаются на ней */
-  --bg-deep: oklch(0.90 0.052 166);
+  --bg: oklch(0.955 0.026 166);          /* мятная подложка, приглушённая — белые карточки и поля читаются на ней */
+  --bg-deep: oklch(0.918 0.032 166);
   --surface: oklch(0.998 0.002 168);
   --surface-2: oklch(0.955 0.015 168);
   --line: oklch(0.862 0.032 167);
@@ -832,8 +832,12 @@ body.workspace .logo { font-family: "Unbounded", sans-serif; }
 body.workspace h1, body.workspace h2, body.workspace h3, body.workspace .display { font-weight: 700; letter-spacing: 0.01em; }
 
 /* флеши в кабинете красим токенами, а не тёмными заливками сайта */
-body.workspace .flash { background: color-mix(in oklch, var(--acid) 12%, var(--surface)); border-color: var(--acid); }
-body.workspace .flash.err { background: color-mix(in oklch, var(--pink) 10%, var(--surface)); border-color: var(--pink); }
+body.workspace .flash { background: var(--surface); border: 2px solid var(--acid); border-radius: var(--radius); box-shadow: var(--shadow-dark); }
+body.workspace .flash.err { border-color: var(--pink); }
+/* область со статистикой и таблицы — белые карточки с обводкой, а не голая мятная подложка */
+body.workspace .table-wrap { background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+body.workspace .adm td, body.workspace .adm tbody tr { background: var(--surface); }
+body.workspace .company-stats { background: var(--surface); border: 2px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-dark); }
 body.workspace .site-header { background: color-mix(in oklch, var(--surface) 92%, transparent); border-bottom-width: 1px; }
 body.workspace .site-footer { background: var(--bg-deep); }
 body.workspace .kicker::before { box-shadow: none; }
