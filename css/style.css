@@ -764,11 +764,11 @@ main > .section:nth-of-type(even) {
    ============================================================ */
 /* светлая тема кабинета — по умолчанию; тёмную человек включает сам (data-ws-theme) */
 html:not([data-ws-theme="dark"]) body.workspace {
-  --bg: oklch(0.968 0.016 168);          /* мятная подложка — выбор пользователя из 5 концептов */
-  --bg-deep: oklch(0.936 0.020 168);
-  --surface: oklch(0.996 0.003 168);
-  --surface-2: oklch(0.955 0.010 168);
-  --line: oklch(0.878 0.016 168);
+  --bg: oklch(0.938 0.045 166);          /* мятная подложка, насыщеннее — белые карточки и поля читаются на ней */
+  --bg-deep: oklch(0.90 0.052 166);
+  --surface: oklch(0.998 0.002 168);
+  --surface-2: oklch(0.955 0.015 168);
+  --line: oklch(0.862 0.032 167);
   --line-strong: oklch(0.70 0.014 168);
   --ink: oklch(0.26 0.014 172);
   --ink-dim: oklch(0.44 0.014 172);
@@ -788,6 +788,15 @@ html:not([data-ws-theme="dark"]) body.workspace {
   --bezel: inset 0 1px 0 oklch(1 0 0 / 0.9);
   background: var(--bg); color: var(--ink);
 }
+/* в светлом кабинете поля ввода белые: никакой «зебры» из зелёных плашек на зелёном */
+html:not([data-ws-theme="dark"]) body.workspace .input,
+html:not([data-ws-theme="dark"]) body.workspace .select,
+html:not([data-ws-theme="dark"]) body.workspace textarea.input,
+html:not([data-ws-theme="dark"]) body.workspace .custom-select__trigger,
+html:not([data-ws-theme="dark"]) body.workspace .custom-select__search {
+  background: #fff;
+}
+
 /* тёмный кабинет — те же спокойные контрасты, приглушённые акценты без неона.
    Объявлен явно (а не фолбэком в :root), чтобы светлая тема сайта его не ломала. */
 html[data-ws-theme="dark"] body.workspace {
