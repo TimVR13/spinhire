@@ -552,37 +552,6 @@ if (window.matchMedia('(pointer: fine)').matches &&
     });
 })();
 
-// Промо-полоса над шапкой: ближайшее событие индустрии. Закрывается на ✕
-// и не возвращается для этого события (localStorage).
-(function () {
-  const header = document.querySelector('.site-header');
-  if (!header || document.body.classList.contains('workspace')) return;
-  fetch('/api/events', { credentials: 'same-origin' })
-    .then(r => r.ok ? r.json() : Promise.reject())
-    .then(events => {
-      const today = new Date().toISOString().slice(0, 10);
-      const next = (events || []).find(e => (e.end || e.dt) >= today && e.t);
-      if (!next) return;
-      const key = 'promoBarDismissed';
-      if (localStorage.getItem(key) === next.dt + next.t) return;
-      const bar = document.createElement('div');
-      bar.className = 'promo-bar';
-      const days = Math.max(0, Math.round((new Date(next.dt) - new Date(today)) / 864e5));
-      const when = days === 0 ? 'уже сегодня' : (days === 1 ? 'уже завтра' : 'через ' + days + ' дн.');
-      bar.innerHTML = '<span>🎪 <b></b> · ' + (next.city || '') + ' · ' + when + '</span>' +
-        (next.url ? '<a href="' + next.url + '" target="_blank" rel="noopener">Подробнее →</a>' : '') +
-        '<button aria-label="Скрыть">✕</button>';
-      bar.querySelector('b').textContent = next.t;
-      bar.querySelector('button').addEventListener('click', () => {
-        try { localStorage.setItem(key, next.dt + next.t); } catch (e) {}
-        bar.remove();
-      });
-      header.parentNode.insertBefore(bar, header);
-      if (window.__translateWithin) window.__translateWithin(bar);
-    })
-    .catch(() => {});
-})();
-
 // Scroll-reveal: карточки и заголовки секций всплывают при входе в вьюпорт.
 // Прогрессивно: класс вешаем только из JS, без JS всё видно сразу.
 (function () {

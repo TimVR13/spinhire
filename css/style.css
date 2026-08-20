@@ -183,19 +183,6 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
 
-/* ---------- promo bar над шапкой ---------- */
-.promo-bar {
-  display: flex; align-items: center; justify-content: center; gap: 16px;
-  padding: 9px 44px 9px 16px; position: relative;
-  background: linear-gradient(90deg, color-mix(in oklch, var(--acid) 16%, var(--bg-deep)), color-mix(in oklch, var(--pink) 12%, var(--bg-deep)));
-  border-bottom: 1px solid var(--line);
-  font-size: 0.84rem; font-weight: 600; text-align: center;
-}
-.promo-bar b { color: var(--acid); }
-.promo-bar a { color: var(--pink); font-weight: 800; text-decoration: none; white-space: nowrap; }
-.promo-bar button { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: 0; color: var(--ink-faint); font-size: 0.9rem; padding: 6px; }
-.promo-bar button:hover { color: var(--ink); }
-
 /* ---------- header ---------- */
 .site-header {
   position: sticky; top: 0; z-index: 50;
