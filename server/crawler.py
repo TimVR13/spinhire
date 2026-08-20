@@ -64,6 +64,12 @@ PARTNER_FEEDS = {
 HH_TOKEN = os.environ.get("HH_APP_TOKEN", "").strip()
 
 SOURCE_REGISTRY = [
+    {"key": "rabota.ua", "name": "robota.ua", "type": "Открытый JSON API",
+     "status": "подключён", "note": "Поиск по iGaming-словарю и брендам (FAVBET, Cosmolot, VBET…), "
+                                    "полные описания и вилки в гривнах через api.rabota.ua"},
+    {"key": "work.ua", "name": "work.ua", "type": "HTML + страницы поиска",
+     "status": "подключён", "note": "Страницы поиска по iGaming-словарю, описание из карточки; "
+                                    "смысловой фильтр отсекает боулинги и случайные «ставки»"},
     {"key": "softswiss", "name": "SOFTSWISS", "type": "WordPress REST API",
      "status": "работает", "note": "Все опубликованные вакансии и полные описания (до 100 за запуск)"},
     {"key": "greenhouse:betsson", "name": "Betsson Group", "type": "Greenhouse API",
@@ -1212,8 +1218,142 @@ def collect(with_metadata=False):
                      lambda c=channel, t=channel_title: crawl_telegram(c, t))
     fetch_source("vendor-seeds", crawl_vendor_seeds)
     fetch_source("igamingcareers", crawl_igamingcareers)
+    fetch_source("rabota.ua", crawl_rabota_ua)
+    fetch_source("work.ua", crawl_work_ua)
     fetch_source("casino-discovery", crawl_casino_seed_registry)
     return (items, complete_sources, health) if with_metadata else items
+
+
+# ---------- rabota.ua: открытый JSON-API ----------
+# Сайт закрыт Cloudflare, но api.rabota.ua отвечает без ключа. Ищем по словарю
+# iGaming-запросов и брендов, детали тянем по id (полное описание, вилка в грн).
+RABOTA_UA_QUERIES = [
+    "казино", "igaming", "gambling", "гембл", "беттінг", "беттинг", "букмекер",
+    "betting", "sportsbook", "favbet", "cosmolot", "vbet", "ggbet", "slots city",
+    "pin-up", "parimatch", "1win", "slotoking", "космолот", "крупє", "крупье",
+]
+
+
+def crawl_rabota_ua(max_details: int = 250):
+    import urllib.parse as _up
+    seen, out = set(), []
+    for query in RABOTA_UA_QUERIES:
+        start = 0
+        while True:
+            url = ("https://api.rabota.ua/vacancy/search?"
+                   f"keyWords={_up.quote(query)}&count=40&start={start}")
+            try:
+                data = json.loads(_fetch(url))
+            except Exception:
+                break
+            docs = data.get("documents") or []
+            for doc in docs:
+                seen.add(str(doc.get("id")))
+            if len(docs) < 40:
+                break
+            start += 40
+    for vid in sorted(seen)[:max_details]:
+        try:
+            d = json.loads(_fetch(f"https://api.rabota.ua/vacancy?id={vid}"))
+        except Exception:
+            continue
+        if not d.get("isActive", True):
+            continue
+        title = (d.get("name") or "").strip()
+        if not title:
+            continue
+        desc = _clean_html(d.get("description") or "")
+        probe = {"title": title, "company_name": d.get("companyName") or "",
+                 "description": desc}
+        if not _ua_item_relevant(probe):
+            continue
+        lo, hi = d.get("salaryFrom") or 0, d.get("salaryTo") or 0
+        if lo and hi:
+            salary = f"₴{lo:,}–{hi:,}".replace(",", " ")
+        elif d.get("salary"):
+            salary = f"₴{d['salary']:,}".replace(",", " ")
+        else:
+            salary = "по запросу"
+        city = (d.get("cityName") or "").strip()
+        fmt = "удалёнка" if re.search(r"віддален|удалённ|remote", desc, re.I) else "офис"
+        out.append({
+            "title": title,
+            "company_name": (d.get("companyName") or "").strip() or "iGaming-компания",
+            "location": f"{city}, Украина" if city else "Украина",
+            "fmt": fmt, "salary": salary, "tags": "", "description": desc,
+            "source": "rabota.ua", "ext_id": str(vid),
+            "source_url": f"https://robota.ua/company{d.get('notebookId')}/vacancy{vid}",
+        })
+        time.sleep(0.2)
+    return out
+
+
+# Общий смысловой фильтр для генералистских украинских бордов: берём вакансию,
+# только если компания — известный iGaming-бренд или в тексте ≥2 отраслевых
+# маркеров. Иначе по слову «казино» приезжают боулинги и P&G по «ставкам».
+_UA_IGAMING_RE = re.compile(
+    r"казино|casino|гембл|gambl|igaming|беттінг|беттинг|betting|букмекер|"
+    r"sportsbook|ставк[аи] на спорт|ставок на спорт|\bslots?\b|слот|крупє|"
+    r"круп'є|крупье|poker|покер|live[ -]?dealer", re.I)
+_UA_BRANDS_RE = re.compile(
+    r"favbet|фавбет|cosmolot|космолот|vbet|ggbet|pin-?up|пін-?ап|parimatch|"
+    r"парімач|1win|slotoking|slots ?city|betking|прематч", re.I)
+
+
+def _ua_item_relevant(item) -> bool:
+    # Procter & Gamble — «Проктер енд Гембл»: единственная компания, чьё имя
+    # буквально содержит «гембл», не имея отношения к индустрии
+    if re.search(r"procter|проктер", item["company_name"], re.I):
+        return False
+    if _UA_BRANDS_RE.search(item["company_name"]):
+        return True
+    haystack = f"{item['company_name']} {item['title']} {item['description']}"
+    return len(_UA_IGAMING_RE.findall(haystack)) >= 2
+
+
+WORK_UA_QUERIES = ["казино", "гемблінг", "igaming", "ставки", "крупє", "беттинг", "gambling"]
+
+
+def crawl_work_ua(max_details: int = 120):
+    """work.ua: страницы поиска отдаются с браузерным UA, описание — в
+    div#job-description; JSON-LD на карточках нет, парсим разметку."""
+    import urllib.parse as _up
+    ids = set()
+    for query in WORK_UA_QUERIES:
+        for lang in ("", "ru/"):
+            try:
+                page = _fetch_html(f"https://www.work.ua/{lang}jobs-{_up.quote(query)}/")
+            except Exception:
+                continue
+            ids.update(re.findall(r'/(?:ru/)?jobs/(\d+)', page))
+    out = []
+    for vid in sorted(ids)[:max_details]:
+        try:
+            page = _fetch_html(f"https://www.work.ua/jobs/{vid}/")
+        except Exception:
+            continue
+        title_m = re.search(r'<h1[^>]*id="h1-name"[^>]*>(.*?)</h1>', page, re.S)
+        if not title_m:
+            continue
+        title = _clean_text(re.sub(r"<[^>]+>", "", title_m.group(1)))
+        company_m = re.search(r'/jobs/by-company/\d+/"[^>]*>\s*<span class="strong-500">([^<]+)</span>', page)
+        company = _clean_text(company_m.group(1)) if company_m else "iGaming-компания"
+        desc_m = re.search(r'id="job-description"[^>]*>(.*?)</div>', page, re.S)
+        desc = _clean_html(desc_m.group(1)) if desc_m else ""
+        salary_m = re.search(r'>([\d\s \xa0]{4,12})\s*грн', page)
+        salary = f"₴{_clean_text(salary_m.group(1))}" if salary_m else "по запросу"
+        city_m = re.search(r'glyphicon-map-marker[^<]*</span>\s*([^<]{2,40})', page)
+        city = _clean_text(city_m.group(1)).strip(" ,·") if city_m else ""
+        fmt = "удалёнка" if re.search(r"віддален|удалённ|remote", desc, re.I) else "офис"
+        item = {"title": title, "company_name": company,
+                "location": f"{city}, Украина" if city else "Украина",
+                "fmt": fmt, "salary": salary, "tags": "", "description": desc,
+                "source": "work.ua", "ext_id": str(vid),
+                "source_url": f"https://www.work.ua/jobs/{vid}/"}
+        if _ua_item_relevant(item):
+            out.append(item)
+        time.sleep(0.25)
+    return out
 
 
 # ---------- фильтр релевантности ----------
@@ -1234,7 +1374,9 @@ _IRRELEVANT_TITLE_RE = re.compile(
     r"(?<!data\s)warehouse|forklift|general\s+worker|porter|"
     r"уборщи\w*|клинер|горничн\w*|охранник\w*|водитель\w*|курьер\w*|повар\w*|"
     r"официант\w*|бармен\w*|сантехник\w*|электрик\w*|кладовщик\w*|грузчик\w*|"
-    r"разнорабоч\w*|медсестр\w*"
+    r"разнорабоч\w*|медсестр\w*|"
+    r"охорон\w*|прибиральн\w*|покоївк\w*|кухар\w*|офіціант\w*|водій|кур'?єр\w*|"
+    r"вантажник\w*|різнороб\w*|адміністратор\w* (?:на|у) ресепшн|ресепшн"
     r")\b", re.I)
 
 
