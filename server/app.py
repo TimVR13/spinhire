@@ -1127,13 +1127,15 @@ def resend_send(to: str, subject: str, html: str) -> bool:
     try:
         body = json.dumps({"from": RESEND_FROM, "to": [to],
                            "subject": subject, "html": html}).encode("utf-8")
-        status, _ = _http_post(
+        status, resp = _http_post(
             "https://api.resend.com/emails", data=body,
             headers={"Authorization": f"Bearer {RESEND_API_KEY}",
                      "Content-Type": "application/json"})
         if 200 <= status < 300:
             return True
-        print(f"[resend] send failed: status={status}")
+        # тело ответа Resend называет точную причину (домен не верифицирован,
+        # ключ без прав и т.п.) — без него 403 не диагностируется
+        print(f"[resend] send failed: status={status} body={resp[:300]}")
         return False
     except Exception as e:  # noqa: BLE001 — сеть/таймаут; не роняем запрос
         print(f"[resend] send error: {type(e).__name__}")
