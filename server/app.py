@@ -3208,6 +3208,7 @@ ARTICLE_FILES = {
     "compliance-career": "post-compliance-career.html",
     "crypto-salary": "post-crypto-salary.html",
     "igaming-bez-opyta": "post-igaming-bez-opyta.html",
+    "support-agent-igaming": "post-support-agent-igaming.html",
 }
 
 
