@@ -4044,6 +4044,13 @@ def market_markdown(db: Session = Depends(db_session)):
     out += [f"- {lang['name']}: {lang['jobs']}" for lang in stats["languages"]]
     out += ["", "## По формату", ""]
     out += [f"- {f['name']}: {f['jobs']}" for f in stats["formats"]]
+    archive = market_archive(db)
+    if archive:
+        out += ["", "## Архив по месяцам", ""]
+        out += [f"- {m['label']}{' (текущий)' if m['current'] else ''}: "
+                f"{m['open_jobs']} открытых вакансий, {m['companies']} компаний, "
+                f"{m['new_jobs']} новых, {m['salary_pct']}% с зарплатой"
+                for m in archive]
     out += ["", "## Методика", "",
             "Считается по всем вакансиям, открытым на SpinHire в момент запроса. "
             "Источники — карьерные страницы работодателей, ATS-фиды и публичные "
