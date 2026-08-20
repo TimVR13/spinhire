@@ -67,6 +67,10 @@ SOURCE_REGISTRY = [
     {"key": "rabota.ua", "name": "robota.ua", "type": "Открытый JSON API",
      "status": "подключён", "note": "Поиск по iGaming-словарю и брендам (FAVBET, Cosmolot, VBET…), "
                                     "полные описания и вилки в гривнах через api.rabota.ua"},
+    {"key": "justjoin.it", "name": "justjoin.it (Польша)", "type": "Открытый JSON API + RSC",
+     "status": "подключён", "note": "Весь листинг крупнейшего IT-борда Польши, свой фильтр по "
+                                    "iGaming-брендам (Betsson, Evolution, Betclic, STS…) и ключам; "
+                                    "вилки в злотых, описания из RSC-потока"},
     {"key": "work.ua", "name": "work.ua", "type": "HTML + страницы поиска",
      "status": "подключён", "note": "Страницы поиска по iGaming-словарю, описание из карточки; "
                                     "смысловой фильтр отсекает боулинги и случайные «ставки»"},
@@ -1220,6 +1224,7 @@ def collect(with_metadata=False):
     fetch_source("igamingcareers", crawl_igamingcareers)
     fetch_source("rabota.ua", crawl_rabota_ua)
     fetch_source("work.ua", crawl_work_ua)
+    fetch_source("justjoin.it", crawl_justjoin)
     fetch_source("casino-discovery", crawl_casino_seed_registry)
     return (items, complete_sources, health) if with_metadata else items
 
@@ -1353,6 +1358,104 @@ def crawl_work_ua(max_details: int = 120):
         if _ua_item_relevant(item):
             out.append(item)
         time.sleep(0.25)
+    return out
+
+
+# ---------- justjoin.it: крупнейший IT-борд Польши ----------
+# API отдаёт весь листинг (заголовок Version: 2 обязателен), keyword игнорирует —
+# фильтруем сами по брендам и ключам. Описание лежит в RSC-потоке страницы
+# оффера по ссылке вида body:"$5c" → секция "5c:T…,<html>".
+_PL_BRANDS_RE = re.compile(
+    r"betsson|evolution|sportradar|betclic|superbet|fortuna|\bsts\b|pragmatic play|"
+    r"playtech|kindred|livescore|betfan|totalbet|entain|bwin|\b888\b|softswiss|"
+    r"betgames|casumo|leovegas|yolo group|hero gaming|greentube|wazdan|booongo|"
+    r"evoplay|slotegrator|betby|stakelogic|relax gaming", re.I)
+_PL_KEYWORD_RE = re.compile(r"casino|igaming|gambling|betting|bukmacher|sportsbook|slots?\b", re.I)
+
+
+def _justjoin_api(url):
+    req = urllib.request.Request(url, headers={"Version": "2", "User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        return json.loads(r.read())
+
+
+def _justjoin_body(slug: str) -> str:
+    """Достать HTML описания оффера из RSC-потока страницы."""
+    try:
+        page = _fetch_html(f"https://justjoin.it/job-offer/{slug}")
+    except Exception:
+        return ""
+    joined = "".join(re.findall(r'self\.__next_f\.push\(\[1,"(.*?)"\]\)', page, re.S))
+    ref = re.search(r'body\\+":\\+"\$(\w+)\\+"', joined)
+    if not ref:
+        return ""
+    # переносы строк внутри потока экранированы: секции разделены «\n5c:T2f0a,…»,
+    # где T2f0a — hex-длина текста секции: по ней и отрезаем
+    m = re.search(rf'\\n{ref.group(1)}:T([0-9a-f]+),(.*?)(?=\\n[0-9a-f]{{1,4}}:|\Z)',
+                  joined, re.S)
+    if not m:
+        return ""
+    try:
+        raw = json.loads('"' + m.group(2) + '"')
+    except Exception:
+        raw = m.group(2)
+    try:
+        raw = raw[:int(m.group(1), 16)]
+    except ValueError:
+        pass
+    # если в захват всё же попал заголовок следующей RSC-секции — отрезаем
+    raw = re.split(r"\n[0-9a-f]{1,4}:T[0-9a-f]+,", raw)[0]
+    # GDPR-приписку про обработку персональных данных кандидату читать незачем
+    raw = re.split(r"Informujemy, że administratorem|Administratorem (?:Twoich |Pani/Pana )?danych",
+                   raw, flags=re.I)[0]
+    return _clean_html(raw)
+
+
+def crawl_justjoin(max_pages: int = 120, max_details: int = 60):
+    out, page = [], 1
+    candidates = []
+    while page <= max_pages:
+        try:
+            data = _justjoin_api("https://api.justjoin.it/v2/user-panel/offers"
+                                 f"?perPage=100&page={page}")
+        except Exception:
+            break
+        offers = data.get("data") or []
+        for o in offers:
+            company = o.get("companyName") or ""
+            title = o.get("title") or ""
+            if _PL_BRANDS_RE.search(company) or _PL_KEYWORD_RE.search(f"{title} {company}"):
+                candidates.append(o)
+        meta = data.get("meta") or {}
+        if page >= (meta.get("totalPages") or 1):
+            break
+        page += 1
+        time.sleep(0.12)
+    for o in candidates[:max_details]:
+        slug = o.get("slug") or ""
+        desc = _justjoin_body(slug)
+        pay = ""
+        for et in (o.get("employmentTypes") or []):
+            lo, hi = et.get("from"), et.get("to")
+            cur = (et.get("currency") or "pln").upper()
+            if lo and hi:
+                pay = f"{lo:,}–{hi:,} {cur}".replace(",", " ")
+                break
+        wt = (o.get("workplaceType") or "").lower()
+        fmt = {"remote": "удалёнка", "hybrid": "гибрид"}.get(wt, "офис")
+        city = o.get("city") or ""
+        skills = ", ".join(s.get("name", "") if isinstance(s, dict) else str(s)
+                           for s in (o.get("requiredSkills") or [])[:5])
+        out.append({
+            "title": (o.get("title") or "").strip(),
+            "company_name": (o.get("companyName") or "").strip() or "iGaming-компания",
+            "location": f"{city}, Польша" if city else "Польша",
+            "fmt": fmt, "salary": pay or "по запросу", "tags": skills,
+            "description": desc,
+            "source": "justjoin.it", "ext_id": slug,
+            "source_url": f"https://justjoin.it/job-offer/{slug}",
+        })
+        time.sleep(0.2)
     return out
 
 
