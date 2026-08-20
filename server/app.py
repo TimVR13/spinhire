@@ -1110,6 +1110,8 @@ def dest_for(user: User) -> str:
 
 def _http_post(url: str, *, data: bytes, headers: dict, timeout: int = 12):
     """POST → (status, body_text). Бросает только на транспортных сбоях."""
+    # Cloudflare перед api.resend.com банит дефолтный Python-urllib UA (код 1010)
+    headers = {"User-Agent": "SpinHire/1.0 (+https://spinhire.io)", **headers}
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
