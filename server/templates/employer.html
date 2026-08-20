@@ -45,6 +45,8 @@
   {% if request.query_params.get('invite_accepted') %}<div class="flash">Вы присоединились к командному кабинету.</div>{% endif %}
   {% if request.query_params.get('member_removed') %}<div class="flash">Сотрудник удалён из командного кабинета.</div>{% endif %}
   {% if request.query_params.get('invite_error') %}<div class="flash err">Не удалось создать приглашение: проверьте email и членство сотрудника.</div>{% endif %}
+  {% if request.query_params.get('settings_ok') %}<div class="flash">Настройки аккаунта сохранены.</div>{% endif %}
+  {% if request.query_params.get('settings_error') %}<div class="flash err">{{ request.query_params.get('settings_error') }}</div>{% endif %}
   <div class="section-head" style="margin-bottom: var(--sp-5);">
     <div>
       <span class="kicker pink">Бэк-офис</span>
@@ -54,7 +56,6 @@
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <a href="/resumes" class="btn btn-acid">Резюме · {{ account.cv_credits or 0 }} открытий</a>
       {% if team_role != 'viewer' %}<a href="#post" class="btn btn-pink">+ Разместить вакансию</a>{% endif %}
-      {% if user and user.role == 'employer' %}<form method="post" action="/account/mode"><input type="hidden" name="mode" value="talent"><button class="btn btn-ghost" type="submit" title="Тот же аккаунт, данные обоих режимов сохраняются">⇄ Я соискатель</button></form>{% endif %}
     </div>
   </div>
 
@@ -65,6 +66,8 @@
     <a href="#ats" data-pane="ats">Кандидаты<b>{{ ats_apps|length }}</b></a>
     <a href="#talents" data-pane="talents">База резюме<b>{{ account.cv_credits or 0 }}</b></a>
     <a href="#company" data-pane="company">Компания{% if company_progress < 100 %}<b>{{ company_progress }}%</b>{% endif %}</a>
+    <a href="#team" data-pane="team">Команда<b>{{ team|length + 1 }}</b></a>
+    <a href="#settings" data-pane="settings">Настройки</a>
   </nav>
 
   <div class="cab-pane" data-pane="overview">
@@ -135,7 +138,7 @@
       {% if team_role == 'owner' %}<button class="btn btn-acid wide" type="submit">Сохранить профиль компании</button>{% endif %}
     </form>
   </details>
-  </div><!-- закроется после команды: секцию Команда тоже кладём в «Компания» -->
+  </div><!-- /company -->
 
   <div class="cab-pane" data-pane="talents">
   <section class="cv-access" style="margin-top:0;">
@@ -164,7 +167,7 @@
 
   </div><!-- /talents -->
 
-  <div class="cab-pane" data-pane="company" data-pane-extra="company">
+  <div class="cab-pane" data-pane="team">
   <details class="card" style="margin:0 0 var(--sp-6);" id="team" open>
     <summary style="cursor:pointer;font-family:var(--font-display);">Команда · {{ team|length + 1 }} человек</summary>
     <div style="margin-top:18px;border-top:2px solid var(--line);">
@@ -175,7 +178,30 @@
     {% if team_role=='owner' %}<form method="post" action="/employer/team/invite" style="display:grid;grid-template-columns:minmax(0,1fr) 180px auto;gap:10px;margin-top:18px;"><input class="input" type="email" name="email" placeholder="recruiter@company.com" required><select class="input" name="role"><option value="recruiter">Рекрутер</option><option value="viewer">Наблюдатель</option></select><button class="btn btn-acid">Пригласить</button></form>{% endif %}
   </details>
 
-  </div><!-- /company-team -->
+  </div><!-- /team -->
+
+  <div class="cab-pane" data-pane="settings">
+  <div class="card" style="max-width:720px; margin-bottom:var(--sp-4);">
+    <b style="font-family:var(--font-display);">Аккаунт</b>
+    <p style="color:var(--ink-dim); font-size:.9rem; margin:8px 0 18px;">Имя видят кандидаты и коллеги в переписке и приглашениях. Логотип и данные компании — во вкладке <a href="#company" style="color:var(--acid);">«Компания»</a>.</p>
+    <form method="post" action="/account/settings" class="profile-grid">
+      <div class="field"><label>Email (логин)</label><input class="input" value="{{ user.email }}" disabled></div>
+      <div class="field"><label>Контактное имя</label><input class="input" name="name" value="{{ user.name or '' }}" placeholder="Имя Фамилия"></div>
+      <div class="field"><label>Текущий пароль</label><input class="input" type="password" name="current_password" autocomplete="current-password" placeholder="Только при смене пароля"></div>
+      <div class="field"><label>Новый пароль</label><input class="input" type="password" name="new_password" autocomplete="new-password" placeholder="Минимум 6 символов"></div>
+      <button class="btn btn-acid wide" type="submit">Сохранить настройки</button>
+    </form>
+  </div>
+  {% if user and user.role == 'employer' %}
+  <div class="card" style="max-width:720px; display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
+    <div>
+      <b style="font-family:var(--font-display);">Режим аккаунта</b>
+      <p style="color:var(--ink-dim); font-size:.9rem; margin-top:6px;">Один аккаунт — два режима. Данные работодателя и соискателя сохраняются при переключении.</p>
+    </div>
+    <form method="post" action="/account/mode"><input type="hidden" name="mode" value="talent"><button class="btn btn-ghost" type="submit">⇄ Я соискатель</button></form>
+  </div>
+  {% endif %}
+  </div><!-- /settings -->
 
   <div class="cab-pane" data-pane="ats">
   <section style="margin:0 0 var(--sp-6);"><div class="section-head"><div><span class="kicker pink">Мини-ATS</span><h2 style="font-size:1.25rem;margin-top:6px;">Кандидаты · {{ ats_apps|length }}</h2></div><form method="get" action="/employer" style="display:flex;gap:8px;"><select class="input" name="stage"><option value="">Все этапы</option>{% for value,label in [('new','Новые'),('viewed','Просмотрены'),('invited','Интервью'),('offer','Оффер'),('hired','Наняты'),('rejected','Отказ')] %}<option value="{{ value }}" {% if stage==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="btn btn-ghost">Фильтр</button></form></div>
@@ -261,9 +287,9 @@
     }
     const params = new URLSearchParams(location.search);
     let initial = (location.hash || '').slice(1);
-    if (initial === 'team') initial = 'company';
     if (!KNOWN.includes(initial)) {
-      if (params.get('profile_ok') || params.get('invite_sent') || params.get('invite_accepted') || params.get('member_removed') || params.get('invite_error')) initial = 'company';
+      if (params.get('invite_sent') || params.get('invite_accepted') || params.get('member_removed') || params.get('invite_error')) initial = 'team';
+      else if (params.get('profile_ok')) initial = 'company';
       else if (params.get('job_saved') || params.get('job_archived') || params.get('job_posted')) initial = 'jobs';
       else if (params.get('job_error')) initial = 'post';
       else if (params.get('stage')) initial = 'ats';

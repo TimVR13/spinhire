@@ -1727,6 +1727,31 @@ def account_mode(request: Request, mode: str = Form(...), db: Session = Depends(
     return RedirectResponse("/employer" if mode == "employer" else "/profile", status_code=303)
 
 
+@app.post("/account/settings")
+def account_settings(request: Request, name: str = Form(""),
+                     current_password: str = Form(""), new_password: str = Form(""),
+                     db: Session = Depends(db_session)):
+    """Настройки аккаунта из кабинета: контактное имя и смена пароля."""
+    from urllib.parse import quote
+    user = get_user(request, db)
+    if not user:
+        return login_redirect("/employer")
+    back = "/employer?%s#settings"
+
+    user.name = name.strip()
+    if new_password:
+        if len(new_password) < 6:
+            db.commit()
+            return RedirectResponse(back % ("settings_error=" + quote("Новый пароль слишком короткий — минимум 6 символов.")), status_code=303)
+        # у входа через Google пароля может не быть — тогда его можно задать без текущего
+        if user.password_hash and not check_pw(current_password, user.password_hash):
+            db.commit()
+            return RedirectResponse(back % ("settings_error=" + quote("Текущий пароль не подошёл — пароль не менялся, имя сохранено.")), status_code=303)
+        user.password_hash = hash_pw(new_password)
+    db.commit()
+    return RedirectResponse(back % "settings_ok=1", status_code=303)
+
+
 @app.get("/logout")
 def logout(next: str = ""):
     destination = f"/login?next={urllib.parse.quote(next, safe='')}" if safe_next(next, "") else "/"
