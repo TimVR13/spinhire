@@ -32,6 +32,18 @@
   .prof-card .foot { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 0.82rem; }
   .prof-card .pay { color: var(--emerald, var(--acid)); font-weight: 800; }
   .prof-card .live { color: var(--ink-faint); }
+  .prof-card .more { color: var(--acid); font-size: 0.76rem; font-weight: 700; opacity: 0; transition: opacity .15s; }
+  .prof-card:hover .more, .prof-card:focus-visible .more { opacity: 1; }
+  .prof-toolbar { position: sticky; top: 66px; z-index: 40; background: color-mix(in oklch, var(--bg) 92%, transparent); backdrop-filter: blur(14px); padding: 12px 0; margin-bottom: var(--sp-4); display: flex; flex-direction: column; gap: 10px; }
+  .prof-toolbar .input { max-width: 460px; }
+  .prof-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .prof-chips a { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; color: var(--ink-dim); font-size: .78rem; font-weight: 700; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px 6px 7px; }
+  .prof-chips a:hover { border-color: var(--acid); color: var(--acid); }
+  .prof-chips img { width: 22px; height: 22px; border-radius: 6px; object-fit: cover; }
+  .prof-chips b { color: var(--acid); }
+  .fam h2 { display: flex; align-items: center; gap: 10px; }
+  .fam-ico { width: 34px; height: 34px; border-radius: 9px; object-fit: cover; }
+  .prof-card[hidden] { display: none; }
   @media (max-width: 760px) {
     .prof-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: var(--sp-4) 0 var(--sp-5); }
     .prof-stat { min-width: 0; padding: 12px 14px; }
@@ -57,9 +69,21 @@
     <div class="prof-stat"><b>4</b><span>Грейда</span></div>
   </div>
 
+  {% set fam_icons = {'Операции казино':'asset-roulette','Беттинг и трейдинг':'sym-horseshoe','Разработка игр':'sym-seven',
+                      'Аффилейты и медиабаинг':'sym-cherry','Комплаенс и AML':'sym-bar','Платежи и антифрод':'asset-chips',
+                      'Поддержка игроков':'sym-bell','Маркетинг и CRM':'sym-star','Данные и BI':'sym-diamond','Топ-менеджмент':'sym-crown'} %}
+  <div class="prof-toolbar" id="profToolbar">
+    <input class="input" id="profSearch" type="search" placeholder="Найти должность: VIP, CRM, аналитик…" aria-label="Поиск по профессиям">
+    <div class="prof-chips">
+      {% for family, roles in families.items() %}
+      <a href="#fam-{{ loop.index }}"><img src="/img/{{ fam_icons.get(family, 'sym-star') }}.jpg" alt="" width="22" height="22" loading="lazy">{{ family }} <b>{{ roles|length }}</b></a>
+      {% endfor %}
+    </div>
+  </div>
+
   {% for family, roles in families.items() %}
-  <section class="fam">
-    <h2>{{ family }} <span style="color: var(--ink-faint); font-weight: 400;">· {{ roles|length }}</span></h2>
+  <section class="fam" id="fam-{{ loop.index }}">
+    <h2><img class="fam-ico" src="/img/{{ fam_icons.get(family, 'sym-star') }}.jpg" alt="" width="34" height="34" loading="lazy">{{ family }} <span style="color: var(--ink-faint); font-weight: 400;">· {{ roles|length }}</span></h2>
     <div class="prof-grid">
       {% for r in roles %}
       <a class="prof-card" href="/profession/{{ r.slug }}">
@@ -67,11 +91,31 @@
         <h3>{{ r.title }}</h3>
         <p>{{ r.lead }}</p>
         <span class="foot"><span class="pay">{{ r.salary }} / мес</span>{% if r.jobs %}<span class="live">{{ r.jobs }} вакансий</span>{% endif %}</span>
+        <span class="more">профиль роли: метрики, навыки, зарплаты по грейдам →</span>
       </a>
       {% endfor %}
     </div>
   </section>
   {% endfor %}
+
+  <script>
+  (function () {
+    const input = document.getElementById('profSearch');
+    if (!input) return;
+    input.addEventListener('input', () => {
+      const q = input.value.trim().toLocaleLowerCase('ru');
+      document.querySelectorAll('.fam').forEach(fam => {
+        let shown = 0;
+        fam.querySelectorAll('.prof-card').forEach(card => {
+          const ok = !q || card.textContent.toLocaleLowerCase('ru').includes(q);
+          card.hidden = !ok;
+          if (ok) shown++;
+        });
+        fam.hidden = shown === 0;
+      });
+    });
+  })();
+  </script>
 
   <section class="card" style="text-align: center; max-width: 680px; margin: var(--sp-7) auto 0;">
     <h2 style="font-size: 1.25rem; margin-bottom: 10px;">Не нашли свою роль?</h2>
