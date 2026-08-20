@@ -62,7 +62,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap" rel="stylesheet">
 <script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="css/style.css?v=20260820a">
+<link rel="stylesheet" href="css/style.css?v=20260820f">
 <style>
 
   .hero {
@@ -247,7 +247,8 @@
   /* iGaming в цифрах */
   .facts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
   @media (max-width: 760px) { .facts-grid { grid-template-columns: 1fr; } }
-  .fact { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: var(--sp-5); }
+  .fact { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: var(--sp-5); display: flex; align-items: center; gap: 16px; }
+  .fact-ico { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; flex: 0 0 auto; box-shadow: 0 8px 22px oklch(0 0 0 / 0.4); }
   .fact b { font-family: var(--font-display); font-weight: 900; font-size: 1.5rem; color: var(--acid); display: block; margin-bottom: 6px; }
   .fact:nth-child(2n) b { color: var(--pink); }
   .fact span { color: var(--ink-dim); font-size: 0.9rem; }
@@ -302,6 +303,9 @@
   .salary-tile .role { font-weight: 700; font-size: 0.9rem; display: block; margin-bottom: var(--sp-1); }
   .salary-tile .range { font-family: var(--font-display); font-weight: 800; color: var(--yellow); font-size: 1.05rem; white-space: nowrap; }
   .salary-tile .geo { color: var(--ink-faint); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; }
+  .salary-ico { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; float: right; margin: 0 0 6px 10px; box-shadow: 0 6px 16px oklch(0 0 0 / 0.4); }
+  .mkt-card__head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .mkt-ico { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; }
 
   .cta-banner {
     border: 1px solid var(--line-strong);
@@ -665,12 +669,12 @@
     <div class="container">
       <div class="section-head"><div><span class="kicker">Индустрия в цифрах</span><h2>iGaming — это большие деньги</h2></div></div>
       <div class="facts-grid">
-        <div class="fact"><b>$100B+</b><span>объём онлайн-гемблинга к 2027 году</span></div>
-        <div class="fact"><b>×2–3</b><span>зарплаты выше обычного IT и маркетинга</span></div>
-        <div class="fact"><b>Мальта · Кипр · Тбилиси</b><span>главные хабы релокации с визой</span></div>
-        <div class="fact"><b>40%+</b><span>вакансий — удалёнка или гибрид</span></div>
-        <div class="fact"><b>₿ USDT</b><span>всё больше компаний платят в крипте</span></div>
-        <div class="fact"><b>Английский B2</b><span>достаточно для старта в большинстве ролей</span></div>
+        <div class="fact"><img class="fact-ico" src="img/asset-chips.jpg" alt="" loading="lazy" width="56" height="56"><div><b>$100B+</b><span>объём онлайн-гемблинга к 2027 году</span></div></div>
+        <div class="fact"><img class="fact-ico" src="img/sym-diamond.jpg" alt="" loading="lazy" width="56" height="56"><div><b>×2–3</b><span>зарплаты выше обычного IT и маркетинга</span></div></div>
+        <div class="fact"><img class="fact-ico" src="img/asset-cards.jpg" alt="" loading="lazy" width="56" height="56"><div><b>Мальта · Кипр · Тбилиси</b><span>главные хабы релокации с визой</span></div></div>
+        <div class="fact"><img class="fact-ico" src="img/asset-dice.jpg" alt="" loading="lazy" width="56" height="56"><div><b>40%+</b><span>вакансий — удалёнка или гибрид</span></div></div>
+        <div class="fact"><img class="fact-ico" src="img/sym-seven.jpg" alt="" loading="lazy" width="56" height="56"><div><b>₿ USDT</b><span>всё больше компаний платят в крипте</span></div></div>
+        <div class="fact"><img class="fact-ico" src="img/sym-star.jpg" alt="" loading="lazy" width="56" height="56"><div><b>Английский B2</b><span>достаточно для старта в большинстве ролей</span></div></div>
       </div>
     </div>
   </section>
@@ -696,17 +700,17 @@
 
       <div class="mkt-grid">
         <div class="mkt-card">
-          <h3>Направления</h3>
+          <div class="mkt-card__head"><img class="mkt-ico" src="img/pricing/p-stats.jpg" alt="" loading="lazy" width="38" height="38"><h3>Направления</h3></div>
           <p class="mkt-sub">Сколько ролей открыто в каждой вертикали</p>
           <ul class="mkt-bars" data-market="directions"></ul>
         </div>
         <div class="mkt-card">
-          <h3>География</h3>
+          <div class="mkt-card__head"><img class="mkt-ico" src="img/pricing/p-seo.jpg" alt="" loading="lazy" width="38" height="38"><h3>География</h3></div>
           <p class="mkt-sub">Где нанимают прямо сейчас</p>
           <ul class="mkt-chips" data-market="countries"></ul>
         </div>
         <div class="mkt-card">
-          <h3>Профессии по спросу</h3>
+          <div class="mkt-card__head"><img class="mkt-ico" src="img/pricing/p-salary.jpg" alt="" loading="lazy" width="38" height="38"><h3>Профессии по спросу</h3></div>
           <p class="mkt-sub">Роль, открытые вакансии и вилка middle на Мальте</p>
           <ul class="mkt-roles" data-market="professions"></ul>
         </div>
@@ -726,14 +730,14 @@
         <a class="link-more" href="jobs.html#salaries">Полный гид по зарплатам →</a>
       </div>
       <div class="salary-strip">
-        <div class="salary-tile"><span class="role">VIP-менеджер</span><span class="range">€3–5K</span><br><span class="geo">Кипр · Мальта</span></div>
-        <div class="salary-tile"><span class="role">Аффилейт-менеджер</span><span class="range">€2.5–4.5K</span><br><span class="geo">Удалёнка · ЕС</span></div>
-        <div class="salary-tile"><span class="role">AML / Комплаенс</span><span class="range">€4–6K</span><br><span class="geo">Мальта · Гибралтар</span></div>
-        <div class="salary-tile"><span class="role">Разработчик слотов</span><span class="range">€4–7K</span><br><span class="geo">Удалёнка · Варшава</span></div>
-        <div class="salary-tile"><span class="role">Трейдер спортбука</span><span class="range">€2.5–3.5K</span><br><span class="geo">Лимассол</span></div>
-        <div class="salary-tile"><span class="role">Медиабайер</span><span class="range">€2.5–5K</span><br><span class="geo">Удалёнка · + %</span></div>
-        <div class="salary-tile"><span class="role">Продакт-менеджер</span><span class="range">€4.5–7K</span><br><span class="geo">Мальта · Кипр</span></div>
-        <div class="salary-tile"><span class="role">Head of Casino</span><span class="range">€8–15K</span><br><span class="geo">Мальта · Кюрасао</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-crown.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">VIP-менеджер</span><span class="range">€3–5K</span><br><span class="geo">Кипр · Мальта</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-star.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">Аффилейт-менеджер</span><span class="range">€2.5–4.5K</span><br><span class="geo">Удалёнка · ЕС</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-bell.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">AML / Комплаенс</span><span class="range">€4–6K</span><br><span class="geo">Мальта · Гибралтар</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-seven.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">Разработчик слотов</span><span class="range">€4–7K</span><br><span class="geo">Удалёнка · Варшава</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-horseshoe.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">Трейдер спортбука</span><span class="range">€2.5–3.5K</span><br><span class="geo">Лимассол</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-cherry.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">Медиабайер</span><span class="range">€2.5–5K</span><br><span class="geo">Удалёнка · + %</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-diamond.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">Продакт-менеджер</span><span class="range">€4.5–7K</span><br><span class="geo">Мальта · Кипр</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-bar.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">Head of Casino</span><span class="range">€8–15K</span><br><span class="geo">Мальта · Кюрасао</span></div>
       </div>
     </div>
   </section>
@@ -1177,6 +1181,6 @@
   document.addEventListener('keydown', event => { if (event.key === 'Escape') { setOpen(false); trigger.focus(); } });
 })();
 </script>
-<script src="js/app.js?v=20260820a"></script>
+<script src="js/app.js?v=20260820f"></script>
 </body>
 </html>

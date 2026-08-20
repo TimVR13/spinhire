@@ -39,7 +39,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20260820a">
+<link rel="stylesheet" href="css/style.css?v=20260820f">
 <style>
   .co-filters { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-block: var(--sp-5); }
   .co-filters .tag { padding: 7px 14px; font-size: 0.8rem; cursor: pointer; }
@@ -247,6 +247,6 @@
 <script>
 (function(){const table=document.getElementById('companyTable');if(!table)return;const rows=[...table.querySelectorAll('.co-row')],search=document.getElementById('companySearch'),sort=document.getElementById('companySort'),empty=document.getElementById('companyEmpty');function render(){const q=search.value.trim().toLocaleLowerCase('ru');const ordered=[...rows].sort((a,b)=>sort.value==='name'?a.dataset.name.localeCompare(b.dataset.name,'ru'):Number(b.dataset.jobs)-Number(a.dataset.jobs)||a.dataset.name.localeCompare(b.dataset.name,'ru'));let shown=0;ordered.forEach(row=>{const ok=row.textContent.toLocaleLowerCase('ru').includes(q);row.hidden=!ok;if(ok){table.insertBefore(row,empty);shown++}});empty.hidden=shown!==0}search.addEventListener('input',render);sort.addEventListener('change',render);render()})();
 </script>
-<script src="js/app.js?v=20260820a"></script>
+<script src="js/app.js?v=20260820f"></script>
 </body>
 </html>

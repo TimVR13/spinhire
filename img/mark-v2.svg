@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SpinHire">
+  <defs><linearGradient id="g" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse"><stop stop-color="#78ffbf"/><stop offset=".52" stop-color="#19e58a"/><stop offset="1" stop-color="#00a967"/></linearGradient></defs>
+  <path d="M32 3 38 10 47 8 50 17 59 20 55 29 61 36 53 42 53 52 43 53 36 61 28 55 18 58 15 48 6 44 10 35 4 27 13 21 13 12 23 11Z" fill="#0b1511" stroke="url(#g)" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="32" cy="32" r="18" fill="none" stroke="url(#g)" stroke-width="3" stroke-dasharray="4 3"/>
+  <path d="M22 18v28M42 18v28M22 32h20" fill="none" stroke="url(#g)" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="32" cy="32" r="4" fill="#ff2fa6" stroke="#0b1511" stroke-width="2"/>
+</svg>

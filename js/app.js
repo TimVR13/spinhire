@@ -35,6 +35,34 @@ document.addEventListener('DOMContentLoaded', () => {
       'удалёнка':'remote','гибрид':'hybrid','офис':'office','Топ-менеджмент':'Executive','Разработка игр':'Game development','Маркетинг и CRM':'Marketing & CRM','Поддержка игроков':'Player support'
     }
   };
+  // Служебная лексика площадки: категории, форматы, гео, «по запросу» и т.п.
+  // Переводится ВЕЗДЕ, включая карточки вакансий и любой динамический рендер, —
+  // это наши слова, а не текст работодателя.
+  const VOCAB = {
+    en: {
+      'Операции казино':'Casino operations','Беттинг и трейдинг':'Betting & trading','Разработка игр':'Game development',
+      'Аффилейты и медиабаинг':'Affiliates & media buying','Комплаенс и AML':'Compliance & AML','Платежи и антифрод':'Payments & antifraud',
+      'Поддержка игроков':'Player support','Маркетинг и CRM':'Marketing & CRM','Данные и BI':'Data & BI','Топ-менеджмент':'Executive',
+      'удалёнка':'remote','Удалёнка':'Remote','гибрид':'hybrid','офис':'office','по запросу':'on request',
+      'Не указана':'Not specified','вакансий':'jobs','вакансии':'jobs','вакансия':'job','Обновлено':'Updated',
+      'Саппорт (языки)':'Support (languages)','Мальта':'Malta','США':'USA','Великобритания':'United Kingdom','Греция':'Greece',
+      'Польша':'Poland','Бразилия':'Brazil','Германия':'Germany','Кипр':'Cyprus','Украина':'Ukraine','Испания':'Spain',
+      'Румыния':'Romania','Грузия':'Georgia','Сербия':'Serbia','Армения':'Armenia','Чехия':'Czechia','Нидерланды':'Netherlands',
+      'Филиппины':'Philippines','Болгария':'Bulgaria','Швеция':'Sweden','Гибралтар':'Gibraltar'
+    },
+    uk: {
+      'Операции казино':'Операції казино','Беттинг и трейдинг':'Бетинг і трейдинг','Разработка игр':'Розробка ігор',
+      'Аффилейты и медиабаинг':'Афілейти та медіабаїнг','Комплаенс и AML':'Комплаєнс і AML','Платежи и антифрод':'Платежі та антифрод',
+      'Поддержка игроков':'Підтримка гравців','Маркетинг и CRM':'Маркетинг і CRM','Данные и BI':'Дані та BI','Топ-менеджмент':'Топменеджмент',
+      'удалёнка':'віддалено','Удалёнка':'Віддалено','гибрид':'гібрид','офис':'офіс','по запросу':'за запитом',
+      'Не указана':'Не вказана','вакансий':'вакансій','вакансии':'вакансії','вакансия':'вакансія','Обновлено':'Оновлено',
+      'Саппорт (языки)':'Сапорт (мови)','Мальта':'Мальта','США':'США','Великобритания':'Велика Британія','Греция':'Греція',
+      'Польша':'Польща','Бразилия':'Бразилія','Германия':'Німеччина','Кипр':'Кіпр','Украина':'Україна','Испания':'Іспанія',
+      'Румыния':'Румунія','Грузия':'Грузія','Сербия':'Сербія','Армения':'Вірменія','Чехия':'Чехія','Нидерланды':'Нідерланди',
+      'Филиппины':'Філіппіни','Болгария':'Болгарія','Швеция':'Швеція','Гибралтар':'Гібралтар'
+    }
+  };
+  let translating = false;   // защита от зацикливания MutationObserver на своих же правках
   const translateInterface = async lang => {
     document.documentElement.lang = lang;
     if (lang === 'ru') return;
@@ -44,30 +72,58 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response.ok) complete = await response.json();
     } catch (_) {}
     const dict = Object.assign({}, complete, UI_COPY[lang]);
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    const nodes = [];
-    while (walker.nextNode()) {
-      const parent = walker.currentNode.parentElement;
-      if (parent && !parent.closest('script, style, textarea, [data-no-translate], .job-card, .job-body')) nodes.push(walker.currentNode);
-    }
     // Периоды в вилке приходят из базы вместе с числом («$350 000 в год»),
     // поэтому словарь их не ловит — переводим подписью к сумме
     const PERIODS = {
       en: [[' в год', '/year'], [' в час', '/hour'], [' в месяц', '/month']],
       uk: [[' в год', ' на рік'], [' в час', ' на годину'], [' в месяц', ' на місяць']]
     }[lang] || [];
+    const vocab = VOCAB[lang] || {};
+    const vocabKeys = Object.keys(vocab).sort((a, b) => b.length - a.length);
+    const vocabRe = vocabKeys.length
+      ? new RegExp(vocabKeys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g')
+      : null;
 
-    nodes.forEach(node => {
-      const raw = node.nodeValue, key = raw.trim().replace(/\s+/g, ' ');
-      if (dict[key]) {
-        const leading = (raw.match(/^\s*/) || [''])[0];
-        const trailing = (raw.match(/\s*$/) || [''])[0];
-        node.nodeValue = leading + dict[key] + trailing;
-        return;
+    const translateWithin = root => {
+      if (!root || !(root instanceof Element || root === document.body)) return;
+      translating = true;
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      while (walker.nextNode()) {
+        const parent = walker.currentNode.parentElement;
+        if (parent && !parent.closest('script, style, textarea, [data-no-translate]')) nodes.push(walker.currentNode);
       }
-      const period = PERIODS.find(([russian]) => raw.includes(russian));
-      if (period) node.nodeValue = raw.replace(period[0], period[1]);
+      nodes.forEach(node => {
+        const parent = node.parentElement;
+        const insideJob = parent && parent.closest('.job-card, .job-body');
+        const raw = node.nodeValue, key = raw.trim().replace(/\s+/g, ' ');
+        // полный словарь — только вне карточек вакансий: текст работодателя не трогаем
+        if (!insideJob && dict[key]) {
+          const leading = (raw.match(/^\s*/) || [''])[0];
+          const trailing = (raw.match(/\s*$/) || [''])[0];
+          node.nodeValue = leading + dict[key] + trailing;
+          return;
+        }
+        let value = node.nodeValue;
+        const period = PERIODS.find(([russian]) => value.includes(russian));
+        if (period) value = value.replace(period[0], period[1]);
+        // служебная лексика — везде, в том числе внутри карточек
+        if (vocabRe && /[А-Яа-яЁёІіЇїЄє]/.test(value)) value = value.replace(vocabRe, m => vocab[m] || m);
+        if (value !== node.nodeValue) node.nodeValue = value;
+      });
+      translating = false;
+    };
+    window.__translateWithin = translateWithin;
+    translateWithin(document.body);
+
+    // Автоперевод всего, что дорисовывается позже: рынок, «показать ещё», похожие вакансии…
+    const mo = new MutationObserver(muts => {
+      if (translating) return;
+      muts.forEach(m => m.addedNodes.forEach(n => {
+        if (n.nodeType === 1) translateWithin(n);
+      }));
     });
+    mo.observe(document.body, { childList: true, subtree: true });
     document.querySelectorAll('[placeholder],[aria-label],[title]').forEach(el => {
       if (el.closest('[data-no-translate], .job-card, .job-body')) return;
       ['placeholder','aria-label','title'].forEach(attr => {

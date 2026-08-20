@@ -151,6 +151,14 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 }
 .kicker::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
 .kicker.pink { color: var(--pink); border-color: color-mix(in oklch, var(--pink) 34%, transparent); background: color-mix(in oklch, var(--pink) 8%, transparent); }
+/* заголовок после плашки-кикера всегда дышит, а не липнет к ней */
+.kicker + h1, .kicker + h2, .kicker + h3 { margin-top: 10px; }
+
+/* гео-лендинги: текст слева, казино-реквизит справа — без пустой правой половины */
+.land-cols { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.75fr); gap: clamp(24px, 4vw, 64px); align-items: center; }
+.land-art { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); aspect-ratio: 4 / 3; background: var(--bg-deep); }
+.land-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@media (max-width: 860px) { .land-cols { grid-template-columns: 1fr; } .land-art { display: none; } }
 
 .lead { font-size: 1.12rem; color: var(--ink-dim); max-width: 62ch; }
 
