@@ -2370,7 +2370,7 @@ def employer(request: Request, stage: str = "", assigned: int = 0,
                   credit_ledger=ledger, stats=stats, company_progress=company_progress,
                   account=account, team_role=team_role, team=team, invites=invites,
                   ats_apps=ats_apps, stage=stage, assigned=assigned,
-                  job_stats=job_stats)
+                  job_stats=job_stats, categories=CATEGORIES, formats=FORMATS)
 
 
 @app.post("/employer/profile")
@@ -2639,13 +2639,13 @@ def employer_job_archive(job_id: int, request: Request, db: Session = Depends(db
 
 @app.get("/post-job", response_class=HTMLResponse)
 def post_job_page(request: Request, db: Session = Depends(db_session)):
+    # страница для работодателей: тарифы и описание для всех;
+    # сама форма размещения живёт в кабинете (/employer#post)
     user = get_user(request, db)
-    can_post = bool(user and user.role in ("employer", "admin")
-                    and company_context(user, db)[1] != "viewer")
     live_jobs = db.query(Job).filter(Job.status == "approved").count()
-    return render(request, db, "post_job.html", categories=CATEGORIES, formats=FORMATS,
-                  posted=False, need_login=not user or user.role == "talent",
-                  can_post=can_post, live_jobs=f"{live_jobs:,}".replace(",", " "))
+    return render(request, db, "post_job.html",
+                  need_login=not user or user.role == "talent",
+                  live_jobs=f"{live_jobs:,}".replace(",", " "))
 
 
 @app.post("/post-job")
@@ -2656,12 +2656,12 @@ def post_job(request: Request, title: str = Form(...), category: str = Form(""),
              description: str = Form(""), db: Session = Depends(db_session)):
     user = get_user(request, db)
     if not user or user.role == "talent":
-        return login_redirect("/post-job")
+        return login_redirect("/employer")
     _, account, _ = require_company_user(request, db, write=True)
 
     def err(msg):
-        return render(request, db, "post_job.html", categories=CATEGORIES, formats=FORMATS,
-                      posted=False, need_login=False, can_post=True, error=msg)
+        from urllib.parse import quote
+        return RedirectResponse(f"/employer?job_error={quote(msg)}#post", status_code=303)
 
     # правила заведения: без корректной зарплатной вилки не публикуем
     try:
@@ -2693,8 +2693,7 @@ def post_job(request: Request, title: str = Form(...), category: str = Form(""),
                tags=normalized_tags, description=description.strip(),
                owner_id=account.id, status="pending"))
     db.commit()
-    return render(request, db, "post_job.html", categories=CATEGORIES, formats=FORMATS,
-                  posted=True, need_login=False, can_post=True)
+    return RedirectResponse("/employer?job_posted=1#jobs", status_code=303)
 
 
 # ---------- admin ----------

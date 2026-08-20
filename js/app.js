@@ -362,11 +362,22 @@ if (window.matchMedia('(pointer: fine)').matches &&
   });
 }
 
-// Переключатель светлой/тёмной темы (на всех страницах)
+// Переключатель светлой/тёмной темы (на всех страницах).
+// В кабинетах (body.workspace) — своя настройка: светлая по умолчанию,
+// тёмную человек включает сам, выбор хранится отдельно (wsTheme).
 (function () {
+  const isWorkspace = document.body && document.body.classList.contains('workspace');
   const saved = localStorage.getItem('theme');
-  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  if (!isWorkspace && saved) document.documentElement.setAttribute('data-theme', saved);
   function apply(t) {
+    if (isWorkspace) {
+      if (t === 'dark') document.documentElement.setAttribute('data-ws-theme', 'dark');
+      else document.documentElement.removeAttribute('data-ws-theme');
+      localStorage.setItem('wsTheme', t);
+      if (btn) btn.textContent = t === 'dark' ? '☀️' : '🌙';
+      if (btn) btn.setAttribute('aria-label', t === 'dark' ? 'Светлая тема' : 'Тёмная тема');
+      return;
+    }
     if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
     else document.documentElement.removeAttribute('data-theme');
     localStorage.setItem('theme', t);
@@ -384,10 +395,16 @@ if (window.matchMedia('(pointer: fine)').matches &&
       btn.classList.add('theme-toggle--float');
       document.body.appendChild(btn);
     }
-    apply(localStorage.getItem('theme') || 'dark');
+    apply(isWorkspace ? (localStorage.getItem('wsTheme') || 'light')
+                      : (localStorage.getItem('theme') || 'dark'));
     btn.addEventListener('click', () => {
-      const cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-      apply(cur === 'light' ? 'dark' : 'light');
+      if (isWorkspace) {
+        const cur = document.documentElement.getAttribute('data-ws-theme') === 'dark' ? 'dark' : 'light';
+        apply(cur === 'dark' ? 'light' : 'dark');
+      } else {
+        const cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+        apply(cur === 'light' ? 'dark' : 'light');
+      }
     });
   });
 })();

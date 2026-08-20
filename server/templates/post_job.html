@@ -9,8 +9,7 @@
 <meta property="og:url" content="https://spinhire.io/post-job">
 <meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">{% endblock %}
 {% block content %}
-  <nav class="crumbs" style="text-align: center;"><a href="/">Главная</a> / Разместить вакансию</nav>
-  {% if need_login %}
+  <nav class="crumbs" style="text-align: center;"><a href="/">Главная</a> / Работодателям</nav>
   <style>
     .pj-hero { display:grid; grid-template-columns: minmax(0,1.1fr) minmax(0,.9fr); gap: clamp(24px,4vw,56px); align-items:center; margin: 4px 0 var(--sp-6); }
     .pj-hero h1 { font-size: clamp(1.9rem, 3.6vw, 3rem); line-height:1.04; margin: 8px 0 14px; }
@@ -43,18 +42,9 @@
     </div>
     <div class="pj-hero__art"><img src="/img/pricing/hero.jpg" alt="Дилер сдаёт карту-вакансию на зелёном сукне" width="800" height="600"></div>
   </section>
-  {% else %}
-  <div style="text-align: center;"><span class="kicker pink">Сдавай карты</span></div>
-  <h1 style="font-size: clamp(1.6rem, 3.5vw, 2.6rem); margin: 8px 0 24px; text-align: center;">Разместить вакансию</h1>
-  {% endif %}
 
-  {% if posted %}
-    <div class="flash">✓ Вакансия отправлена на модерацию. Обычно проверяем за пару часов — статус виден в <a href="/employer" style="color: inherit; font-weight: 800;">кабинете</a>.</div>
-  {% endif %}
-  {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+  <!-- ТАРИФЫ -->
 
-  {% if need_login %}
-  <!-- ТАРИФЫ (только для не-вошедших) -->
   <section id="pricing" style="margin-bottom: var(--sp-7);">
     <span class="kicker">Цена запуска · действует до 30 сентября 2026</span>
     <p style="color: var(--ink-dim); max-width: 74ch; margin: 10px 0 var(--sp-4); font-size: 0.95rem;">Одна вакансия стоит столько же, сколько у международных iGaming-бордов, но чем больше вы нанимаете, тем дешевле выходит каждое размещение. Всё раздельно и прозрачно: разместить вакансию, открыть контакты кандидатов из базы или отдать поиск нам под ключ.</p>
@@ -241,38 +231,23 @@
     </div>
   </section>
 
+    {% if need_login %}
     <div class="card" style="border-color: var(--pink); max-width: 560px; margin: 0 auto;">
       <b style="font-family: var(--font-display); text-transform: uppercase;">Нужен аккаунт работодателя</b>
-      <p style="color: var(--ink-dim); margin: 12px 0 20px;">Вакансии размещают компании. Зарегистрируйтесь как работодатель или войдите.</p>
+      <p style="color: var(--ink-dim); margin: 12px 0 20px;">Вакансии размещают компании. Зарегистрируйтесь как работодатель или войдите — форма размещения откроется в кабинете.</p>
       <div style="display: flex; gap: 10px; flex-wrap: wrap;">
         <a href="/register?role=employer" class="btn btn-pink">Регистрация работодателя →</a>
-        <a href="/login?next=/post-job" class="btn btn-ghost">Войти</a>
+        <a href="/login?next=/employer%23post" class="btn btn-ghost">Войти</a>
       </div>
     </div>
-  {% elif can_post %}
-  <h2 style="font-size: 1.3rem; margin-bottom: 14px; text-align: center;">Новая вакансия</h2>
-  <p style="color: var(--ink-dim); text-align: center; margin-bottom: 22px;">Без зарплатной вилки не публикуем. Тарифы — <a href="/post-job?tariffs=1" style="color: var(--acid);">здесь</a>. <a href="/employer" style="color: var(--ink-dim);">← в кабинет</a></p>
-  <form method="post" action="/post-job" class="card" style="display: flex; flex-direction: column; gap: 18px; max-width: 760px; margin: 0 auto;">
-    <div class="field"><label>Название вакансии *</label><input class="input" name="title" required placeholder="например, Senior VIP-менеджер (немецкий)"></div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px;">
-      <div class="field"><label>Направление</label>
-        <select class="select input" name="category">{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select></div>
-      <div class="field"><label>Формат</label>
-        <select class="select input" name="fmt">{% for f in formats %}<option>{{ f }}</option>{% endfor %}</select></div>
-      <div class="field"><label>Локация</label><input class="input" name="location" placeholder="Лимассол / Мальта / удалёнка"></div>
-      <div class="field"><label>Язык работы *</label><select class="select input" name="languages" required><option value="">Выберите язык</option><option value="en">English</option><option value="uk">Українська</option><option value="ru">Русский</option><option value="de">Deutsch</option><option value="es">Español</option><option value="fr">Français</option><option value="pt">Português</option><option value="pl">Polski</option></select></div>
+    {% else %}
+    <div class="card" style="border-color: var(--pink); max-width: 560px; margin: 0 auto;">
+      <b style="font-family: var(--font-display); text-transform: uppercase;">Готовы разместить вакансию?</b>
+      <p style="color: var(--ink-dim); margin: 12px 0 20px;">Форма размещения, вакансии и отклики — в кабинете работодателя.</p>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="/employer#post" class="btn btn-pink">Разместить вакансию →</a>
+        <a href="/employer" class="btn btn-ghost">Открыть кабинет</a>
+      </div>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 14px;">
-      <div class="field"><label>Зарплата от *</label><input class="input" name="salary_from" type="number" required placeholder="3500"></div>
-      <div class="field"><label>Зарплата до *</label><input class="input" name="salary_to" type="number" required placeholder="4500"></div>
-      <div class="field"><label>Валюта / основа</label>
-        <select class="select input" name="currency"><option>EUR net</option><option>EUR gross</option><option>USD net</option><option>USDT (крипто)</option></select></div>
-    </div>
-    <div class="field"><label>Теги (через запятую)</label><input class="input" name="tags" placeholder="казино, немецкий C1, релокация"></div>
-    <div class="field"><label>Описание</label><textarea class="input" name="description" rows="7" placeholder="Что делать / что нужно / что дадите. Честно — здесь сначала читают зарплату."></textarea></div>
-    <button class="btn btn-pink btn-lg" type="submit">Отправить на модерацию →</button>
-    <p style="color: var(--ink-faint); font-size: 0.8rem;">Без зарплатной вилки не публикуем — правила заведения. Модерация людьми.</p>
-  </form>
-  {% else %}<div class="card" style="max-width:620px;margin:0 auto;"><b>Роль наблюдателя</b><p style="color:var(--ink-dim);margin-top:10px;">Вы можете смотреть вакансии и отклики команды, но не создавать публикации. Попросите владельца изменить роль на рекрутера.</p><a href="/employer" class="btn btn-ghost" style="margin-top:16px;">Вернуться в кабинет</a></div>
-  {% endif %}
+    {% endif %}
 {% endblock %}

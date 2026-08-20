@@ -762,7 +762,8 @@ main > .section:nth-of-type(even) {
    Люди сидят тут часами: минимум неона, мягкие контрасты,
    фирменный изумруд остаётся, но приглушён.
    ============================================================ */
-body.workspace {
+/* светлая тема кабинета — по умолчанию; тёмную человек включает сам (data-ws-theme) */
+html:not([data-ws-theme="dark"]) body.workspace {
   --bg: oklch(0.968 0.016 168);          /* мятная подложка — выбор пользователя из 5 концептов */
   --bg-deep: oklch(0.936 0.020 168);
   --surface: oklch(0.996 0.003 168);
@@ -787,10 +788,46 @@ body.workspace {
   --bezel: inset 0 1px 0 oklch(1 0 0 / 0.9);
   background: var(--bg); color: var(--ink);
 }
+/* тёмный кабинет — те же спокойные контрасты, приглушённые акценты без неона.
+   Объявлен явно (а не фолбэком в :root), чтобы светлая тема сайта его не ломала. */
+html[data-ws-theme="dark"] body.workspace {
+  --bg: oklch(0.165 0.012 170);
+  --bg-deep: oklch(0.125 0.010 172);
+  --surface: oklch(0.205 0.014 170);
+  --surface-2: oklch(0.24 0.015 170);
+  --line: oklch(0.31 0.016 170);
+  --line-strong: oklch(0.47 0.02 170);
+  --ink: oklch(0.94 0.005 285);
+  --ink-dim: oklch(0.73 0.008 285);
+  --ink-faint: oklch(0.62 0.008 285);
+  --acid: oklch(0.74 0.13 165);
+  --acid-deep: oklch(0.64 0.12 166);
+  --emerald: oklch(0.74 0.13 165);
+  --pink: oklch(0.70 0.16 352);
+  --yellow: oklch(0.80 0.10 95);
+  --violet: oklch(0.70 0.12 300);
+  --on-acid: oklch(0.16 0.04 165);
+  --on-pink: oklch(0.16 0.05 350);
+  --shadow-acid: 0 4px 14px oklch(0.74 0.13 165 / 0.15);
+  --shadow-pink: 0 4px 14px oklch(0.70 0.16 352 / 0.14);
+  --shadow-dark: 0 8px 22px oklch(0.02 0 0 / 0.4);
+  --shadow-lift: 0 8px 22px oklch(0.02 0 0 / 0.45);
+  --bezel: inset 0 1px 0 oklch(1 0 0 / 0.05);
+  background: var(--bg); color: var(--ink);
+}
 body.workspace::after { display: none; }                 /* без киношного зерна на рабочих экранах */
+
+/* в кабинете дисплейная гарнитура строже: без широкого Unbounded, кроме логотипа */
+body.workspace { --font-display: "Golos Text", sans-serif; }
+body.workspace .logo { font-family: "Unbounded", sans-serif; }
+body.workspace h1, body.workspace h2, body.workspace h3, body.workspace .display { font-weight: 700; letter-spacing: 0.01em; }
+
+/* флеши в кабинете красим токенами, а не тёмными заливками сайта */
+body.workspace .flash { background: color-mix(in oklch, var(--acid) 12%, var(--surface)); border-color: var(--acid); }
+body.workspace .flash.err { background: color-mix(in oklch, var(--pink) 10%, var(--surface)); border-color: var(--pink); }
 body.workspace .site-header { background: color-mix(in oklch, var(--surface) 92%, transparent); border-bottom-width: 1px; }
 body.workspace .site-footer { background: var(--bg-deep); }
 body.workspace .kicker::before { box-shadow: none; }
 body.workspace .btn-acid:hover, body.workspace .btn-pink:hover { box-shadow: var(--shadow-dark); }
 body.workspace h1, body.workspace h2 { letter-spacing: 0; }
-body.workspace .theme-toggle { display: none; }          /* тема кабинета фиксирована */
+/* переключатель темы в кабинете живёт внизу, у подвала: светлая по умолчанию, тёмная — по желанию */
