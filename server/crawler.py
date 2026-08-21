@@ -71,6 +71,12 @@ SOURCE_REGISTRY = [
      "status": "подключён", "note": "Весь листинг крупнейшего IT-борда Польши, свой фильтр по "
                                     "iGaming-брендам (Betsson, Evolution, Betclic, STS…) и ключам; "
                                     "вилки в злотых, описания из RSC-потока"},
+    {"key": "arbeitnow", "name": "Arbeitnow (Германия/ЕС)", "type": "Открытый JSON API",
+     "status": "подключён", "note": "Пагинируемый фид вакансий ЕС; фильтр по iGaming-брендам "
+                                    "(Smarkets, Tipico, Merkur…) и отраслевым ключам"},
+    {"key": "dev.bg", "name": "dev.bg (Болгария)", "type": "HTML + JSON-LD",
+     "status": "подключён", "note": "Поиск по iGaming-словарю, JobPosting-разметка на карточках; "
+                                    "София — заметный iGaming-хаб (EGT, Amusnet…)"},
     {"key": "work.ua", "name": "work.ua", "type": "HTML + страницы поиска",
      "status": "подключён", "note": "Страницы поиска по iGaming-словарю, описание из карточки; "
                                     "смысловой фильтр отсекает боулинги и случайные «ставки»"},
@@ -1225,6 +1231,8 @@ def collect(with_metadata=False):
     fetch_source("rabota.ua", crawl_rabota_ua)
     fetch_source("work.ua", crawl_work_ua)
     fetch_source("justjoin.it", crawl_justjoin)
+    fetch_source("arbeitnow", crawl_arbeitnow)
+    fetch_source("dev.bg", crawl_devbg)
     fetch_source("casino-discovery", crawl_casino_seed_registry)
     return (items, complete_sources, health) if with_metadata else items
 
@@ -1369,7 +1377,18 @@ _PL_BRANDS_RE = re.compile(
     r"betsson|evolution|sportradar|betclic|superbet|fortuna|\bsts\b|pragmatic play|"
     r"playtech|kindred|livescore|betfan|totalbet|entain|bwin|\b888\b|softswiss|"
     r"betgames|casumo|leovegas|yolo group|hero gaming|greentube|wazdan|booongo|"
-    r"evoplay|slotegrator|betby|stakelogic|relax gaming", re.I)
+    r"evoplay|slotegrator|betby|stakelogic|relax gaming|"
+    # европейские бренды за пределами Польши: DE/UK/BG-операторы и провайдеры
+    r"smarkets|tipico|merkur|gauselmann|l[öo]wen play|bet365|kaizen|betano|"
+    r"aura gaming|amusnet|\begt\b|efbet|palms bet|winbet|sesame|flutter|"
+    r"william hill|ladbrokes|paddy power|unibet|mr ?green|gamomat|hölle ?games", re.I)
+
+
+def _eu_item_relevant(item) -> bool:
+    if _PL_BRANDS_RE.search(item["company_name"]):
+        return True
+    haystack = f"{item['company_name']} {item['title']} {item['description']}"
+    return len(_UA_IGAMING_RE.findall(haystack)) >= 2
 _PL_KEYWORD_RE = re.compile(r"casino|igaming|gambling|betting|bukmacher|sportsbook|slots?\b", re.I)
 
 
@@ -1455,6 +1474,96 @@ def crawl_justjoin(max_pages: int = 120, max_details: int = 60):
             "source": "justjoin.it", "ext_id": slug,
             "source_url": f"https://justjoin.it/job-offer/{slug}",
         })
+        time.sleep(0.2)
+    return out
+
+
+# ---------- arbeitnow.com: открытый API, Германия и ЕС ----------
+def crawl_arbeitnow(max_pages: int = 15):
+    out, url = [], "https://www.arbeitnow.com/api/job-board-api"
+    for _ in range(max_pages):
+        try:
+            data = json.loads(_fetch(url))
+        except Exception:
+            break
+        for o in data.get("data") or []:
+            item = {"title": (o.get("title") or "").strip(),
+                    "company_name": (o.get("company_name") or "").strip(),
+                    "description": _clean_html(o.get("description") or "")}
+            if not item["title"] or not _eu_item_relevant(item):
+                continue
+            tags = ", ".join(t for t in (o.get("tags") or []) if isinstance(t, str))[:120]
+            item.update({
+                "location": o.get("location") or "",
+                "fmt": "удалёнка" if o.get("remote") else "офис",
+                "salary": "по запросу", "tags": tags,
+                "source": "arbeitnow", "ext_id": o.get("slug") or "",
+                "source_url": o.get("url") or "",
+            })
+            out.append(item)
+        url = (data.get("links") or {}).get("next")
+        if not url:
+            break
+        time.sleep(0.15)
+    return out
+
+
+# ---------- dev.bg: IT-борд Болгарии (София — iGaming-хаб) ----------
+DEVBG_QUERIES = ["igaming", "casino", "gambling", "betting"]
+
+
+def crawl_devbg(max_details: int = 40):
+    links = set()
+    for query in DEVBG_QUERIES:
+        try:
+            page = _fetch_html(f"https://dev.bg/?s={query}")
+        except Exception:
+            continue
+        links.update(re.findall(r'href="(https://dev\.bg/company/jobads/[^"]+)"', page))
+    out = []
+    for url in sorted(links)[:max_details]:
+        try:
+            page = _fetch_html(url)
+        except Exception:
+            continue
+        posting = None
+        for block in re.findall(r'<script type="application/ld\+json"[^>]*>(.*?)</script>',
+                                page, re.S):
+            try:
+                data = json.loads(block)
+            except Exception:
+                continue
+            items = data if isinstance(data, list) else [data]
+            posting = next((x for x in items if isinstance(x, dict)
+                            and "JobPosting" in (x.get("@type") if isinstance(x.get("@type"), list)
+                                                 else [x.get("@type")])), posting)
+        if not posting:
+            continue
+        # JSON-LD у dev.bg содержит лишь превью; полный текст — в div.job_description,
+        # компания — в span.company-name
+        company_m = re.search(r'class="company-name\s*"[^>]*>\s*([^<]+)', page)
+        desc_m = re.search(r'<div class="job_description">(.*?)</div>\s*<(?:div|section|aside)', page, re.S)
+        item = {"title": _clean_text(posting.get("title") or ""),
+                "company_name": _clean_text(company_m.group(1)) if company_m else "iGaming-компания",
+                "description": _clean_html(desc_m.group(1) if desc_m
+                                           else posting.get("description") or "")}
+        if not item["title"] or not _eu_item_relevant(item):
+            continue
+        loc = posting.get("jobLocation")
+        loc = loc[0] if isinstance(loc, list) and loc else loc
+        city = ""
+        if isinstance(loc, dict):
+            addr = loc.get("address") or {}
+            city = addr.get("addressLocality", "") if isinstance(addr, dict) else ""
+        remote = "TELECOMMUTE" in str(posting.get("jobLocationType") or "").upper()
+        slug = url.rstrip("/").rsplit("/", 1)[-1]
+        item.update({
+            "location": f"{city}, Болгария" if city else "Болгария",
+            "fmt": "удалёнка" if remote else "офис",
+            "salary": "по запросу", "tags": "",
+            "source": "dev.bg", "ext_id": slug, "source_url": url,
+        })
+        out.append(item)
         time.sleep(0.2)
     return out
 
