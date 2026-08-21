@@ -77,6 +77,9 @@ SOURCE_REGISTRY = [
     {"key": "dev.bg", "name": "dev.bg (Болгария)", "type": "HTML + JSON-LD",
      "status": "подключён", "note": "Поиск по iGaming-словарю, JobPosting-разметка на карточках; "
                                     "София — заметный iGaming-хаб (EGT, Amusnet…)"},
+    {"key": "jobsinmalta", "name": "jobsinmalta.com", "type": "Sitemap + JSON-LD",
+     "status": "подключён", "note": "Категория gambling целиком + iGaming-роли из других категорий "
+                                    "по слагу; полные описания из JobPosting-разметки карточек"},
     {"key": "work.ua", "name": "work.ua", "type": "HTML + страницы поиска",
      "status": "подключён", "note": "Страницы поиска по iGaming-словарю, описание из карточки; "
                                     "смысловой фильтр отсекает боулинги и случайные «ставки»"},
@@ -1233,6 +1236,7 @@ def collect(with_metadata=False):
     fetch_source("justjoin.it", crawl_justjoin)
     fetch_source("arbeitnow", crawl_arbeitnow)
     fetch_source("dev.bg", crawl_devbg)
+    fetch_source("jobsinmalta", crawl_jobsinmalta)
     fetch_source("casino-discovery", crawl_casino_seed_registry)
     return (items, complete_sources, health) if with_metadata else items
 
@@ -1565,6 +1569,73 @@ def crawl_devbg(max_details: int = 40):
         })
         out.append(item)
         time.sleep(0.2)
+    return out
+
+
+# ---------- jobsinmalta.com: главный борд Мальты ----------
+# Листинг и фильтры рендерятся клиентом, зато sitemap отдаёт все ~1900 вакансий
+# с категорией в пути. Берём категорию gambling целиком + вакансии других
+# категорий, у которых iGaming-слово прямо в слаге, — их прогоняем через фильтр.
+_JIM_SLUG_RE = re.compile(r"casino|igaming|gambling|betting|sportsbook|slot|game-?(?:dev|design|math)", re.I)
+
+
+def crawl_jobsinmalta(max_details: int = 80):
+    try:
+        sitemap = _fetch_html("https://jobsinmalta.com/sitemap.xml")
+    except Exception:
+        return []
+    urls = re.findall(r"<loc>(https://jobsinmalta\.com/job/[^<]+)</loc>", sitemap)
+    picked = []
+    for u in urls:
+        category, _, slug = u.split("/job/")[1].partition("/")
+        if category == "gambling" or _JIM_SLUG_RE.search(slug):
+            picked.append((u, category == "gambling"))
+    out = []
+    for url, sure in picked[:max_details]:
+        try:
+            page = _fetch_html(url)
+        except Exception:
+            continue
+        posting = None
+        for block in re.findall(r'<script type="application/ld\+json"[^>]*>(.*?)</script>',
+                                page, re.S):
+            try:
+                data = json.loads(block)
+            except Exception:
+                continue
+            for cand in (data if isinstance(data, list) else [data]):
+                types = cand.get("@type") if isinstance(cand, dict) else None
+                if "JobPosting" in (types if isinstance(types, list) else [types]):
+                    posting = cand
+        if not posting:
+            continue
+        org = posting.get("hiringOrganization") or {}
+        item = {"title": _clean_text(posting.get("title") or ""),
+                "company_name": _clean_text((org.get("name") if isinstance(org, dict) else "") or "iGaming-компания"),
+                "description": _clean_html(posting.get("description") or "")}
+        if not item["title"] or (not sure and not _eu_item_relevant(item)):
+            continue
+        loc = posting.get("jobLocation")
+        loc = loc[0] if isinstance(loc, list) and loc else loc
+        city = ""
+        if isinstance(loc, dict):
+            addr = loc.get("address") or {}
+            city = addr.get("addressLocality", "") if isinstance(addr, dict) else ""
+        location = f"{city}, Мальта" if city and "malta" not in city.lower() else "Мальта"
+        # у части агрегированных ролей город зашит в скобки заголовка (Gdansk, NSW…)
+        bracket = re.search(r"\(([^)]*(?:,\s*\w{2,3}|Gdansk|Warsaw|Sofia|London|Remote)[^)]*)\)",
+                            item["title"], re.I)
+        if not city and bracket:
+            location = bracket.group(1).strip()
+        item.update({
+            "location": location,
+            "fmt": "гибрид" if re.search(r"hybrid", item["description"], re.I) else "офис",
+            "salary": "по запросу", "tags": "",
+            "source": "jobsinmalta", "ext_id": url.rsplit("-", 1)[-1],
+            "source_url": url,
+        })
+        out.append(item)
+        time.sleep(0.25)
     return out
 
 
