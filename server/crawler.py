@@ -1834,6 +1834,11 @@ def run(db, Job, guess_category, approve=True, upsert_companies=None):
             enrich_missing(db, Job, limit=int(os.environ.get("ENRICH_PER_RUN", "150")))
         except Exception as exc:  # noqa: BLE001 — обогащение не должно ронять кроул
             print(f"[enrich] пропущено: {type(exc).__name__}: {exc}")
+        try:
+            from .audit import audit_jobs
+            audit_jobs(db, Job)
+        except Exception as exc:  # noqa: BLE001 — аудит тоже не критичен для сбора
+            print(f"[audit] пропущено: {type(exc).__name__}: {exc}")
         notify_search_engines(changed_ids, closed_ids)
         profiles = company_snapshot(items)
         company_rows = 0
