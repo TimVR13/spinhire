@@ -41,6 +41,12 @@ CHANNELS = {
 DIGEST_AT = int(os.environ.get("SPINHIRE_TG_DIGEST_AT", "10"))
 TZ_OFFSET = int(os.environ.get("SPINHIRE_TG_TZ_OFFSET", "3"))
 TOP_N = max(3, int(os.environ.get("SPINHIRE_TG_TOP", "7")))
+# «Горячие» вакансии — отдельными постами помимо дайджеста: от ~$5k/мес
+HOT_EUR = float(os.environ.get("SPINHIRE_TG_HOT_EUR", "4600"))
+HOT_PER_DAY = int(os.environ.get("SPINHIRE_TG_HOT_PER_DAY", "3"))
+HOT_GAP_H = int(os.environ.get("SPINHIRE_TG_HOT_GAP_H", "3"))
+_hours = os.environ.get("SPINHIRE_TG_HOURS", "9-21").split("-")
+HOUR_FROM, HOUR_TO = int(_hours[0]), int(_hours[-1])
 SITE = (BASE_URL or "https://spinhire.io").rstrip("/")
 
 # Курсы для сравнения вилок между валютами — грубые, нужны только для сортировки
@@ -55,6 +61,16 @@ class TgDigestPost(Base):
     id = Column(Integer, primary_key=True)
     channel = Column(String, nullable=False)          # 'en' | 'ru'
     job_ids = Column(String, default="")              # какие вакансии вошли
+    message_id = Column(Integer, nullable=True)
+    posted_at = Column(DateTime, default=datetime.utcnow)
+
+
+class TgHotPost(Base):
+    """Отдельные посты «горячих» вакансий (от ~$5k/мес) — дедуп по каналу."""
+    __tablename__ = "tg_channel_posts"
+    id = Column(Integer, primary_key=True)
+    job_id = Column(Integer, nullable=False)
+    channel = Column(String, nullable=False)          # 'en' | 'ru'
     message_id = Column(Integer, nullable=True)
     posted_at = Column(DateTime, default=datetime.utcnow)
 
@@ -101,7 +117,13 @@ def pretty_salary(text: str, lang: str) -> str:
     return re.sub(r"\s{2,}", " ", out)
 
 
-def pick_jobs(db: Session, hours: int = 24, limit: int = TOP_N, exclude=()):
+def is_english(job) -> bool:
+    """В английский канал идёт только написанное латиницей: русская вакансия
+    подписчику из Мальты бесполезна."""
+    return not re.search(r"[а-яА-ЯіїєґІЇЄҐ]", f"{job.title} {(job.description or '')[:400]}")
+
+
+def pick_jobs(db: Session, hours: int = 24, limit: int = TOP_N, exclude=(), lang: str = "ru"):
     """Топ по зарплате среди свежих вакансий; если их мало — расширяем окно."""
     for window in (hours, hours * 3, hours * 7):
         since = datetime.utcnow() - timedelta(hours=window)
@@ -109,6 +131,8 @@ def pick_jobs(db: Session, hours: int = 24, limit: int = TOP_N, exclude=()):
                 .filter(Job.status == "approved", Job.created_at >= since)
                 .all())
         rows = [j for j in rows if j.id not in exclude and salary_eur(j) > 0]
+        if lang == "en":
+            rows = [j for j in rows if is_english(j)]
         rows.sort(key=salary_eur, reverse=True)
         # не больше двух вакансий одной компании — иначе дайджест выглядит
         # как реклама одного работодателя
@@ -150,6 +174,8 @@ TEXT = {
         "cta": "👉 <a href=\"{url}\">See all jobs</a>",
         "remote": "remote", "hybrid": "hybrid", "office": "office",
         "tags": "#iGaming #jobs #casino #betting",
+        "hot": "🔥 <b>Hot job</b>", "need": "What they're looking for:",
+        "apply": "Details & apply",
     },
     "ru": {
         "head": "💰 <b>Самые дорогие вакансии iGaming</b>",
@@ -158,6 +184,8 @@ TEXT = {
         "cta": "👉 <a href=\"{url}\">Все вакансии</a>",
         "remote": "удалёнка", "hybrid": "гибрид", "office": "офис",
         "tags": "#iGaming #вакансии #казино #беттинг",
+        "hot": "🔥 <b>Вакансия дня</b>", "need": "Что ищут:",
+        "apply": "Подробнее и отклик",
     },
 }
 FMT_KEY = {"удалёнка": "remote", "гибрид": "hybrid", "офис": "office"}
@@ -194,6 +222,95 @@ def build_digest(db: Session, lang: str, jobs=None, window=24) -> tuple:
     lines.append("")
     lines.append(t["tags"])
     return "\n".join(lines), [j.id for j in jobs]
+
+
+def job_bullets(job, limit: int = 4) -> list:
+    """Первые пункты требований из описания — <li> или строки-буллеты."""
+    text = job.description or ""
+    items = [re.sub(r"<[^>]+>", "", m).strip()
+             for m in re.findall(r"<li[^>]*>(.*?)</li>", text, re.S | re.I)]
+    if not items:
+        items = [line.strip().lstrip("•-–* ").strip()
+                 for line in text.splitlines() if line.strip()[:1] in "•-–*"]
+    out = []
+    for item in items:
+        item = re.sub(r"\s+", " ", item)
+        if 8 <= len(item) <= 90:
+            out.append(item)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def build_hot(job, lang: str) -> str:
+    """Пост одной «горячей» вакансии: заметно, но без нагромождения."""
+    t = TEXT.get(lang, TEXT["en"])
+    prefix = "" if lang == "ru" else f"/{lang}"
+    url = f"{SITE}{prefix}/job/{job.id}?utm_source=telegram&utm_medium=hot&utm_campaign={lang}"
+    fmt = t.get(FMT_KEY.get(job.fmt, ""), "")
+    place = " · ".join(x for x in (_esc(localize(job.location or "", lang)), fmt) if x)
+    lines = [f"{t['hot']}",
+             "",
+             f"🎰 <b>{_esc((job.title or '').strip())}</b> — {_esc(job.company_name or '')}"]
+    if place:
+        lines.append(f"📍 {place}")
+    lines.append(f"💰 <b>{_esc(pretty_salary(job.salary, lang))}</b>")
+    bullets = job_bullets(job)
+    if bullets:
+        lines += ["", f"<i>{t['need']}</i>"]
+        lines += [f"• {_esc(localize(b, lang))}" for b in bullets]
+    lines += ["", f"➡️ <a href=\"{url}\">{t['apply']}</a>", "", t["tags"]]
+    return "\n".join(lines)
+
+
+def pick_hot(db: Session, lang: str):
+    """Самая дорогая непощенная вакансия за последние двое суток от порога HOT_EUR."""
+    posted = {r.job_id for r in db.query(TgHotPost.job_id).filter(TgHotPost.channel == lang)}
+    since = datetime.utcnow() - timedelta(hours=48)
+    rows = (db.query(Job).filter(Job.status == "approved", Job.created_at >= since).all())
+    rows = [j for j in rows if j.id not in posted and salary_eur(j) >= HOT_EUR]
+    if lang == "en":
+        rows = [j for j in rows if is_english(j)]
+    rows.sort(key=salary_eur, reverse=True)
+    return rows[0] if rows else None
+
+
+def send_hot(db: Session, force: bool = False, dry: bool = False) -> dict:
+    """Пост горячей вакансии, если нашлась и не нарушаем темп (кол-во/паузу)."""
+    if not TOKEN and not dry:
+        return {"skipped": "no_token"}
+    result = {}
+    day_ago = datetime.utcnow() - timedelta(hours=24)
+    gap = datetime.utcnow() - timedelta(hours=HOT_GAP_H)
+    for lang, chat in CHANNELS.items():
+        if not chat and not dry:
+            continue
+        recent = (db.query(TgHotPost)
+                  .filter(TgHotPost.channel == lang, TgHotPost.posted_at >= day_ago).all())
+        if not force and len(recent) >= HOT_PER_DAY:
+            result[lang] = "daily_cap"
+            continue
+        if not force and any(r.posted_at >= gap for r in recent):
+            result[lang] = "too_soon"
+            continue
+        job = pick_hot(db, lang)
+        if not job:
+            result[lang] = "no_hot_jobs"
+            continue
+        text = build_hot(job, lang)
+        if dry:
+            result[lang] = text
+            continue
+        resp = _api("sendMessage", {"chat_id": chat, "text": text, "parse_mode": "HTML",
+                                    "disable_web_page_preview": True})
+        if resp.get("ok"):
+            db.add(TgHotPost(job_id=job.id, channel=lang,
+                             message_id=(resp.get("result") or {}).get("message_id")))
+            db.commit()
+            result[lang] = f"sent job {job.id}"
+        else:
+            result[lang] = f"error: {resp.get('description') or resp.get('error')}"
+    return result or {"skipped": "no_channels"}
 
 
 def _api(method: str, payload: dict) -> dict:
@@ -235,7 +352,7 @@ def send_digest(db: Session, force: bool = False, dry: bool = False) -> dict:
         if not force and posted_today(db, lang):
             result[lang] = "already_posted"
             continue
-        jobs, window = pick_jobs(db, exclude=recent_job_ids(db, lang))
+        jobs, window = pick_jobs(db, exclude=recent_job_ids(db, lang), lang=lang)
         text, ids = build_digest(db, lang, jobs, window)
         if not text:
             result[lang] = "no_jobs"
@@ -258,31 +375,44 @@ def send_digest(db: Session, force: bool = False, dry: bool = False) -> dict:
 
 
 @router.post("/admin/tgpost/run")
-def tgpost_run(request: Request, dry: int = 0, db: Session = Depends(db_session)):
+def tgpost_run(request: Request, dry: int = 0, kind: str = "digest",
+               db: Session = Depends(db_session)):
+    """kind=digest — подборка дня, kind=hot — горячая вакансия; ?dry=1 — превью."""
     need_admin(request, db)
-    return JSONResponse(send_digest(db, force=True, dry=bool(dry)))
+    send = send_hot if kind == "hot" else send_digest
+    return JSONResponse(send(db, force=True, dry=bool(dry)))
 
 
 @router.get("/admin/tgpost/preview")
 def tgpost_preview(request: Request, db: Session = Depends(db_session)):
     need_admin(request, db)
-    return JSONResponse({lang: build_digest(db, lang)[0] for lang in CHANNELS if CHANNELS[lang]}
-                        or {lang: build_digest(db, lang)[0] for lang in ("en", "ru")})
+    langs = [lang for lang in CHANNELS if CHANNELS[lang]] or ["en", "ru"]
+    out = {}
+    for lang in langs:
+        job = pick_hot(db, lang)
+        out[lang] = {"digest": build_digest(db, lang)[0],
+                     "hot": build_hot(job, lang) if job else None}
+    return JSONResponse(out)
 
 
 def _scheduler():
-    """Раз в день в назначенный час — по одному дайджесту на канал."""
+    """Дайджест — раз в день в назначенный час; горячие вакансии — между делом,
+    не чаще HOT_PER_DAY в сутки с паузой HOT_GAP_H часов."""
     while True:
         try:
             now = datetime.utcnow() + timedelta(hours=TZ_OFFSET)
-            if now.hour == DIGEST_AT:
-                db = SessionLocal()
-                try:
+            db = SessionLocal()
+            try:
+                if now.hour == DIGEST_AT:
                     res = send_digest(db)
-                    if any(v.startswith("sent") for v in res.values() if isinstance(v, str)):
+                    if any(str(v).startswith("sent") for v in res.values()):
                         print(f"[tgpost] дайджест отправлен: {res}")
-                finally:
-                    db.close()
+                elif HOUR_FROM <= now.hour < HOUR_TO:
+                    res = send_hot(db)
+                    if any(str(v).startswith("sent") for v in res.values()):
+                        print(f"[tgpost] горячая вакансия: {res}")
+            finally:
+                db.close()
         except Exception as exc:                                # noqa: BLE001
             print(f"[tgpost] ошибка планировщика: {type(exc).__name__}: {exc}")
         time.sleep(1800)

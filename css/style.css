@@ -420,6 +420,9 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
   font-size: 0.8rem; color: var(--ink-faint);
 }
 .footer-tagline { font-family: var(--font-display); font-size: 0.95rem; text-transform: uppercase; color: var(--ink-dim); max-width: 30ch; line-height: 1.4; }
+.footer-social { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.footer-social a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border: 1px solid var(--line-strong); border-radius: 999px; text-decoration: none; font-size: 0.78rem; font-weight: 700; color: var(--ink-dim); transition: border-color .2s var(--ease), color .2s var(--ease); }
+.footer-social a:hover { border-color: var(--acid); color: var(--acid); }
 
 /* ---------- modal (auth) ---------- */
 .modal-backdrop {
