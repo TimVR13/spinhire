@@ -127,7 +127,10 @@ def derive_tags(title: str, description: str, existing: str = "") -> str:
     return ", ".join(tags[:MAX_TAGS])
 
 
-ACCEPT_DESC = 160       # добытое описание короче — считаем, что инфы нет
+# Порог приёма равен порогу проверки: иначе вакансия с описанием между
+# ними считалась бы «обогащённой» и одновременно «нуждающейся» — и ходила
+# бы к источнику в каждом прогоне вечно.
+ACCEPT_DESC = MIN_DESC
 
 _WORKDAY_RE = re.compile(r"https://([^.]+)\.(wd\d+)\.myworkdayjobs\.com/"
                          r"(?:[a-z]{2}-[A-Z]{2}/)?([^/]+)/job/(.+)")
