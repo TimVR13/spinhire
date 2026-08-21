@@ -6,8 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // метой sh-lang, а выбор языка меняет хост, сохраняя путь.
   const UI_LANGS = ['ru', 'uk', 'en'];
   // Европейские языки живут в поддиректориях: /de/jobs, /pl/jobs …
-  const PATH_LANGS = { en:'English', de:'Deutsch', pl:'Polski', es:'Español', pt:'Português',
-                       it:'Italiano', el:'Ελληνικά', ro:'Română', bg:'Български', uk:'Українська' };
+  const PATH_LANGS = { en:'English', de:'Deutsch', pl:'Polski', fr:'Français', es:'Español',
+                       pt:'Português', it:'Italiano', el:'Ελληνικά', ro:'Română',
+                       bg:'Български', uk:'Українська' };
   const langMeta = document.querySelector('meta[name="sh-lang"]');
   const hostMode = !!(langMeta && langMeta.dataset.mode === 'host');
   const pathMode = !!(langMeta && langMeta.dataset.mode === 'path');

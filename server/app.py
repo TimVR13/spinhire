@@ -77,9 +77,9 @@ LANG_HOSTS = {"en": "spinhire.io", "ru": "ru.spinhire.io", "uk": "ua.spinhire.io
 # ни отдельные сертификаты, а поисковики отдают им авторитет основного домена.
 # Ключ — код языка, значение — как язык называется на самом себе (для футера).
 PATH_LANGS = {
-    "en": "English", "de": "Deutsch", "pl": "Polski", "es": "Español",
-    "pt": "Português", "it": "Italiano", "el": "Ελληνικά", "ro": "Română",
-    "bg": "Български", "uk": "Українська",
+    "en": "English", "de": "Deutsch", "pl": "Polski", "fr": "Français",
+    "es": "Español", "pt": "Português", "it": "Italiano", "el": "Ελληνικά",
+    "ro": "Română", "bg": "Български", "uk": "Українська",
 }
 LANG_LABELS = {"ru": "Русский", **PATH_LANGS}
 
@@ -1137,7 +1137,8 @@ if os.path.isdir(_I18N_DIR):
     for _file in sorted(os.listdir(_I18N_DIR)):
         if not _file.endswith(".json"):
             continue
-        _code = _file[:-5]
+        # de.json — интерфейс, de.articles.json — переводы статей блога
+        _code = _file.split(".")[0]
         try:
             with open(os.path.join(_I18N_DIR, _file), encoding="utf-8") as _fh:
                 _data = json.load(_fh)
@@ -1158,11 +1159,19 @@ _CYR_RE = re.compile(r"[А-Яа-яЁёІіЇїЄєҐґ]")
 
 
 def host_lang(host: str) -> str:
+    """Язык из поддомена: ru./ua. исторические, остальные — по коду (de., pl.…).
+
+    Схема с поддоменами включается сама, как только у домена появится
+    wildcard-запись; до этого работают языковые поддиректории.
+    """
     h = (host or "").split(":")[0].lower()
-    if h.startswith("ru."):
+    sub = h.split(".")[0] if h.count(".") >= 2 else ""
+    if sub == "ru":
         return "ru"
-    if h.startswith(("ua.", "uk.")):
+    if sub in ("ua", "uk"):
         return "uk"
+    if sub in PATH_LANGS:
+        return sub
     return BASE_LANG
 
 
