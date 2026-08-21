@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set active = 'market' %}
-{% block title %}Рынок труда iGaming в цифрах — {{ stats.live_jobs }} вакансий на {{ today }} | SpinHire{% endblock %}
-{% block desc %}Сколько вакансий открыто в iGaming прямо сейчас: {{ stats.live_jobs }} позиций от {{ stats.companies }} компаний, разбивка по направлениям, странам, языкам и формату работы. Обновляется каждые 6 часов.{% endblock %}
+{% block title %}Рынок труда iGaming: {{ stats.live_jobs }} вакансий | SpinHire{% endblock %}
+{% block desc %}Сколько вакансий открыто в iGaming сейчас: {{ stats.live_jobs }} позиций от {{ stats.companies }} компаний. Срезы по направлениям, странам и языкам.{% endblock %}
 {% block robots %}<link rel="canonical" href="https://spinhire.io/market">
 <link rel="alternate" type="text/markdown" href="https://spinhire.io/market.md" title="Текстовая версия для языковых моделей">
 <meta property="og:type" content="website">
