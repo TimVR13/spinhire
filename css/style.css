@@ -852,3 +852,9 @@ body.workspace .kicker::before { box-shadow: none; }
 body.workspace .btn-acid:hover, body.workspace .btn-pink:hover { box-shadow: var(--shadow-dark); }
 body.workspace h1, body.workspace h2 { letter-spacing: 0; }
 /* переключатель темы в кабинете живёт внизу, у подвала: светлая по умолчанию, тёмная — по желанию */
+
+/* ---------- ссылки на языковые версии в подвале ---------- */
+.lang-links { flex-basis: 100%; order: 10; display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 10px; font-size: 0.76rem; color: var(--ink-faint); }
+.lang-links a { color: var(--ink-faint); text-decoration: none; }
+.lang-links a:hover { color: var(--acid); }
+.lang-links b { color: var(--ink); font-weight: 700; }

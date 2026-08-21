@@ -1220,6 +1220,20 @@ def _prefix_links(text: str, lang: str) -> str:
     return _HREF_RE.sub(repl, text)
 
 
+def _lang_links(path: str, current: str) -> str:
+    """Видимые ссылки на переводы: их обходит поисковик и видит человек без JS."""
+    items = [("ru", "Русский")] + list(PATH_LANGS.items())
+    links = []
+    for code, label in items:
+        href = path if code == "ru" else f"/{code}{path}"
+        if code == current:
+            links.append(f'<b lang="{code}">{label}</b>')
+        else:
+            links.append(f'<a lang="{code}" hreflang="{code}" href="{href}">{label}</a>')
+    return ('<nav class="lang-links" aria-label="Язык сайта">'
+            + " · ".join(links) + "</nav>")
+
+
 def _hreflang_block(path: str, canonical_lang: str) -> str:
     """hreflang по всем языкам: базовый на корне, остальные в поддиректориях."""
     site = "https://spinhire.io"
@@ -1248,8 +1262,6 @@ async def language_layer(request: Request, call_next):
     ctype = response.headers.get("content-type", "")
     if not ctype.startswith("text/html") or path.startswith("/admin"):
         return response
-    if lang == "ru" and BASE_LANG == "ru":
-        return response
     body = b""
     async for chunk in response.body_iterator:
         body += chunk
@@ -1265,6 +1277,9 @@ async def language_layer(request: Request, call_next):
     # свой canonical у страницы теперь лишний — язык задаёт его сам
     text = re.sub(r'<link rel="canonical"[^>]*>', "", text, count=1)
     text = text.replace("</head>", marker + "</head>", 1)
+    if "lang-links" not in text:
+        text = text.replace('<div class="footer-bottom">',
+                            '<div class="footer-bottom">' + _lang_links(inner_path, lang), 1)
     headers = dict(response.headers)
     headers.pop("content-length", None)
     return HTMLResponse(text, status_code=response.status_code, headers=headers)
