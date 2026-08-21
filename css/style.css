@@ -416,7 +416,7 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 .footer-bottom {
   border-top: 1px solid var(--line);
   padding-block: var(--sp-4);
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
   font-size: 0.8rem; color: var(--ink-faint);
 }
 .footer-tagline { font-family: var(--font-display); font-size: 0.95rem; text-transform: uppercase; color: var(--ink-dim); max-width: 30ch; line-height: 1.4; }
@@ -526,6 +526,7 @@ main > .section:nth-of-type(even) {
   .nav-burger { display: block; margin-left: auto; width: 44px; height: 44px; }
   .site-footer .footer-grid { grid-template-columns: 1fr 1fr; }
   .footer-bottom { flex-wrap: wrap; gap: 10px 18px; justify-content: flex-start; }
+  .footer-bottom .lang-links { justify-content: flex-start; }
   .job-card { grid-template-columns: 44px 1fr; }
   .job-card > * { min-width: 0; }
   .job-card__logo { width: 44px; height: 44px; font-size: 1rem; }
@@ -563,6 +564,7 @@ main > .section:nth-of-type(even) {
   .footer-bottom .consent-settings { order: 3; justify-self: end; }
   .footer-bottom .footer-language { order: 4; }
   .footer-bottom .theme-toggle { order: 5; justify-self: end; }
+  .footer-bottom .lang-links { grid-column: 1 / -1; order: 6; }
 }
 
 
@@ -854,7 +856,7 @@ body.workspace h1, body.workspace h2 { letter-spacing: 0; }
 /* переключатель темы в кабинете живёт внизу, у подвала: светлая по умолчанию, тёмная — по желанию */
 
 /* ---------- ссылки на языковые версии в подвале ---------- */
-.lang-links { flex-basis: 100%; order: 10; display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 10px; font-size: 0.76rem; color: var(--ink-faint); }
+.lang-links { flex-basis: 100%; order: 10; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 0.76rem; color: var(--ink-faint); }
 .lang-links a { color: var(--ink-faint); text-decoration: none; }
 .lang-links a:hover { color: var(--acid); }
 .lang-links b { color: var(--ink); font-weight: 700; }

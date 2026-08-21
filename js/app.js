@@ -178,7 +178,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
   const languageHost = document.querySelector('.footer-bottom');
-  if (languageHost && !languageHost.querySelector('.footer-language')) {
+  // Если сервер уже отдал видимый список языков (.lang-links), дублирующий
+  // селект не нужен — оставляем его только страницам без серверной вставки.
+  if (languageHost && !languageHost.querySelector('.footer-language') && !document.querySelector('.lang-links')) {
     const label = document.createElement('label'); label.className = 'footer-language';
     const caption = document.createElement('span'); caption.textContent = 'Язык';
     const select = document.createElement('select');
