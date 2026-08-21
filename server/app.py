@@ -73,6 +73,16 @@ REQUIRE_VERIFY = bool(RESEND_API_KEY)
 BASE_LANG = os.environ.get("SPINHIRE_BASE_LANG", "ru")
 LANG_HOSTS = {"en": "spinhire.io", "ru": "ru.spinhire.io", "uk": "ua.spinhire.io"}
 
+# Европейские языки живут в поддиректориях (/de/, /pl/…): не нужны ни DNS-записи,
+# ни отдельные сертификаты, а поисковики отдают им авторитет основного домена.
+# Ключ — код языка, значение — как язык называется на самом себе (для футера).
+PATH_LANGS = {
+    "en": "English", "de": "Deutsch", "pl": "Polski", "es": "Español",
+    "pt": "Português", "it": "Italiano", "el": "Ελληνικά", "ro": "Română",
+    "bg": "Български", "uk": "Українська",
+}
+LANG_LABELS = {"ru": "Русский", **PATH_LANGS}
+
 engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
 Base = declarative_base()
@@ -1114,12 +1124,29 @@ _SERVER_VOCAB = {
 }
 
 _I18N_SERVER, _VOCAB_RE = {}, {}
+# полные машинные словари прежних языков (en/uk) — большие JSON рядом с фронтом
 for _code in ("en", "uk"):
     try:
         with open(os.path.join(ROOT, "js", f"i18n-{_code}.js"), encoding="utf-8") as _fh:
             _I18N_SERVER[_code] = json.load(_fh)
     except Exception:
         _I18N_SERVER[_code] = {}
+# ключевые словари европейских языков: server/i18n/<code>.json
+_I18N_DIR = os.path.join(ROOT, "server", "i18n")
+if os.path.isdir(_I18N_DIR):
+    for _file in sorted(os.listdir(_I18N_DIR)):
+        if not _file.endswith(".json"):
+            continue
+        _code = _file[:-5]
+        try:
+            with open(os.path.join(_I18N_DIR, _file), encoding="utf-8") as _fh:
+                _data = json.load(_fh)
+        except Exception:
+            continue
+        _I18N_SERVER.setdefault(_code, {}).update(_data)
+        # эти же строки работают подстрочно внутри карточек и динамики
+        _SERVER_VOCAB.setdefault(_code, {}).update(_data)
+for _code in set(_SERVER_VOCAB) | set(_I18N_SERVER):
     _keys = sorted(_SERVER_VOCAB.get(_code, {}), key=len, reverse=True)
     _VOCAB_RE[_code] = re.compile("|".join(re.escape(k) for k in _keys)) if _keys else None
 
@@ -1167,31 +1194,67 @@ def translate_html(html_text: str, lang: str) -> str:
     return "".join(out)
 
 
-def _hreflang_block(path: str) -> str:
-    links = [f'<link rel="alternate" hreflang="{code}" href="https://{host}{path}">'
-             for code, host in LANG_HOSTS.items()]
-    links.append(f'<link rel="alternate" hreflang="x-default" href="https://{LANG_HOSTS["en"]}{path}">')
+_LANG_PREFIX_RE = re.compile(r"^/(" + "|".join(PATH_LANGS) + r")(/.*)?$")
+# ссылки, которые не должны получать языковой префикс
+_NO_PREFIX_RE = re.compile(r"^(?:https?:|mailto:|tel:|#|/(?:css|js|img|assets|api|static|"
+                           r"favicon|robots|sitemap|indexnow|llms)\b|/[^/]+\.(?:xml|txt|md|jpg|png|svg|webp|ico|css|js))")
+_HREF_RE = re.compile(r'\b(href|action)="(/[^"]*)"')
+
+
+def _prefix_links(text: str, lang: str) -> str:
+    """Все внутренние ссылки страницы держат посетителя в его языке."""
+    def repl(m):
+        attr, url = m.group(1), m.group(2)
+        if _NO_PREFIX_RE.match(url) or _LANG_PREFIX_RE.match(url):
+            return m.group(0)
+        return f'{attr}="/{lang}{url}"'
+    return _HREF_RE.sub(repl, text)
+
+
+def _hreflang_block(path: str, canonical_lang: str) -> str:
+    """hreflang по всем языкам: базовый на корне, остальные в поддиректориях."""
+    site = "https://spinhire.io"
+    links = [f'<link rel="alternate" hreflang="ru" href="{site}{path}">']
+    links += [f'<link rel="alternate" hreflang="{code}" href="{site}/{code}{path}">'
+              for code in PATH_LANGS]
+    links.append(f'<link rel="alternate" hreflang="x-default" href="{site}/en{path}">')
+    canonical = f"{site}/{canonical_lang}{path}" if canonical_lang != "ru" else f"{site}{path}"
+    links.append(f'<link rel="canonical" href="{canonical}">')
     return "".join(links)
 
 
 @app.middleware("http")
 async def language_layer(request: Request, call_next):
+    """Язык из пути (/de/jobs) или из хоста (ru.spinhire.io) — и перевод ответа."""
+    path = request.url.path
+    prefix_lang = ""
+    match = _LANG_PREFIX_RE.match(path)
+    if match:
+        prefix_lang = match.group(1)
+        inner = match.group(2) or "/"
+        request.scope["path"] = inner
+        request.scope["raw_path"] = inner.encode()
     response = await call_next(request)
-    if BASE_LANG == "ru":                      # режим ещё не включён — ничего не трогаем
-        return response
+    lang = prefix_lang or host_lang(request.headers.get("host", ""))
     ctype = response.headers.get("content-type", "")
-    if not ctype.startswith("text/html") or request.url.path.startswith("/admin"):
+    if not ctype.startswith("text/html") or path.startswith("/admin"):
         return response
-    lang = host_lang(request.headers.get("host", ""))
+    if lang == "ru" and BASE_LANG == "ru":
+        return response
     body = b""
     async for chunk in response.body_iterator:
         body += chunk
     text = body.decode("utf-8", "replace")
+    inner_path = request.scope.get("path", path)
     if lang != "ru":
         text = translate_html(text, lang)
         text = text.replace('<html lang="ru">', f'<html lang="{lang}">', 1)
-    marker = (f'<meta name="sh-lang" content="{lang}" data-mode="host">'
-              + _hreflang_block(request.url.path))
+        if prefix_lang:
+            text = _prefix_links(text, lang)
+    marker = (f'<meta name="sh-lang" content="{lang}" data-mode="{"path" if prefix_lang else "host"}">'
+              + _hreflang_block(inner_path, lang))
+    # свой canonical у страницы теперь лишний — язык задаёт его сам
+    text = re.sub(r'<link rel="canonical"[^>]*>', "", text, count=1)
     text = text.replace("</head>", marker + "</head>", 1)
     headers = dict(response.headers)
     headers.pop("content-length", None)
@@ -4100,7 +4163,21 @@ def sitemap(db: Session = Depends(db_session)):
     static.append(("market", "0.9"))
     for role in professions_data()["roles"]:
         static.append((f"profession/{role['slug']}", "0.8"))
-    rows = [f"  <url><loc>{base}/{p}</loc><priority>{pr}</priority></url>" for p, pr in static]
+    # каждая статическая страница отдаётся со списком языковых версий:
+    # так поисковик находит /de/jobs, /pl/jobs и понимает, что это переводы
+    def _alts(path: str) -> str:
+        clean = f"/{path}" if path else ""
+        out = [f'<xhtml:link rel="alternate" hreflang="ru" href="{base}{clean}"/>']
+        out += [f'<xhtml:link rel="alternate" hreflang="{code}" href="{base}/{code}{clean}"/>'
+                for code in PATH_LANGS]
+        out.append(f'<xhtml:link rel="alternate" hreflang="x-default" href="{base}/en{clean}"/>')
+        return "".join(out)
+
+    rows = [f"  <url><loc>{base}/{p}</loc><priority>{pr}</priority>{_alts(p)}</url>"
+            for p, pr in static]
+    for code in PATH_LANGS:
+        rows += [f"  <url><loc>{base}/{code}/{p}</loc><priority>{max(float(pr) - 0.1, 0.1):.1f}</priority>"
+                 f"{_alts(p)}</url>" for p, pr in static]
     for j in db.query(Job).filter(Job.status == "approved").all():
         lastmod = j.posted_at if re.match(r"^\d{4}-\d{2}-\d{2}$", j.posted_at or "") else j.created_at.strftime("%Y-%m-%d")
         rows.append(f'  <url><loc>{base}/job/{j.id}</loc>'
@@ -4110,7 +4187,8 @@ def sitemap(db: Session = Depends(db_session)):
     rows.extend(f'  <url><loc>{base}/company/{slug}</loc><priority>0.6</priority></url>'
                 for slug in company_slugs)
     xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
-           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+           'xmlns:xhtml="http://www.w3.org/1999/xhtml">\n'
            + "\n".join(rows) + "\n</urlset>\n")
     return Response(xml, media_type="application/xml")
 

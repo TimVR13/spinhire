@@ -5,15 +5,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // В хост-режиме (spinhire.io = EN, ru./ua. — поддомены) язык диктует сервер
   // метой sh-lang, а выбор языка меняет хост, сохраняя путь.
   const UI_LANGS = ['ru', 'uk', 'en'];
+  // Европейские языки живут в поддиректориях: /de/jobs, /pl/jobs …
+  const PATH_LANGS = { en:'English', de:'Deutsch', pl:'Polski', es:'Español', pt:'Português',
+                       it:'Italiano', el:'Ελληνικά', ro:'Română', bg:'Български', uk:'Українська' };
   const langMeta = document.querySelector('meta[name="sh-lang"]');
   const hostMode = !!(langMeta && langMeta.dataset.mode === 'host');
+  const pathMode = !!(langMeta && langMeta.dataset.mode === 'path');
   const LANG_HOSTS = { en: 'spinhire.io', ru: 'ru.spinhire.io', uk: 'ua.spinhire.io' };
+  const stripLang = p => p.replace(new RegExp('^/(' + Object.keys(PATH_LANGS).join('|') + ')(?=/|$)'), '') || '/';
+  const langUrl = code => (code === 'ru' ? '' : '/' + code) + stripLang(location.pathname) + location.search;
   const savedUiLang = localStorage.getItem('uiLanguage');
   const browserUiLang = (navigator.languages || [navigator.language || 'ru'])
     .map(lang => String(lang).toLowerCase().split('-')[0])
     .map(lang => lang === 'ua' ? 'uk' : lang)
     .find(lang => UI_LANGS.includes(lang)) || 'ru';
-  const uiLang = hostMode ? (langMeta.getAttribute('content') || 'en')
+  const uiLang = (hostMode || pathMode) ? (langMeta.getAttribute('content') || 'en')
     : (UI_LANGS.includes(savedUiLang) ? savedUiLang : browserUiLang);
   // разовое автоподстраивание под язык браузера: только людям без явного выбора
   if (hostMode && !localStorage.getItem('langHostChosen') && browserUiLang !== uiLang
@@ -21,6 +27,17 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('langHostChosen', '1');
     location.host = LANG_HOSTS[browserUiLang];
   }
+  // язык браузера ≠ языка страницы: уводим один раз и только с главной,
+  // чтобы не мешать поисковикам обходить глубокие страницы
+  (function () {
+    const nav = (navigator.languages || [navigator.language || '']).map(l => String(l).toLowerCase().split('-')[0]);
+    const wanted = nav.find(l => PATH_LANGS[l] || l === 'ru');
+    if (!wanted || localStorage.getItem('langChosen')) return;
+    const current = langMeta ? langMeta.getAttribute('content') : 'ru';
+    if (wanted === current || stripLang(location.pathname) !== '/') return;
+    try { localStorage.setItem('langChosen', '1'); } catch (e) {}
+    location.href = langUrl(wanted);
+  })();
   const UI_COPY = {
     uk: {
       'Вакансии':'Вакансії','Резюме':'Резюме','Компании':'Компанії','Блог':'Блог','Работодателям':'Роботодавцям',
@@ -165,15 +182,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const caption = document.createElement('span'); caption.textContent = 'Язык';
     const select = document.createElement('select');
     select.setAttribute('data-native-select', ''); select.setAttribute('data-no-translate', ''); select.setAttribute('aria-label', 'Язык сайта');
-    select.innerHTML = '<option value="ru">Русский</option><option value="uk">Українська</option><option value="en">English</option>';
+    select.innerHTML = '<option value="ru">Русский</option>' +
+      Object.entries(PATH_LANGS).map(([code, name]) => `<option value="${code}">${name}</option>`).join('');
     select.value = uiLang;
     select.addEventListener('change', () => {
-      if (hostMode) {
+      try { localStorage.setItem('langChosen', '1'); } catch (e) {}
+      if (hostMode && LANG_HOSTS[select.value]) {
         localStorage.setItem('langHostChosen', '1');
-        location.host = LANG_HOSTS[select.value] || LANG_HOSTS.en;
+        location.host = LANG_HOSTS[select.value];
         return;
       }
-      localStorage.setItem('uiLanguage', select.value); location.reload();
+      localStorage.setItem('uiLanguage', select.value);
+      location.href = langUrl(select.value);   // /de/jobs, /pl/jobs …
     });
     label.append(caption, select); languageHost.appendChild(label);
   }
