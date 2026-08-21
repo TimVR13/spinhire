@@ -75,9 +75,13 @@ def salary_eur(job) -> float:
     # «€60K» и «60 000» должны сравниваться одинаково
     if re.search(r"\d\s*[KkКк]\b", text) and top < 1000:
         top *= 1000
-    if re.search(r"в год|/year|annual|rocznie", text, re.I):
-        top /= 12
-    return top * rate
+    monthly = top * rate
+    if re.search(r"в год|/year|annual|rocznie|p\.a\.", text, re.I):
+        monthly /= 12
+    elif monthly > 15000 and not re.search(r"в мес|/mo|month|мiсяц|miesi", text, re.I):
+        # «£33 000 – £37 000» без периода — почти всегда годовая вилка
+        monthly /= 12
+    return monthly
 
 
 
@@ -106,9 +110,36 @@ def pick_jobs(db: Session, hours: int = 24, limit: int = TOP_N, exclude=()):
                 .all())
         rows = [j for j in rows if j.id not in exclude and salary_eur(j) > 0]
         rows.sort(key=salary_eur, reverse=True)
-        if len(rows) >= limit:
-            return rows[:limit], window
-    return rows[:limit], window
+        # не больше двух вакансий одной компании — иначе дайджест выглядит
+        # как реклама одного работодателя
+        picked, per_company = [], {}
+        for job in rows:
+            key = (job.company_name or "").strip().lower()
+            if per_company.get(key, 0) >= 2:
+                continue
+            per_company[key] = per_company.get(key, 0) + 1
+            picked.append(job)
+            if len(picked) >= limit:
+                break
+        if len(picked) >= limit:
+            return picked, window
+    return picked, window
+
+
+
+def localize(text: str, lang: str) -> str:
+    """Гео и служебные слова — словарём языка канала (Польша → Poland)."""
+    if lang == "ru" or not text:
+        return text
+    try:
+        from server.app import _SERVER_VOCAB
+    except Exception:
+        return text
+    vocab = _SERVER_VOCAB.get(lang) or {}
+    for source in sorted(vocab, key=len, reverse=True):
+        if source in text:
+            text = text.replace(source, vocab[source])
+    return text
 
 
 TEXT = {
@@ -148,7 +179,7 @@ def build_digest(db: Session, lang: str, jobs=None, window=24) -> tuple:
         title = _esc((job.title or "").strip())[:70]
         place = " · ".join(x for x in (
             _esc(job.company_name or ""),
-            _esc(job.location or ""),
+            _esc(localize(job.location or "", lang)),
             t.get(FMT_KEY.get(job.fmt, ""), ""),
         ) if x)
         lines.append(f"<b>{i}. <a href=\"{url}\">{title}</a></b>")
