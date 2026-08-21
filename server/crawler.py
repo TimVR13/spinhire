@@ -1783,19 +1783,43 @@ def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
     return added, updated, closed, [row.id for row in changed_rows], [row.id for row in closed_rows]
 
 
-def notify_indexnow(urls):
-    """Push changed URLs to Yandex/IndexNow when INDEXNOW_KEY is configured."""
+# Языковые версии страницы — тоже отдельные адреса, и поисковик должен
+# узнать о каждой. Список синхронизирован с PATH_LANGS в app.py.
+INDEXNOW_LANGS = ("en", "de", "pl", "fr", "es", "pt", "it", "el", "ro", "bg", "uk")
+
+
+def _with_lang_versions(urls):
+    """К каждому нашему адресу добавить его языковые версии."""
+    out = []
+    for url in urls:
+        out.append(url)
+        if url.startswith("https://spinhire.io/"):
+            path = url[len("https://spinhire.io"):]
+            out += [f"https://spinhire.io/{code}{path}" for code in INDEXNOW_LANGS]
+    return out
+
+
+def notify_indexnow(urls, with_languages: bool = True):
+    """Push changed URLs to Yandex/Bing IndexNow when INDEXNOW_KEY is configured."""
     key = os.environ.get("INDEXNOW_KEY", "").strip()
     if not key or not urls:
         return 0
+    payload = _with_lang_versions(urls) if with_languages else list(urls)
     body = json.dumps({"host": "spinhire.io", "key": key,
                        "keyLocation": "https://spinhire.io/indexnow-key.txt",
-                       "urlList": urls[:10000]}).encode()
-    req = urllib.request.Request("https://yandex.com/indexnow", data=body,
-                                 headers={"Content-Type": "application/json", "User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as response:
-        response.read()
-    return len(urls[:10000])
+                       "urlList": payload[:10000]}).encode()
+    sent = 0
+    # оба хаба раздают друг другу, но прямой пинг быстрее и надёжнее
+    for endpoint in ("https://yandex.com/indexnow", "https://api.indexnow.org/indexnow"):
+        req = urllib.request.Request(endpoint, data=body,
+                                     headers={"Content-Type": "application/json", "User-Agent": UA})
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as response:
+                response.read()
+            sent = len(payload[:10000])
+        except Exception as exc:                                # noqa: BLE001
+            print(f"[indexnow] {endpoint.split('/')[2]}: {type(exc).__name__}")
+    return sent
 
 
 def notify_google_indexing(updated_urls, deleted_urls):
