@@ -153,6 +153,42 @@ def _fetch_workday(url: str):
             "location": info.get("location", "") or "", "fmt": fmt}
 
 
+_ORACLE_RE = re.compile(
+    r"https://([^/]+\.oraclecloud\.com)/hcmUI/CandidateExperience/[^/]+/sites/([^/]+)/"
+    r"(?:requisitions/preview|job)/(\d+)")
+
+
+def _fetch_oracle_hcm(url: str):
+    """Oracle Recruiting (Caesars, Penn и другие крупные операторы):
+    страница — SPA, но публичный hcmRestApi отдаёт полный текст вакансии."""
+    m = _ORACLE_RE.match(url)
+    if not m:
+        return None
+    host, site, rid = m.groups()
+    from urllib.parse import quote
+    finder = quote(f"ById;Id={rid},siteNumber={site}", safe=";,=")
+    api = (f"https://{host}/hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails"
+           f"?expand=all&onlyData=true&finder={finder}")
+    try:
+        items = (json.loads(_fetch(api)).get("items") or [])
+    except Exception:
+        return None
+    if not items:
+        return None
+    item = items[0]
+    desc = _clean_html(item.get("ExternalDescriptionStr")
+                       or item.get("ExternalDescription") or "")
+    extra = _clean_html(item.get("ExternalQualificationsStr")
+                        or item.get("ShortDescriptionStr") or "")
+    if extra and extra not in desc:
+        desc = f"{desc}\n\n{extra}".strip()
+    if not desc:
+        return None
+    fmt = "удалёнка" if str(item.get("WorkplaceTypeCode", "")).upper().find("REMOTE") >= 0 else ""
+    return {"description": desc, "salary": "",
+            "location": item.get("PrimaryLocation") or "", "fmt": fmt}
+
+
 def _fetch_bamboohr(url: str):
     """BambooHR: /careers/{id}/detail — JSON с полным описанием."""
     if ".bamboohr.com/careers/" not in url:
@@ -181,7 +217,7 @@ def _fetch_jobvite(page: str):
 
 def fetch_details(url: str):
     """→ dict(description, salary, location, fmt) или None, если не достали."""
-    for adapter in (_fetch_workday, _fetch_bamboohr):
+    for adapter in (_fetch_workday, _fetch_oracle_hcm, _fetch_bamboohr):
         got = adapter(url)
         if got and len(got["description"]) >= ACCEPT_DESC:
             return got
