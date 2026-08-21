@@ -2543,7 +2543,7 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
                         employment_history: str = Form(""), education: str = Form(""),
                         preferred_locations: str = Form(""), relocation: str = Form(None),
                         availability: str = Form(""), portfolio_url: str = Form(""),
-                        linkedin_url: str = Form(""),
+                        linkedin_url: str = Form(""), full_name: str = Form(""),
                         avatar_file: UploadFile | None = File(None),
                         db: Session = Depends(db_session)):
     user = get_user(request, db)
@@ -2561,6 +2561,10 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
         return RedirectResponse("/profile?cv_error=consent#cv", status_code=303)
     if not title.strip() or not about.strip():
         return RedirectResponse("/profile?cv_error=1#cv", status_code=303)
+    if not (full_name.strip() or (user.name or "").strip()):
+        return RedirectResponse("/profile?cv_error=name#cv", status_code=303)
+    if not contact_telegram.strip() or not (contact_email.strip() or user.email):
+        return RedirectResponse("/profile?cv_error=contacts#cv", status_code=303)
     avatar_name = avatar_ext = ""
     avatar_payload = b""
     if not avatar_file or not avatar_file.filename:
@@ -2644,6 +2648,8 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
         row.submitted_at = datetime.utcnow().isoformat() + "Z"
         row.moderation_note = ""
     row.updated_at = datetime.utcnow()
+    if full_name.strip():
+        user.name = full_name.strip()[:160]
     user.headline = row.title
     user.salary_expect = row.salary_expect
     user.languages = row.languages

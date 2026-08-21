@@ -51,9 +51,9 @@
       {% if unlocked %}
         {% if resume.user.avatar_file_path %}<img class="contact-avatar" src="/resume/{{ resume.id }}/avatar" alt="Фото кандидата">{% endif %}
         <span class="kicker">Контакты открыты</span>
-        <h2 style="margin:10px 0 20px;">Связаться с кандидатом</h2>
+        <h2 style="margin:10px 0 20px;">{{ resume.user.name or 'Связаться с кандидатом' }}</h2>
         {% if user and user.role == 'admin' %}
-        <p><b>Владелец (видит только админ)</b><br>{{ resume.user.name or 'имя не указано' }} · {{ resume.user.email }}</p>
+        <p><b>Аккаунт (видит только админ)</b><br>{{ resume.user.email }}</p>
         {% endif %}
         <p><b>Email</b><br><a style="color:var(--acid);" href="mailto:{{ resume.contact_email }}">{{ resume.contact_email }}</a></p>
         {% if resume.contact_telegram %}<p style="margin-top:14px;"><b>Telegram</b><br>{{ resume.contact_telegram }}</p>{% endif %}
@@ -62,7 +62,7 @@
       {% else %}
         <span class="kicker pink">Контакты закрыты</span>
         <h2 style="margin:10px 0 8px;">Имя и способы связи скрыты</h2>
-        <p style="color:var(--ink-dim);">Один оплаченный доступ открывает контакты навсегда для вашего аккаунта.</p>
+        <p style="color:var(--ink-dim);">Один оплаченный доступ навсегда открывает ФИО, email и Telegram кандидата для вашего аккаунта.</p>
         <div class="locked-lines" aria-hidden="true"><span></span><span></span><span></span></div>
         {% if user and user.role == 'employer' and cv_team_role != 'viewer' and (cv_account.cv_credits or 0) > 0 %}
           <form method="post" action="/resume/{{ resume.id }}/unlock"><button class="btn btn-acid" style="width:100%;">Открыть контакт · осталось {{ cv_account.cv_credits }}</button></form>

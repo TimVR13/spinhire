@@ -20,22 +20,34 @@
   .recommend-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-3);margin-bottom:var(--sp-6)}
   .recommend-job{padding:16px;border:1px solid var(--line);text-decoration:none}.recommend-job:hover{border-color:var(--acid)}
   @media(max-width:700px){.cv-grid{grid-template-columns:1fr}.cv-grid .wide{grid-column:auto}.cv-start{grid-template-columns:1fr}.cv-choice{min-height:0;border-right:0;border-bottom:1px solid var(--line)}.cv-choice:last-child{border-bottom:0}.dash-strip{grid-template-columns:repeat(2,1fr)}.dash-cell:first-child{grid-column:1/-1}.recommend-grid{grid-template-columns:1fr}}
-  .cab-tabs { display:flex; gap:6px; flex-wrap:wrap; border-bottom:2px solid var(--line); margin-bottom:var(--sp-6); }
+  .cab-head { display:flex; align-items:flex-end; gap:18px; flex-wrap:wrap; border-bottom:2px solid var(--line); margin-bottom:var(--sp-6); }
+  .cab-id { display:flex; align-items:center; gap:12px; min-width:0; padding-bottom:10px; }
+  .cab-id .profile-avatar { width:44px; height:44px; flex:0 0 44px; border-radius:12px; font-size:.95rem; }
+  .cab-id h1 { font-size:1.15rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cab-id .kicker { flex:0 0 auto; }
+  .cab-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-left:auto; }
   .cab-tabs a { padding:12px 18px; text-decoration:none; color:var(--ink-dim); font-family:var(--font-display); font-size:.8rem; text-transform:uppercase; letter-spacing:.06em; border:1px solid transparent; border-bottom:none; border-radius:10px 10px 0 0; position:relative; top:2px; }
   .cab-tabs a b { color:var(--acid); margin-left:6px; }
   .cab-tabs a.active { color:var(--ink); background:var(--surface); border-color:var(--line); border-bottom:2px solid var(--surface); }
   .cab-tabs a:hover { color:var(--acid); }
   .cab-pane { display:none; }
   .cab-pane.active { display:block; }
-  @media(max-width:760px){.cab-tabs{gap:2px}.cab-tabs a{padding:10px 12px;font-size:.7rem}}
+  .cv-src { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+  .cv-src span { color:var(--ink-faint); font-size:.75rem; text-transform:uppercase; letter-spacing:.08em; }
+  .cv-src button { padding:8px 14px; background:transparent; color:var(--ink-dim); border:1px solid var(--line); border-radius:999px; font:inherit; font-size:.82rem; cursor:pointer; }
+  .cv-src button:hover { color:var(--acid); border-color:var(--acid); }
+  .cv-tips { border:1px dashed var(--line); padding:14px 16px; color:var(--ink-dim); font-size:.88rem; line-height:1.5; }
+  .cv-tips b { color:var(--acid); }
+  @media(max-width:760px){.cab-tabs{gap:2px;margin-left:0}.cab-tabs a{padding:10px 12px;font-size:.7rem}.cab-id{padding-bottom:6px;flex-wrap:wrap}.cab-id h1{white-space:normal;overflow:visible;text-overflow:clip}}
 {% endblock %}
 {% block content %}
-  <nav class="crumbs"><a href="/">Главная</a> / Мой профиль</nav>
   {% if request.query_params.get('quick') %}<div class="flash">✓ Мы разобрали ваше CV и заполнили черновик. Проверьте поля ниже, поправьте что нужно — и опубликуйте. Пароль для входа задайте через «Забыли пароль» или продолжайте по этой сессии.</div>{% endif %}
   {% if request.query_params.get('ok') %}<div class="flash">✓ Профиль сохранён</div>{% endif %}
   {% if request.query_params.get('cv_ok') %}<div class="flash">CV сохранено{% if resume and resume.status == 'pending' %} и отправлено на модерацию{% elif resume and resume.status == 'approved' %} и опубликовано анонимно{% elif resume and resume.status == 'paused' %}; публикация приостановлена{% endif %}.</div>{% endif %}
   {% if request.query_params.get('cv_error') == 'consent' %}<div class="flash err">Оба подтверждения обязательны: публикация в базе и согласие на обработку контактов.</div>
   {% elif request.query_params.get('cv_error') == 'avatar' %}<div class="flash err">Добавьте фотографию профиля.</div>
+  {% elif request.query_params.get('cv_error') == 'name' %}<div class="flash err">Укажите ФИО — работодатель получает его вместе с контактами после оплаченного открытия.</div>
+  {% elif request.query_params.get('cv_error') == 'contacts' %}<div class="flash err">Укажите Telegram и email — их получает работодатель после оплаченного открытия.</div>
   {% elif request.query_params.get('cv_error') %}<div class="flash err">Заполните роль и описание резюме.</div>{% endif %}
   {% if request.query_params.get('avatar_error') == 'type' %}<div class="flash err">Аватар принимается только в JPG, PNG или WebP.</div>{% endif %}
   {% if request.query_params.get('avatar_error') == 'size' %}<div class="flash err">Фотография больше 3 МБ. Уменьшите файл и попробуйте снова.</div>{% endif %}
@@ -46,17 +58,19 @@
   {% set sp = request.query_params.get('spin') %}
   {% if sp and sp not in ('wait',) %}<div class="flash">🎡 Ежедневный фриспин: <b>+{{ sp }} SpinCoins</b>! Заходи завтра за следующим.</div>{% endif %}
   {% if sp == 'wait' %}<div class="flash err">Сегодня уже крутили — фриспин обновляется раз в сутки.</div>{% endif %}
-  <span class="kicker">Кабинет соискателя</span>
-  <div class="section-head" style="margin-block: 8px 24px;">
-    <div style="display:flex;align-items:center;gap:16px;min-width:0;">{% if user.avatar_file_path %}<img class="profile-avatar" src="/profile/avatar" alt="Аватар {{ user.name or 'пользователя' }}">{% else %}<div class="profile-avatar" style="display:grid;place-items:center;font-family:var(--font-display);font-size:1.4rem;">{{ (user.name or user.email)[:2]|upper }}</div>{% endif %}<h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem);">{{ user.name or user.email }}</h1></div>
+  <div class="cab-head">
+    <div class="cab-id">
+      {% if user.avatar_file_path %}<img class="profile-avatar" src="/profile/avatar" alt="Аватар {{ user.name or 'пользователя' }}">{% else %}<div class="profile-avatar" style="display:grid;place-items:center;font-family:var(--font-display);">{{ (user.name or user.email)[:2]|upper }}</div>{% endif %}
+      <h1>{{ user.name or user.email }}</h1>
+      <span class="kicker">Кабинет соискателя</span>
+    </div>
+    <nav class="cab-tabs" id="cabTabs" aria-label="Разделы кабинета">
+      <a href="#overview" data-pane="overview">Обзор</a>
+      <a href="#cv" data-pane="cv">Моё CV{% if resume %}<b>{{ {'draft':'черновик','pending':'модерация','approved':'✓','rejected':'!','paused':'⏸'}.get(resume.status, '') }}</b>{% endif %}</a>
+      <a href="#apps" data-pane="apps">Отклики<b>{{ apps|length }}</b></a>
+      <a href="#settings" data-pane="settings">Настройки</a>
+    </nav>
   </div>
-
-  <nav class="cab-tabs" id="cabTabs" aria-label="Разделы кабинета">
-    <a href="#overview" data-pane="overview">Обзор</a>
-    <a href="#cv" data-pane="cv">Моё CV{% if resume %}<b>{{ {'draft':'черновик','pending':'модерация','approved':'✓','rejected':'!','paused':'⏸'}.get(resume.status, '') }}</b>{% endif %}</a>
-    <a href="#apps" data-pane="apps">Отклики<b>{{ apps|length }}</b></a>
-    <a href="#settings" data-pane="settings">Настройки</a>
-  </nav>
 
   <div class="cab-pane" data-pane="overview">
   <section class="dash-strip" aria-label="Состояние профиля и откликов">
@@ -95,25 +109,27 @@
   <div class="cab-pane" data-pane="cv">
   <section id="cv" class="card cv-editor">
     <div class="section-head" style="margin-bottom:20px;">
-      <div><span class="kicker">Анонимная база</span><h2 style="font-size:clamp(1.3rem,3vw,2rem);">{{ 'Редактировать CV' if resume else 'Добавить CV' }}</h2></div>
+      <div><span class="kicker">База кандидатов</span><h2 style="font-size:clamp(1.3rem,3vw,2rem);">{{ 'Редактировать CV' if resume else 'Добавить CV' }}</h2></div>
       {% if resume %}<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><span class="status {{ resume.status }}">{{ {'draft':'черновик','pending':'модерация','approved':'опубликовано','rejected':'нужны правки','paused':'скрыто'}.get(resume.status, resume.status) }}</span><a href="/resume/{{ resume.id }}" class="btn btn-ghost">Предпросмотр</a></div>{% endif %}
     </div>
     {% if resume and resume.moderation_note %}<div class="flash err">Комментарий модератора: {{ resume.moderation_note }}</div>{% endif %}
     {% if resume %}<p style="color:var(--ink-faint);margin:-8px 0 18px;">{{ resume.views or 0 }} просмотров · {{ resume_unlocks or 0 }} работодателей открыли контакты</p>{% endif %}
-    <p style="color:var(--ink-dim);max-width:70ch;margin-bottom:20px;">Работодатели увидят опыт, навыки и ожидания. Имя, email и Telegram останутся закрытыми до оплаченного открытия контакта.</p>
+    <p style="color:var(--ink-dim);max-width:78ch;margin-bottom:20px;">В базе работодатели видят опыт, навыки и ожидания — без имени. После оплаченного открытия контакта они получают ФИО, email и Telegram, поэтому эти поля обязательны для публикации.</p>
     {% if not resume %}
     <h3 style="font-size:1rem;margin-top:24px;">Как добавить резюме?</h3>
     <div class="cv-start" role="group" aria-label="Способ добавления резюме">
-      <button class="cv-choice" type="button" data-cv-path="upload"><b>Есть готовое резюме</b><span>Загрузите PDF, DOC или DOCX. Мы сохраним файл в черновике.</span><em>Загрузить файл →</em></button>
-      <button class="cv-choice" type="button" data-cv-path="linkedin"><b>Создать из LinkedIn</b><span>Сохраним профиль как источник и подготовим черновик из данных аккаунта.</span><em>Вставить ссылку →</em></button>
-      <button class="cv-choice" type="button" data-cv-path="manual"><b>Заполнить вручную</b><span>Укажите опыт, навыки и ожидания прямо на SpinHire.</span><em>Открыть форму →</em></button>
+      <button class="cv-choice" type="button" data-cv-path="upload"><b>У меня есть резюме</b><span>Загрузите PDF, DOC или DOCX — сохраним файл и создадим черновик.</span><em>Загрузить файл →</em></button>
+      <button class="cv-choice" type="button" data-cv-path="linkedin"><b>У меня есть LinkedIn</b><span>Вставьте ссылку на профиль — создадим черновик из него и сохраним как источник.</span><em>Вставить ссылку →</em></button>
+      <button class="cv-choice" type="button" data-cv-path="manual"><b>У меня нет резюме</b><span>Составим вместе прямо на SpinHire: форма с подсказками по каждому полю.</span><em>Составить резюме →</em></button>
     </div>
     <div class="cv-path" data-cv-panel="upload">
       <form method="post" action="/profile/resume" enctype="multipart/form-data">
         <input type="hidden" name="title" value="{{ user.headline or 'Резюме на обработке' }}"><input type="hidden" name="about" value="Данные будут структурированы после обработки загруженного CV."><input type="hidden" name="location" value="{{ user.location or '' }}"><input type="hidden" name="salary_expect" value="{{ user.salary_expect or '' }}"><input type="hidden" name="languages" value="{{ user.languages or '' }}"><input type="hidden" name="contact_email" value="{{ user.email }}"><input type="hidden" name="publish" value="1">
+        <div class="field"><label>ФИО</label><input class="input" name="full_name" value="{{ user.name or '' }}" placeholder="Иван Петров" required></div>
+        <div class="field"><label>Telegram</label><input class="input" name="contact_telegram" placeholder="@username" required></div>
         <div class="field"><label>Файл резюме · до 5 МБ</label><input class="input" type="file" name="cv_file" accept=".pdf,.doc,.docx" required></div>
         <div class="field"><label>Аватар · JPG, PNG или WebP до 3 МБ</label><input class="input" type="file" name="avatar_file" accept="image/jpeg,image/png,image/webp" {% if not user.avatar_file_path %}required{% endif %}></div>
-        <label class="check" style="flex-basis:100%;"><input type="checkbox" name="consent" required> Я разрешаю публикацию обезличенного CV и передачу контактов после оплаченного открытия.</label>
+        <label class="check" style="flex-basis:100%;"><input type="checkbox" name="consent" required> Я разрешаю публикацию обезличенного CV и передачу ФИО и контактов после оплаченного открытия.</label>
         <button class="btn btn-acid" type="submit">Создать черновик</button>
       </form>
     </div>
@@ -123,8 +139,16 @@
         <button class="btn btn-acid" type="submit">Создать черновик</button>
       </form>
     </div>
+    {% else %}
+    <div class="cv-src">
+      <span>Обновить из источника:</span>
+      <button type="button" data-focus="cvFileField">📄 Заменить файл CV</button>
+      <button type="button" data-focus="linkedinField">Обновить LinkedIn-ссылку</button>
+    </div>
     {% endif %}
     <form method="post" action="/profile/resume" enctype="multipart/form-data" class="cv-grid cv-manual{% if resume %} is-open{% endif %}" data-cv-panel="manual">
+      {% if not resume %}<div class="cv-tips wide"><b>Составим вместе.</b> Роль — как в вакансиях, на которые претендуете. В опыте — цифры и результаты («поднял retention VIP-сегмента на 18%»), а не список обязанностей. В публичной карточке скроем имя и контакты автоматически — просто заполните всё честно.</div>{% endif %}
+      <div class="field wide"><label>ФИО · увидит работодатель после оплаченного открытия</label><input class="input" name="full_name" value="{{ user.name or '' }}" placeholder="Иван Петров" required></div>
       <div class="field wide"><label>Желаемая роль</label><input class="input" name="title" value="{{ resume.title if resume else user.headline }}" placeholder="CRM Manager · iGaming" required></div>
       <div class="field"><label>Локация</label><input class="input" name="location" value="{{ resume.location if resume else '' }}" placeholder="Варшава, Польша"></div>
       <div class="field"><label>Опыт в годах</label><input class="input" type="number" min="0" max="60" name="experience_years" value="{{ resume.experience_years if resume else 0 }}"></div>
@@ -138,25 +162,31 @@
       <div class="field"><label>Готовность выйти</label><input class="input" name="availability" value="{{ resume.availability if resume else '' }}" placeholder="Сразу / через 2 недели"></div>
       <label class="check wide"><input type="checkbox" name="relocation" {% if resume and resume.relocation %}checked{% endif %}> Готов к релокации</label>
       <div class="field wide"><label>Портфолио — откроется только после покупки контакта</label><input class="input" type="url" name="portfolio_url" value="{{ resume.portfolio_url if resume else '' }}" placeholder="https://"></div>
-      <div class="field wide"><label>LinkedIn — источник резюме</label><input class="input" type="url" name="linkedin_url" value="{{ resume.linkedin_url if resume else '' }}" placeholder="https://www.linkedin.com/in/username"></div>
+      <div class="field wide"><label>LinkedIn — источник резюме</label><input class="input" id="linkedinField" type="url" name="linkedin_url" value="{{ resume.linkedin_url if resume else '' }}" placeholder="https://www.linkedin.com/in/username"></div>
       <div class="field"><label>Языки</label><input class="input" name="languages" value="{{ resume.languages if resume else user.languages }}" placeholder="English C1, Polish B1"></div>
       <div class="field"><label>Email для работодателей</label><input class="input" type="email" name="contact_email" value="{{ resume.contact_email if resume else user.email }}" required></div>
-      <div class="field wide"><label>Telegram</label><input class="input" name="contact_telegram" value="{{ resume.contact_telegram if resume else '' }}" placeholder="@username"></div>
-      <div class="field wide"><label>Исходный CV · PDF, DOC или DOCX до 5 МБ</label><input class="input" type="file" name="cv_file" accept=".pdf,.doc,.docx">{% if resume and resume.cv_file_name %}<p style="margin-top:8px;color:var(--ink-dim);">Загружен: <a href="/resume/{{ resume.id }}/file" style="color:var(--acid);">{{ resume.cv_file_name }}</a></p><label class="check" style="margin-top:8px;"><input type="checkbox" name="remove_cv_file"> Удалить файл</label>{% endif %}</div>
+      <div class="field wide"><label>Telegram</label><input class="input" name="contact_telegram" value="{{ resume.contact_telegram if resume else '' }}" placeholder="@username" required></div>
+      <div class="field wide"><label>Исходный CV · PDF, DOC или DOCX до 5 МБ</label><input class="input" id="cvFileField" type="file" name="cv_file" accept=".pdf,.doc,.docx">{% if resume and resume.cv_file_name %}<p style="margin-top:8px;color:var(--ink-dim);">Загружен: <a href="/resume/{{ resume.id }}/file" style="color:var(--acid);">{{ resume.cv_file_name }}</a></p><label class="check" style="margin-top:8px;"><input type="checkbox" name="remove_cv_file"> Удалить файл</label>{% endif %}</div>
       <div class="field wide"><label>Аватар · JPG, PNG или WebP до 3 МБ</label>{% if user.avatar_file_path %}<div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;"><img class="profile-avatar" src="/profile/avatar" alt="Текущий аватар"><span style="color:var(--ink-dim);">{{ user.avatar_file_name or 'Аватар загружен' }}</span></div>{% endif %}<input class="input" type="file" name="avatar_file" accept="image/jpeg,image/png,image/webp" {% if not user.avatar_file_path %}required{% endif %}></div>
       <label class="check wide"><input type="checkbox" name="publish" required {% if resume and resume.published %}checked{% endif %}> Показывать CV в анонимной базе <b>· обязательно</b></label>
-      <label class="check wide"><input type="checkbox" name="consent" required {% if resume and resume.consent_at %}checked{% endif %}> Я разрешаю публиковать обезличенную информацию и передавать мои контакты работодателям после оплаченного открытия <b>· обязательно</b></label>
+      <label class="check wide"><input type="checkbox" name="consent" required {% if resume and resume.consent_at %}checked{% endif %}> Я разрешаю публиковать обезличенную информацию и передавать моё ФИО и контакты работодателям после оплаченного открытия <b>· обязательно</b></label>
       <button class="btn btn-acid wide" type="submit">Сохранить CV</button>
     </form>
   </section>
-  {% if not resume %}<script>
+  <script>
     document.querySelectorAll('[data-cv-path]').forEach((button) => button.addEventListener('click', () => {
       document.querySelectorAll('[data-cv-panel]').forEach((panel) => panel.classList.remove('is-open'));
       const panel = document.querySelector(`[data-cv-panel="${button.dataset.cvPath}"]`);
       panel.classList.add('is-open');
       panel.querySelector('input, textarea, select')?.focus();
     }));
-  </script>{% endif %}
+    document.querySelectorAll('[data-focus]').forEach((button) => button.addEventListener('click', () => {
+      const field = document.getElementById(button.dataset.focus);
+      if (!field) return;
+      field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      field.focus({ preventScroll: true });
+    }));
+  </script>
   </div><!-- /cv -->
 
   <div class="cab-pane" data-pane="apps">
