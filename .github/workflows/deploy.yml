@@ -1,0 +1,37 @@
+name: deploy
+
+# Автодеплой: как только в GitHub прилетает пуш в main — сервер делает git pull,
+# ставит зависимости и перезапускает spinhire. Можно запустить и вручную (workflow_dispatch).
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH deploy
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes "$USER@$HOST" bash -s <<'REMOTE'
+            set -euo pipefail
+            cd /opt/spinhire
+            git fetch --quiet origin
+            git reset --hard origin/main
+            ./venv/bin/pip install -q -r requirements.txt || true
+            systemctl restart spinhire
+            echo "deployed $(git rev-parse --short HEAD) at $(date -u +%FT%TZ)"
+          REMOTE

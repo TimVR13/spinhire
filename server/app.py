@@ -1088,7 +1088,11 @@ async def guard(request: Request, call_next):
     path = request.url.path.lower()
     generated_md = path.endswith(".md") and (path.startswith(_MD_ROUTE_PREFIXES)
                                              or path in _MD_ROUTE_EXACT)
-    if (path in _BLOCKED_EXACT or path.startswith(_BLOCKED_PREFIXES)
+    # любой dot-файл (.env, .env.local, .htaccess, .git/… и т.п.) не раздаём,
+    # кроме служебного /.well-known/. Это закрывает утечку секретов из web-root.
+    dotfile = (not path.startswith("/.well-known/")
+               and any(seg.startswith(".") for seg in path.strip("/").split("/") if seg))
+    if (dotfile or path in _BLOCKED_EXACT or path.startswith(_BLOCKED_PREFIXES)
             or (path.endswith(_BLOCKED_SUFFIXES) and not generated_md)):
         # sitemap.xml / robots.txt / og-cover.jpg остаются доступны — не .md/.py/.db
         from fastapi.responses import PlainTextResponse

@@ -1,0 +1,7 @@
+[Unit]
+Description=SpinHire auto-pull from GitHub
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/spinhire/deploy/autopull.sh
