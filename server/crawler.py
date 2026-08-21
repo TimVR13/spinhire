@@ -1663,6 +1663,24 @@ _IRRELEVANT_TITLE_RE = re.compile(
     r")\b", re.I)
 
 
+# Компании общего профиля: аутсорс, бигтех, консалтинг, универсальные платёжки.
+# Они попадают через агрегаторы, но их вакансии — не про iGaming, если в тексте
+# нет явных отраслевых маркеров. Nuvei, Paysafe и т.п. сюда НЕ входят: для них
+# гемблинг — профильный рынок.
+_GENERIC_COMPANY_RE = re.compile(
+    r"\bstripe\b|globallogic|\bn-?ix\b|\bepam\b|luxoft|softserve|ciklum|\bintellias\b|"
+    r"deloitte|\bpwc\b|\bkpmg\b|ernst\s*&\s*young|\bey\b|accenture|capgemini|"
+    r"amazon|\bgoogle\b|\bmeta\b|microsoft|\bapple\b|procter|unilever|nestl", re.I)
+
+
+def company_is_offtopic(company: str, title: str = "", description: str = "") -> bool:
+    """Вакансия компании общего профиля без отраслевых маркеров — не наша."""
+    if not _GENERIC_COMPANY_RE.search(company or ""):
+        return False
+    haystack = f"{title}\n{description}"
+    return len(_UA_IGAMING_RE.findall(haystack)) < 2
+
+
 def job_is_irrelevant(title: str) -> bool:
     """Название говорит, что роль не про iGaming-карьеру."""
     t = title or ""
@@ -1678,7 +1696,8 @@ def sweep_irrelevant(db, Job) -> int:
             .all())
     rejected = 0
     for row in rows:
-        if job_is_irrelevant(row.title):
+        if job_is_irrelevant(row.title) or company_is_offtopic(
+                row.company_name, row.title, row.description or ""):
             row.status = "rejected"
             row.closed_at = datetime.utcnow().date().isoformat()
             rejected += 1
@@ -1742,7 +1761,10 @@ def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
                       source_url=it["source_url"], source=it["source"],
                       ext_id=it["ext_id"], category=cat,
                       posted_at=it.get("posted_at", ""), deadline=it.get("deadline", ""),
-                      status="rejected" if job_is_irrelevant(it["title"])
+                      status="rejected" if (job_is_irrelevant(it["title"])
+                                           or company_is_offtopic(it["company_name"],
+                                                                  it["title"],
+                                                                  it.get("description", "")))
                              else ("approved" if approve else "pending"))
             db.add(row)
             changed_rows.append(row)
