@@ -4242,5 +4242,10 @@ async def http_exc(request: Request, exc: StarletteHTTPException):
 from server import crm  # noqa: E402
 app.include_router(crm.router)
 
+# ---------- автопостинг вакансий в Telegram-каналы ----------
+from server import tgpost  # noqa: E402
+app.include_router(tgpost.router)
+tgpost.start_scheduler()  # молчит, пока не заданы SPINHIRE_TG_BOT_TOKEN и каналы
+
 # ---------- static site (последним — перекрывается роутами выше) ----------
 app.mount("/", StaticFiles(directory=ROOT, html=True), name="site")
