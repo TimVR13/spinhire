@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block bodyclass %}workspace{% endblock %}
+{% block title %}{{ c.name }} — CRM — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block style %}
+{% include "crm/_style.html" %}
+.cols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 980px) { .cols { grid-template-columns: 1fr; } }
+.panel { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 16px 18px; margin-bottom: 16px; }
+.panel h2 { font-size: 0.95rem; margin: 0 0 12px; }
+.touch { border-left: 3px solid var(--line); padding: 8px 12px; margin-bottom: 10px; }
+.touch.in { border-left-color: var(--acid); }
+.touch .meta { font-size: 0.72rem; color: var(--ink-faint); }
+.touch .body { font-size: 0.85rem; color: var(--ink-dim); white-space: pre-wrap; margin-top: 4px; }
+.contact-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.contact-row:last-child { border-bottom: 0; }
+.dnc { color: var(--pink); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
+.evt { font-size: 0.78rem; color: var(--ink-faint); padding: 4px 0; border-bottom: 1px dashed var(--line); }
+.task-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.task-row.overdue .t { color: var(--pink); }
+.task-row.done .t { color: var(--ink-faint); text-decoration: line-through; }
+{% endblock %}
+{% block content %}
+<nav class="crumbs"><a href="/">Главная</a> / <a href="/admin">Админка</a> / <a href="/admin/crm">CRM</a> / {{ c.name }}</nav>
+<div style="display:flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 8px;">
+  <h1 style="font-size: clamp(1.4rem, 3vw, 2rem); margin: 0;">{{ c.name }}</h1>
+  <span class="stage-tag stage-{{ c.stage }}">{{ stage_labels[c.stage] }}</span>
+  <span class="icp {% if c.icp_score >= 70 %}hi{% elif c.icp_score >= 50 %}mid{% else %}lo{% endif %}" title="{{ c.icp_why }}">ICP {{ c.icp_score }}</span>
+  {% if profile %}<a class="btn btn-ghost btn-sm" href="/company/{{ c.slug }}" target="_blank" rel="noopener">Профиль на борде ↗</a>{% endif %}
+  {% if c.careers_url %}<a class="btn btn-ghost btn-sm" href="{{ c.careers_url }}" target="_blank" rel="noopener">Карьерная страница ↗</a>{% endif %}
+</div>
+{% if c.icp_why %}<p style="color: var(--ink-faint); font-size: 0.8rem; margin-top: 6px;">{{ c.icp_why }}</p>{% endif %}
+{% if msg %}<div class="flash" style="margin-top: 12px;">{{ msg }}</div>{% endif %}
+
+<div class="cols" style="margin-top: var(--sp-5);">
+<div>
+
+  <div class="panel">
+    <h2>Касания</h2>
+    <form class="crm-inline" method="post" action="/admin/crm/company/{{ c.id }}/touch/new" style="margin-bottom: 14px;">
+      <div style="flex: 0 1 130px;"><label>Канал</label>
+        <select name="channel">{% for code, label in channels %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select></div>
+      <div style="flex: 0 1 150px;"><label>Направление</label>
+        <select name="direction"><option value="out">Мы написали</option><option value="in">Нам ответили</option></select></div>
+      <div style="flex: 0 1 180px;"><label>Контакт</label>
+        <select name="contact_id"><option value="">—</option>
+          {% for ct in contacts %}<option value="{{ ct.id }}">{{ ct.name }}</option>{% endfor %}</select></div>
+      <div style="flex: 1 1 100%;"><label>Суть (тема письма / кратко о чём)</label><input name="subject"></div>
+      <div style="flex: 1 1 100%;"><label>Текст (не обязательно)</label><textarea name="body" rows="2"></textarea></div>
+      <div style="flex: 0 0 auto;"><button class="btn btn-acid btn-sm">Записать</button></div>
+    </form>
+    {% for t in touches %}
+    <div class="touch {{ t.direction }}">
+      <div class="meta">{{ '←' if t.direction == 'in' else '→' }} {{ channel_labels.get(t.channel, t.channel) }}
+        {% if t.contact_id and contact_names.get(t.contact_id) %} · {{ contact_names[t.contact_id] }}{% endif %}
+        · {{ t.happened_at.strftime('%d.%m.%Y %H:%M') }}</div>
+      {% if t.subject %}<div style="font-weight: 600; font-size: 0.88rem;">{{ t.subject }}</div>{% endif %}
+      {% if t.body %}<div class="body">{{ t.body }}</div>{% endif %}
+    </div>
+    {% else %}<p style="color: var(--ink-faint); font-size: 0.85rem;">Касаний ещё не было.</p>{% endfor %}
+  </div>
+
+  <div class="panel">
+    <h2>Контакты</h2>
+    {% for ct in contacts %}
+    <div class="contact-row">
+      <div>
+        <b>{{ ct.name }}</b> {% if ct.role_title %}<span style="color: var(--ink-faint);">— {{ ct.role_title }}</span>{% endif %}
+        {% if ct.do_not_contact %}<span class="dnc">✋ не беспокоить{% if ct.dnc_reason %}: {{ ct.dnc_reason }}{% endif %}</span>{% endif %}
+        <div style="font-size: 0.78rem; color: var(--ink-dim);">
+          {% if ct.email %}✉ {{ ct.email }}{% endif %}
+          {% if ct.linkedin %} · <a href="{{ ct.linkedin }}" target="_blank" rel="noopener">LinkedIn ↗</a>{% endif %}
+          {% if ct.telegram %} · TG @{{ ct.telegram }}{% endif %}
+          {% if ct.last_reply_at %} · отвечал {{ ct.last_reply_at.strftime('%d.%m') }}{% elif ct.last_touch_at %} · касание {{ ct.last_touch_at.strftime('%d.%m') }}{% endif %}
+        </div>
+      </div>
+      <form method="post" action="/admin/crm/contact/{{ ct.id }}/dnc">
+        <button class="btn btn-ghost btn-sm" style="{% if not ct.do_not_contact %}color: var(--pink);{% endif %}">
+          {{ 'Можно писать' if ct.do_not_contact else '✋ Не беспокоить' }}</button>
+      </form>
+    </div>
+    {% else %}<p style="color: var(--ink-faint); font-size: 0.85rem;">Контактов пока нет — найди LPR и добавь.</p>{% endfor %}
+    <form class="crm-inline" method="post" action="/admin/crm/company/{{ c.id }}/contact/new" style="margin-top: 14px;">
+      <div><label>Имя</label><input name="name" required></div>
+      <div><label>Должность</label><input name="role_title" placeholder="Head of Talent…"></div>
+      <div><label>Email</label><input name="email" type="email"></div>
+      <div><label>LinkedIn</label><input name="linkedin" placeholder="https://linkedin.com/in/…"></div>
+      <div><label>Telegram</label><input name="telegram" placeholder="без @"></div>
+      <div style="flex: 0 0 auto;"><button class="btn btn-acid btn-sm">Добавить</button></div>
+    </form>
+  </div>
+
+</div>
+<div>
+
+  <div class="panel">
+    <h2>Карточка</h2>
+    <form method="post" action="/admin/crm/company/{{ c.id }}/update" class="crm-form-grid">
+      <div style="grid-column: 1 / -1;"><label>Название</label><input name="name" value="{{ c.name }}" required></div>
+      <div><label>Стадия</label>
+        <select name="stage">{% for code, label in stages %}<option value="{{ code }}" {% if c.stage == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Тип</label>
+        <select name="kind">{% for code, label in kinds %}<option value="{{ code }}" {% if c.kind == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Страна / гео</label><input name="country" value="{{ c.country }}"></div>
+      <div><label>Причина отказа</label><input name="lost_reason" value="{{ c.lost_reason }}" placeholder="если стадия — Отказ"></div>
+      <div style="grid-column: 1 / -1;"><label>Сайт</label><input name="website" value="{{ c.website }}"></div>
+      <div style="grid-column: 1 / -1;"><label>Карьерная страница</label><input name="careers_url" value="{{ c.careers_url }}"></div>
+      <div style="grid-column: 1 / -1;"><label>Заметки</label><textarea name="notes" rows="4">{{ c.notes }}</textarea></div>
+      <div><button class="btn btn-acid btn-sm">Сохранить</button></div>
+    </form>
+    <p style="color: var(--ink-faint); font-size: 0.75rem; margin-top: 10px;">
+      Вакансий: у них {{ c.open_jobs or 0 }} · у нас {{ c.jobs_here or 0 }} · источник: {{ c.source }} · добавлена {{ c.created_at.strftime('%d.%m.%Y') }}</p>
+  </div>
+
+  <div class="panel">
+    <h2>Фоллоу-апы</h2>
+    {% for t in tasks %}
+    <div class="task-row {% if t.done_at %}done{% elif t.due_at and t.due_at < now %}overdue{% endif %}">
+      <div class="t">{{ t.title }}
+        {% if t.due_at %}<span style="font-size: 0.72rem; color: var(--ink-faint);"> до {{ t.due_at.strftime('%d.%m') }}</span>{% endif %}
+        {% if t.result %}<div style="font-size: 0.75rem; color: var(--ink-faint);">{{ t.result }}</div>{% endif %}</div>
+      {% if not t.done_at %}
+      <form method="post" action="/admin/crm/task/{{ t.id }}/done"><button class="btn btn-ghost btn-sm">✓</button></form>
+      {% endif %}
+    </div>
+    {% endfor %}
+    <form class="crm-inline" method="post" action="/admin/crm/company/{{ c.id }}/task/new" style="margin-top: 12px;">
+      <div style="flex: 2 1 160px;"><label>Что сделать</label><input name="title" required placeholder="Напомнить о себе…"></div>
+      <div style="flex: 1 1 120px;"><label>Когда</label><input name="due" type="date"></div>
+      <div style="flex: 0 0 auto;"><button class="btn btn-acid btn-sm">+</button></div>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h2>История</h2>
+    {% for e in events %}<div class="evt">{{ e.created_at.strftime('%d.%m %H:%M') }} · {{ e.body }}</div>
+    {% else %}<p style="color: var(--ink-faint); font-size: 0.85rem;">Пока пусто.</p>{% endfor %}
+  </div>
+
+</div>
+</div>
+{% endblock %}

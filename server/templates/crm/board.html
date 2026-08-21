@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% set crm_tab = 'board' %}
+{% block bodyclass %}workspace{% endblock %}
+{% block title %}CRM — доска — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block style %}
+{% include "crm/_style.html" %}
+.board { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 16px; align-items: flex-start; }
+.board-col { flex: 0 0 250px; background: var(--bg-deep); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+.board-col h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-faint); margin: 4px 6px 10px; display: flex; justify-content: space-between; }
+.board-card { display: block; text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; color: var(--ink); }
+.board-card:hover { border-color: var(--acid); }
+.board-card .t { font-weight: 700; font-size: 0.9rem; display: flex; justify-content: space-between; gap: 8px; }
+.board-card .m { font-size: 0.74rem; color: var(--ink-faint); margin-top: 3px; }
+.board-card .warn { color: var(--pink); font-weight: 700; }
+{% endblock %}
+{% block content %}
+{% include "crm/_head.html" %}
+
+<div class="stat-grid">
+  <div class="stat-card"><div class="n">{{ stats.total }}</div><div class="l">Компаний</div></div>
+  <div class="stat-card"><div class="n">{{ stats.replied }}</div><div class="l">В диалоге</div></div>
+  <div class="stat-card"><div class="n" {% if stats.clients %}style="color: var(--acid);"{% endif %}>{{ stats.clients }}</div><div class="l">Клиентов</div></div>
+  <div class="stat-card"><div class="n">{{ stats.touches_7d }}</div><div class="l">Касаний за 7 дней</div></div>
+  <a class="stat-card" href="/admin/crm/tasks" style="text-decoration:none;" {% if stats.tasks_overdue %}style="border-color: var(--pink);"{% endif %}>
+    <div class="n" {% if stats.tasks_overdue %}style="color: var(--pink);"{% endif %}>{{ stats.tasks_overdue }}</div><div class="l">Просрочено&nbsp;→</div></a>
+</div>
+
+<div class="board">
+  {% for code, label, items in columns %}
+  <div class="board-col">
+    <h3>{{ label }} <span>{{ items|length }}</span></h3>
+    {% for c in items %}
+    <a class="board-card" href="/admin/crm/company/{{ c.id }}">
+      <div class="t">{{ c.name }}
+        <span class="icp {% if c.icp_score >= 70 %}hi{% elif c.icp_score >= 50 %}mid{% else %}lo{% endif %}">{{ c.icp_score }}</span></div>
+      <div class="m">
+        {% if c.open_jobs %}{{ c.open_jobs }} вак. у них{% endif %}
+        {% if c.jobs_here %} · {{ c.jobs_here }} у нас{% endif %}
+        {% if c.country %} · {{ c.country.split(',')[0] }}{% endif %}
+        {% if c.id in overdue %} · <span class="warn">⏰ просрочен фоллоу-ап</span>{% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

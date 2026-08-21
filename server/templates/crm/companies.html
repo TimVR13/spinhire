@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% set crm_tab = 'companies' %}
+{% block bodyclass %}workspace{% endblock %}
+{% block title %}CRM — компании — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block style %}
+{% include "crm/_style.html" %}
+.filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: var(--sp-4); }
+.filters input, .filters select { background: var(--bg-deep); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font: inherit; }
+details.newco { margin-bottom: var(--sp-4); }
+details.newco summary { cursor: pointer; font-weight: 700; color: var(--acid); }
+{% endblock %}
+{% block content %}
+{% include "crm/_head.html" %}
+
+<form class="filters" method="get" action="/admin/crm/companies">
+  <input type="search" name="q" value="{{ q }}" placeholder="Название, домен, страна…">
+  <select name="stage">
+    <option value="">Все стадии</option>
+    {% for code, label in stages %}<option value="{{ code }}" {% if stage == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="kind">
+    <option value="">Все типы</option>
+    {% for code, label in kinds %}<option value="{{ code }}" {% if kind == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="sort">
+    <option value="icp" {% if sort == 'icp' %}selected{% endif %}>По ICP</option>
+    <option value="jobs" {% if sort == 'jobs' %}selected{% endif %}>По вакансиям</option>
+    <option value="updated" {% if sort == 'updated' %}selected{% endif %}>По активности</option>
+    <option value="name" {% if sort == 'name' %}selected{% endif %}>По имени</option>
+  </select>
+  <button class="btn btn-acid btn-sm">Показать</button>
+</form>
+
+<details class="newco">
+  <summary>+ Добавить компанию вручную</summary>
+  <form class="crm-inline" method="post" action="/admin/crm/company/new" style="margin-top: 12px;">
+    <div><label>Название</label><input name="name" required></div>
+    <div><label>Тип</label><select name="kind">{% for code, label in kinds %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select></div>
+    <div><label>Страна</label><input name="country"></div>
+    <div><label>Сайт</label><input name="website" placeholder="https://…"></div>
+    <div style="flex: 0 0 auto;"><button class="btn btn-acid btn-sm">Создать</button></div>
+  </form>
+</details>
+
+<div class="table-wrap">
+<table class="adm">
+  <tr><th>Компания</th><th>Стадия</th><th>Тип</th><th>ICP</th><th>Вак. у них</th><th>У нас</th><th>Страна</th><th>Обновлена</th></tr>
+  {% for c in companies %}
+  <tr>
+    <td><a href="/admin/crm/company/{{ c.id }}" style="color: inherit;">{{ c.name }}</a>
+      {% if c.domain %}<div style="font-size:.72rem; color:var(--ink-faint); font-weight:400;">{{ c.domain }}</div>{% endif %}</td>
+    <td><span class="stage-tag stage-{{ c.stage }}">{{ stage_labels[c.stage] }}</span></td>
+    <td>{{ kind_labels.get(c.kind, c.kind) }}</td>
+    <td><span class="icp {% if c.icp_score >= 70 %}hi{% elif c.icp_score >= 50 %}mid{% else %}lo{% endif %}">{{ c.icp_score }}</span></td>
+    <td>{{ c.open_jobs or '—' }}</td>
+    <td>{{ c.jobs_here or '—' }}</td>
+    <td>{{ c.country.split(',')[0] if c.country else '—' }}</td>
+    <td>{{ c.updated_at.strftime('%d.%m') }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="8" style="text-align:center; padding: 30px; color: var(--ink-faint);">
+    Пусто. Нажми «⟳ Импорт из краулера» — подтянутся компании из data/companies.json.</td></tr>
+  {% endfor %}
+</table>
+</div>
+<p style="color: var(--ink-faint); font-size: .8rem; margin-top: 10px;">Всего: {{ companies|length }}</p>
+{% endblock %}

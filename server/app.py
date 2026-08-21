@@ -4136,5 +4136,9 @@ async def http_exc(request: Request, exc: StarletteHTTPException):
     return PlainTextResponse(str(exc.detail), status_code=exc.status_code)
 
 
+# ---------- CRM (импорт в конце: crm.py использует модели и хелперы отсюда) ----------
+from server import crm  # noqa: E402
+app.include_router(crm.router)
+
 # ---------- static site (последним — перекрывается роутами выше) ----------
 app.mount("/", StaticFiles(directory=ROOT, html=True), name="site")

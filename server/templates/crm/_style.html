@@ -1,0 +1,24 @@
+.adm-tabs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-block: var(--sp-4) var(--sp-5); }
+.adm-tabs a { text-decoration: none; border: 1px solid var(--line); border-radius: 10px; padding: 8px 16px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-dim); background: var(--surface); }
+.adm-tabs a.on { background: var(--acid); color: var(--on-acid); border-color: var(--acid); }
+.adm-tabs a:hover { border-color: var(--acid); }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 12px; margin-bottom: var(--sp-5); }
+.stat-card { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 12px 16px; min-height: 76px; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.stat-card .n { font-family: var(--font-display); font-weight: 900; font-size: 1.45rem; color: var(--ink); }
+.stat-card .l { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-faint); font-weight: 700; }
+.crm-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+.crm-form-grid label, .crm-inline label { display: block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); margin-bottom: 4px; }
+.crm-form-grid input, .crm-form-grid select, .crm-form-grid textarea,
+.crm-inline input, .crm-inline select, .crm-inline textarea { width: 100%; background: var(--bg-deep); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font: inherit; }
+.crm-inline { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+.crm-inline > div { flex: 1 1 160px; }
+.stage-tag { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; padding: 3px 9px; border: 1.5px solid; border-radius: 999px; white-space: nowrap; }
+.stage-new { color: var(--violet); border-color: var(--violet); }
+.stage-contact { color: var(--cyan, #22d3ee); border-color: var(--cyan, #22d3ee); }
+.stage-outreach { color: var(--yellow); border-color: var(--yellow); }
+.stage-replied { color: var(--pink); border-color: var(--pink); }
+.stage-talks { color: var(--pink); border-color: var(--pink); background: oklch(0.2 0.06 350); }
+.stage-client { color: var(--acid); border-color: var(--acid); background: oklch(0.2 0.06 155); }
+.stage-lost { color: var(--ink-faint); border-color: var(--line); }
+.icp { font-weight: 900; font-family: var(--font-display); }
+.icp.hi { color: var(--acid); } .icp.mid { color: var(--yellow); } .icp.lo { color: var(--ink-faint); }

@@ -1,0 +1,14 @@
+<nav class="crumbs"><a href="/">Главная</a> / <a href="/admin">Админка</a> / CRM</nav>
+<span class="kicker" style="color: var(--yellow);">Продажи</span>
+<h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem); margin-top: 8px;">CRM компаний</h1>
+
+<nav class="adm-tabs">
+  <a href="/admin/crm" class="{% if crm_tab == 'board' %}on{% endif %}">Доска</a>
+  <a href="/admin/crm/companies" class="{% if crm_tab == 'companies' %}on{% endif %}">Компании</a>
+  <a href="/admin/crm/tasks" class="{% if crm_tab == 'tasks' %}on{% endif %}">Фоллоу-апы</a>
+  <form method="post" action="/admin/crm/import" style="margin-left:auto;">
+    <button class="btn btn-ghost btn-sm" title="Компании из краулера: data/companies.json + профили борда">⟳ Импорт из краулера</button>
+  </form>
+</nav>
+
+{% if msg %}<div class="flash">{{ msg }}</div>{% endif %}

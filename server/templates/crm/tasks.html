@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% set crm_tab = 'tasks' %}
+{% block bodyclass %}workspace{% endblock %}
+{% block title %}CRM — фоллоу-апы — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block style %}
+{% include "crm/_style.html" %}
+{% endblock %}
+{% block content %}
+{% include "crm/_head.html" %}
+
+<div class="table-wrap">
+<table class="adm">
+  <tr><th>Срок</th><th>Задача</th><th>Компания</th><th></th></tr>
+  {% for t in tasks %}
+  <tr>
+    <td style="{% if t.due_at and t.due_at < now %}color: var(--pink); font-weight: 800;{% endif %}">
+      {{ t.due_at.strftime('%d.%m.%Y') if t.due_at else 'без срока' }}
+      {% if t.due_at and t.due_at < now %} ⏰{% endif %}</td>
+    <td>{{ t.title }}</td>
+    <td><a href="/admin/crm/company/{{ t.company_id }}" style="color: inherit;">{{ names.get(t.company_id, '?') }}</a></td>
+    <td><form method="post" action="/admin/crm/task/{{ t.id }}/done"><button class="btn btn-ghost btn-sm">✓ Сделано</button></form></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="4" style="text-align:center; padding: 30px; color: var(--ink-faint);">Открытых фоллоу-апов нет. Красота.</td></tr>
+  {% endfor %}
+</table>
+</div>
+{% endblock %}
