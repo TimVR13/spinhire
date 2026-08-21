@@ -94,6 +94,21 @@ CATEGORIES = ["Операции казино", "Беттинг и трейдин
               "Финансы, право и HR", "Топ-менеджмент"]
 FORMATS = ["офис", "гибрид", "удалёнка"]
 
+# В базе формат хранится по-русски, а ссылки на нас ставят по-английски:
+# ?fmt=remote приходит из чужих статей, ИИ-ответов и наших же переводов.
+FMT_ALIASES = {
+    "remote": "удалёнка", "wfh": "удалёнка", "remotely": "удалёнка",
+    "work from home": "удалёнка", "удаленка": "удалёнка", "віддалено": "удалёнка",
+    "office": "офис", "on-site": "офис", "onsite": "офис", "офіс": "офис",
+    "hybrid": "гибрид", "гібрид": "гибрид",
+}
+
+
+def normalize_fmt(raw: str) -> str:
+    """Привести формат из ссылки к тому, что лежит в базе."""
+    value = (raw or "").strip()
+    return FMT_ALIASES.get(value.lower(), value)
+
 
 
 def script_language(text: str):
@@ -1231,7 +1246,7 @@ def _lang_links(path: str, current: str) -> str:
         else:
             links.append(f'<a lang="{code}" hreflang="{code}" href="{href}">{label}</a>')
     return ('<nav class="lang-links" aria-label="Язык сайта">'
-            + " · ".join(links) + "</nav>")
+            + "".join(links) + "</nav>")
 
 
 def _hreflang_block(path: str, canonical_lang: str) -> str:
@@ -1272,6 +1287,11 @@ async def language_layer(request: Request, call_next):
         text = text.replace('<html lang="ru">', f'<html lang="{lang}">', 1)
         if prefix_lang:
             text = _prefix_links(text, lang)
+    live_count = getattr(request.state, "landing_count", None)
+    if live_count:
+        token, live = live_count
+        text = re.sub(r"(<title>[^<]*)" + re.escape(token) + r"([^<]*</title>)",
+                      lambda m: m.group(1) + live + m.group(2), text, count=1)
     marker = (f'<meta name="sh-lang" content="{lang}" data-mode="{"path" if prefix_lang else "host"}">'
               + _hreflang_block(inner_path, lang))
     # свой canonical у страницы теперь лишний — язык задаёт его сам
@@ -1521,6 +1541,7 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
               db: Session = Depends(db_session)):
     base = db.query(Job).filter(Job.status == "approved")
     qs = base
+    fmt = normalize_fmt(fmt)
     if fmt:
         qs = qs.filter(Job.fmt == fmt)
     if cat:
@@ -3709,6 +3730,141 @@ async def resumes_quick(request: Request, email: str = Form(...),
     return set_session(RedirectResponse("/profile?quick=1#cv", status_code=303), user)
 
 
+# ---------- SEO-лендинги: живые вакансии вместо витринных примеров ----------
+
+def _like_any(column, *needles):
+    return or_(*[column.like(f"%{n}%") for n in needles])
+
+
+LANDING_CARDS = 6
+_JOBS_LIST_DIV = '<div class="jobs-list">'
+_LANDING_CTA_RE = re.compile(r'(<a href=")jobs\.html(" class="btn btn-acid")')
+
+# Каждый лендинг показывает свой срез базы. Ссылка ведёт на тот же срез
+# в общем списке, чтобы «Все вакансии с фильтрами» не сбрасывали контекст.
+LANDING_JOBS = {
+    "jobs-remote.html": {
+        "where": lambda q: q.filter(Job.fmt == "удалёнка"),
+        "link": "/jobs?fmt=remote",
+        # число, зашитое в вёрстку и в словари переводов
+        "count_token": "218",
+    },
+    "jobs-malta.html": {
+        "where": lambda q: q.filter(_like_any(Job.location, "Malta", "Мальт")),
+        "link": "/jobs?q=Malta",
+    },
+    "jobs-cyprus.html": {
+        "where": lambda q: q.filter(_like_any(Job.location, "Cyprus", "Limassol", "Кипр", "Лимассол")),
+        "link": "/jobs?q=Cyprus",
+    },
+    "jobs-warsaw.html": {
+        "where": lambda q: q.filter(_like_any(Job.location, "Warsaw", "Warszawa", "Варшав")),
+        "link": "/jobs?q=Warsaw",
+    },
+    "jobs-tbilisi.html": {
+        # «Georgia» — ещё и штат США, поэтому американские города отсекаем
+        "where": lambda q: q.filter(
+            _like_any(Job.location, "Tbilisi", "Georgia", "Тбилис", "Грузия"),
+            ~_like_any(Job.location, "United States", "USA", "Atlanta")),
+        "link": "/jobs?q=Tbilisi",
+    },
+    "jobs-gamedev.html": {
+        "where": lambda q: q.filter(Job.category == "Разработка игр"),
+        "link": "/jobs?cat=Разработка игр",
+    },
+    "jobs-aml.html": {
+        "where": lambda q: q.filter(Job.category == "Комплаенс и AML"),
+        "link": "/jobs?cat=Комплаенс и AML",
+    },
+    "jobs-affiliate.html": {
+        "where": lambda q: q.filter(Job.category == "Аффилейты и медиабаинг"),
+        "link": "/jobs?cat=Аффилейты и медиабаинг",
+    },
+    "jobs-vip-manager.html": {
+        "where": lambda q: q.filter(_like_any(Job.title, "VIP", "vip", "ВИП")),
+        "link": "/jobs?q=VIP",
+    },
+    "jobs-crypto.html": {
+        "where": lambda q: q.filter(or_(_like_any(Job.salary, "USDT", "USDC", "крипт"),
+                                        _like_any(Job.tags, "USDT", "crypto", "крипт"),
+                                        _like_any(Job.description, "USDT", "крипт"))),
+        "link": "/jobs?q=USDT",
+    },
+}
+
+
+# грейд, уточнение в скобках и предлоги не делают вакансию другой ролью
+_TITLE_NOISE_RE = re.compile(
+    r"\(.*?\)|\b(junior|middle|senior|lead|trainee|intern|of|the|and)\b", re.I)
+
+
+def _role_key(title: str) -> str:
+    """«Junior-Middle Media Buyer (Facebook)» и «Media Buyer FB» — одна роль."""
+    words = _TITLE_NOISE_RE.sub(" ", title or "").lower()
+    words = re.sub(r"[^\w\s]", " ", words).split()
+    return " ".join(words[:2])
+
+
+def _landing_pick(rows, limit):
+    """Разные компании и роли, а не последняя пачка из одного обхода краулера."""
+    picked, companies, titles = [], set(), set()
+    for job in rows:
+        company = (job.company_name or "").strip().lower()
+        title = _role_key(job.title)
+        if company in companies or title in titles:
+            continue
+        companies.add(company)
+        titles.add(title)
+        picked.append(job)
+        if len(picked) == limit:
+            break
+    return picked or rows[:limit]
+
+
+def _replace_div_block(html_text: str, opener: str, inner: str) -> str:
+    """Подменить содержимое блока <div …> … </div> с учётом вложенных div."""
+    start = html_text.find(opener)
+    if start < 0:
+        return html_text
+    body_start = start + len(opener)
+    depth, i = 1, body_start
+    while depth and i < len(html_text):
+        nxt_open = html_text.find("<div", i)
+        nxt_close = html_text.find("</div>", i)
+        if nxt_close < 0:
+            return html_text
+        if 0 <= nxt_open < nxt_close:
+            depth, i = depth + 1, nxt_open + 4
+        else:
+            depth, i = depth - 1, nxt_close + 6
+    if depth:
+        return html_text
+    return html_text[:body_start] + inner + html_text[i - 6:]
+
+
+@app.get("/jobs-{slug}.html", response_class=HTMLResponse)
+def seo_landing(request: Request, slug: str, db: Session = Depends(db_session)):
+    """Лендинг отдаёт настоящие вакансии из базы, а не оформительские примеры."""
+    filename = f"jobs-{slug}.html"
+    config = LANDING_JOBS.get(filename)
+    path = os.path.join(ROOT, filename)
+    if not config or not os.path.exists(path):
+        raise HTTPException(404)
+    with open(path, encoding="utf-8") as handle:
+        text = handle.read()
+    query = config["where"](db.query(Job).filter(Job.status == "approved"))
+    recent = query.order_by(Job.featured.desc(), Job.created_at.desc()).limit(LANDING_CARDS * 12).all()
+    cards = templates.env.get_template("_landing_jobs.html").render(
+        jobs=_landing_pick(recent, LANDING_CARDS))
+    text = _replace_div_block(text, _JOBS_LIST_DIV, cards)
+    text = _LANDING_CTA_RE.sub(lambda m: m.group(1) + config["link"] + m.group(2), text)
+    if config.get("count_token"):
+        # Счётчик в <title> подставляем уже после перевода: словари переводят
+        # заголовок целиком и ждут в нём исходное число.
+        request.state.landing_count = (config["count_token"], str(query.count()))
+    return HTMLResponse(text)
+
+
 # ---------- sitemap (динамический, включает живые вакансии) ----------
 
 ARTICLE_FILES = {
@@ -4030,6 +4186,7 @@ def api_jobs(db: Session = Depends(db_session),
         rows = [j for j in rows if (j.category or "").lower() == category.lower()]
     if country:
         rows = [j for j in rows if country_of(j.location).lower() == country.lower()]
+    fmt = normalize_fmt(fmt)
     if fmt:
         rows = [j for j in rows if (j.fmt or "").lower() == fmt.lower()]
 

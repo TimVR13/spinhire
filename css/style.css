@@ -860,3 +860,7 @@ body.workspace h1, body.workspace h2 { letter-spacing: 0; }
 .lang-links a { color: var(--ink-faint); text-decoration: none; }
 .lang-links a:hover { color: var(--acid); }
 .lang-links b { color: var(--ink); font-weight: 700; }
+/* точка-разделитель между языками — псевдоэлементом, чтобы не рвалась при переносе строк */
+.lang-links a:not(:last-child)::after, .lang-links b:not(:last-child)::after {
+  content: "·"; color: var(--line-strong); margin-left: 12px;
+}

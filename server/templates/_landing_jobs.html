@@ -1,0 +1,27 @@
+{% for j in jobs %}
+<a class="job-card" href="/job/{{ j.id }}">
+  <div class="job-card__logo" style="background: {% if j.logo_url %}var(--surface-2){% else %}var(--{{ ['acid','pink','yellow','violet'][loop.index0 % 4] }}){% endif %}; color: var(--bg-deep); overflow: hidden;" aria-hidden="true">
+    {% if j.logo_url %}<img src="{{ j.logo_url }}" alt="" style="width:34px;height:34px;object-fit:contain" onerror="this.replaceWith(document.createTextNode('{{ j.initials }}'))">{% else %}{{ j.initials }}{% endif %}
+  </div>
+  <div>
+    <h3 class="job-card__title">{{ j.title }}</h3>
+    <p class="job-card__meta"><b>{{ j.company_name }}</b> · {{ j.location or '—' }} · {{ j.fmt }}</p>
+    <div class="job-card__tags">
+      {% if j.category %}<span class="tag">{{ j.category }}</span>{% endif %}
+      {% for t in j.tag_list[:3] %}<span class="tag">{{ t }}</span>{% endfor %}
+      {% for code, label in j.language_list[:2] %}<span class="tag tag-acid" title="Язык работы">{{ label }}</span>{% endfor %}
+    </div>
+  </div>
+  <div class="job-card__side">
+    {% if j.has_salary %}<span class="salary">{{ j.salary }}</span>
+    {% elif j.salary_estimate %}<span class="salary salary--est" title="Оценка SpinHire по картотеке профессий — не данные работодателя">≈ {{ j.salary_estimate }}</span>
+    {% else %}<span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>{% endif %}
+    <span class="job-card__age">{{ j.created_at.strftime('%d.%m') }}</span>
+  </div>
+</a>
+{% else %}
+<div class="card" style="border-style: dashed; text-align: center; padding: 48px;">
+  <b style="font-family: var(--font-display); text-transform: uppercase;">Пока пусто</b>
+  <p style="color: var(--ink-dim); margin-top: 8px;">Свежие вакансии этой категории появятся после ближайшего обхода — <a href="/jobs" style="color: var(--acid);">смотрите весь список</a>.</p>
+</div>
+{% endfor %}
