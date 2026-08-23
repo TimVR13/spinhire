@@ -19,6 +19,14 @@ def nodes_of(path: str):
     html = open(path, encoding="utf-8").read()
     body = SKIP.sub("", html)
     out, seen = [], set()
+    # <title> живёт в <head>, который вырезан из body: без него языковые версии
+    # отдавали половину заголовка вкладки по-русски
+    title = re.search(r"<title>([^<]+)</title>", html)
+    if title:
+        text = " ".join(title.group(1).split())
+        if re.search(r"[А-Яа-я]", text):
+            seen.add(text)
+            out.append(text)
     for raw in re.findall(r">([^<>]{8,400})<", body):
         text = " ".join(raw.split())
         if not re.search(r"[А-Яа-я]", text) or text in seen:
