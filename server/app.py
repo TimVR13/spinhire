@@ -3881,6 +3881,7 @@ ARTICLE_FILES = {
     "igaming-bez-opyta": "post-igaming-bez-opyta.html",
     "support-agent-igaming": "post-support-agent-igaming.html",
     "rabota-na-kipre-igaming": "post-rabota-na-kipre-igaming.html",
+    "media-buyer-igaming": "post-media-buyer-igaming.html",
 }
 
 
