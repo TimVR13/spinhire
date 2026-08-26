@@ -3882,6 +3882,7 @@ ARTICLE_FILES = {
     "support-agent-igaming": "post-support-agent-igaming.html",
     "rabota-na-kipre-igaming": "post-rabota-na-kipre-igaming.html",
     "media-buyer-igaming": "post-media-buyer-igaming.html",
+    "qa-v-geymdeve-slotov": "post-qa-v-geymdeve-slotov.html",
 }
 
 
