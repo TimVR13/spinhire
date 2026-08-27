@@ -3883,6 +3883,7 @@ ARTICLE_FILES = {
     "rabota-na-kipre-igaming": "post-rabota-na-kipre-igaming.html",
     "media-buyer-igaming": "post-media-buyer-igaming.html",
     "qa-v-geymdeve-slotov": "post-qa-v-geymdeve-slotov.html",
+    "crm-manager-casino": "post-crm-manager-casino.html",
 }
 
 
