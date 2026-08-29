@@ -71,7 +71,9 @@
 {% block content %}
   <nav class="crumbs" aria-label="Хлебные крошки"><a href="/">Главная</a> / <a href="/jobs">Вакансии</a> / {{ job.title }}</nav>
 
-  {% if request.query_params.get('ok') %}<div class="flash">✓ Отклик отправлен — работодатель увидит его в кабинете.</div>{% endif %}
+  {% if request.query_params.get('ok') %}<div class="flash">✓ Отклик отправлен — работодатель увидит его в кабинете.{% if request.query_params.get('extra') %} Дневной лимит был исчерпан — списано {{ request.query_params.get('extra') }} SC.{% endif %}</div>{% endif %}
+  {% if request.query_params.get('limit') %}<div class="flash">Лимит откликов на сегодня исчерпан ({{ 10 }}/сутки). Дополнительный отклик стоит 10 SC — загляните за ежедневным фриспином в профиль или вернитесь завтра.</div>{% endif %}
+  {% if request.query_params.get('fast') %}<div class="flash">Слишком быстро — выдержите паузу ~20 секунд между откликами и попробуйте снова.</div>{% endif %}
 
   <div class="job-layout">
     <div>

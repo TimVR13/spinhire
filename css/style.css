@@ -519,7 +519,7 @@ main > .section:nth-of-type(even) {
   .main-nav {
     display: none;
     position: absolute; top: 78px; left: 0; right: 0;
-    background: color-mix(in oklch, var(--bg-deep) 96%, transparent); border-bottom: 2px solid var(--line);
+    background: var(--bg-deep); border-bottom: 2px solid var(--line);
     box-shadow: 0 24px 40px oklch(0.02 0.01 285 / 0.6);
     flex-direction: column; gap: 0; padding: var(--sp-3) var(--sp-5) var(--sp-5);
   }

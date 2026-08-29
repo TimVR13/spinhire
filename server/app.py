@@ -22,6 +22,7 @@ from typing import Optional
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.templating import Jinja2Templates
 import bcrypt as _bcrypt
 from itsdangerous import BadSignature, URLSafeSerializer
@@ -41,7 +42,8 @@ from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer,
                         String, Text, UniqueConstraint, create_engine, event,
                         func, or_)
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
+from sqlalchemy.orm import (Session, declarative_base, defer, relationship,
+                            sessionmaker)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(ROOT, "data", "spinhire.db")
@@ -72,6 +74,12 @@ REQUIRE_VERIFY = bool(RESEND_API_KEY)
 # ua.spinhire.io — украинский. Включается SPINHIRE_BASE_LANG=en, когда для
 # поддоменов добавлены DNS-записи и Caddy. До этого поведение прежнее (ru).
 BASE_LANG = os.environ.get("SPINHIRE_BASE_LANG", "ru")
+
+# Анти-спам откликов: дневной лимит бесплатных, сверх — за SpinCoins,
+# плюс минимальная пауза между откликами (защита от масс-аплая скриптом).
+APPLY_DAILY_LIMIT = int(os.environ.get("SPINHIRE_APPLY_DAILY_LIMIT", "10"))
+APPLY_EXTRA_COST = int(os.environ.get("SPINHIRE_APPLY_EXTRA_COST", "10"))
+APPLY_MIN_INTERVAL = int(os.environ.get("SPINHIRE_APPLY_MIN_INTERVAL", "20"))
 LANG_HOSTS = {"en": "spinhire.io", "ru": "ru.spinhire.io", "uk": "ua.spinhire.io"}
 
 # Европейские языки живут в поддиректориях (/de/, /pl/…): не нужны ни DNS-записи,
@@ -957,6 +965,15 @@ def migrate(db: Session):
         col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
         if rcols and col not in rcols:
             db.execute(text(_sql))
+    # индексы под горячие запросы каталога/API (без них /jobs сканирует всю таблицу)
+    for _idx in (
+        "CREATE INDEX IF NOT EXISTS idx_jobs_status_created ON jobs(status, created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_jobs_status_category ON jobs(status, category)",
+        "CREATE INDEX IF NOT EXISTS idx_jobs_source ON jobs(source)",
+        "CREATE INDEX IF NOT EXISTS idx_apps_user_created ON applications(user_id, created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_events_name_entity ON analytics_events(name, entity_type, entity_id)",
+    ):
+        db.execute(text(_idx))
     # верификация почты: verified DEFAULT 1 — существующие пользователи остаются рабочими
     for _sql in (
         "ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 1",
@@ -1033,6 +1050,28 @@ def backfill_categories(db: Session):
 app = FastAPI(title="SpinHire")
 templates = Jinja2Templates(directory=os.path.join(ROOT, "server", "templates"))
 
+
+def _ru_plural(n, one: str, few: str, many: str) -> str:
+    n = abs(int(n or 0))
+    if n % 10 == 1 and n % 100 != 11:
+        return one
+    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+        return few
+    return many
+
+
+templates.env.filters["ru_plural"] = _ru_plural
+
+
+@app.get("/about")
+@app.get("/privacy")
+@app.get("/terms")
+@app.get("/game-rules")
+@app.get("/editorial")
+def clean_static_pages(request: Request):
+    # «Чистые» URL служебных страниц — 301 на канонические .html
+    return RedirectResponse(request.url.path + ".html", status_code=301)
+
 # ---------- красивый рендер описаний вакансий ----------
 from markupsafe import Markup, escape  # noqa: E402
 
@@ -1094,6 +1133,7 @@ _MD_ROUTE_EXACT = {"/market.md"}
 _SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
     "X-Content-Type-Options": "nosniff",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     "Referrer-Policy": "strict-origin-when-cross-origin",
 }
 
@@ -1750,8 +1790,10 @@ def llms_txt(db: Session = Depends(db_session)):
 
 
 @app.get("/job/{job_id}.md")
-def job_markdown(job_id: int, db: Session = Depends(db_session)):
-    job = db.get(Job, job_id)
+def job_markdown(job_id: str, db: Session = Depends(db_session)):
+    if not job_id.isdigit():
+        raise HTTPException(404)
+    job = db.get(Job, int(job_id))
     if not job or job.status not in ("approved", "archived"):
         raise HTTPException(404)
     return _md_response(_job_markdown(job))
@@ -1945,8 +1987,10 @@ def checkout_invoice(order_id: int, request: Request, db: Session = Depends(db_s
 
 
 @app.get("/job/{job_id}", response_class=HTMLResponse)
-def job_detail(job_id: int, request: Request, db: Session = Depends(db_session)):
-    job = db.get(Job, job_id)
+def job_detail(job_id: str, request: Request, db: Session = Depends(db_session)):
+    if not job_id.isdigit():
+        raise HTTPException(404)  # /job/abc — 404, а не 422
+    job = db.get(Job, int(job_id))
     viewer = get_user(request, db)
     # Админ и владелец видят вакансию в любом статусе — иначе из очереди модерации нечего открывать
     privileged = viewer and (viewer.role == "admin" or viewer.id == job.owner_id if job else False)
@@ -1980,6 +2024,21 @@ def job_apply(job_id: int, request: Request, cover: str = Form(""),
     # Отклик принимаем и на агрегированные вакансии — как лид: мы передаём его
     # работодателю и используем как аргумент подключить компанию к SpinHire.
     if not db.query(Application).filter_by(job_id=job_id, user_id=user.id).first():
+        # Анти-спам: пауза между откликами + дневной лимит (сверх — за SpinCoins).
+        day_ago = datetime.utcnow() - timedelta(hours=24)
+        recent = (db.query(Application)
+                  .filter(Application.user_id == user.id,
+                          Application.created_at >= day_ago)
+                  .order_by(Application.created_at.desc()).all())
+        if recent and (datetime.utcnow() - recent[0].created_at).total_seconds() < APPLY_MIN_INTERVAL:
+            return RedirectResponse(f"/job/{job_id}?fast=1", status_code=303)
+        extra = ""
+        if len(recent) >= APPLY_DAILY_LIMIT:
+            if (user.coins or 0) >= APPLY_EXTRA_COST:
+                user.coins = (user.coins or 0) - APPLY_EXTRA_COST
+                extra = f"&extra={APPLY_EXTRA_COST}"
+            else:
+                return RedirectResponse(f"/job/{job_id}?limit=1", status_code=303)
         application = Application(job_id=job_id, user_id=user.id, cover=cover.strip())
         db.add(application)
         db.flush()
@@ -1987,10 +2046,34 @@ def job_apply(job_id: int, request: Request, cover: str = Form(""),
                                 kind="created", body="Кандидат отправил отклик"))
         track(db, "application_created", user.id, "job", job_id)
         db.commit()
+        return RedirectResponse(f"/job/{job_id}?ok=1{extra}", status_code=303)
     return RedirectResponse(f"/job/{job_id}?ok=1", status_code=303)
 
 
 # ---------- auth ----------
+
+# Троттлинг попыток входа/регистрации: скользящее окно в памяти процесса.
+_auth_attempts: dict = {}
+
+
+def _auth_throttled(key: str, limit: int = 5, window: int = 60) -> bool:
+    now = time.time()
+    hits = [t for t in _auth_attempts.get(key, []) if now - t < window]
+    throttled = len(hits) >= limit
+    if not throttled:
+        hits.append(now)
+    _auth_attempts[key] = hits
+    if len(_auth_attempts) > 10000:  # не даём словарю расти бесконечно
+        _auth_attempts.clear()
+    return throttled
+
+
+def _client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else "?"
+
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, next: str = "/", db: Session = Depends(db_session)):
@@ -2000,6 +2083,9 @@ def login_page(request: Request, next: str = "/", db: Session = Depends(db_sessi
 @app.post("/login")
 def login(request: Request, email: str = Form(...), password: str = Form(...),
           next: str = Form("/"), db: Session = Depends(db_session)):
+    if _auth_throttled(f"login:{_client_ip(request)}:{email.strip().lower()}"):
+        return render(request, db, "login.html", next=next,
+                      error="Слишком много попыток — подождите минуту")
     u = db.query(User).filter(func.lower(User.email) == email.strip().lower()).first()
     if not u or not check_pw(password, u.password_hash):
         return render(request, db, "login.html", next=next, error="Неверная почта или пароль")
@@ -2027,6 +2113,10 @@ def register(request: Request, email: str = Form(...), password: str = Form(...)
              company_name: str = Form(""), next: str = Form(""),
              db: Session = Depends(db_session)):
     role = role if role in ("talent", "employer") else "talent"
+    if _auth_throttled(f"reg:{_client_ip(request)}", limit=5, window=300):
+        return render(request, db, "register.html", role=role,
+                      error="Слишком много регистраций подряд — подождите несколько минут",
+                      next=next, email=email.strip().lower())
     if db.query(User).filter(func.lower(User.email) == email.strip().lower()).first():
         return render(request, db, "register.html", role=role, next=next, email=email,
                       error="Такая почта уже зарегистрирована — войдите")
@@ -4121,7 +4211,20 @@ def human_date(value: date) -> str:
     return f"{value.day} {RU_MONTHS[value.month - 1]} {value.year}"
 
 
+_market_stats_cache = {"at": 0.0, "data": None}
+
+
 def market_stats_data(db: Session) -> dict:
+    """Кэширующая обёртка: агрегат тяжёлый, пересчитываем не чаще раза в 10 мин."""
+    now = time.time()
+    if _market_stats_cache["data"] is not None and now - _market_stats_cache["at"] < 600:
+        return _market_stats_cache["data"]
+    data = _market_stats_compute(db)
+    _market_stats_cache.update(at=now, data=data)
+    return data
+
+
+def _market_stats_compute(db: Session) -> dict:
     """Живые цифры рынка труда iGaming.
 
     Считается на лету по всем одобренным вакансиям: это наш собственный
@@ -4197,7 +4300,9 @@ def api_jobs(db: Session = Depends(db_session),
     """
     limit = max(1, min(100, limit))
     page = max(1, page)
-    rows = db.query(Job).filter(Job.status == "approved").order_by(
+    # description в ответ не входит — не тащим её из БД (в разы меньше I/O на 4.7k строк)
+    rows = db.query(Job).options(defer(Job.description)).filter(
+        Job.status == "approved").order_by(
         Job.featured.desc(), Job.created_at.desc()).all()
 
     needle = (q or "").strip().lower()
@@ -4428,3 +4533,7 @@ tgpost.start_scheduler()  # молчит, пока не заданы SPINHIRE_TG
 
 # ---------- static site (последним — перекрывается роутами выше) ----------
 app.mount("/", StaticFiles(directory=ROOT, html=True), name="site")
+
+# Сжатие — ПОСЛЕДНИМ add_middleware: так gzip становится внешним слоем и жмёт
+# уже переведённое language_layer тело (иначе переводчик портит сжатые байты).
+app.add_middleware(GZipMiddleware, minimum_size=1024)

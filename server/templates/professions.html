@@ -115,7 +115,7 @@
         <span class="en">{{ r.title_en }}</span>
         <h3>{{ r.title }}</h3>
         <p>{{ r.lead }}</p>
-        <span class="foot"><span class="pay">{{ r.salary }} / мес</span>{% if r.jobs %}<span class="live">{{ r.jobs }} вакансий</span>{% endif %}</span>
+        <span class="foot"><span class="pay">{{ r.salary }} / мес</span>{% if r.jobs %}<span class="live">{{ r.jobs }} {{ r.jobs | ru_plural('вакансия', 'вакансии', 'вакансий') }}</span>{% endif %}</span>
         <span class="more">профиль роли: метрики, навыки, зарплаты по грейдам →</span>
       </a>
       {% endfor %}
