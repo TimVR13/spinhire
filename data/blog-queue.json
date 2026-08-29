@@ -72,7 +72,8 @@
         "работа в грузии igaming",
         "тбилиси вакансии гемблинг"
       ],
-      "status": "queued"
+      "status": "published",
+      "date": "2026-08-29"
     },
     {
       "slug": "sobesedovanie-v-igaming",
@@ -81,7 +82,8 @@
         "собеседование гемблинг",
         "интервью igaming вопросы"
       ],
-      "status": "queued"
+      "status": "published",
+      "date": "2026-08-29"
     },
     {
       "slug": "affiliate-manager-career",
@@ -90,7 +92,8 @@
         "аффилейт менеджер вакансии",
         "affiliate manager зарплата"
       ],
-      "status": "queued"
+      "status": "published",
+      "date": "2026-08-29"
     },
     {
       "slug": "payments-antifraud-igaming",
@@ -99,7 +102,8 @@
         "антифрод специалист вакансии",
         "payments igaming"
       ],
-      "status": "queued"
+      "status": "published",
+      "date": "2026-08-29"
     },
     {
       "slug": "english-dlya-igaming",
@@ -108,7 +112,8 @@
         "английский для работы",
         "igaming английский уровень"
       ],
-      "status": "queued"
+      "status": "published",
+      "date": "2026-08-29"
     },
     {
       "slug": "remote-igaming-jobs",
@@ -117,7 +122,8 @@
         "удаленная работа igaming",
         "remote гемблинг вакансии"
       ],
-      "status": "queued"
+      "status": "published",
+      "date": "2026-08-29"
     },
     {
       "slug": "hr-recruiter-igaming",
@@ -126,7 +132,8 @@
         "hr igaming",
         "рекрутер гемблинг вакансии"
       ],
-      "status": "queued"
+      "status": "published",
+      "date": "2026-08-29"
     },
     {
       "slug": "data-analyst-casino",
@@ -135,7 +142,20 @@
         "аналитик казино вакансии",
         "bi analyst igaming"
       ],
-      "status": "queued"
+      "status": "published",
+      "date": "2026-08-29"
+    },
+    {
+      "slug": "kak-sostavit-resume-igaming",
+      "title": "Резюме для iGaming: что писать, а что убить",
+      "status": "published",
+      "date": "2026-08-29"
+    },
+    {
+      "slug": "sportsbook-trader-career",
+      "title": "Трейдер в беттинге: как считают коэффициенты",
+      "status": "published",
+      "date": "2026-08-29"
     }
   ]
 }

@@ -4070,6 +4070,16 @@ ARTICLE_FILES = {
     "media-buyer-igaming": "post-media-buyer-igaming.html",
     "qa-v-geymdeve-slotov": "post-qa-v-geymdeve-slotov.html",
     "crm-manager-casino": "post-crm-manager-casino.html",
+    "rabota-v-gruzii-igaming": "post-rabota-v-gruzii-igaming.html",
+    "sobesedovanie-v-igaming": "post-sobesedovanie-v-igaming.html",
+    "affiliate-manager-career": "post-affiliate-manager-career.html",
+    "payments-antifraud-igaming": "post-payments-antifraud-igaming.html",
+    "english-dlya-igaming": "post-english-dlya-igaming.html",
+    "remote-igaming-jobs": "post-remote-igaming-jobs.html",
+    "hr-recruiter-igaming": "post-hr-recruiter-igaming.html",
+    "data-analyst-casino": "post-data-analyst-casino.html",
+    "kak-sostavit-resume-igaming": "post-kak-sostavit-resume-igaming.html",
+    "sportsbook-trader-career": "post-sportsbook-trader-career.html",
 }
 
 

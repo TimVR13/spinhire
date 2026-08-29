@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="/js/analytics.js?v=20260821c"></script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-0W5XWDYPZ3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-0W5XWDYPZ3');
+</script>
+<base href="/">
+<title>Трейдер в беттинге: как считают коэффициенты | SpinHire</title>
+<link rel="icon" href="/favicon.svg?v=3" type="image/svg+xml">
+<link rel="icon" href="/img/favicons/favicon-32.png?v=3" sizes="32x32" type="image/png">
+<link rel="icon" href="/img/favicons/favicon-16.png?v=3" sizes="16x16" type="image/png">
+<link rel="icon" href="/favicon.ico?v=3" sizes="any">
+<link rel="apple-touch-icon" href="/img/favicons/apple-touch-icon.png?v=3">
+<meta name="description" content="Как устроена работа трейдера и одсмейкера в букмекерской: live vs prematch, риск-менеджмент, вилки по грейдам (€1.8–11K) и как войти в профессию без опыта.">
+<link rel="canonical" href="https://spinhire.io/blog/sportsbook-trader-career">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="SpinHire">
+<meta property="og:title" content="Трейдер в беттинге: как устроена работа с коэффициентами">
+<meta property="og:description" content="Odds compiler vs live-трейдер, риск-менеджмент, синдикаты и вилки по грейдам — карьера в спортивном трейдинге iGaming.">
+<meta property="og:url" content="https://spinhire.io/blog/sportsbook-trader-career">
+<meta property="og:image" content="https://spinhire.io/img/blog-sportsbook-trader-career.jpg">
+<meta property="article:published_time" content="2026-08-29">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Трейдер в букмекерской: как устроена работа с коэффициентами",
+  "description": "Что делает sportsbook trader и odds compiler, live vs prematch, риск-менеджмент и вилки по грейдам в спортивном трейдинге iGaming.",
+  "datePublished": "2026-08-29",
+  "dateModified": "2026-08-29",
+  "author": { "@type": "Organization", "name": "SpinHire", "url": "https://spinhire.io" },
+  "publisher": { "@type": "Organization", "name": "SpinHire", "url": "https://spinhire.io" },
+  "mainEntityOfPage": "https://spinhire.io/blog/sportsbook-trader-career",
+  "inLanguage": "ru"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Главная", "item": "https://spinhire.io/" },
+    { "@type": "ListItem", "position": 2, "name": "Блог", "item": "https://spinhire.io/blog" },
+    { "@type": "ListItem", "position": 3, "name": "Трейдер в беттинге" }
+  ]
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=20260821c">
+<style>
+  .article-head { border-bottom: 2px solid var(--line); padding-block: var(--sp-7) var(--sp-6);
+    background: linear-gradient(90deg, oklch(0.13 0.02 305 / 0.92) 35%, oklch(0.13 0.02 305 / 0.55)), url('img/blog-sportsbook-trader-career.jpg') right center / cover no-repeat, var(--bg); }
+  .article-head h1 { max-width: 24ch; }
+  .article-head .meta { color: var(--ink-faint); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; margin-top: var(--sp-4); }
+  .article-layout { display: grid; grid-template-columns: 1fr 300px; gap: var(--sp-7); align-items: start; padding-top: var(--sp-6); }
+  .article-body { max-width: 72ch; }
+  .article-body > p, .article-body li { color: var(--ink-dim); font-size: 1.02rem; line-height: 1.7; }
+  .article-body > p { margin-bottom: var(--sp-4); }
+  .article-body h2 { font-size: 1.3rem; margin: var(--sp-7) 0 var(--sp-4); color: var(--acid); }
+  .article-body h2::before { content: "▮ "; }
+  .article-body ul, .article-body ol { padding-left: 1.2em; margin-bottom: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); }
+  .article-body li::marker { color: var(--pink); }
+  .salary-table-wrap { overflow-x: auto; border: 2px solid var(--line); margin-block: var(--sp-5); }
+  table.salary-table { border-collapse: collapse; width: 100%; min-width: 480px; font-size: 0.9rem; }
+  .salary-table th { background: var(--bg-deep); color: var(--acid); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.12em; text-align: left; padding: 12px 14px; border-bottom: 2px solid var(--line); }
+  .salary-table td { padding: 10px 14px; border-bottom: 1px solid var(--line); color: var(--ink-dim); }
+  .salary-table td:first-child { color: var(--ink); font-weight: 600; }
+  .salary-table td.money { color: var(--acid); font-weight: 700; white-space: nowrap; }
+  .salary-table tr:last-child td { border-bottom: none; }
+  .callout { border: 2px dashed var(--pink); background: oklch(0.2 0.06 350); padding: var(--sp-5); margin-block: var(--sp-5); }
+  .callout b { color: var(--pink); }
+  .timeline { border: 2px solid var(--line); background: var(--surface); margin-block: var(--sp-5); }
+  .timeline .t-row { display: grid; grid-template-columns: 90px 1fr; gap: var(--sp-4); padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--line); }
+  .timeline .t-row:last-child { border-bottom: none; }
+  .timeline .t-time { font-family: var(--font-display); font-weight: 800; color: var(--yellow); font-size: 0.85rem; }
+  .timeline .t-what { color: var(--ink-dim); font-size: 0.95rem; }
+  .toc { border: 2px solid var(--line); background: var(--surface); padding: var(--sp-5); position: sticky; top: 92px; }
+  .toc h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-faint); margin-bottom: var(--sp-3); }
+  .toc ol { list-style: none; display: flex; flex-direction: column; gap: var(--sp-2); counter-reset: toc; }
+  .toc a { text-decoration: none; color: var(--ink-dim); font-size: 0.9rem; counter-increment: toc; display: flex; gap: 10px; }
+  .toc a::before { content: "0" counter(toc); color: var(--acid); font-weight: 800; font-family: var(--font-display); font-size: 0.8rem; }
+  .toc a:hover { color: var(--acid); }
+  .toc .cta { margin-top: var(--sp-4); }
+  @media (max-width: 900px) { .article-layout { grid-template-columns: 1fr; } .article-layout > * { min-width: 0; max-width: 100%; } .toc { position: static; order: -1; } }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="/index.html" class="logo" aria-label="SpinHire — главная"><img class="logo__mark" src="/img/spinhire-slot.svg" alt="" width="60" height="36">spin<b>hire</b></a>
+    <nav class="main-nav" aria-label="Основная навигация">
+      <a href="/jobs.html">Вакансии</a>
+      <a href="/companies.html">Компании</a>
+      <a href="/blog.html">Блог</a>
+      <a href="/post-job.html">Работодателям</a>
+    </nav>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" data-auth>Войти</button>
+      <button class="nav-burger" aria-label="Меню">☰</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="article-head">
+    <div class="container">
+      <nav class="crumbs" aria-label="Хлебные крошки"><a href="/index.html">Главная</a> / <a href="/blog.html">Блог</a> / Трейдер в беттинге</nav>
+      <span class="kicker" style="color: var(--yellow);">Профессии</span>
+      <h1 style="margin-top: 8px;">Трейдер в беттинге: как устроена работа с коэффициентами</h1>
+      <p class="meta">29 августа 2026 · 11 минут · серия «Профессии iGaming»</p>
+    </div>
+  </div>
+
+  <div class="container article-layout">
+    <article class="article-body">
+      <p>Гол в добавленное время, жёлтая карточка, замена травмированного лидера — каждое такое событие за секунды меняет не только счёт на табло, но и цифры в приложении букмекера. За этими цифрами стоит человек, который считает вероятность, а не болеет за исход. Разбираем, чем занимается трейдер и одсмейкер в спортивном беттинге, чем live отличается от prematch, как устроен риск-менеджмент, сколько за это платят и как войти в профессию, если у вас нет диплома трейдера — зато есть математика и любовь к спорту.</p>
+
+      <h2 id="what">Кто такой трейдер и зачем букмекеру этот человек</h2>
+      <p>Трейдинг в беттинге — не биржа и не игра за свой счёт. Трейдер работает на сторону оператора: его задача — выставить и удерживать коэффициенты так, чтобы букмекер оставался в плюсе на длинной дистанции, независимо от исхода конкретного матча. Если коэффициенты выставлены грамотно, компания зарабатывает на марже вне зависимости от того, кто победит — «Реал» или дворовая команда классом ниже.</p>
+      <p>Работа держится на трёх вещах одновременно: математической модели вероятностей, потоке денег от игроков и живом понимании конкретного вида спорта. Модель без чтения рынка — это калькулятор. Чтение рынка без модели — это ставки вслепую. Трейдер сидит на пересечении, и именно поэтому эту роль сложно закрыть одним «айтишником» или одним «спортивным экспертом» по отдельности.</p>
+      <p>Отличие от смежных ролей в индустрии тоже принципиальное. Продуктовый или BI-аналитик в казино чаще смотрит назад — на исторические данные, retention, конверсию. Трейдер работает вперёд и в моменте: у него есть текущая цена, поток ставок и матч, который идёт прямо сейчас, а решение нужно за секунды, а не к следующему спринту.</p>
+
+      <h2 id="roles">Одсмейкер vs трейдер: где проходит граница</h2>
+      <p>В крупных букмекерских конторах это часто две разные роли, а не один человек в двух шляпах.</p>
+      <ul>
+        <li><b>Одсмейкер (odds compiler)</b> строит линию изначально: собирает статистику по командам и игрокам, строит модель вероятностей, закладывает маржу и выводит стартовые коэффициенты ещё до открытия рынка. Подробный профиль роли — на странице <a href="/profession/odds-compiler" style="color: var(--acid);">одсмейкера</a>.</li>
+        <li><b>Трейдер</b> управляет линией в реальном времени: отслеживает движение денег, реагирует на новости составов, корректирует коэффициенты по ходу матча. Полный разбор обязанностей — в профиле <a href="/profession/sportsbook-trader" style="color: var(--acid);">трейдера беттинга</a>.</li>
+      </ul>
+      <p>В небольших операторах и на нишевых видах спорта эти функции нередко совмещает один специалист: утром строит линию, вечером её же ведёт по ходу матчей. Именно поэтому на входе в профессию границу между ролями лучше воспринимать как спектр, а не жёсткое разделение.</p>
+      <p>Есть и третье амплуа, которое встречается реже, но встречается — <b>риск-трейдер (risk trader)</b>. Он не строит линию и не ведёт матч, а следит за экспозицией оператора по портфелю рынков целиком: сколько денег стоит на каждом исходе, где компания рискует переплатить в случае определённого результата, и когда стоит принудительно снизить лимиты по конкретному событию. Это следующая ступень после нескольких лет в live-трейдинге, а не отдельная стартовая позиция.</p>
+
+      <h2 id="live-prematch">Prematch и live — это фактически две разные работы</h2>
+      <p>Prematch-трейдинг — это спокойный, аналитический режим: часы на построение и проверку модели, сверку с движением линий у конкурентов, закладку маржи по каждому рынку — от исхода матча до количества угловых. Ошибка здесь стоит дорого, но времени на её поиск достаточно.</p>
+      <p>Live-трейдинг — это совсем другой темп. Решения принимаются за секунды, часто вручную поверх модели, потому что событие на поле обгоняет любую автоматику. Типичный ритм рабочего дня трейдера в дни матчей выглядит так:</p>
+      <div class="timeline">
+        <div class="t-row"><span class="t-time">До матча</span><span class="t-what">Проверка стартовой линии от одсмейкера: составы, травмы, погода, новости — всё, что модель ещё не учла.</span></div>
+        <div class="t-row"><span class="t-time">Начало</span><span class="t-what">Открытие live-рынков, первые деньги от игроков — важно понять, куда движется поток и почему.</span></div>
+        <div class="t-row"><span class="t-time">Ключевой момент</span><span class="t-what">Гол, красная карточка, травма лидера — коэффициенты по десяткам рынков пересчитываются за секунды, часто вручную.</span></div>
+        <div class="t-row"><span class="t-time">Второй тайм</span><span class="t-what">Контроль лимитов по крупным ставкам, отслеживание подозрительно точных прогнозов от одних и тех же аккаунтов.</span></div>
+        <div class="t-row"><span class="t-time">После игры</span><span class="t-what">Разбор результата, апдейт модели под следующий тур, отчёт по прибыльности линии за день.</span></div>
+      </div>
+      <p>Именно live чаще всего пугает новичков и одновременно больше всего ценится: за смену трейдер может вести десятки одновременных матчей по разным видам спорта, и цена ошибки в моменте — не абстрактная, а конкретная сумма на счёте оператора.</p>
+
+      <h2 id="tools">Инструменты: чем реально пользуется трейдер</h2>
+      <p>Стек инструментов у трейдера более узкоспециализирован, чем у большинства ролей в iGaming, но не запредельно сложен для входа:</p>
+      <ul>
+        <li><b>Фиды спортивных данных.</b> Sportradar, Betgenius и аналогичные поставщики присылают статистику матча и события на поле в реальном времени — это сырьё, на котором строится и live-, и prematch-модель.</li>
+        <li><b>Трейдинг-платформа букмекера.</b> Часто на базе BetConstruct или собственной разработки оператора — интерфейс, где трейдер видит текущие коэффициенты, поток ставок и может вручную скорректировать линию.</li>
+        <li><b>Excel и внутренние дашборды</b> для расчёта маржи, сверки моделей и отчётности по прибыльности рынков за смену.</li>
+        <li><b>Python или R</b> — не обязательны для линейного live-трейдера, но почти обязательны для одсмейкера и любого, кто хочет вырасти в количественного аналитика.</li>
+      </ul>
+      <p>Ничего из этого не изучают заранее самостоятельно: внутренние платформы и связку фидов дают на онбординге, обычно за одну-две недели плотного обучения рядом с наставником.</p>
+
+      <h2 id="risk">Риск-менеджмент: лимиты, синдикаты и арбитраж</h2>
+      <p>Трейдер — это ещё и первая линия защиты бизнеса от профессиональных игроков. Часть повседневной работы напрямую про риск:</p>
+      <ul>
+        <li><b>Лимиты по игроку и по рынку.</b> Крупная ставка от нового аккаунта на нишевый исход — повод присмотреться, прежде чем принять её по полной сумме.</li>
+        <li><b>Синдикаты и арбитражники.</b> Группы игроков, которые ловят рассинхрон коэффициентов между операторами или используют более точные модели, чем сам букмекер — их поведение имеет узнаваемый почерк, и трейдер учится его читать.</li>
+        <li><b>Разбор аномальной прибыльности.</b> Если по конкретному рынку клиент выигрывает слишком стабильно, это сигнал для проверки модели, а не только для проверки клиента.</li>
+        <li><b>Ограничение, а не бан.</b> В большинстве случаев ответ на «слишком умного» игрока — не блокировка аккаунта, а снижение максимальной суммы ставки по конкретным рынкам: бизнес предпочитает удержать клиента, но ограничить экспозицию.</li>
+        <li><b>Передача в комплаенс.</b> Подозрение на договорной матч или инсайдерскую информацию уходит дальше — в отдел, где этим занимаются профессионально; профиль этой роли — на странице <a href="/profession/compliance-manager" style="color: var(--acid);">комплаенс-менеджера</a>.</li>
+      </ul>
+      <p>Это же риск-мышление роднит трейдера с соседними профессиями индустрии: аналитик антифрода тоже ищет паттерны в потоке транзакций, только объект внимания другой — платежи и мультиаккаунты, а не движение линии. Кому ближе анализ платежей и мошеннических схем, а не спортивная статистика — стоит посмотреть профиль <a href="/profession/fraud-analyst" style="color: var(--acid);">аналитика антифрода</a>.</p>
+
+      <h2 id="skills">Какие навыки реально нужны</h2>
+      <p>Диплом «спортивного трейдера» не существует, поэтому на входе смотрят на комбинацию качеств, а не на строчку в резюме:</p>
+      <ul>
+        <li><b>Математика вероятностей и работа с маржой.</b> Не высшая алгебра, а быстрый устный счёт и понимание, как маржа букмекера складывается из коэффициентов по всем исходам.</li>
+        <li><b>Глубокое знание вида спорта.</b> Не «болею за “Спартак”», а понимание тактики, статистики личных встреч, влияния состава и травм на реальную вероятность исхода.</li>
+        <li><b>Хладнокровие под давлением.</b> В момент, когда на поле творится хаос, а по счёту начинает бежать крупная ставка, паника стоит дороже ошибки в расчёте.</li>
+        <li><b>Работа с данными.</b> Excel как минимум, Python и SQL как преимущество — особенно для трека в сторону одсмейкера и количественного анализа.</li>
+        <li><b>Быстрое принятие решений при неполной информации.</b> Часто нужно скорректировать линию раньше, чем появится официальное подтверждение травмы или замены.</li>
+        <li><b>Дисциплина без эмоциональной вовлечённости в исход.</b> Трейдер, который болеет за команду, на которую сам же выставляет линию, рано или поздно совершает предвзятую ошибку — профессия требует эмоциональной нейтральности к результату матча.</li>
+      </ul>
+      <p>Заметьте: языки программирования и профильное образование в этом списке — не на первом месте. Операторы регулярно берут людей без диплома по математике, если те проходят тестовое на счёт и знание спорта увереннее вчерашнего выпускника финансового факультета.</p>
+
+      <h2 id="salary">Сколько платят по грейдам</h2>
+      <div class="salary-table-wrap">
+        <table class="salary-table">
+          <thead><tr><th>Грейд</th><th>Мальта/Кипр net/мес</th><th>Восточная Европа net/мес</th></tr></thead>
+          <tbody>
+            <tr><td>Junior trading assistant</td><td class="money">€1.8–2.4K</td><td class="money">€1.2–1.7K</td></tr>
+            <tr><td>Trader / odds compiler (1–3 года)</td><td class="money">€2.4–3.6K</td><td class="money">€1.8–2.8K</td></tr>
+            <tr><td>Senior trader / senior odds compiler</td><td class="money">€3.6–5.5K</td><td class="money">€2.8–4.2K</td></tr>
+            <tr><td>Head of Trading / Trading Manager</td><td class="money">€6–11K</td><td class="money">€4.5–8K</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Одсмейкеры с сильным количественным профилем (Python, статистические модели) в среднем оцениваются на 15–25% выше линейного трейдера того же грейда — спрос на людей, которые строят модель, а не только читают рынок, стабильно превышает предложение. Точные вилки и разбивку по опыту для каждой из ролей смотрите в <a href="/professions" style="color: var(--acid);">картотеке профессий</a>.</p>
+
+      <h2 id="enter">Как войти в профессию без опыта в беттинге</h2>
+      <p>Опыт именно в трейдинге на входе почти никогда не требуют — операторы обучают своей модели и внутренним инструментам сами. Что действительно смотрят:</p>
+      <ol>
+        <li><b>Бэкграунд, который тренирует нужные мышцы.</b> Математика, статистика, экономика, профессиональный или полупрофессиональный беттинг как хобби, иногда покер — везде есть привычка считать вероятности под давлением.</li>
+        <li><b>Тестовое на устный счёт и логику.</b> Типичное интервью включает задачи на быстрый пересчёт коэффициентов и вероятностные головоломки — важна скорость, а не калькулятор.</li>
+        <li><b>Проверка знания спорта.</b> Вопросы по конкретной лиге или виду спорта, на который набирают трейдера — общей эрудиции недостаточно, нужна глубина по узкой нише.</li>
+        <li><b>Готовность начать с ассистента.</b> Входная позиция — trading assistant или junior odds compiler: мониторинг линий, сбор данных, помощь сеньору в live — а не самостоятельное ведение матчей с первого дня.</li>
+      </ol>
+      <p>Первые месяцы почти всегда строятся по одному сценарию: сначала наблюдение за работой сеньора без права принимать решения, затем ведение второстепенных рынков под присмотром (тотал угловых, а не исход матча), и только потом — самостоятельные топовые рынки. Это защищает и оператора от дорогой ошибки новичка, и самого новичка от выгорания в первую же неделю.</p>
+      <p>Если совсем нет отраслевого опыта, но есть аналитический склад ума, вход в iGaming необязательно начинать именно с трейдинга — общие маршруты входа в индустрию без опыта разобраны в статье <a href="/blog/igaming-bez-opyta" style="color: var(--acid);">«Как попасть в iGaming без опыта»</a>.</p>
+
+      <div class="callout"><b>Совет:</b> на собеседовании не бойтесь сказать «не знаю» про конкретный коэффициент — гораздо важнее показать, как вы рассуждаете вслух, раскладывая вероятность на факторы. Трейдеров, которые уверенно называют неверное число, отсеивают быстрее, чем тех, кто честно думает вслух.</div>
+
+      <h2 id="growth">Карьерный трек: куда расти</h2>
+      <p>Спортивный трейдинг — один из немногих треков в iGaming, где рост в грейдах напрямую виден по прибыльности линии, а не только по стажу:</p>
+      <ul>
+        <li><b>Senior trader / senior odds compiler.</b> Самостоятельное ведение сложных рынков и видов спорта, часто с фокусом на конкретную нишу (теннис, киберспорт, азиатские рынки).</li>
+        <li><b>Head of Trading / Trading Manager.</b> Управление командой трейдеров и одсмейкеров, ответственность за прибыльность всей линейки рынков компании.</li>
+        <li><b>Количественный аналитик / BI.</b> Для тех, кому ближе построение моделей и работа с большими массивами данных, чем живое ведение матчей — логичный переход в профиль <a href="/profession/bi-analyst" style="color: var(--acid);">BI-аналитика</a>.</li>
+        <li><b>Переход к поставщикам данных.</b> Компании вроде Sportradar и Betgenius, которые продают букмекерам фиды и готовые модели, регулярно нанимают трейдеров с опытом внутри операторов.</li>
+        <li><b>Собственный трейдинг или консалтинг.</b> Часть сеньоров после 7–10 лет в индустрии уходят в независимый анализ рынков или консультируют небольших операторов по настройке риск-менеджмента — нишевый, но реальный маршрут для тех, кто устал от смен.</li>
+      </ul>
+      <p>Важное отличие этого трека от многих других профессий в iGaming: рост в грейде здесь редко бывает чисто «по выслуге лет». Повышение обычно привязано к объёму рынков, которые вам доверяют вести самостоятельно, и к измеримой прибыльности этих рынков за квартал.</p>
+      <p>Ещё один практический момент: большая часть трейдинговых команд физически сидит на Мальте или Кипре — про переезд, налоги и жизнь там мы отдельно разбирали в статье <a href="/blog/rabota-na-kipre-igaming" style="color: var(--acid);">про работу в iGaming на Кипре</a>. Открытые вакансии по обеим ролям — на страницах <a href="/jobs?q=%D0%A2%D1%80%D0%B5%D0%B9%D0%B4%D0%B5%D1%80%20%D0%B1%D0%B5%D1%82%D1%82%D0%B8%D0%BD%D0%B3%D0%B0" style="color: var(--acid);">трейдер беттинга</a> и <a href="/jobs?q=%D0%9E%D0%B4%D1%81%D0%BC%D0%B5%D0%B9%D0%BA%D0%B5%D1%80" style="color: var(--acid);">одсмейкер</a>.</p>
+
+      <h2 id="faq">Частые вопросы</h2>
+      <p><b>Нужна ли математическая степень?</b> Нет, но нужна дружба с вероятностями и быстрый устный счёт. Профильное образование (математика, статистика, экономика) помогает пройти тестовое, но не заменяет знание спорта.</p>
+      <p><b>Это про удачу или про расчёт?</b> Про расчёт. Отдельная ставка может «не зайти», но задача трейдера — чтобы вся линия рынков была прибыльной на дистанции в тысячи событий, а не угадать один конкретный исход.</p>
+      <p><b>Можно ли начать с одсмейкера, а не с live-трейдинга?</b> Да, и для людей с более сильным количественным профилем и менее стрессоустойчивой психикой это часто более комфортный вход в профессию — темп ниже, а требования к моделированию выше.</p>
+      <p><b>Насколько это стрессовая работа?</b> Честно — да, особенно live в дни больших турниров. Но это тот стресс, который снижается с опытом: чем больше матчей вы провели, тем меньше решений принимается на панике и больше — на отработанном рефлексе.</p>
+      <p><b>Какой график у трейдера?</b> Смены привязаны к календарю спорта, а не к обычному офисному дню: выходные, вечера буднего дня и крупные международные турниры — это пиковая нагрузка, а не исключение из графика.</p>
+    </article>
+
+    <aside class="toc">
+      <h3>Содержание</h3>
+      <ol>
+        <li><a href="#what">Кто такой трейдер</a></li>
+        <li><a href="#roles">Одсмейкер vs трейдер</a></li>
+        <li><a href="#live-prematch">Live и prematch</a></li>
+        <li><a href="#tools">Инструменты</a></li>
+        <li><a href="#risk">Риск-менеджмент</a></li>
+        <li><a href="#skills">Навыки</a></li>
+        <li><a href="#salary">Зарплаты по грейдам</a></li>
+        <li><a href="#enter">Как войти</a></li>
+        <li><a href="#growth">Куда расти</a></li>
+        <li><a href="#faq">Частые вопросы</a></li>
+      </ol>
+      <div class="cta">
+        <a href="/jobs" class="btn btn-acid btn-block btn-sm">Вакансии трейдинга →</a>
+        <button class="btn btn-ghost btn-block btn-sm" style="margin-top: 8px;" data-auth>Создать профиль</button>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <a href="/index.html" class="logo"><img class="logo__mark" src="/img/spinhire-slot.svg" alt="" width="60" height="36">spin<b>hire</b></a>
+        <p class="footer-tagline" style="margin-top: 16px;">Самый громкий джоб-борд в iGaming.</p>
+        <div class="footer-social" data-no-translate>
+          <a href="https://t.me/spinhire_ru" target="_blank" rel="noopener" aria-label="Telegram-канал на русском">✈️ Telegram · RU</a>
+          <a href="https://t.me/spinhire" target="_blank" rel="noopener" aria-label="Telegram channel in English">✈️ Telegram · EN</a>
+          <a href="https://www.linkedin.com/company/spinhirejob/" target="_blank" rel="noopener" aria-label="SpinHire в LinkedIn">💼 LinkedIn</a>
+        </div>
+      </div>
+      <div>
+        <h4>Кандидатам</h4>
+        <ul>
+          <li><a href="/jobs.html">Вакансии</a></li>
+          <li><a href="/profile.html">Мой профиль</a></li>
+          <li><a href="/professions">Профессии и зарплаты</a></li>
+          <li><a href="/events.html">Календарь событий</a></li>
+          <li><a href="/games.html">🎡 Игровая зона</a></li>
+          <li><a href="/blog.html">Карьерный блог</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Работодателям</h4>
+        <ul>
+          <li><a href="/post-job.html">Разместить вакансию</a></li>
+          <li><a href="/employer.html">Кабинет работодателя</a></li>
+          <li><a href="/post-job.html#pricing">Тарифы</a></li>
+          <li><a href="/post-job.html#pricing">База резюме</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>О проекте</h4>
+        <ul>
+          <li><a href="/about.html">О нас</a></li>
+          <li><a href="mailto:hello@spinhire.io">Контакты</a></li>
+          <li><a href="/privacy.html">Конфиденциальность</a></li>
+          <li><a href="/terms.html">Условия</a></li>
+          <li><a href="/game-rules.html">Правила игр</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 SpinHire — играй ответственно, работай громко</span>
+      <span>Индустрия 18+ · лицензии проверяем</span>
+    </div>
+  </div>
+</footer>
+
+<div class="modal-backdrop" id="auth-modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Регистрация">
+    <button class="modal__close" aria-label="Закрыть">✕</button>
+    <span class="kicker">Присаживайся к столу</span>
+    <h3 style="margin-top: 8px; font-size: 1.4rem;">Входи в игру</h3>
+    <a class="btn btn-acid btn-block" href="/register?role=talent">Регистрация соискателя →</a>
+    <a class="btn btn-pink btn-block" style="margin-top: 10px;" href="/register?role=employer">Регистрация работодателя →</a>
+    <p style="margin-top: 14px; font-size: 0.85rem; color: var(--ink-faint); text-align: center;">Уже есть аккаунт? <a href="/login" style="color: var(--acid);">Войти</a></p>
+    <div style="display: flex; gap: 8px; margin-top: 14px;">
+      <a href="/profile.html" class="btn btn-ghost btn-sm" style="flex: 1;">Кабинет соискателя</a>
+      <a href="/employer.html" class="btn btn-ghost btn-sm" style="flex: 1;">Кабинет работодателя</a>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/app.js?v=20260821c"></script>
+</body>
+</html>
