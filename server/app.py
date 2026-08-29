@@ -38,7 +38,8 @@ def check_pw(pw: str, h: str) -> bool:
     except ValueError:
         return False
 from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer,
-                        String, Text, UniqueConstraint, create_engine, func, or_)
+                        String, Text, UniqueConstraint, create_engine, event,
+                        func, or_)
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
 
@@ -83,7 +84,21 @@ PATH_LANGS = {
 }
 LANG_LABELS = {"ru": "Русский", **PATH_LANGS}
 
-engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+engine = create_engine(f"sqlite:///{DB_PATH}",
+                       connect_args={"check_same_thread": False, "timeout": 30})
+
+
+@event.listens_for(engine, "connect")
+def _sqlite_pragmas(dbapi_conn, _conn_record):
+    # WAL позволяет краулеру/фоновым задачам писать, пока веб читает, без
+    # мгновенного "database is locked"; busy_timeout даёт время дождаться блокировки.
+    cur = dbapi_conn.cursor()
+    cur.execute("PRAGMA journal_mode=WAL")
+    cur.execute("PRAGMA busy_timeout=30000")
+    cur.execute("PRAGMA synchronous=NORMAL")
+    cur.close()
+
+
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
 Base = declarative_base()
 signer = URLSafeSerializer(SECRET, salt="session")
