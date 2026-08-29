@@ -1,5 +1,37 @@
 // iHiring.org — shared prototype behavior
 
+// First-touch источник: реферер + utm при первом визите → cookie sh_src (30 дней).
+// Сервер читает её при регистрации и пишет в users.signup_source.
+(() => {
+  try {
+    if (document.cookie.includes('sh_src=')) return;
+    const q = new URLSearchParams(location.search);
+    const utm = {};
+    for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid']) {
+      if (q.get(k)) utm[k] = q.get(k).slice(0, 80);
+    }
+    const src = { r: (document.referrer || '').slice(0, 200), lp: location.pathname.slice(0, 100),
+                  t: new Date().toISOString().slice(0, 10) };
+    if (Object.keys(utm).length) src.u = utm;
+    // свой домен как реферер не интересен
+    if (src.r && src.r.includes(location.hostname)) src.r = '';
+    if (!src.r && !src.u) src.d = 'direct';
+    document.cookie = 'sh_src=' + encodeURIComponent(JSON.stringify(src)) +
+      '; max-age=' + 30 * 86400 + '; path=/; SameSite=Lax';
+  } catch (e) { /* не мешаем странице */ }
+})();
+
+// Реферальный код из ?ref=КОД → cookie sh_ref (30 дней, первый код побеждает).
+(() => {
+  try {
+    const ref = new URLSearchParams(location.search).get('ref');
+    if (ref && !document.cookie.includes('sh_ref=')) {
+      document.cookie = 'sh_ref=' + encodeURIComponent(ref.slice(0, 40)) +
+        '; max-age=' + 30 * 86400 + '; path=/; SameSite=Lax';
+    }
+  } catch (e) { /* ignore */ }
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
   // Язык автоматически следует за браузером; ручной выбор доступен в футере.
   // В хост-режиме (spinhire.io = EN, ru./ua. — поддомены) язык диктует сервер

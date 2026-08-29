@@ -80,6 +80,12 @@ BASE_LANG = os.environ.get("SPINHIRE_BASE_LANG", "ru")
 APPLY_DAILY_LIMIT = int(os.environ.get("SPINHIRE_APPLY_DAILY_LIMIT", "10"))
 APPLY_EXTRA_COST = int(os.environ.get("SPINHIRE_APPLY_EXTRA_COST", "10"))
 APPLY_MIN_INTERVAL = int(os.environ.get("SPINHIRE_APPLY_MIN_INTERVAL", "20"))
+
+# Реферальная программа: бонус начисляется только когда приглашённый ПОДТВЕРДИЛ
+# почту (гейт от ферм фейков), с месячным капом на пригласившего.
+REF_BONUS_REFERRER = int(os.environ.get("SPINHIRE_REF_BONUS_REFERRER", "50"))
+REF_BONUS_FRIEND = int(os.environ.get("SPINHIRE_REF_BONUS_FRIEND", "30"))
+REF_MONTHLY_CAP = int(os.environ.get("SPINHIRE_REF_MONTHLY_CAP", "10"))
 LANG_HOSTS = {"en": "spinhire.io", "ru": "ru.spinhire.io", "uk": "ua.spinhire.io"}
 
 # Европейские языки живут в поддиректориях (/de/, /pl/…): не нужны ни DNS-записи,
@@ -168,6 +174,10 @@ class User(Base):
     job_credits = Column(Integer, default=0)        # оплаченные размещения вакансий
     job_access_until = Column(String, default="")  # ISO-дата безлимитного размещения
     promo_code = Column(String, default="")        # активированный промокод (один на аккаунт)
+    signup_source = Column(Text, default="")        # first-touch: referrer + utm из cookie sh_src
+    referral_code = Column(String, default="")      # личный код «пригласи друга»
+    referred_by = Column(Integer, default=None)     # id пригласившего
+    referral_credited = Column(Boolean, default=False)  # бонус за этого юзера уже начислен
     coins = Column(Integer, default=0)              # SpinCoins на аккаунте
     avatar_file_name = Column(String, default="")
     avatar_file_path = Column(String, default="")
@@ -892,6 +902,14 @@ def migrate(db: Session):
         db.execute(text("ALTER TABLE users ADD COLUMN job_credits INTEGER DEFAULT 0"))
     if "job_access_until" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN job_access_until VARCHAR DEFAULT ''"))
+    if "signup_source" not in ucols:
+        db.execute(text("ALTER TABLE users ADD COLUMN signup_source TEXT DEFAULT ''"))
+    if "referral_code" not in ucols:
+        db.execute(text("ALTER TABLE users ADD COLUMN referral_code VARCHAR DEFAULT ''"))
+    if "referred_by" not in ucols:
+        db.execute(text("ALTER TABLE users ADD COLUMN referred_by INTEGER"))
+    if "referral_credited" not in ucols:
+        db.execute(text("ALTER TABLE users ADD COLUMN referral_credited BOOLEAN DEFAULT 0"))
     if "promo_code" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN promo_code VARCHAR DEFAULT ''"))
     ecols = {r[1] for r in db.execute(text("PRAGMA table_info(events)")).fetchall()}
@@ -2068,6 +2086,53 @@ def _auth_throttled(key: str, limit: int = 5, window: int = 60) -> bool:
     return throttled
 
 
+def _referrer_id_from_cookie(request: Request, db: Session):
+    """id пригласившего из cookie sh_ref (ставится JS при заходе по ?ref=КОД)."""
+    code = (request.cookies.get("sh_ref") or "").strip()[:40]
+    if not code:
+        return None
+    ref = db.query(User).filter(User.referral_code == code).first()
+    return ref.id if ref else None
+
+
+def _credit_referral(db: Session, u) -> None:
+    """Начислить реферальный бонус после подтверждения почты приглашённого.
+
+    Гейты от фермы фейков: только verified-друг, один раз на аккаунт,
+    не сам себя, месячный кап на пригласившего.
+    """
+    if not u or not u.referred_by or u.referral_credited or u.referred_by == u.id:
+        return
+    referrer = db.get(User, u.referred_by)
+    if not referrer:
+        return
+    month_ago = datetime.utcnow() - timedelta(days=30)
+    credited_this_month = (db.query(User)
+                           .filter(User.referred_by == referrer.id,
+                                   User.referral_credited == True,  # noqa: E712
+                                   User.created_at >= month_ago).count())
+    u.referral_credited = True
+    if credited_this_month < REF_MONTHLY_CAP:
+        referrer.coins = (referrer.coins or 0) + REF_BONUS_REFERRER
+        u.coins = (u.coins or 0) + REF_BONUS_FRIEND
+        db.add(Notification(user_id=referrer.id, kind="referral",
+                            title=f"+{REF_BONUS_REFERRER} SC за друга",
+                            body=f"{u.name or u.email} зарегистрировался по вашей ссылке и подтвердил почту.",
+                            link="/profile"))
+    db.commit()
+
+
+def _signup_source(request: Request) -> str:
+    """First-touch источник из cookie sh_src (ставит js/app.js при первом визите)."""
+    raw = request.cookies.get("sh_src", "")
+    if not raw:
+        return ""
+    try:
+        return urllib.parse.unquote(raw)[:500]
+    except Exception:
+        return ""
+
+
 def _client_ip(request: Request) -> str:
     fwd = request.headers.get("x-forwarded-for", "")
     if fwd:
@@ -2125,7 +2190,8 @@ def register(request: Request, email: str = Form(...), password: str = Form(...)
                       error="Пароль — от 6 символов")
     u = User(email=email.strip().lower(), password_hash=hash_pw(password),
              name=name.strip(), role=role, company_name=company_name.strip(),
-             coins=SIGNUP_COIN_BONUS)
+             coins=SIGNUP_COIN_BONUS, signup_source=_signup_source(request),
+             referred_by=_referrer_id_from_cookie(request, db))
     db.add(u)
     db.commit()
     # подтверждение почты: только если Resend настроен
@@ -2294,9 +2360,11 @@ def auth_google_callback(request: Request, code: str = "", state: str = "",
         if not u:
             u = User(email=email, password_hash=hash_pw(secrets.token_urlsafe(24)),
                      name=name, role=requested_role or "talent", verified=1,
-                     coins=SIGNUP_COIN_BONUS)
+                     coins=SIGNUP_COIN_BONUS, signup_source=_signup_source(request),
+                     referred_by=_referrer_id_from_cookie(request, db))
             db.add(u)
             db.commit()
+            _credit_referral(db, u)  # OAuth-почта уже подтверждена Google
         elif requested_role and u.role != "admin" and u.role != requested_role:
             # Явный выбор на регистрации также исправляет аккаунты, которые
             # старый Google-flow ошибочно создавал соискателями.
@@ -2362,6 +2430,7 @@ def verify(request: Request, email: str = Form(...), code: str = Form(...),
     u.otp_expires = ""
     u.otp_attempts = 0
     db.commit()
+    _credit_referral(db, u)  # почта подтверждена — можно начислять реферальный бонус
     return set_session(RedirectResponse(dest_for(u), status_code=303), u)
 
 
@@ -2649,10 +2718,20 @@ def profile(request: Request, db: Session = Depends(db_session)):
                        .order_by(Job.featured.desc(), Job.created_at.desc()).limit(4).all())
     notifications = (db.query(Notification).filter_by(user_id=user.id)
                      .order_by(Notification.created_at.desc()).limit(20).all())
+    # личный реферальный код — генерируем лениво при первом заходе в профиль
+    if not user.referral_code:
+        user.referral_code = f"{user.id}{secrets.token_hex(3)}"
+        db.commit()
+    ref_invited = db.query(User).filter(User.referred_by == user.id).count()
+    ref_credited = db.query(User).filter(User.referred_by == user.id,
+                                         User.referral_credited == True).count()  # noqa: E712
     return render(request, db, "profile.html", apps=apps, spin_ready=spin_ready,
                   resume=resume, resume_unlocks=resume_unlocks, formats=FORMATS,
                   profile_progress=profile_progress, app_counts=app_counts,
-                  recommendations=recommendations, notifications=notifications)
+                  recommendations=recommendations, notifications=notifications,
+                  ref_code=user.referral_code, ref_invited=ref_invited,
+                  ref_credited=ref_credited, ref_bonus=REF_BONUS_REFERRER,
+                  ref_bonus_friend=REF_BONUS_FRIEND)
 
 
 @app.post("/account/role/{target_role}")
@@ -3819,7 +3898,9 @@ async def resumes_quick(request: Request, email: str = Form(...),
                                 status_code=303)
     parsed = parse_cv_pdf(payload)
     user = User(email=email, password_hash=hash_pw(secrets.token_urlsafe(18)),
-                name=parsed["name"], role="talent", coins=SIGNUP_COIN_BONUS)
+                name=parsed["name"], role="talent", coins=SIGNUP_COIN_BONUS,
+                signup_source=_signup_source(request),
+                referred_by=_referrer_id_from_cookie(request, db))
     db.add(user)
     db.flush()
     os.makedirs(CV_UPLOAD_DIR, exist_ok=True)

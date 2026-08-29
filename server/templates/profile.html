@@ -103,6 +103,26 @@
     {% endif %}
   </div>
 
+  <!-- Пригласи друга: реферальный бонус в SpinCoins -->
+  <div class="card" style="margin-bottom: var(--sp-5);">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap;">
+      <div style="min-width: 240px;">
+        <b style="font-family: var(--font-display); text-transform: uppercase;">Пригласи друга — получи +{{ ref_bonus }} SC</b>
+        <p style="color: var(--ink-dim); font-size: 0.88rem; margin-top: 4px;">
+          Друг регистрируется по вашей ссылке и подтверждает почту — вам +{{ ref_bonus }} SC, ему +{{ ref_bonus_friend }} SC к стартовым.
+          {% if ref_invited %}Приглашено: {{ ref_invited }}, засчитано: {{ ref_credited }}.{% endif %}
+        </p>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <input type="text" readonly value="https://spinhire.io/?ref={{ ref_code }}" id="refLink"
+               aria-label="Ваша реферальная ссылка"
+               style="background: var(--surface-2); border: 1px solid var(--line-strong); color: var(--ink); padding: 10px 12px; border-radius: 8px; font-size: 0.82rem; width: 280px; max-width: 100%;">
+        <button type="button" class="btn btn-ghost btn-sm" style="min-height:44px;"
+                onclick="navigator.clipboard.writeText(document.getElementById('refLink').value).then(() => { this.textContent = 'Скопировано ✓'; setTimeout(() => this.textContent = 'Копировать', 1600); })">Копировать</button>
+      </div>
+    </div>
+  </div>
+
   {% if recommendations %}<section><span class="kicker">Под ваш профиль</span><h2 style="font-size:1.25rem;margin:8px 0 16px;">Рекомендованные вакансии</h2><div class="recommend-grid">{% for job in recommendations %}<a class="recommend-job" href="/job/{{ job.id }}"><b>{{ job.title }}</b><p style="color:var(--ink-faint);font-size:.82rem;margin-top:6px;">{{ job.company_name }} · {{ job.location or job.fmt }}</p>{% if job.has_salary %}<span class="salary">{{ job.salary }}</span>{% endif %}</a>{% endfor %}</div></section>{% endif %}
   </div><!-- /overview -->
 
