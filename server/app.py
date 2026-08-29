@@ -507,6 +507,26 @@ class ResumeCreditLedger(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class GamePlay(Base):
+    """Журнал игровой зоны: кто, во что, на сколько сыграл (серверный кошелёк)."""
+    __tablename__ = "game_plays"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    game = Column(String, default="")       # slot | roulette | blackjack | daily
+    bet = Column(Integer, default=0)
+    delta = Column(Integer, default=0)      # чистое изменение баланса (выплата − ставка)
+    detail = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class BjState(Base):
+    """Незавершённая раздача блэкджека — состояние живёт на сервере, не у клиента."""
+    __tablename__ = "bj_states"
+    user_id = Column(Integer, primary_key=True)
+    state = Column(Text, default="")
+    updated = Column(DateTime, default=datetime.utcnow)
+
+
 class Notification(Base):
     __tablename__ = "notifications"
     id = Column(Integer, primary_key=True)
@@ -2776,6 +2796,269 @@ def profile_spin(request: Request, db: Session = Depends(db_session)):
     return RedirectResponse(f"/profile?spin={prize}", status_code=303)
 
 
+# ---------- игровая зона: серверный кошелёк ----------
+# Исходы всех игр считает сервер (клиент только анимирует ответ) — иначе
+# localStorage-кошелёк накручивался бы правкой консоли, а SpinCoins теперь
+# имеют реальную ценность (сверхлимитные отклики, мерч).
+
+GAME_MAX_BET = int(os.environ.get("SPINHIRE_GAME_MAX_BET", "100"))
+GAME_MAX_STAKE = int(os.environ.get("SPINHIRE_GAME_MAX_STAKE", "500"))  # рулетка, сумма фишек
+_SLOT_SYMS = ["seven", "cherry", "bell", "diamond", "crown", "horseshoe", "star", "bar"]
+_RU_RED = {1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36}
+_RU_BET_RE = re.compile(r"^(n(\d|[12]\d|3[0-6])|red|black|even|odd|low|high|d[123]|c[tmb])$")
+_BJ_RANKS = [("A", 11), ("2", 2), ("3", 3), ("4", 4), ("5", 5), ("6", 6), ("7", 7),
+             ("8", 8), ("9", 9), ("10", 10), ("J", 10), ("Q", 10), ("K", 10)]
+_BJ_SUITS = [("♠", False), ("♥", True), ("♦", True), ("♣", False)]
+_game_last: dict = {}
+
+
+def _game_user(request: Request, db: Session, min_interval: float = 1.5):
+    user = get_user(request, db)
+    if not user:
+        raise HTTPException(401, "Войдите, чтобы играть на общий баланс")
+    now = time.time()
+    if now - _game_last.get(user.id, 0) < min_interval:
+        raise HTTPException(429, "Не так быстро")
+    _game_last[user.id] = now
+    if len(_game_last) > 5000:
+        _game_last.clear()
+    return user
+
+
+def _record_play(db: Session, user, game: str, bet: int, delta: int, detail: str = ""):
+    db.add(GamePlay(user_id=user.id, game=game, bet=bet, delta=delta, detail=detail[:400]))
+
+
+@app.get("/api/wallet")
+def api_wallet(request: Request, db: Session = Depends(db_session)):
+    user = get_user(request, db)
+    if not user:
+        return JSONResponse({"logged_in": False})
+    daily_ready = (not user.last_spin
+                   or (datetime.utcnow() - user.last_spin).total_seconds() >= 20 * 3600)
+    return JSONResponse({"logged_in": True, "coins": user.coins or 0,
+                         "daily_ready": daily_ready})
+
+
+@app.post("/api/games/daily")
+def api_games_daily(request: Request, db: Session = Depends(db_session)):
+    import random
+    user = _game_user(request, db)
+    if user.last_spin and (datetime.utcnow() - user.last_spin).total_seconds() < 20 * 3600:
+        return JSONResponse({"ok": False, "wait": True, "coins": user.coins or 0})
+    prize = random.choices([10, 20, 30, 50, 100, 200],
+                           weights=[34, 27, 18, 12, 7, 2])[0]
+    user.coins = (user.coins or 0) + prize
+    user.last_spin = datetime.utcnow()
+    _record_play(db, user, "daily", 0, prize)
+    db.commit()
+    return JSONResponse({"ok": True, "prize": prize, "coins": user.coins})
+
+
+@app.post("/api/games/slot")
+async def api_games_slot(request: Request, db: Session = Depends(db_session)):
+    user = _game_user(request, db)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    try:
+        bet = int(body.get("bet", 10))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Некорректная ставка")
+    if not 1 <= bet <= GAME_MAX_BET:
+        raise HTTPException(400, "Некорректная ставка")
+    if (user.coins or 0) < bet:
+        raise HTTPException(400, "Не хватает SC")
+    grid = [[secrets.choice(_SLOT_SYMS) for _ in range(3)] for _ in range(3)]  # [катушка][ряд]
+    rows = [[grid[0][r], grid[1][r], grid[2][r]] for r in range(3)]
+    flat = [s for reel in grid for s in reel]
+    jackpot = all(s == flat[0] for s in flat)
+    triples = sum(1 for row in rows if row[0] == row[1] == row[2])
+    pairs = sum(1 for row in rows
+                if not (row[0] == row[1] == row[2]) and len(set(row)) == 2)
+    win = 30000 if jackpot else round(triples * bet * 5 + pairs * bet * 0.5)
+    user.coins = (user.coins or 0) - bet + win
+    _record_play(db, user, "slot", bet, win - bet,
+                 json.dumps({"grid": grid, "win": win}, ensure_ascii=False))
+    db.commit()
+    return JSONResponse({"ok": True, "grid": grid, "triples": triples, "pairs": pairs,
+                         "jackpot": jackpot, "win": win, "coins": user.coins})
+
+
+def _ru_wins(bet_id: str, n: int) -> bool:
+    if bet_id.startswith("n"):
+        return int(bet_id[1:]) == n
+    return {"red": n in _RU_RED, "black": n != 0 and n not in _RU_RED,
+            "even": n != 0 and n % 2 == 0, "odd": n % 2 == 1,
+            "low": 1 <= n <= 18, "high": 19 <= n <= 36,
+            "d1": 1 <= n <= 12, "d2": 13 <= n <= 24, "d3": 25 <= n <= 36,
+            "ct": n != 0 and n % 3 == 0, "cm": n % 3 == 2,
+            "cb": n != 0 and n % 3 == 1}.get(bet_id, False)
+
+
+def _ru_mult(bet_id: str) -> int:
+    if bet_id.startswith("n"):
+        return 36
+    return 3 if bet_id in ("d1", "d2", "d3", "ct", "cm", "cb") else 2
+
+
+@app.post("/api/games/roulette")
+async def api_games_roulette(request: Request, db: Session = Depends(db_session)):
+    user = _game_user(request, db)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    raw = body.get("bets") or {}
+    if not isinstance(raw, dict) or not raw:
+        raise HTTPException(400, "Сначала поставьте фишку")
+    bets = {}
+    for key, amt in raw.items():
+        if not isinstance(key, str) or not _RU_BET_RE.match(key):
+            raise HTTPException(400, "Неизвестная ставка")
+        try:
+            amt = int(amt)
+        except (TypeError, ValueError):
+            raise HTTPException(400, "Некорректная сумма")
+        if not 1 <= amt <= GAME_MAX_STAKE:
+            raise HTTPException(400, "Некорректная сумма")
+        bets[key] = amt
+    total = sum(bets.values())
+    if total > GAME_MAX_STAKE:
+        raise HTTPException(400, f"Максимум {GAME_MAX_STAKE} SC за спин")
+    if (user.coins or 0) < total:
+        raise HTTPException(400, "Не хватает SC")
+    n = secrets.randbelow(37)
+    payout = sum(amt * _ru_mult(k) for k, amt in bets.items() if _ru_wins(k, n))
+    user.coins = (user.coins or 0) - total + payout
+    _record_play(db, user, "roulette", total, payout - total,
+                 json.dumps({"n": n, "bets": bets}, ensure_ascii=False))
+    db.commit()
+    return JSONResponse({"ok": True, "n": n, "payout": payout,
+                         "total": total, "coins": user.coins})
+
+
+def _bj_draw() -> dict:
+    r, v = secrets.choice(_BJ_RANKS)
+    s, red = secrets.choice(_BJ_SUITS)
+    return {"r": r, "v": v, "s": s, "red": red, "ace": r == "A"}
+
+
+def _bj_val(hand) -> int:
+    total = sum(c["v"] for c in hand)
+    aces = sum(1 for c in hand if c["ace"])
+    while total > 21 and aces:
+        total -= 10
+        aces -= 1
+    return total
+
+
+def _bj_load(db: Session, user):
+    row = db.get(BjState, user.id)
+    if not row or not row.state:
+        return None, row
+    try:
+        return json.loads(row.state), row
+    except ValueError:
+        return None, row
+
+
+def _bj_finish(db: Session, user, st: dict, row, dealer_plays: bool = True) -> dict:
+    hand, dealer, bet = st["h"], st["d"], st["bet"]
+    pv = _bj_val(hand)
+    if pv > 21:
+        payout, result = 0, "bust"
+    else:
+        if dealer_plays:
+            while _bj_val(dealer) < 17:
+                dealer.append(_bj_draw())
+        dv = _bj_val(dealer)
+        if pv == 21 and len(hand) == 2:
+            payout, result = round(bet * 2.5), "blackjack"
+        elif dv > 21 or pv > dv:
+            payout, result = bet * 2, "win"
+        elif pv == dv:
+            payout, result = bet, "push"
+        else:
+            payout, result = 0, "lose"
+    user.coins = (user.coins or 0) + payout
+    _record_play(db, user, "blackjack", bet, payout - bet,
+                 json.dumps({"result": result}, ensure_ascii=False))
+    if row:
+        db.delete(row)
+    db.commit()
+    return {"ok": True, "phase": "done", "player": hand, "pv": pv,
+            "dealer": dealer, "dv": _bj_val(dealer), "result": result,
+            "payout": payout, "bet": bet, "coins": user.coins}
+
+
+@app.post("/api/games/bj/start")
+async def api_bj_start(request: Request, db: Session = Depends(db_session)):
+    user = _game_user(request, db)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    try:
+        bet = int(body.get("bet", 10))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Некорректная ставка")
+    if not 1 <= bet <= GAME_MAX_BET:
+        raise HTTPException(400, "Некорректная ставка")
+    st, row = _bj_load(db, user)
+    if st:  # незавершённую раздачу честно доигрываем автостендом
+        _bj_finish(db, user, st, row)
+        row = None
+    if (user.coins or 0) < bet:
+        raise HTTPException(400, "Не хватает SC")
+    user.coins = (user.coins or 0) - bet
+    st = {"h": [_bj_draw(), _bj_draw()], "d": [_bj_draw(), _bj_draw()], "bet": bet}
+    if _bj_val(st["h"]) == 21:  # мгновенный блэкджек
+        return JSONResponse(_bj_finish(db, user, st, None))
+    if row:
+        row.state = json.dumps(st, ensure_ascii=False)
+        row.updated = datetime.utcnow()
+    else:
+        db.add(BjState(user_id=user.id, state=json.dumps(st, ensure_ascii=False)))
+    db.commit()
+    return JSONResponse({"ok": True, "phase": "play", "player": st["h"],
+                         "pv": _bj_val(st["h"]), "dealer_up": st["d"][1],
+                         "can_double": (user.coins or 0) >= bet, "coins": user.coins})
+
+
+@app.post("/api/games/bj/{action}")
+def api_bj_action(action: str, request: Request, db: Session = Depends(db_session)):
+    if action not in ("hit", "stand", "double"):
+        raise HTTPException(404)
+    user = _game_user(request, db, min_interval=0.5)  # ходы в раздаче идут быстро
+    st, row = _bj_load(db, user)
+    if not st:
+        raise HTTPException(400, "Раздача не начата")
+    if action == "hit":
+        st["h"].append(_bj_draw())
+        if _bj_val(st["h"]) > 21:
+            return JSONResponse(_bj_finish(db, user, st, row, dealer_plays=False))
+        row.state = json.dumps(st, ensure_ascii=False)
+        row.updated = datetime.utcnow()
+        db.commit()
+        return JSONResponse({"ok": True, "phase": "play", "player": st["h"],
+                             "pv": _bj_val(st["h"]), "dealer_up": st["d"][1],
+                             "can_double": False, "coins": user.coins or 0})
+    if action == "double":
+        if len(st["h"]) != 2:
+            raise HTTPException(400, "Удвоение — только на первых двух картах")
+        if (user.coins or 0) < st["bet"]:
+            raise HTTPException(400, "Не хватает SC на удвоение")
+        user.coins = (user.coins or 0) - st["bet"]
+        st["bet"] *= 2
+        st["h"].append(_bj_draw())
+        if _bj_val(st["h"]) > 21:
+            return JSONResponse(_bj_finish(db, user, st, row, dealer_plays=False))
+        return JSONResponse(_bj_finish(db, user, st, row))
+    return JSONResponse(_bj_finish(db, user, st, row))  # stand
+
+
 @app.post("/profile")
 def profile_save(request: Request, name: str = Form(""), headline: str = Form(""),
                  salary_expect: str = Form(""), languages: str = Form(""),
@@ -4596,6 +4879,9 @@ def sitemap(db: Session = Depends(db_session)):
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exc(request: Request, exc: StarletteHTTPException):
+    # API-клиенты всегда получают JSON, а не брендированную HTML-страницу
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
     if exc.status_code in (404, 403, 401, 500):
         with SessionLocal() as db:
             titles = {404: "Стол не найден", 403: "Только для своих",

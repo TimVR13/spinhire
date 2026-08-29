@@ -496,14 +496,20 @@
 <script>
 (function () {
   // ---------- wallet ----------
-  // стартовый баланс на первый визит, чтобы демо-раунды реально отыгрались
+  // Два режима: вошедшие играют на ОБЩИЙ серверный баланс (исходы считает сервер,
+  // /api/games/*), гости — на демо-баланс в localStorage (3 пробных раунда).
   if (localStorage.getItem('spinCoins') === null) localStorage.setItem('spinCoins', '200');
   const amtEl = document.getElementById('wallet-amt');
+  let SERVER = false, DAILY_READY = false, serverCoins = 0;
   const W = {
-    get: () => parseInt(localStorage.getItem('spinCoins') || '0', 10),
-    set(v) { localStorage.setItem('spinCoins', String(v)); if (amtEl) amtEl.textContent = v; },
+    get: () => SERVER ? serverCoins : parseInt(localStorage.getItem('spinCoins') || '0', 10),
+    set(v) {
+      if (SERVER) serverCoins = Math.max(0, v);
+      else localStorage.setItem('spinCoins', String(Math.max(0, v)));
+      if (amtEl) amtEl.textContent = this.get();
+    },
     add(d) {
-      this.set(Math.max(0, this.get() + d));
+      this.set(this.get() + d);
       if (d > 0 && amtEl) { amtEl.classList.add('bump'); setTimeout(() => amtEl.classList.remove('bump'), 220); }
     },
   };
@@ -511,9 +517,17 @@
   const bets = { ru: 10, bj: 10, sl: 10 };
   const rnd = n => Math.floor(Math.random() * n);
 
+  async function api(url, body) {
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                   body: JSON.stringify(body || {}) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Ошибка — попробуйте ещё раз');
+    return data;
+  }
+
   // ---------- registration / demo-rounds gate ----------
   const DEMO_TOTAL = 3;
-  const isRegistered = () => localStorage.getItem('sh_registered') === '1';
+  const isRegistered = () => SERVER || localStorage.getItem('sh_registered') === '1';
   function roundsLeft() {
     let v = localStorage.getItem('sh_free_plays');
     if (v === null) { v = DEMO_TOTAL; localStorage.setItem('sh_free_plays', String(v)); }
@@ -527,7 +541,6 @@
     counterNum.textContent = Math.max(0, roundsLeft());
   }
   const gate = document.getElementById('reg-gate');
-  const authModal = document.getElementById('auth-modal');
   function openGate() { gate.classList.add('open'); }
   function closeGate() { gate.classList.remove('open'); }
 
@@ -542,27 +555,12 @@
     openGate();
     return false;
   }
-  function register() {
-    if (!isRegistered()) {
-      localStorage.setItem('sh_registered', '1');
-      W.add(500);
-      toast('Профиль создан — +500 SpinCoins 🎉');
-    }
-    syncCounter();
-  }
+  // настоящая регистрация: серверный баланс, бонус начисляет бэкенд
   document.getElementById('gate-register').addEventListener('click', () => {
-    closeGate();
-    if (authModal) authModal.classList.add('open'); // открываем существующую регистрацию сайта
-    else register();
+    window.location.href = '/register?next=' + encodeURIComponent('/games.html');
   });
   document.getElementById('gate-skip').addEventListener('click', closeGate);
   gate.addEventListener('click', e => { if (e.target === gate) closeGate(); });
-  // завершение регистрации через общий auth-modal -> начисляем 500 и закрываем
-  const authForm = document.getElementById('auth-form');
-  if (authForm) authForm.addEventListener('submit', () => {
-    register();
-    if (authModal) authModal.classList.remove('open');
-  });
   syncCounter();
 
   // bet selectors
@@ -575,7 +573,9 @@
   });
   function needCoins(amount, resultEl) {
     if (W.get() < amount) {
-      resultEl.innerHTML = '<span class="lose">Не хватает SC — забери бонус за визит (+100).</span>';
+      resultEl.innerHTML = SERVER
+        ? '<span class="lose">Не хватает SC — крути ежедневный фриспин или зови друга (+50 SC в профиле).</span>'
+        : '<span class="lose">Не хватает SC — забери бонус за визит (+100).</span>';
       return true;
     }
     return false;
@@ -584,13 +584,47 @@
   // ---------- daily bonus ----------
   const daily = document.getElementById('daily-btn');
   function dailyReady() { return Date.now() - (parseInt(localStorage.getItem('scDaily') || '0', 10)) > 20 * 3600 * 1000; }
-  function syncDaily() { daily.disabled = !dailyReady(); daily.textContent = dailyReady() ? '+100 за визит' : 'Бонус забран ✓'; }
+  function syncDaily() {
+    if (SERVER) {
+      daily.disabled = !DAILY_READY;
+      daily.textContent = DAILY_READY ? '🎡 Ежедневный фриспин' : 'Фриспин будет завтра ✓';
+      return;
+    }
+    daily.disabled = !dailyReady();
+    daily.textContent = dailyReady() ? '+100 за визит (демо)' : 'Бонус забран ✓';
+  }
   daily.addEventListener('click', () => {
+    if (SERVER) {
+      if (!DAILY_READY) return;
+      daily.disabled = true;
+      api('/api/games/daily').then(d => {
+        if (d.ok) { W.set(d.coins); toast('+' + d.prize + ' SpinCoins — заходи завтра'); }
+        else toast('Сегодня уже крутили — фриспин раз в сутки.');
+        DAILY_READY = false; syncDaily();
+      }).catch(e => { toast(e.message); daily.disabled = false; });
+      return;
+    }
     if (!dailyReady()) return;
     localStorage.setItem('scDaily', String(Date.now()));
     W.add(100); toast('+100 SpinCoins — заходи завтра'); syncDaily();
   });
   syncDaily();
+
+  // серверный режим: подтягиваем общий баланс профиля
+  (async () => {
+    try {
+      const w = await (await fetch('/api/wallet')).json();
+      const lbl = amtEl && amtEl.nextElementSibling;
+      if (w.logged_in) {
+        SERVER = true; serverCoins = w.coins || 0; DAILY_READY = !!w.daily_ready;
+        W.set(serverCoins);
+        if (lbl) lbl.textContent = 'SpinCoins · общий с профилем';
+        syncCounter(); syncDaily();
+      } else if (lbl) {
+        lbl.textContent = 'SpinCoins · демо';
+      }
+    } catch (e) { /* офлайн/сбой — остаёмся в демо */ }
+  })();
 
   // ===================== SLOT MACHINE (3×3) =====================
   const SYMS = ['seven', 'cherry', 'bell', 'diamond', 'crown', 'horseshoe', 'star', 'bar'];
@@ -626,17 +660,9 @@
     }
     setTimeout(() => { slBurst.innerHTML = ''; }, 1200);
   }
-  slBtn.addEventListener('click', () => {
-    if (slSpinning) return;
-    const bet = bets.sl;
-    if (needCoins(bet, slRes)) return;
-    if (!tryPlay()) return;
-    W.add(-bet); slSpinning = true; slBtn.disabled = true;
-    slLever.classList.add('pull'); setTimeout(() => slLever.classList.remove('pull'), 340);
-    slRes.textContent = 'Крутим...';
+  function animateSlot(grid) {
     const cell = slCell();
-    // 3×3 результат: каждой катушке [верх, центр, низ]
-    const grid = reels.map(() => [SYMS[rnd(SYMS.length)], SYMS[rnd(SYMS.length)], SYMS[rnd(SYMS.length)]]);
+    slLever.classList.add('pull'); setTimeout(() => slLever.classList.remove('pull'), 340);
     reels.forEach((r, i) => {
       const n = buildStrip(r, grid[i]);
       r.style.transition = 'none';
@@ -645,20 +671,50 @@
       r.style.transition = 'transform ' + (1.9 + i * 0.5) + 's cubic-bezier(0.15, 0.85, 0.15, 1)';
       r.style.transform = 'translateY(-' + ((n - 3) * cell) + 'px)';
     });
+  }
+  function slotSettle(bet, grid, win, jackpot, triples, pairs, finalCoins) {
+    let msg;
+    if (jackpot) msg = '🎰 <span class="big">ДЖЕКПОТ!</span> Все 9 одинаковых — <b>+30 000 SC</b>';
+    else if (win) msg = 'Выигрыш по строкам: ' + triples + ' тройки, ' + pairs + ' пары — <b>+' + win + ' SC</b>';
+    else msg = '<span class="lose">Совпадений по строкам нет. −' + bet + ' SC</span>';
+    if (win) {
+      if (SERVER) W.set(finalCoins); else W.add(win);
+      coinBurst(); slReelsBox.classList.add('win-flash');
+      setTimeout(() => slReelsBox.classList.remove('win-flash'), 1400);
+    } else if (SERVER) W.set(finalCoins);
+    slRes.innerHTML = msg;
+    slSpinning = false; slBtn.disabled = false;
+  }
+  slBtn.addEventListener('click', () => {
+    if (slSpinning) return;
+    const bet = bets.sl;
+    if (needCoins(bet, slRes)) return;
+    if (SERVER) {
+      slSpinning = true; slBtn.disabled = true;
+      slRes.textContent = 'Крутим...';
+      api('/api/games/slot', { bet }).then(d => {
+        W.add(-bet); // визуально списываем ставку на время вращения
+        animateSlot(d.grid);
+        setTimeout(() => slotSettle(bet, d.grid, d.win, d.jackpot, d.triples, d.pairs, d.coins), 3100);
+      }).catch(e => {
+        slRes.innerHTML = '<span class="lose">' + e.message + '</span>';
+        slSpinning = false; slBtn.disabled = false;
+      });
+      return;
+    }
+    if (!tryPlay()) return;
+    W.add(-bet); slSpinning = true; slBtn.disabled = true;
+    slRes.textContent = 'Крутим...';
+    const grid = reels.map(() => [SYMS[rnd(SYMS.length)], SYMS[rnd(SYMS.length)], SYMS[rnd(SYMS.length)]]);
+    animateSlot(grid);
     setTimeout(() => {
       const rows = [0, 1, 2].map(row => [grid[0][row], grid[1][row], grid[2][row]]);
       const flat = grid.flat();
       const jackpot = flat.every(symbol => symbol === flat[0]);
-      const triples = rows.filter(row => row[0] === row[1] && row[1] === row[2]);
-      const pairs = rows.filter(row => !(row[0] === row[1] && row[1] === row[2]) && new Set(row).size === 2);
-      const win = jackpot ? 30000 : Math.round(triples.length * bet * 5 + pairs.length * bet * 0.5);
-      let msg;
-      if (jackpot) msg = '🎰 <span class="big">ДЖЕКПОТ!</span> Все 9 одинаковых — <b>+30 000 SC</b>';
-      else if (win) msg = 'Выигрыш по строкам: ' + triples.length + ' тройки, ' + pairs.length + ' пары — <b>+' + win + ' SC</b>';
-      else msg = '<span class="lose">Совпадений по строкам нет. −' + bet + ' SC</span>';
-      if (win) { W.add(win); coinBurst(); slReelsBox.classList.add('win-flash'); setTimeout(() => slReelsBox.classList.remove('win-flash'), 1400); }
-      slRes.innerHTML = msg;
-      slSpinning = false; slBtn.disabled = false;
+      const triples = rows.filter(row => row[0] === row[1] && row[1] === row[2]).length;
+      const pairs = rows.filter(row => !(row[0] === row[1] && row[1] === row[2]) && new Set(row).size === 2).length;
+      const win = jackpot ? 30000 : Math.round(triples * bet * 5 + pairs * bet * 0.5);
+      slotSettle(bet, grid, win, jackpot, triples, pairs, 0);
     }, 3100);
   });
 
@@ -794,18 +850,9 @@
     return 2;                          // red/black/even/odd/low/high
   }
 
-  ruBtn.addEventListener('click', () => {
-    if (ruSpinning) return;
-    const total = ruStaked();
-    if (total <= 0) { ruRes.innerHTML = '<span class="lose">Сначала поставь фишку на поле.</span>'; return; }
-    if (!tryPlay()) return;
-    W.add(-total); ruSpinning = true; ruBtn.disabled = true; ruClear.disabled = true;
-    ruRes.textContent = 'Шарик пущен...';
-    ruHub.textContent = '…'; ruHub.className = 'ru-hub-readout';
-    ruWheelSvg.querySelectorAll('.is-win').forEach(pocket => pocket.classList.remove('is-win'));
+  function animateRoulette(n) {
     const step = 360 / EU.length;
-    const idx = rnd(EU.length);
-    const n = EU[idx];
+    const idx = EU.indexOf(n);
     const currentWheel = ((ruRot % 360) + 360) % 360;
     const targetWheel = (360 - idx * step) % 360;
     const wheelDelta = (targetWheel - currentWheel + 360) % 360;
@@ -814,19 +861,55 @@
     ruArmRot += 360 * 10 + (360 - currentArm) % 360;
     ruWheel.style.transform = 'rotate(' + ruRot + 'deg)';
     ruArm.style.transform = 'rotate(' + ruArmRot + 'deg)';
+  }
+  function rouletteSettle(n, total, payout, finalCoins) {
+    const color = colorOf(n);
+    const net = payout - total;
+    ruHub.textContent = n; ruHub.className = 'ru-hub-readout ' + color;
+    const winningPocket = ruWheelSvg.querySelector('[data-number="' + n + '"]');
+    if (winningPocket) winningPocket.classList.add('is-win');
+    ruReadout.innerHTML = '<span class="num ' + color + '">' + n + '</span> ' + ruColName(color);
+    if (payout > 0) {
+      if (SERVER) W.set(finalCoins); else W.add(payout);
+      ruRes.innerHTML = 'Выпало <b>' + n + '</b> (' + ruColName(color) + '). Возврат ' + payout + ' SC · <b class="big">' + (net >= 0 ? '+' : '') + net + ' SC</b> 🎉';
+    } else {
+      if (SERVER) W.set(finalCoins);
+      ruRes.innerHTML = 'Выпало ' + n + ' (' + ruColName(color) + '). <span class="lose">−' + total + ' SC</span>';
+    }
+    clearBets();
+    ruSpinning = false; ruBtn.disabled = false; ruClear.disabled = false;
+  }
+  ruBtn.addEventListener('click', () => {
+    if (ruSpinning) return;
+    const total = ruStaked();
+    if (total <= 0) { ruRes.innerHTML = '<span class="lose">Сначала поставь фишку на поле.</span>'; return; }
+    const startSpin = () => {
+      ruSpinning = true; ruBtn.disabled = true; ruClear.disabled = true;
+      ruRes.textContent = 'Шарик пущен...';
+      ruHub.textContent = '…'; ruHub.className = 'ru-hub-readout';
+      ruWheelSvg.querySelectorAll('.is-win').forEach(pocket => pocket.classList.remove('is-win'));
+    };
+    if (SERVER) {
+      startSpin();
+      api('/api/games/roulette', { bets: ruBets }).then(d => {
+        W.add(-total); // визуальное списание на время вращения
+        animateRoulette(d.n);
+        setTimeout(() => rouletteSettle(d.n, d.total, d.payout, d.coins), 4700);
+      }).catch(e => {
+        ruRes.innerHTML = '<span class="lose">' + e.message + '</span>';
+        ruSpinning = false; ruBtn.disabled = false; ruClear.disabled = false;
+      });
+      return;
+    }
+    if (!tryPlay()) return;
+    startSpin();
+    W.add(-total);
+    const n = EU[rnd(EU.length)];
+    animateRoulette(n);
     setTimeout(() => {
-      const color = colorOf(n);
       let payout = 0;
       Object.keys(ruBets).forEach(id => { if (betWins(id, n)) payout += ruBets[id] * betMult(id); });
-      const net = payout - total;
-      ruHub.textContent = n; ruHub.className = 'ru-hub-readout ' + color;
-      const winningPocket = ruWheelSvg.querySelector('[data-number="' + n + '"]');
-      if (winningPocket) winningPocket.classList.add('is-win');
-      ruReadout.innerHTML = '<span class="num ' + color + '">' + n + '</span> ' + ruColName(color);
-      if (payout > 0) { W.add(payout); ruRes.innerHTML = 'Выпало <b>' + n + '</b> (' + ruColName(color) + '). Возврат ' + payout + ' SC · <b class="big">' + (net >= 0 ? '+' : '') + net + ' SC</b> 🎉'; }
-      else { ruRes.innerHTML = 'Выпало ' + n + ' (' + ruColName(color) + '). <span class="lose">−' + total + ' SC</span>'; }
-      clearBets();
-      ruSpinning = false; ruBtn.disabled = false; ruClear.disabled = false;
+      rouletteSettle(n, total, payout, 0);
     }, 4700);
   });
 
@@ -837,7 +920,7 @@
   const bjStand = document.getElementById('bj-stand'), bjDouble = document.getElementById('bj-double');
   const bjP = document.getElementById('bj-player'), bjD = document.getElementById('bj-dealer'), bjRes = document.getElementById('bj-result');
   const bjPS = document.getElementById('bj-pscore'), bjDS = document.getElementById('bj-dscore');
-  let hand = [], dealer = [], inGame = false, bjBet = 0;
+  let hand = [], dealer = [], inGame = false, bjBet = 0, bjBusy = false;
   const draw = () => { const [r, v] = RANKS[rnd(13)]; const [s, red] = SUITS[rnd(4)]; return { r, s, red, v, ace: r === 'A' }; };
   const val = h => { let s = h.reduce((a, c) => a + c.v, 0), aces = h.filter(c => c.ace).length; while (s > 21 && aces--) s -= 10; return s; };
   function cardHTML(c) {
@@ -858,6 +941,44 @@
     // удвоение только на первых двух картах и при достаточном балансе
     bjDouble.disabled = !(state === 'play' && hand.length === 2 && W.get() >= bjBet);
   }
+  // серверный режим: рендер по ответам API
+  function bjSrvPlay(d) {
+    hand = d.player;
+    bjP.innerHTML = hand.map(cardHTML).join('');
+    bjD.innerHTML = backHTML + cardHTML(d.dealer_up);
+    bjPS.textContent = d.pv; bjDS.textContent = '';
+    setControls('play');
+    bjDouble.disabled = !d.can_double;
+    bjRes.textContent = 'У тебя ' + d.pv + '. Ещё, хватит или удвоить?';
+  }
+  function bjSrvDone(d) {
+    hand = d.player; dealer = d.dealer;
+    bjP.innerHTML = hand.map(cardHTML).join('');
+    bjD.innerHTML = dealer.map(cardHTML).join('');
+    bjPS.textContent = d.pv; bjDS.textContent = d.dv;
+    setControls('idle');
+    W.set(d.coins);
+    const net = d.payout - d.bet;
+    const base = d.result === 'blackjack' ? 'Блэкджек! ' + d.pv + ':' + d.dv + '.'
+      : d.result === 'bust' ? 'Перебор: ' + d.pv + '.'
+      : d.result === 'win' ? 'Ты: ' + d.pv + ', дилер: ' + d.dv + '. Победа!'
+      : d.result === 'push' ? 'Пуш ' + d.pv + ':' + d.dv + '.'
+      : 'Ты: ' + d.pv + ', дилер: ' + d.dv + '.';
+    const tail = d.payout > d.bet ? ' <b class="big">+' + net + ' SC</b>'
+      : d.payout === 0 ? ' <span class="lose">−' + d.bet + ' SC</span>' : ' <span>ставка вернулась</span>';
+    bjRes.innerHTML = base + tail;
+  }
+  function bjApi(url, body) {
+    if (bjBusy) return;
+    bjBusy = true;
+    api(url, body).then(d => {
+      if (d.phase === 'done') bjSrvDone(d);
+      else { W.set(d.coins); bjSrvPlay(d); }
+    }).catch(e => {
+      bjRes.innerHTML = '<span class="lose">' + e.message + '</span>';
+      setControls(inGame ? 'play' : 'idle');
+    }).finally(() => { bjBusy = false; });
+  }
   function finish(msg, delta) {
     inGame = false; setControls('idle');
     if (delta > 0) W.add(delta);
@@ -866,6 +987,7 @@
   bjDeal.addEventListener('click', () => {
     bjBet = bets.bj;
     if (needCoins(bjBet, bjRes)) return;
+    if (SERVER) { inGame = true; bjApi('/api/games/bj/start', { bet: bjBet }); return; }
     if (!tryPlay()) return;
     W.add(-bjBet); hand = [draw(), draw()]; dealer = [draw(), draw()]; inGame = true;
     render(true);
@@ -874,6 +996,7 @@
     if (val(hand) === 21) { stand(); }
   });
   bjHit.addEventListener('click', () => {
+    if (SERVER) { bjApi('/api/games/bj/hit'); return; }
     if (!inGame) return;
     hand.push(draw()); render(true);
     const v = val(hand);
@@ -882,6 +1005,7 @@
     else bjRes.textContent = 'У тебя ' + v + '.';
   });
   bjDouble.addEventListener('click', () => {
+    if (SERVER) { bjApi('/api/games/bj/double'); return; }
     if (!inGame || hand.length !== 2) return;
     if (W.get() < bjBet) return;
     W.add(-bjBet); bjBet *= 2;
@@ -900,7 +1024,10 @@
     else if (p === d) finish('Пуш ' + p + ':' + d + '.', bjBet);
     else finish('Ты: ' + p + ', дилер: ' + d + '.', 0);
   }
-  bjStand.addEventListener('click', stand);
+  bjStand.addEventListener('click', () => {
+    if (SERVER) { bjApi('/api/games/bj/stand'); return; }
+    stand();
+  });
 
   // демо-раздача на старте — стол не пустой (не настоящий раунд)
   hand = [draw(), draw()]; dealer = [draw(), draw()];
@@ -910,6 +1037,11 @@
   document.querySelectorAll('[data-merch]').forEach(btn => {
     btn.addEventListener('click', () => {
       const cost = parseInt(btn.dataset.merch, 10);
+      if (SERVER) {
+        if (W.get() < cost) { toast('Не хватает ' + (cost - W.get()) + ' SC на «' + btn.dataset.name + '»'); return; }
+        toast('Обмен на мерч запускаем совсем скоро — SC уже общие с профилем, ничего не сгорит.');
+        return;
+      }
       if (W.get() < cost) { toast('Не хватает ' + (cost - W.get()) + ' SC на «' + btn.dataset.name + '»'); return; }
       W.add(-cost); toast('«' + btn.dataset.name + '» твой! Спишем ' + cost + ' SC, детали на почту.');
     });
