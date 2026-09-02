@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% set active = 'market' %}
+{% set en = lang == 'en' %}
+{% block title %}{% if en %}iGaming job market, {{ title_month }}: {{ row.open_jobs }} open jobs | SpinHire{% else %}Рынок труда iGaming, {{ title_month }}: {{ row.open_jobs }} вакансий | SpinHire{% endif %}{% endblock %}
+{% block desc %}{% if en %}SpinHire iGaming Hiring Index for {{ title_month }}: {{ row.open_jobs }} open jobs at {{ row.companies }} companies, {{ row.new_jobs }} new postings, {{ row.salary_pct }}% with a published salary. Permanent, citable snapshot.{% else %}Индекс найма iGaming от SpinHire за {{ title_month }}: {{ row.open_jobs }} открытых вакансий у {{ row.companies }} компаний, {{ row.new_jobs }} новых, {{ row.salary_pct }}% с зарплатой. Постоянный адрес для цитирования.{% endif %}{% endblock %}
+{% block robots %}<link rel="canonical" href="https://spinhire.io/market/{{ row.ym }}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="{% if en %}iGaming job market — {{ title_month }}{% else %}Рынок труда iGaming — {{ title_month }}{% endif %}">
+<meta property="og:description" content="{{ row.open_jobs }} {% if en %}open jobs at{% else %}открытых вакансий у{% endif %} {{ row.companies }} {% if en %}companies{% else %}компаний{% endif %}">
+<meta property="og:url" content="https://spinhire.io/market/{{ row.ym }}">
+<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
+<script type="application/ld+json">{{ {
+  "@context": "https://schema.org",
+  "@type": "Dataset",
+  "name": ("SpinHire iGaming Hiring Index — " ~ title_month) if en else ("Индекс найма iGaming SpinHire — " ~ title_month),
+  "description": ("Open iGaming jobs, hiring companies and new postings for " ~ title_month ~ ", with daily snapshots. Computed from the SpinHire aggregated job index.") if en else ("Открытые вакансии iGaming, нанимающие компании и новые позиции за " ~ title_month ~ " с дневными снимками. Считается по агрегированному индексу вакансий SpinHire."),
+  "url": "https://spinhire.io/market/" ~ row.ym,
+  "temporalCoverage": row.ym,
+  "license": "https://creativecommons.org/licenses/by/4.0/",
+  "creator": {"@type": "Organization", "name": "SpinHire", "url": "https://spinhire.io/"},
+  "isPartOf": {"@type": "Dataset", "name": "SpinHire iGaming job market", "url": "https://spinhire.io/market"},
+  "dateModified": today,
+  "distribution": [
+    {"@type": "DataDownload", "encodingFormat": "text/csv", "contentUrl": "https://spinhire.io/market.csv"},
+    {"@type": "DataDownload", "encodingFormat": "application/json", "contentUrl": "https://spinhire.io/api/market-history"}
+  ],
+  "variableMeasured": [
+    {"@type": "PropertyValue", "name": "open jobs, end of month", "value": row.open_jobs},
+    {"@type": "PropertyValue", "name": "companies hiring", "value": row.companies},
+    {"@type": "PropertyValue", "name": "new postings in month", "value": row.new_jobs},
+    {"@type": "PropertyValue", "name": "share with published salary, %", "value": row.salary_pct}
+  ]
+} | tojson }}</script>{% endblock %}
+{% block style %}
+  .mm-wrap { max-width: 900px; margin: 0 auto; }
+  .mm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: var(--sp-3); margin: var(--sp-5) 0; }
+  .mm-card { border: 2px solid var(--line); padding: 14px 18px; }
+  .mm-card b { display: block; font-family: var(--font-display); font-size: 1.7rem; color: var(--acid); line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .mm-card span { font-size: 0.76rem; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .mm-nav { display: flex; justify-content: space-between; gap: 12px; margin: var(--sp-5) 0; font-size: 0.9rem; }
+  .mm-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: var(--sp-5); }
+  .mm-cols h2 { font-family: var(--font-display); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--sp-3); }
+  .mm-bar { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
+  .mm-bar b { font-variant-numeric: tabular-nums; }
+  .mm-quote { border-left: 3px solid var(--acid); padding: 10px 16px; background: var(--surface); margin: var(--sp-4) 0; }
+  .adm td, .adm th { font-variant-numeric: tabular-nums; }
+{% endblock %}
+{% block content %}
+<section class="section"><div class="container mm-wrap">
+  <nav class="crumbs"><a href="/">Главная</a> / <a href="/market">Рынок труда</a> / {{ title_month }}</nav>
+  <span class="kicker">{% if en %}SpinHire iGaming Hiring Index{% else %}Индекс найма iGaming · SpinHire{% endif %}</span>
+  <h1 style="font-size: clamp(1.6rem, 4vw, 2.6rem); margin: 8px 0 10px;">{% if en %}iGaming job market: {{ title_month }}{% else %}Рынок труда iGaming: {{ title_month }}{% endif %}</h1>
+  <p style="color: var(--ink-dim); max-width: 70ch;">
+    {% if en %}Permanent snapshot of the month. Figures below are not recomputed later, so a quote with this address stays verifiable.{% if row.current %} The month is still running: end-of-month values are as of today.{% endif %}
+    {% else %}Постоянный снимок месяца. Цифры ниже потом не пересчитываются, поэтому цитата с этим адресом остаётся проверяемой.{% if row.current %} Месяц ещё идёт: значения «на конец месяца» даны по состоянию на сегодня.{% endif %}{% endif %}
+  </p>
+
+  <div class="mm-grid">
+    <div class="mm-card"><b>{{ row.open_jobs }}</b><span>{% if en %}open jobs, end of month{% else %}открытых на конец месяца{% endif %}</span></div>
+    <div class="mm-card"><b>{{ row.companies }}</b><span>{% if en %}companies hiring{% else %}компаний нанимало{% endif %}</span></div>
+    <div class="mm-card"><b>{{ row.new_jobs }}</b><span>{% if en %}new postings{% else %}новых за месяц{% endif %}</span></div>
+    <div class="mm-card"><b>{{ row.salary_pct }}%</b><span>{% if en %}with published salary{% else %}с указанной зарплатой{% endif %}</span></div>
+  </div>
+
+  <div class="mm-quote">
+    <span class="kicker" style="display:block; margin-bottom:6px;">{% if en %}How to cite{% else %}Как цитировать{% endif %}</span>
+    {% if en %}“According to the SpinHire iGaming Hiring Index, {{ row.open_jobs }} iGaming jobs were open at {{ row.companies }} companies in {{ title_month }}” — https://spinhire.io/market/{{ row.ym }}
+    {% else %}«По данным индекса найма SpinHire, в {{ title_month | lower }} в iGaming было открыто {{ row.open_jobs }} вакансий у {{ row.companies }} компаний» — https://spinhire.io/market/{{ row.ym }}{% endif %}
+  </div>
+
+  {% if latest %}
+  <div class="mm-cols">
+    <section>
+      <h2>{% if en %}By department{% else %}По направлениям{% endif %} <small style="font-weight:400; text-transform:none; letter-spacing:0; color: var(--ink-faint);">· {{ latest.date }}</small></h2>
+      {% for d in latest.directions %}<div class="mm-bar"><span>{{ d.name }}</span><b>{{ d.jobs }}</b></div>{% endfor %}
+    </section>
+    <section>
+      <h2>{% if en %}By country{% else %}По странам{% endif %}</h2>
+      {% for c in latest.countries[:10] %}<div class="mm-bar"><span>{{ c.name }}</span><b>{{ c.jobs }}</b></div>{% endfor %}
+    </section>
+  </div>
+  {% endif %}
+
+  {% if days %}
+  <h2 style="font-family: var(--font-display); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin: var(--sp-6) 0 var(--sp-3);">{% if en %}Daily snapshots{% else %}Дневные снимки{% endif %}</h2>
+  <div class="table-wrap"><table class="adm">
+    <thead><tr><th>{% if en %}Date{% else %}Дата{% endif %}</th><th>{% if en %}Open jobs{% else %}Открытых{% endif %}</th><th>{% if en %}New in 7 days{% else %}Новых за 7 дней{% endif %}</th><th>{% if en %}Companies{% else %}Компаний{% endif %}</th><th>{% if en %}With salary{% else %}С зарплатой{% endif %}</th></tr></thead>
+    <tbody>{% for d in days | reverse %}<tr><td>{{ d.date }}</td><td>{{ d.live_jobs }}</td><td>{{ d.new_this_week }}</td><td>{{ d.companies }}</td><td>{{ d.with_salary_pct }}%</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}
+  <p style="color: var(--ink-faint); font-size: 0.9rem; margin-top: var(--sp-5);">{% if en %}Daily snapshots are stored from September 2026 onward; earlier months are reconstructed from each job's open and close dates.{% else %}Дневные снимки хранятся с сентября 2026; более ранние месяцы восстановлены по датам открытия и закрытия каждой вакансии.{% endif %}</p>
+  {% endif %}
+
+  <div class="mm-nav">
+    <span>{% if older %}← <a href="/market/{{ older.ym }}">{{ older.label_en if en else older.label }}</a>{% endif %}</span>
+    <a href="/market#methodology">{% if en %}Methodology and live figures{% else %}Методика и живые цифры{% endif %}</a>
+    <span>{% if newer %}<a href="/market/{{ newer.ym }}">{{ newer.label_en if en else newer.label }}</a> →{% endif %}</span>
+  </div>
+  <p style="font-size: 0.85rem; color: var(--ink-faint);">{% if en %}Data: CC BY 4.0. Download{% else %}Данные: CC BY 4.0. Выгрузка{% endif %} <a href="/market.csv">CSV</a> · <a href="/api/market-history">JSON</a> · <a href="/market.md">Markdown</a></p>
+</div></section>
+{% endblock %}

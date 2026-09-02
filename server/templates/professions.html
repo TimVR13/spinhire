@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 {% set active = 'professions' %}
-{% block title %}Профессии в iGaming: обязанности и зарплаты | SpinHire{% endblock %}
-{% block desc %}Картотека iGaming: {{ roles_total }} должностей от VIP-менеджера до COO. Обязанности, KPI, навыки и зарплаты по грейдам.{% endblock %}
+{% block title %}{% if lang == 'en' %}iGaming careers: {{ roles_total }} roles, responsibilities and salaries | SpinHire{% else %}Профессии в iGaming: обязанности и зарплаты | SpinHire{% endif %}{% endblock %}
+{% block desc %}{% if lang == 'en' %}iGaming career directory: {{ roles_total }} roles from VIP Manager to COO. Responsibilities, KPIs, skills and monthly salary bands by seniority for Malta, Cyprus, Eastern Europe and remote.{% else %}Картотека iGaming: {{ roles_total }} должностей от VIP-менеджера до COO. Обязанности, KPI, навыки и зарплаты по грейдам.{% endif %}{% endblock %}
 {% block robots %}<link rel="canonical" href="https://spinhire.io/professions">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Профессии в iGaming — обязанности и зарплаты">
-<meta property="og:description" content="{{ roles_total }} должностей индустрии: чем занимается каждая роль, какие навыки нужны и сколько платят по грейдам.">
+<meta property="og:title" content="{% if lang == 'en' %}iGaming careers — responsibilities and salaries{% else %}Профессии в iGaming — обязанности и зарплаты{% endif %}">
+<meta property="og:description" content="{% if lang == 'en' %}{{ roles_total }} industry roles: what each one does, which skills are required and what it pays by seniority.{% else %}{{ roles_total }} должностей индустрии: чем занимается каждая роль, какие навыки нужны и сколько платят по грейдам.{% endif %}">
 <meta property="og:url" content="https://spinhire.io/professions">
 <meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
 <script type="application/ld+json">{{ {
   "@context": "https://schema.org",
   "@type": "CollectionPage",
-  "name": "Профессии в iGaming",
-  "description": "Картотека профессий iGaming-индустрии с обязанностями и зарплатными вилками.",
+  "name": ("iGaming careers" if lang == "en" else "Профессии в iGaming"),
+  "description": ("Directory of iGaming professions with responsibilities and salary bands." if lang == "en" else "Картотека профессий iGaming-индустрии с обязанностями и зарплатными вилками."),
   "url": "https://spinhire.io/professions"
 } | tojson }}</script>{% endblock %}
 {% block style %}

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% set active = 'professions' %}
 {% set mid = role.salary.mt_cy.middle %}
-{% block title %}{{ role.title }} в iGaming: обязанности, навыки и зарплата {{ salary_headline }} | SpinHire{% endblock %}
-{% block desc %}{{ role.title }} ({{ role.title_en }}) в iGaming: чем занимается, за что отвечает, какие навыки нужны и сколько платят — {{ salary_headline }} на Мальте и Кипре, вилки по грейдам и регионам.{% endblock %}
+{% block title %}{% if lang == 'en' %}{{ role.title }} in iGaming: responsibilities, skills and salary {{ salary_headline }} | SpinHire{% else %}{{ role.title }} в iGaming: обязанности, навыки и зарплата {{ salary_headline }} | SpinHire{% endif %}{% endblock %}
+{% block desc %}{% if lang == 'en' %}{{ role.title }} in iGaming: what the role does, what it owns, which skills employers ask for and what it pays — {{ salary_headline }} per month in Malta and Cyprus, with bands by seniority and region.{% else %}{{ role.title }} ({{ role.title_en }}) в iGaming: чем занимается, за что отвечает, какие навыки нужны и сколько платят — {{ salary_headline }} на Мальте и Кипре, вилки по грейдам и регионам.{% endif %}{% endblock %}
 {% block robots %}<link rel="canonical" href="https://spinhire.io/profession/{{ role.slug }}">
 <link rel="alternate" type="text/markdown" href="https://spinhire.io/profession/{{ role.slug }}.md" title="Текстовая версия для языковых моделей">
 <meta property="og:type" content="article">
-<meta property="og:title" content="{{ role.title }} в iGaming — обязанности и зарплата">
+<meta property="og:title" content="{% if lang == 'en' %}{{ role.title }} in iGaming — responsibilities and salary{% else %}{{ role.title }} в iGaming — обязанности и зарплата{% endif %}">
 <meta property="og:description" content="{{ role.lead }}">
 <meta property="og:url" content="https://spinhire.io/profession/{{ role.slug }}">
 <meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
@@ -23,7 +23,7 @@
   "estimatedSalary": [
     {
       "@type": "MonetaryAmountDistribution",
-      "name": "Мальта и Кипр",
+      "name": ("Malta & Cyprus" if lang == "en" else "Мальта и Кипр"),
       "currency": "EUR",
       "duration": "P1M",
       "percentile10": role.salary.mt_cy.junior[0],
@@ -32,7 +32,7 @@
     },
     {
       "@type": "MonetaryAmountDistribution",
-      "name": "Восточная Европа",
+      "name": ("Eastern Europe" if lang == "en" else "Восточная Европа"),
       "currency": "EUR",
       "duration": "P1M",
       "percentile10": role.salary.eu.junior[0],
@@ -46,8 +46,8 @@
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   "itemListElement": [
-    {"@type": "ListItem", "position": 1, "name": "Главная", "item": "https://spinhire.io/"},
-    {"@type": "ListItem", "position": 2, "name": "Профессии", "item": "https://spinhire.io/professions"},
+    {"@type": "ListItem", "position": 1, "name": ("Home" if lang == "en" else "Главная"), "item": "https://spinhire.io/"},
+    {"@type": "ListItem", "position": 2, "name": ("Careers" if lang == "en" else "Профессии"), "item": "https://spinhire.io/professions"},
     {"@type": "ListItem", "position": 3, "name": role.title, "item": "https://spinhire.io/profession/" + role.slug}
   ]
 } | tojson }}</script>{% endblock %}
@@ -103,7 +103,7 @@
   </div>
 
   <div class="facts">
-    <a class="fact pay" href="#salary"><span>Middle · Мальта и Кипр</span><b>{{ salary_headline }}</b><i>вилки по грейдам ↓</i></a>
+    <a class="fact pay" href="#salary"><span>Middle · {{ "Malta & Cyprus" if lang == "en" else "Мальта и Кипр" }}</span><b>{{ salary_headline }}</b><i>вилки по грейдам ↓</i></a>
     <a class="fact" href="/professions"><span>Направление</span><b style="font-size: 0.95rem;">{{ role.family }}</b><i>вся картотека →</i></a>
     <a class="fact" href="{% if jobs %}#live-jobs{% else %}/jobs?q={{ role.title | urlencode }}{% endif %}"><span>Живых вакансий</span><b>{{ jobs_count }}</b><i>смотреть ↓</i></a>
     <div class="fact"><span>Похожие названия</span><b style="font-size: 0.9rem;">{{ role.aliases[0] }}</b></div>
@@ -179,7 +179,7 @@
 
   {% if jobs %}
   <section class="p-section" id="live-jobs">
-    <h2>Живые вакансии: {{ role.title }}</h2>
+    <h2>{{ "Live jobs" if lang == "en" else "Живые вакансии" }}: {{ role.title }}</h2>
     <div style="display: flex; flex-direction: column; gap: 10px;">
       {% for j in jobs %}
       <a href="/job/{{ j.id }}" class="rel" style="display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
@@ -215,7 +215,7 @@
 
   {% if same_family %}
   <section class="p-section">
-    <h2>Ещё в направлении «{{ role.family }}»</h2>
+    <h2>{% if lang == "en" %}More in {{ role.family }}{% else %}Ещё в направлении «{{ role.family }}»{% endif %}</h2>
     <div class="chips">
       {% for r in same_family %}<a class="chip" href="/profession/{{ r.slug }}" style="text-decoration: none;">{{ r.title }}</a>{% endfor %}
     </div>
@@ -223,8 +223,8 @@
   {% endif %}
 
   <div class="card" style="text-align: center; margin-top: var(--sp-6);">
-    <h2 style="font-size: 1.15rem; margin-bottom: 10px;">Ищете {{ role.title | lower }}а в команду?</h2>
-    <p style="color: var(--ink-dim); margin-bottom: 18px;">Разместите вакансию за €49 — она попадёт в поиск, в направление «{{ role.family }}» и на эту страницу.</p>
+    <h2 style="font-size: 1.15rem; margin-bottom: 10px;">{% if lang == "en" %}Hiring a {{ role.title }}?{% else %}Ищете {{ role.title | lower }}а в команду?{% endif %}</h2>
+    <p style="color: var(--ink-dim); margin-bottom: 18px;">{% if lang == "en" %}Post a job for €49: it goes into search, into the {{ role.family }} department and onto this page.{% else %}Разместите вакансию за €49 — она попадёт в поиск, в направление «{{ role.family }}» и на эту страницу.{% endif %}</p>
     <a href="/post-job" class="btn btn-pink">Разместить вакансию →</a>
   </div>
 </div>

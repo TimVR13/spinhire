@@ -1,0 +1,1885 @@
+{
+ "regions": {
+  "mt_cy": "Malta & Cyprus",
+  "eu": "Poland, Romania, Baltics",
+  "remote": "Remote · Tbilisi, Yerevan, Kyiv"
+ },
+ "roles": {
+  "vip-manager": {
+   "family": "Casino operations",
+   "lead": "The personal account manager for the players who generate most of a casino's revenue: you look after 100–300 high rollers, know them by name and are accountable for keeping them coming back.",
+   "about": "In online casino, 1–3% of players can account for up to half of turnover. The VIP Manager is the only person in the company who talks to them directly: messaging on Telegram and WhatsApp, calling, sending birthday wishes, signing off tailored bonuses and defusing disputes before a player defects to a competitor. It sits at the intersection of sales, support and analytics: half the day is conversations and calls, the other half is deposit, churn and portfolio-activity reports. The role is almost always tied to a market language: German, Turkish, Japanese, Portuguese (Brazil) or the Nordic languages carry a 15–30% premium.",
+   "responsibilities": [
+    "Own a personal portfolio of VIP players: messaging, calls, occasions, reactivation",
+    "Agree tailored bonuses, cashback and limits within budget",
+    "Analyse portfolio activity: deposits, wagering, churn and early signs a player is drifting away",
+    "Win back players who have gone quiet: personal offers and outbound calls",
+    "Handle complaints and escalations, resolve disputed payouts together with support",
+    "Spot signs of problem gambling and hand cases over to Responsible Gaming",
+    "Invite players to offline events and tournaments, arrange branded gifts"
+   ],
+   "kpis": [
+    "Portfolio NGR",
+    "Retention rate and reactivation rate of the VIP segment",
+    "Average deposit and deposit frequency",
+    "High-roller churn",
+    "Response time to players"
+   ],
+   "hard_skills": [
+    "Casino metrics: GGR, NGR, RTP, bonus cost",
+    "Working in a CRM (Optimove, Fast Track, Solitics)",
+    "Excel/Google Sheets to pivot-table level",
+    "Bonus policy and wagering requirements",
+    "AML and responsible gambling fundamentals"
+   ],
+   "soft_skills": [
+    "Negotiation and objection handling",
+    "Resilience: a player has just lost and is messaging you at 2 a.m.",
+    "Empathy paired with the ability to hold boundaries",
+    "Self-management: the portfolio runs without anyone chasing you"
+   ],
+   "tools": [
+    "Optimove",
+    "Fast Track",
+    "Solitics",
+    "Intercom / Zendesk",
+    "Telegram, WhatsApp",
+    "In-house BI dashboards"
+   ],
+   "languages": "English B2+ is a must. The real premium is for native or C1 command of the market language: German, Turkish, Japanese, Portuguese (BR), Finnish, Norwegian, Swedish.",
+   "entry": "The classic route is casino support: 6–12 months in support, then a move into retention or VIP. The second route is sales or private banking, provided you have the right language. Candidates with no industry experience are rarely hired, and usually only onto a junior portfolio.",
+   "schedule": "Often shift-based with weekend on-call duty — high rollers play in the evenings and at night. In office teams in Malta and Cyprus that means a 5/2 week with rotating shifts; remote roles offer flexible hours with a mandatory window aligned to the market's time zone.",
+   "bonus": "There is almost always a variable component: 20–60% of base salary for hitting the portfolio NGR target. Senior managers with a strong portfolio can earn a bonus that exceeds their base.",
+   "growth": [
+    "Senior VIP Manager",
+    "VIP Team Lead",
+    "Head of VIP",
+    "Head of CRM / Retention",
+    "Country Manager"
+   ],
+   "demand": "One of the hardest roles to fill in the industry. Language-specific VIP Managers (German, Japanese, Turkish) take months to hire, so companies pay relocation packages and sign-on bonuses.",
+   "faq": [
+    {
+     "q": "Do I need casino experience to become a VIP Manager?",
+     "a": "For mid and senior roles, yes — employers expect at least a year in gambling. Junior portfolios are open to people from casino support, premium retail or private banking with high-net-worth clients, provided they have the right language."
+    },
+    {
+     "q": "How many players does one VIP Manager handle?",
+     "a": "Typically 100–300 active players. In the top tier (high rollers depositing €50,000 and up) a portfolio can be as small as 30–60 people."
+    },
+    {
+     "q": "Is it true a VIP Manager can out-earn a Head of Support?",
+     "a": "Often, yes — thanks to the bonus tied to portfolio NGR. A strong senior on a European market takes home €6,000–9,000 a month including bonus."
+    }
+   ]
+  },
+  "retention-manager": {
+   "family": "Casino operations",
+   "lead": "Responsible for making sure a player doesn't leave after the first deposit: you build communication flows, bonus mechanics and lifecycle segments.",
+   "about": "Acquiring a player costs €50–300, so the entire casino economy rests on how long they stay after registration. The Retention Manager works with segments (new, active, dormant, churned) and runs a dedicated mechanic for each: welcome flows, missions, tournaments, cashback, reactivation offers. Unlike a VIP Manager, you don't talk to players one-to-one — you design the system that does it automatically, then work out whether the bonus budget paid for itself.",
+   "responsibilities": [
+    "Segment the player base by lifecycle stage and player value",
+    "Launch and maintain automated flows: email, SMS, push, on-site",
+    "Plan the bonus calendar and promo mechanics a month ahead",
+    "A/B test offers, subject lines and mechanics, and analyse the results",
+    "Control the bonus budget: bonus cost against incremental NGR",
+    "Reactivate dormant segments and fight churn",
+    "Work hand in hand with the CRM, analytics and content teams"
+   ],
+   "kpis": [
+    "Retention D7 / D30 / D90",
+    "Reactivation rate",
+    "Bonus cost / NGR",
+    "Cohort ARPU and LTV",
+    "First-to-second deposit conversion"
+   ],
+   "hard_skills": [
+    "CRM platforms and journey building",
+    "Cohort analysis and player unit economics",
+    "Basic SQL for pulling segments",
+    "Bonus mechanics: wagering requirements, cashback, free spins, missions",
+    "A/B testing and statistical significance"
+   ],
+   "soft_skills": [
+    "Analytical mindset",
+    "Ability to defend a budget with numbers",
+    "Cross-team coordination",
+    "Fast reaction when metrics dip"
+   ],
+   "tools": [
+    "Optimove",
+    "Fast Track",
+    "Solitics",
+    "Braze",
+    "Metabase / Tableau",
+    "Excel, SQL"
+   ],
+   "languages": "English B2+ as the working language. Knowing the market language is a plus, not a requirement.",
+   "entry": "People come in from CRM marketing, the VIP team or analytics. A good entry point is junior CRM executive: build campaigns, run the promo calendar, and a year later take ownership of a segment.",
+   "schedule": "Standard 5/2, with peaks ahead of major promos and tournaments. Occasional weekend on-call when a big campaign is live.",
+   "bonus": "Annual or quarterly bonus of 10–25% of base salary, tied to retention metrics and bonus-budget efficiency.",
+   "growth": [
+    "Senior Retention Manager",
+    "Head of CRM",
+    "Head of Retention",
+    "Chief Marketing Officer"
+   ],
+   "demand": "Consistently high demand: every operator hits a retention wall soon after launch. Employers value candidates who can show, in numbers, how their campaigns moved NGR.",
+   "faq": [
+    {
+     "q": "How does a Retention Manager differ from a CRM Manager?",
+     "a": "In practice the roles often overlap. Where they are split, CRM owns the channels and the technical delivery of communications, while retention owns segment economics and bonus mechanics."
+    },
+    {
+     "q": "Do I need SQL?",
+     "a": "Not for junior roles, but almost always from mid-level up: being able to pull a segment and check a campaign's results without waiting for an analyst makes you several times faster."
+    }
+   ]
+  },
+  "casino-operations-manager": {
+   "family": "Casino operations",
+   "lead": "Keeps everything the player sees running smoothly: the game portfolio, the promo calendar, the lobby, and the coordination between support, payments and providers.",
+   "about": "The Casino Operations Manager is the casino's operational nerve centre. You make sure new slots go live on time, tournaments start without glitches, the lobby shows the right games to the right geos, and a provider outage doesn't sit unresolved for hours. It's a role for someone who loves orderly processes and can juggle a dozen small tasks across different teams at once. In smaller companies the role also absorbs content, promotions and a slice of analytics.",
+   "responsibilities": [
+    "Run the promo calendar and launch campaigns together with CRM and content",
+    "Oversee the game lobby: collections, recommendations, geo settings",
+    "Coordinate with game providers on releases, tournaments and incidents",
+    "Monitor daily metrics: turnover, deposit conversion, outages",
+    "Resolve incidents and escalations between support, payments and tech",
+    "Prepare operational reporting for management"
+   ],
+   "kpis": [
+    "GGR and NGR for the vertical",
+    "Active player share",
+    "Incident resolution time",
+    "Promo calendar adherence",
+    "Deposit conversion"
+   ],
+   "hard_skills": [
+    "Casino metrics and the vertical's P&L",
+    "Working in the platform back office",
+    "Project management and release calendar ownership",
+    "Fundamentals of working with game providers and aggregators",
+    "Excel/BI at reporting level"
+   ],
+   "soft_skills": [
+    "Multitasking",
+    "Ability to reach agreements with external partners",
+    "Attention to detail",
+    "Staying calm during incidents"
+   ],
+   "tools": [
+    "Platform back office (SoftSwiss, EveryMatrix, GR8)",
+    "Jira / Asana",
+    "Metabase / Tableau",
+    "Slack"
+   ],
+   "languages": "English C1 — all communication with providers and internal teams is in English.",
+   "entry": "People grow into it from support, casino content management or promo coordination. Less often they arrive from product or project roles outside the industry.",
+   "schedule": "5/2 with occasional on-call during major releases and tournaments.",
+   "bonus": "Quarterly bonus of 10–20% of base salary based on the vertical's operational metrics.",
+   "growth": [
+    "Senior Operations Manager",
+    "Head of Casino",
+    "Country Manager",
+    "COO"
+   ],
+   "demand": "Steady demand from mid-sized operators and brands expanding into new markets.",
+   "faq": [
+    {
+     "q": "Is this a technical role?",
+     "a": "No, but you need to be confident in the platform back office and understand how game provider integrations work."
+    }
+   ]
+  },
+  "game-content-manager": {
+   "family": "Casino operations",
+   "lead": "Decides which games make it into the lobby, how they're positioned, and which of them will actually make money in a given market.",
+   "about": "A large operator carries 5,000–12,000 games from 60+ providers in its lobby. The Casino Content Manager onboards new releases, curates collections and recommendations, tracks each provider's share of turnover and cuts what isn't working. The role blends provider negotiations, back-office work and constant analysis: which game holds a session on the Japanese market, and which one flops in Brazil.",
+   "responsibilities": [
+    "Onboard new games and providers in the platform back office",
+    "Configure the lobby, collections, banners and recommendations per geo",
+    "Analyse turnover and retention by game and provider",
+    "Negotiate exclusives, tournaments and promo terms with providers",
+    "Localise the game portfolio to each market's licence requirements",
+    "Plan the release calendar a quarter ahead"
+   ],
+   "kpis": [
+    "Turnover and GGR by game",
+    "Share of new games in turnover",
+    "Average session length",
+    "Time from release to lobby"
+   ],
+   "hard_skills": [
+    "Platform back office and content aggregators",
+    "Understanding of RTP, volatility and slot mechanics",
+    "Game turnover analytics",
+    "Licence content requirements (MGA, UKGC, Curacao)"
+   ],
+   "soft_skills": [
+    "A trained eye for the product",
+    "Negotiating with providers",
+    "Rigour with data"
+   ],
+   "tools": [
+    "SoftSwiss, EveryMatrix, Relax Hub",
+    "Metabase / Tableau",
+    "Excel",
+    "Jira"
+   ],
+   "languages": "English B2+ is a must.",
+   "entry": "Often the first step up after support or junior operations. People also arrive from game provider teams — the supplier side.",
+   "schedule": "5/2, with peaks ahead of major releases and around industry trade shows.",
+   "bonus": "Annual bonus of 10–15%, sometimes tied to the share of new releases in turnover.",
+   "growth": [
+    "Senior Content Manager",
+    "Head of Casino Content",
+    "Head of Casino"
+   ],
+   "demand": "Moderate but steady demand. Employers value candidates with hands-on experience of specific markets — LatAm, Asia, the Nordics.",
+   "faq": [
+    {
+     "q": "Do I need to play slots myself?",
+     "a": "You absolutely need to understand the mechanics, otherwise you can't explain why one game holds a session and another doesn't. Employers expect a trained eye for the product."
+    }
+   ]
+  },
+  "bonus-manager": {
+   "family": "Casino operations",
+   "lead": "Designs bonuses and promotions that pull players in without eating the margin.",
+   "about": "The bonus is a casino's main growth lever and, at the same time, its main way of losing money. The Promotions & Bonus Manager designs the mechanic (wagering requirements, cashback, free spins, missions, tournaments), costs it out, sets it up in the back office, checks it on test accounts and makes sure bonus hunters can't break it. It's a role at the intersection of product, maths and operations.",
+   "responsibilities": [
+    "Design bonus mechanics and calculate their cost",
+    "Set up promotions in the back office and test them before launch",
+    "Control the bonus budget and bonus cost / NGR",
+    "Detect abuse and work with anti-fraud on bonus hunters",
+    "Maintain promotion terms together with legal and compliance",
+    "Analyse promo results and report on them"
+   ],
+   "kpis": [
+    "Bonus cost / NGR",
+    "Promo participant to deposit conversion",
+    "Bonus abuse rate",
+    "Active player uplift during the promotion"
+   ],
+   "hard_skills": [
+    "Bonus cost and expected return calculations",
+    "Bonus engine back office",
+    "Excel at modelling level",
+    "Regulatory requirements for promotion terms"
+   ],
+   "soft_skills": [
+    "Attention to detail — a mistake in the wagering requirement costs tens of thousands",
+    "Product thinking",
+    "Willingness to push back on marketing"
+   ],
+   "tools": [
+    "Platform back office",
+    "Excel",
+    "Metabase",
+    "Jira"
+   ],
+   "languages": "English B2+.",
+   "entry": "From support, casino operations or CRM. People with a mathematical mindset do well here.",
+   "schedule": "5/2, with on-call during major tournaments and seasonal promotions.",
+   "bonus": "10–20% annually, often tied to staying within the bonus budget.",
+   "growth": [
+    "Senior Promotions Manager",
+    "Head of Promotions",
+    "Head of CRM"
+   ],
+   "demand": "Growing demand: the fiercer the competition for players, the more bonus cost control matters.",
+   "faq": [
+    {
+     "q": "What is a bonus hunter?",
+     "a": "A player who signs up purely for a generous bonus mechanic and leaves the moment the wagering requirement is cleared. The Promotions & Bonus Manager's job is to set the terms so that these players don't drain the budget."
+    }
+   ]
+  },
+  "sportsbook-trader": {
+   "family": "Betting & trading",
+   "lead": "Manages the bookmaker's lines and risk in real time: moving odds, cutting limits and deciding whether to accept a large bet.",
+   "about": "The Sportsbook Trader is the person standing between the bookmaker and a loss. You watch the flow of bets, market movements and team news, adjust odds and limits, and identify players who win systematically. In live betting, decisions are made in seconds: a key player's injury or a goal changes the line instantly. The work is shift-based, nights and weekends included — because sport runs around the clock.",
+   "responsibilities": [
+    "Monitor lines and odds against the market",
+    "Manage risk and limits by event and by player",
+    "Make calls on large bets and suspicious patterns",
+    "Live trading: adjust odds on the fly as the match unfolds",
+    "Settle and review disputed outcomes together with support",
+    "Analyse profitability by sport, league and market"
+   ],
+   "kpis": [
+    "Margin (overround) and bottom-line profit on the book",
+    "Line accuracy against the market",
+    "Winning players' share of turnover",
+    "Reaction time to live events"
+   ],
+   "hard_skills": [
+    "Probability and margin maths",
+    "Deep knowledge of sports and leagues",
+    "Working in a trading platform (Betgenius, Sportradar, BetConstruct)",
+    "Excel and handling large data extracts",
+    "Understanding of arbitrage and syndicates"
+   ],
+   "soft_skills": [
+    "A cool head under pressure",
+    "Fast decision-making",
+    "Discipline and adherence to the risk policy"
+   ],
+   "tools": [
+    "Betgenius",
+    "Sportradar",
+    "BetConstruct",
+    "Proprietary trading terminals",
+    "Excel"
+   ],
+   "languages": "English B2+. For local markets, knowing the league's language is valued — Portuguese (Brazil), Turkish, Spanish.",
+   "entry": "Bookmakers often hire people with a strong maths or sports background but no industry experience and train them up as junior traders. Personal betting experience and a feel for the market are a plus.",
+   "schedule": "24/7 shift rota, nights and weekends included — that's the norm for the role. Live traders work around the match schedule.",
+   "bonus": "Bonus is tied to the book's result: 10–40% of base salary, and higher for senior traders.",
+   "growth": [
+    "Senior Trader",
+    "Head of Trading",
+    "Head of Sportsbook",
+    "Director of Risk"
+   ],
+   "demand": "A scarce role: training takes a year, and experienced traders get poached from one bookmaker to the next. Esports and Latin American league specialists are in particularly short supply.",
+   "faq": [
+    {
+     "q": "Can I become a trader with no betting experience?",
+     "a": "Yes, junior positions are often open to maths and economics graduates. You need a strong quantitative background and a willingness to work shifts."
+    },
+    {
+     "q": "Does the job involve night shifts?",
+     "a": "Almost always. Sporting events run around the clock, so the trading desk works in several shifts."
+    }
+   ]
+  },
+  "odds-compiler": {
+   "family": "Betting & trading",
+   "lead": "Calculates outcome probabilities and turns them into odds — before the line ever reaches traders and players.",
+   "about": "If the trader manages the line in real time, the Odds Compiler builds it in the first place. You gather team and player statistics, build a probability model, bake in the margin and produce the opening odds. At modern bookmakers this is increasingly a quantitative role built on Python and statistical models rather than picking numbers by hand.",
+   "responsibilities": [
+    "Build and maintain probability models across sports",
+    "Set the opening line and the margin",
+    "Validate models against historical data and results",
+    "Develop new betting markets (totals, handicaps, specials)",
+    "Work with data feeds and statistical data quality"
+   ],
+   "kpis": [
+    "Model accuracy against the closing market",
+    "Margin on the line",
+    "Share of markets requiring manual adjustment"
+   ],
+   "hard_skills": [
+    "Probability theory and statistics",
+    "Python or R for modelling",
+    "SQL",
+    "Knowledge of sports and the quirks of individual leagues",
+    "Working with data feeds (Sportradar, Betgenius)"
+   ],
+   "soft_skills": [
+    "Analytical discipline",
+    "Ability to explain a model to non-mathematicians",
+    "Curiosity about data"
+   ],
+   "tools": [
+    "Python (pandas, scikit-learn)",
+    "R",
+    "SQL",
+    "Sports data feeds"
+   ],
+   "languages": "English B2+.",
+   "entry": "From maths, physics, econometrics or data science. Betting experience isn't required if you bring strong models and a real understanding of sport.",
+   "schedule": "5/2, usually without night shifts — unlike traders.",
+   "bonus": "10–25% annually; in quant teams it is sometimes tied to the book's result.",
+   "growth": [
+    "Senior Odds Compiler",
+    "Quantitative Lead",
+    "Head of Trading",
+    "Head of Sportsbook"
+   ],
+   "demand": "High demand and few candidates: the combination of statistics and sports expertise is rare.",
+   "faq": [
+    {
+     "q": "How does an Odds Compiler differ from a trader?",
+     "a": "The Odds Compiler builds the model and the opening line; the trader manages it in real time and owns the risk on the book."
+    }
+   ]
+  },
+  "risk-manager-betting": {
+   "family": "Betting & trading",
+   "lead": "Hunts down the players and schemes that systematically drain money from the bookmaker: arbitrage, syndicates, bonus abuse, match-fixing.",
+   "about": "The Betting Risk Manager treats the flow of bets as data: spotting anomalies, linking accounts, uncovering multi-accounting and arbers, and escalating suspected match-fixing to the relevant integrity bodies. You also set limits by player segment and protect the book from systematic losses. The role works closely with anti-fraud and compliance.",
+   "responsibilities": [
+    "Monitor suspicious betting patterns and accounts",
+    "Identify arbers, syndicates and multi-accounts",
+    "Configure limits and bet acceptance rules by segment",
+    "Escalate suspected match manipulation",
+    "Run joint investigations with anti-fraud and compliance",
+    "Report on losses and the effectiveness of risk rules"
+   ],
+   "kpis": [
+    "Losses prevented",
+    "Winning accounts' share of turnover",
+    "Risk rule precision (false positive rate)"
+   ],
+   "hard_skills": [
+    "Data analysis and SQL",
+    "Understanding of arbitrage and value betting",
+    "Fraud detection tools and device fingerprinting",
+    "Knowledge of regulatory requirements for suspicious betting reports"
+   ],
+   "soft_skills": [
+    "An investigator's mindset",
+    "Meticulousness",
+    "Readiness to defend a decision in front of the commercial team"
+   ],
+   "tools": [
+    "SQL",
+    "BI dashboards",
+    "Fraud platforms",
+    "In-house risk systems"
+   ],
+   "languages": "English B2+.",
+   "entry": "From trading, anti-fraud or analytics. Less often, from financial monitoring at banks.",
+   "schedule": "5/2, or a shift rota at larger bookmakers.",
+   "bonus": "10–20% annually.",
+   "growth": [
+    "Senior Risk Manager",
+    "Head of Risk",
+    "Director of Trading & Risk"
+   ],
+   "demand": "Steady demand from bookmakers of every size, especially in the growth markets of LatAm and Africa.",
+   "faq": [
+    {
+     "q": "Is this the same thing as anti-fraud?",
+     "a": "They overlap but aren't the same: anti-fraud deals with payments and card fraud, while betting risk deals with betting patterns and protecting the book."
+    }
+   ]
+  },
+  "game-developer": {
+   "family": "Game development",
+   "lead": "Builds the games themselves — slots, crash games, live mechanics: the client side in Unity, Phaser or PixiJS plus the integration with the game server.",
+   "about": "A Game Developer in iGaming isn't building an entertainment game but a certifiable product: every outcome is computed on the server, and the client only displays the result. That imposes strict requirements — determinism, round reproducibility, support for dozens of languages and currencies, and smooth performance on low-end mobile devices. The typical stack is Unity/C# or TypeScript with PixiJS/Phaser, WebGL, and communication with the maths engine over the studio's protocol.",
+   "responsibilities": [
+    "Develop the client side of slots and game mechanics",
+    "Integrate with the game server and the maths engine",
+    "Optimise for mobile devices and poor network conditions",
+    "Support multiple languages, currencies and jurisdiction requirements",
+    "Prepare builds for certification at test labs",
+    "Fix defects raised by QA and certification bodies"
+   ],
+   "kpis": [
+    "Release velocity",
+    "Number of defects found after certification",
+    "Game performance on target devices"
+   ],
+   "hard_skills": [
+    "Unity + C# or TypeScript + PixiJS/Phaser",
+    "WebGL and rendering optimisation",
+    "Git, CI/CD",
+    "Understanding of RNG and the server-side game model",
+    "Technical English"
+   ],
+   "soft_skills": [
+    "Attention to detail",
+    "Working in tandem with the mathematician and the artist",
+    "Patience with certification cycles"
+   ],
+   "tools": [
+    "Unity",
+    "PixiJS / Phaser",
+    "TypeScript, C#",
+    "Git, Jenkins/GitLab CI",
+    "Jira"
+   ],
+   "languages": "English B1+ for working in an international studio.",
+   "entry": "From game development outside gambling (mobile and casual games) or from front-end with strong graphics skills. The barrier to entry is lower than it looks: the industry actively recruits developers from mainstream game dev.",
+   "schedule": "5/2, with plenty of remote openings. Peaks come ahead of certification and release.",
+   "bonus": "Usually 5–15% annually or release bonuses. Some studios offer a share of a game's success.",
+   "growth": [
+    "Senior Game Developer",
+    "Tech Lead",
+    "Head of Game Development",
+    "Studio CTO"
+   ],
+   "demand": "High and sustained demand: new slot studios are appearing faster than developers with experience of certifiable games.",
+   "faq": [
+    {
+     "q": "Do I need gambling experience to get into a slot studio?",
+     "a": "No. Studios readily hire developers from mobile and casual game dev — the specifics of RNG and certification are taught on the job."
+    },
+    {
+     "q": "Unity or HTML5?",
+     "a": "Both stacks are alive and well. Unity is more common at studios doing 3D and live mechanics; TypeScript + PixiJS dominates classic slots built for mobile web."
+    }
+   ]
+  },
+  "game-mathematician": {
+   "family": "Game development",
+   "lead": "Builds the maths behind a slot: RTP, volatility, bonus frequency and the win distribution — the things that decide whether a game hooks players or falls flat.",
+   "about": "A Game Mathematician is a rare and expensive hire. You build the paytable, simulate billions of spins, tune volatility to the target audience and prepare the maths documentation for the certification lab. Your numbers drive both player retention and the operator's margin. The work is done in Python, C++ or the studio's own simulators.",
+   "responsibilities": [
+    "Design the game's mathematical model: RTP, volatility, hit rate",
+    "Simulate billions of rounds and verify convergence",
+    "Balance bonus features and jackpot mechanics",
+    "Prepare maths documentation for certification (GLI, BMM, eCOGRA)",
+    "Maintain game versions for jurisdictions with different permitted RTP levels"
+   ],
+   "kpis": [
+    "Actual RTP matching the theoretical RTP",
+    "Certification passed at the first attempt",
+    "Post-launch retention figures for the game"
+   ],
+   "hard_skills": [
+    "Probability theory, combinatorics, Monte Carlo methods",
+    "Python or C++",
+    "Understanding of certification-lab requirements",
+    "Excel at complex-model level"
+   ],
+   "soft_skills": [
+    "Precision",
+    "Ability to explain the model to a game designer",
+    "Patience for long-running calculations"
+   ],
+   "tools": [
+    "Python (numpy)",
+    "C++",
+    "In-house studio simulators",
+    "Excel"
+   ],
+   "languages": "English B2+; all lab documentation is written in English.",
+   "entry": "From applied mathematics, physics or statistics. The industry is willing to train strong graduates — junior mathematician openings are scarce, but they do exist.",
+   "schedule": "Mon–Fri, often remote.",
+   "bonus": "5–15% annually; successful studios pay bonuses for hit games.",
+   "growth": [
+    "Senior Mathematician",
+    "Head of Game Maths",
+    "Game Director"
+   ],
+   "demand": "Very high demand against an extremely thin candidate pool. One of the best-paid non-executive roles in the industry.",
+   "faq": [
+    {
+     "q": "What is RTP and why is the mathematician responsible for it?",
+     "a": "RTP (return to player) is the share of stakes that goes back to players over the long run. The mathematician designs the model so that the actual RTP converges to the advertised figure, and proves it with simulations for certification."
+    }
+   ]
+  },
+  "game-designer": {
+   "family": "Game development",
+   "lead": "Dreams up the whole game — theme, mechanics, bonus features and the feel of a spin — and carries it from concept to release together with the mathematician and the artists.",
+   "about": "A Game Designer in a slot studio works inside tight constraints: the mechanic has to be fresh yet understandable within 10 seconds, the bonus has to make players want to see it through, and the whole construction must fit the maths model and pass certification. You write the game design document, argue with the mathematician over feature frequency, sign off on art and sound, and make sure the release lands in its target market.",
+   "responsibilities": [
+    "Develop the game concept: theme, mechanics, bonus features",
+    "Write the game design document and specifications for the dev team",
+    "Work with the mathematician on balance and volatility",
+    "Brief artists and sound designers",
+    "Playtest the game for feel and drive changes before release",
+    "Analyse release performance and prepare the next iteration"
+   ],
+   "kpis": [
+    "In-game retention and session length",
+    "Post-launch turnover of the game",
+    "Release-calendar deadlines met"
+   ],
+   "hard_skills": [
+    "Understanding of slot and live-game mechanics",
+    "Fundamentals of game maths",
+    "Writing design documentation",
+    "Game-metrics analysis"
+   ],
+   "soft_skills": [
+    "A trained eye and good taste",
+    "Ability to defend an idea",
+    "Cross-team collaboration"
+   ],
+   "tools": [
+    "Figma",
+    "Confluence / Notion",
+    "Excel",
+    "Jira",
+    "In-house simulators"
+   ],
+   "languages": "English B2+.",
+   "entry": "From mainstream game development, from product roles, or from game-content managers with a strong feel for the product.",
+   "schedule": "Mon–Fri, with plenty of remote and hybrid openings.",
+   "bonus": "5–15% annually; studios pay bonuses for successful releases.",
+   "growth": [
+    "Senior Game Designer",
+    "Lead Game Designer",
+    "Game Director",
+    "Head of Studio"
+   ],
+   "demand": "Demand is growing with the number of content studios, but competition to get in is stiffer than for developers.",
+   "faq": [
+    {
+     "q": "Can I move over from mobile game development?",
+     "a": "Yes — it is the most common route in. The main things you will have to pick up are slot maths and the constraints of certification."
+    }
+   ]
+  },
+  "backend-developer-igaming": {
+   "family": "Game development",
+   "lead": "Writes the core of the platform: wallet, bets, transactions, game-provider and PSP integrations — everything that has to survive peak load without losing a cent.",
+   "about": "Backend in iGaming means high-load financial systems with strict consistency requirements. Traffic peaks around major matches, every transaction has to be idempotent and reproducible for audit, and a platform can easily run more than a hundred integrations: game aggregators, PSPs, KYC providers, SMS gateways. Typical stacks are Java/Kotlin, C#/.NET, Go, Node.js and PHP; on the data side, PostgreSQL, Redis and Kafka.",
+   "responsibilities": [
+    "Build wallet, betting and transaction services",
+    "Integrate game providers, PSPs and KYC services",
+    "Guarantee idempotency and consistency of financial operations",
+    "Optimise for peak load and fault tolerance",
+    "Log and audit operations to licence requirements",
+    "Code review and on-call support"
+   ],
+   "kpis": [
+    "Service uptime",
+    "Latency of critical operations",
+    "Number of balance-mismatch incidents",
+    "Time-to-ship for new integrations"
+   ],
+   "hard_skills": [
+    "Java/Kotlin, C#, Go, Node.js or PHP",
+    "PostgreSQL, Redis, Kafka",
+    "Microservices and message queues",
+    "Docker, Kubernetes",
+    "Understanding of financial consistency and idempotency"
+   ],
+   "soft_skills": [
+    "Ownership of the money flowing through the system",
+    "Comfortable with on-call rotations",
+    "Precision in specifications"
+   ],
+   "tools": [
+    "Git, CI/CD",
+    "Kubernetes",
+    "Grafana / Prometheus",
+    "Jira"
+   ],
+   "languages": "English B1+, technical.",
+   "entry": "From fintech, e-commerce or any high-load project — the switch is almost painless. The industry specifics take a couple of months to pick up.",
+   "schedule": "Mon–Fri with on-call rotations in platform teams. Plenty of fully remote openings.",
+   "bonus": "5–15% annually, sometimes stock options at product companies.",
+   "growth": [
+    "Senior Backend Developer",
+    "Tech Lead",
+    "Engineering Manager",
+    "CTO"
+   ],
+   "demand": "The most common technical vacancy in the industry. Operators and platform providers are constantly hiring backend engineers with high-load experience.",
+   "faq": [
+    {
+     "q": "Do I need prior gambling experience?",
+     "a": "No. Experience in fintech, exchanges, e-commerce or any payment system is valued just as highly — the domain knowledge is learned on the job."
+    }
+   ]
+  },
+  "qa-engineer-igaming": {
+   "family": "Game development",
+   "lead": "Makes sure the game or platform counts money correctly in every scenario — including a dropped connection mid-spin and a duplicate payout.",
+   "about": "QA in iGaming carries more weight than ordinary testing because the cost of a bug is measured in money and in the licence. You test game rounds and their recovery, the wallet, bonus mechanics, responsible gambling limits, localisations and the requirements of specific jurisdictions. Automation engineers write tests in Playwright, Cypress or Selenium, or at API level; a separate track is preparing builds for external certification.",
+   "responsibilities": [
+    "Functional testing of games, the platform and the back office",
+    "Verify round-recovery scenarios and wallet calculations",
+    "Test bonus mechanics and responsible gambling limits",
+    "Automate regression at UI and API level",
+    "Check localisations and jurisdiction-specific requirements",
+    "Prepare builds for lab certification and support the process"
+   ],
+   "kpis": [
+    "Share of defects caught before release",
+    "Automated test coverage",
+    "Number of certification rejections"
+   ],
+   "hard_skills": [
+    "Test design and test-case management",
+    "Playwright / Cypress / Selenium",
+    "API testing (Postman, REST)",
+    "SQL for data verification",
+    "Understanding of game mechanics and payout calculations"
+   ],
+   "soft_skills": [
+    "Meticulousness",
+    "Ability to reproduce complex bugs",
+    "Clear communication with developers"
+   ],
+   "tools": [
+    "Jira, TestRail",
+    "Playwright, Cypress",
+    "Postman",
+    "SQL clients"
+   ],
+   "languages": "English B1+.",
+   "entry": "One of the most accessible doors into the industry: companies hire QA from any domain, and sometimes with no experience at all for manual game testing.",
+   "schedule": "Mon–Fri, plenty of remote openings.",
+   "bonus": "5–12% annually.",
+   "growth": [
+    "Senior QA",
+    "QA Lead",
+    "QA Manager",
+    "Head of Quality"
+   ],
+   "demand": "Steady demand, especially for automation engineers with experience in financial calculations.",
+   "faq": [
+    {
+     "q": "Is this a good way into iGaming with no experience?",
+     "a": "Yes — manual QA is one of the most realistic entry points into the industry. After a year to eighteen months you can move into automation, analytics or operations."
+    }
+   ]
+  },
+  "affiliate-manager": {
+   "family": "Affiliates & media buying",
+   "lead": "Finds and manages the affiliates who bring in players for a cut: negotiates the deal, watches traffic quality and grows the volume.",
+   "about": "For most operators the affiliate channel delivers a significant share of registrations. As an Affiliate Manager you source webmasters and media buyers, negotiate the deal model (RevShare, CPA, Hybrid), monitor the quality of the traffic they send and step in when a partner starts pushing incentivised or bot players. The job blends sales, analytics and a constant presence at industry conferences.",
+   "responsibilities": [
+    "Source and onboard new partners and webmasters",
+    "Negotiate terms: RevShare, CPA, Hybrid, volume bonuses",
+    "Monitor traffic quality and detect fraud",
+    "Partner analytics: registrations, deposits, LTV, churn",
+    "Prepare promo materials and landing pages together with marketing",
+    "Work the conference circuit: SiGMA, SBC, iGB Affiliate"
+   ],
+   "kpis": [
+    "Number of active partners",
+    "FTDs (first-time deposits) from the affiliate channel",
+    "Channel NGR and ROI",
+    "Share of fraudulent traffic"
+   ],
+   "hard_skills": [
+    "Affiliate platforms (Income Access, Affilka, MyAffiliates, PostAffiliatePro)",
+    "Payout models and ROI calculation",
+    "Tracking and attribution",
+    "Excel/BI for cohort analysis"
+   ],
+   "soft_skills": [
+    "Sales and networking skills",
+    "Resilience to rejection",
+    "Negotiating on margin"
+   ],
+   "tools": [
+    "Affilka, Income Access, MyAffiliates",
+    "Telegram, Skype",
+    "Excel, BI dashboards"
+   ],
+   "languages": "English B2+ is a must. Russian, Portuguese, Spanish or Turkish is a strong plus for specific markets.",
+   "entry": "From sales, marketing or support. Companies often hire people with no industry experience at all if they have people skills and solid English.",
+   "schedule": "Mon–Fri plus travel to conferences. Plenty of remote openings.",
+   "bonus": "The key part of your income: a percentage of the NGR generated by your partners. For strong managers the variable part matches or exceeds the base salary.",
+   "growth": [
+    "Senior Affiliate Manager",
+    "Head of Affiliates",
+    "Head of Acquisition",
+    "CMO"
+   ],
+   "demand": "One of the most common vacancies in the industry. Managers for LatAm, Africa and Asia are in particularly short supply.",
+   "faq": [
+    {
+     "q": "How does an Affiliate Manager differ from a Media Buyer?",
+     "a": "An Affiliate Manager works with external partners who send traffic in exchange for a share of revenue. A Media Buyer buys traffic directly and spends the company's own budget."
+    },
+    {
+     "q": "Can I get in without experience?",
+     "a": "Yes — it is one of the most open doors into iGaming. English, discipline and negotiation skills matter more than a track record."
+    }
+   ]
+  },
+  "head-of-affiliates": {
+   "family": "Affiliates & media buying",
+   "lead": "Owns the entire affiliate channel: strategy, the team of managers, payout terms and the channel P&L.",
+   "about": "The Head of Affiliates decides which markets to grow in and on which model, where an aggressive CPA is acceptable and where it has to be RevShare only, and how to protect the business from fraud and overpayment. You lead the affiliate management team, negotiate with the biggest networks and media, and set targets for FTDs and margin. It is a role with direct accountability for money and a strong public side — conferences and industry relationships.",
+   "responsibilities": [
+    "Affiliate channel strategy by market and payout model",
+    "Lead the team of affiliate managers",
+    "Negotiate with the largest networks and media partners",
+    "Control the channel P&L: payouts against NGR",
+    "Set the policy on fraud and abuse",
+    "Represent the brand at industry events"
+   ],
+   "kpis": [
+    "Affiliate channel NGR and ROI",
+    "Channel share of total player acquisition",
+    "Acquisition cost (CPA) against LTV",
+    "Growth in the number of active partners"
+   ],
+   "hard_skills": [
+    "Acquisition unit economics",
+    "Affiliate platforms and tracking",
+    "Budgeting and P&L",
+    "Knowledge of markets and advertising regulations"
+   ],
+   "soft_skills": [
+    "Team leadership",
+    "Hard-nosed negotiation",
+    "Public presence and networking"
+   ],
+   "tools": [
+    "Affilka, Income Access",
+    "BI dashboards",
+    "Excel",
+    "CRM"
+   ],
+   "languages": "English C1.",
+   "entry": "Only via a senior Affiliate Manager role or by leading acquisition marketing.",
+   "schedule": "Mon–Fri with regular travel.",
+   "bonus": "A substantial variable component tied to channel NGR, often 30–100% of base salary.",
+   "growth": [
+    "Affiliate Director",
+    "Head of Acquisition",
+    "CMO",
+    "Managing Director"
+   ],
+   "demand": "A limited number of positions, but employers compete fiercely for strong candidates with an established network of contacts.",
+   "faq": [
+    {
+     "q": "What matters more — the team or your personal network of partners?",
+     "a": "Interviewers look at both, but it is usually the established relationships with top partners that decide the outcome."
+    }
+   ]
+  },
+  "media-buyer": {
+   "family": "Affiliates & media buying",
+   "lead": "Buys paid traffic on the company's budget and is accountable for one thing: every player has to cost less than they bring in.",
+   "about": "A Media Buyer in gambling operates in a world where half the ad platforms ban gambling ads outright. Hence the specifics: cloaking and account warm-up on grey sources, Facebook, Google UAC, TikTok, push and pop networks, ASO apps, and creatives built to survive strict moderation. The key metric is cost per first deposit and cohort payback. The role lives and dies by discipline — a budget can burn through in hours.",
+   "responsibilities": [
+    "Launch and optimise paid campaigns by geo and traffic source",
+    "Work on creatives and landing pages",
+    "Control CPA, ROMI and cohort payback",
+    "Scale winning funnels and hunt for new traffic sources",
+    "Work with the anti-fraud team on traffic quality",
+    "Report on budget spend"
+   ],
+   "kpis": [
+    "CPA / CPD (cost per deposit)",
+    "ROMI by cohort",
+    "Total budget spent",
+    "Share of creatives passing moderation"
+   ],
+   "hard_skills": [
+    "Facebook Ads, Google Ads/UAC, TikTok Ads",
+    "Push/pop and in-app networks",
+    "Trackers (Keitaro, Voluum, Binom)",
+    "Cohort analytics and unit economics",
+    "Fundamentals of cloaking and anti-ban practices"
+   ],
+   "soft_skills": [
+    "Rapid hypothesis testing",
+    "Financial discipline",
+    "Resilience to bans and drawdowns"
+   ],
+   "tools": [
+    "Keitaro, Voluum, Binom",
+    "Facebook Ads Manager",
+    "Google Ads",
+    "Excel, BI"
+   ],
+   "languages": "English B1+ is enough; a large part of the market is Russian-speaking.",
+   "entry": "From traffic arbitrage or e-commerce performance marketing. The formal bar is low, but the real one is high: employers ask about budgets spent and ROI delivered.",
+   "schedule": "Mon–Fri, mostly remote. Campaigns need watching at weekends too.",
+   "bonus": "Often the main source of income: a percentage of profit on your funnels, from 5 to 30% depending on the team's model.",
+   "growth": [
+    "Senior Media Buyer",
+    "Media Buying Team Lead",
+    "Head of Acquisition",
+    "Partner in a media buying team"
+   ],
+   "demand": "Very high demand, but high turnover too: results show within a couple of months.",
+   "faq": [
+    {
+     "q": "Do I need my own proven funnels to get hired?",
+     "a": "At senior level, effectively yes — employers ask for case studies with numbers. Juniors are taken into teams with ready-made sources and trained up."
+    }
+   ]
+  },
+  "seo-specialist-igaming": {
+   "family": "Affiliates & media buying",
+   "lead": "Gets casino and affiliate sites ranking for the most competitive commercial search queries on the internet.",
+   "about": "Gambling SEO is a discipline of its own: a niche where rankings are driven by link budgets in the hundreds of thousands of euros and sites regularly get hit by penalties. You work with site networks, outreach, paid links, technical SEO on large projects and localisation for dozens of markets. The role is often combined with content strategy and analytics.",
+   "responsibilities": [
+    "Keyword research and site structure around the market's commercial queries",
+    "Technical SEO: indexing, page speed, templates, hreflang",
+    "Link building: outreach, paid links, PBN networks",
+    "Content planning and briefing writers",
+    "Monitor rankings, penalties and algorithm updates",
+    "Localise projects for new geos"
+   ],
+   "kpis": [
+    "Organic traffic and its trend",
+    "Rankings for commercial keyword clusters",
+    "FTDs from organic",
+    "Acquisition cost from SEO versus paid channels"
+   ],
+   "hard_skills": [
+    "Ahrefs, Semrush, Screaming Frog",
+    "Technical SEO for large sites",
+    "Link building and donor-site evaluation",
+    "Google Search Console, GA4",
+    "Basic HTML and CMS skills"
+   ],
+   "soft_skills": [
+    "Patience — results take months to show",
+    "Analytical mindset",
+    "Managing contractors"
+   ],
+   "tools": [
+    "Ahrefs, Semrush",
+    "Screaming Frog",
+    "GSC, GA4",
+    "Excel, Looker Studio"
+   ],
+   "languages": "English B2+; for multi-geo projects, knowing the languages of the target markets is valued.",
+   "entry": "From general SEO — a direct move; what you need to learn is the specifics of the niche and how link budgets work.",
+   "schedule": "Mon–Fri, plenty of remote openings.",
+   "bonus": "10–25% annually; on affiliate projects, a share of the site's revenue.",
+   "growth": [
+    "Senior SEO",
+    "Head of SEO",
+    "Head of Organic Growth",
+    "CMO of an affiliate project"
+   ],
+   "demand": "High demand from affiliate media and from operators entering new markets.",
+   "faq": [
+    {
+     "q": "Is it true that SEO in gambling costs more than usual?",
+     "a": "Yes. Link budgets and content costs in this niche are several times higher, because competition for commercial queries is among the toughest on the internet."
+    }
+   ]
+  },
+  "aml-officer": {
+   "family": "Compliance & AML",
+   "lead": "Keeps the casino from being used to launder money: reviews suspicious activity, runs investigations and answers to the regulator.",
+   "about": "The AML Officer is a role every licence requires. You build and apply customer due diligence and transaction monitoring procedures, review rule alerts, manage cases, file suspicious activity reports (SAR/STR) with the financial intelligence unit and deal with auditors. Requirements differ between the MGA, the UKGC and other regulators, so experience with a specific jurisdiction is prized. Mistakes in this area cost the licence and multi-million fines.",
+   "responsibilities": [
+    "Transaction monitoring and review of AML rule alerts",
+    "Enhanced due diligence (EDD) on high-risk players",
+    "Source of funds and source of wealth checks",
+    "File suspicious activity reports with the regulator",
+    "Keep AML/CFT policies and procedures up to date",
+    "Train staff and prepare for audits and regulatory inspections"
+   ],
+   "kpis": [
+    "Case closure time",
+    "False-positive rate",
+    "External audit results",
+    "Timeliness of regulatory reporting"
+   ],
+   "hard_skills": [
+    "EU AML/CFT regulation (4th/5th/6th AMLD)",
+    "MGA, UKGC, Curacao and local regulator requirements",
+    "AML platforms and transaction monitoring systems",
+    "KYC providers (SumSub, Jumio, Onfido)",
+    "Customer risk assessment and risk scoring"
+   ],
+   "soft_skills": [
+    "An investigator's attention to detail",
+    "Ability to say no to the commercial team",
+    "Careful writing — auditors read your case files"
+   ],
+   "tools": [
+    "SumSub, Jumio, Onfido",
+    "Comply Advantage, Refinitiv",
+    "In-house AML systems",
+    "Excel"
+   ],
+   "languages": "English C1 — all regulation and correspondence with auditors is in English.",
+   "entry": "From banking compliance and financial monitoring — a direct move. Within the industry, people grow into it from KYC and anti-fraud roles.",
+   "schedule": "Mon–Fri, usually office-based or hybrid: many licences require key staff to be physically present in the jurisdiction.",
+   "bonus": "10–20% annually. Higher for an MLRO with personal accountability to the regulator.",
+   "growth": [
+    "Senior AML Officer",
+    "MLRO",
+    "Head of Compliance",
+    "Chief Compliance Officer"
+   ],
+   "demand": "One of the industry's most persistent shortages: without an AML function you can neither obtain nor keep a licence. Candidates with MGA and UKGC experience get snapped up very quickly.",
+   "faq": [
+    {
+     "q": "What is an MLRO?",
+     "a": "The Money Laundering Reporting Officer — the designated person personally accountable to the regulator for suspicious activity reporting. The appointment is approved by the regulator and is well paid."
+    },
+    {
+     "q": "Can I work remotely?",
+     "a": "Partly. A number of licences require key compliance functions to be based in the jurisdiction — which is why there are so many office-based openings in Malta and Gibraltar."
+    }
+   ]
+  },
+  "compliance-manager": {
+   "family": "Compliance & AML",
+   "lead": "Makes sure the product, the advertising and the internal processes stay within the rules of every licence the company operates under.",
+   "about": "A Compliance Manager reads regulatory requirements and turns them into concrete changes: what wording has to appear on a banner, which limits must be available to the player, what cannot be shown in ads on a given market, which reports are due to the regulator and by when. The role also runs licence applications and renewals, handles regulatory inspections and keeps legal, product and marketing pulling in the same direction.",
+   "responsibilities": [
+    "Tracking regulatory changes across every market the company operates in",
+    "Reviewing the product, promotions and advertising for compliance",
+    "Managing licence applications, renewals and regulatory reporting",
+    "Handling regulatory inspections and audits",
+    "Writing internal policies and training the teams on them",
+    "Assessing regulatory risk before entering a new market"
+   ],
+   "kpis": [
+    "Zero fines and regulatory notices",
+    "Time to obtain and renew licences",
+    "Audit outcomes",
+    "Turnaround time on promo material sign-off"
+   ],
+   "hard_skills": [
+    "MGA, UKGC, Gibraltar, Curacao and local-market regulation",
+    "Gambling advertising rules by jurisdiction",
+    "Preparing licensing documentation",
+    "Contract law fundamentals"
+   ],
+   "soft_skills": [
+    "Explaining restrictions to the business in plain terms",
+    "An eye for exact wording",
+    "Holding the line under commercial pressure"
+   ],
+   "tools": [
+    "Regulator registers",
+    "Confluence / Notion",
+    "Document control systems"
+   ],
+   "languages": "English C1 is mandatory.",
+   "entry": "From legal practice, banking compliance or an AML function. A law degree is a strong advantage.",
+   "schedule": "Monday to Friday, usually on-site or hybrid in the licensing jurisdiction.",
+   "bonus": "10–20% annually.",
+   "growth": [
+    "Senior Compliance Manager",
+    "Head of Compliance",
+    "Chief Compliance Officer",
+    "General Counsel"
+   ],
+   "demand": "High and rising: regulation is tightening on every major market while operators keep expanding into new jurisdictions.",
+   "faq": [
+    {
+     "q": "Do I need a law degree?",
+     "a": "Not strictly, but it speeds up your progression considerably and is a requirement for Head of Compliance at most companies holding European licences."
+    }
+   ]
+  },
+  "kyc-specialist": {
+   "family": "Compliance & AML",
+   "lead": "Checks players' documents and decides whether an account can be opened and a win can be paid out.",
+   "about": "The KYC Specialist is the first line of compliance. You review passports, utility bills and bank statements, screen players against sanctions and PEP lists and reject forgeries. The work is high-volume and shift-based, but it is the most accessible way into compliance: after a year or two, people move from here into AML or fraud.",
+   "responsibilities": [
+    "Verifying proof-of-identity and proof-of-address documents",
+    "Screening against sanctions and PEP lists",
+    "Spotting forged documents and multi-accounting",
+    "Escalating suspicious cases to the AML Officer",
+    "Keeping the verification queue within SLA"
+   ],
+   "kpis": [
+    "Queue processing speed",
+    "Decision accuracy and share of reopened cases",
+    "Share of forgeries caught"
+   ],
+   "hard_skills": [
+    "Working with KYC providers (SumSub, Jumio, Onfido)",
+    "Tell-tale signs of forged documents",
+    "Sanctions and PEP screening",
+    "Basic AML requirements"
+   ],
+   "soft_skills": [
+    "Stamina for repetitive work",
+    "Attention to detail",
+    "A calm attitude to routine"
+   ],
+   "tools": [
+    "SumSub, Jumio, Onfido",
+    "In-house back offices",
+    "Comply Advantage"
+   ],
+   "languages": "English B1+. Additional languages add to the rate.",
+   "entry": "The most accessible entry point into compliance: companies hire without industry experience and train on the job.",
+   "schedule": "Often shift-based, weekends included — the verification queue never stops.",
+   "bonus": "5–10% annually or shift allowances.",
+   "growth": [
+    "Senior KYC Analyst",
+    "KYC Team Lead",
+    "AML Officer",
+    "Fraud Analyst"
+   ],
+   "demand": "A high-volume role with continuous hiring, especially on growing markets.",
+   "faq": [
+    {
+     "q": "Is KYC a good way to start a career in iGaming?",
+     "a": "Yes, if you are aiming for compliance or fraud. It is one of the few entry points that needs no prior experience and comes with a clear path upwards."
+    }
+   ]
+  },
+  "responsible-gaming-officer": {
+   "family": "Compliance & AML",
+   "lead": "Spots players showing signs of gambling harm and makes sure the company protects them the way the licence requires.",
+   "about": "Regulators in the UK, Sweden, the Netherlands and Malta come down hard on player protection failures. A Responsible Gaming Officer configures risk markers (a sudden jump in deposits, late-night play, chasing losses), reaches out to flagged players, applies limits and self-exclusions and documents every interaction. The role is a recent one and is growing faster than most others in compliance.",
+   "responsibilities": [
+    "Configuring and monitoring markers of harmful play",
+    "Reaching out to players whose markers have triggered",
+    "Applying deposit limits, time-outs and self-exclusions",
+    "Keeping audit-ready records on every case",
+    "Training support and the VIP team to recognise the warning signs",
+    "Reporting to the regulator and working with safer-gambling organisations"
+   ],
+   "kpis": [
+    "Share of cases with a timely intervention",
+    "Regulatory inspection outcomes",
+    "Quality of case documentation"
+   ],
+   "hard_skills": [
+    "Regulators' safer gambling requirements",
+    "Risk-marker models",
+    "Play-monitoring tools",
+    "AML fundamentals"
+   ],
+   "soft_skills": [
+    "Tact in difficult conversations",
+    "Resilience to emotional strain",
+    "Independent judgement"
+   ],
+   "tools": [
+    "In-house monitoring systems",
+    "Fast Track, Mindway AI",
+    "CRM"
+   ],
+   "languages": "English C1; for regulated markets, the language of the market.",
+   "entry": "From support, the VIP team or compliance. A background in psychology or social work is a plus.",
+   "schedule": "Monday to Friday, or shifts at larger operators.",
+   "bonus": "10–15% annually.",
+   "growth": [
+    "Senior RG Officer",
+    "Head of Player Protection",
+    "Head of Compliance"
+   ],
+   "demand": "Fast-growing demand on every regulated market. The role barely existed five years ago.",
+   "faq": [
+    {
+     "q": "Doesn't this clash with the company's commercial goals?",
+     "a": "Formally, yes — which is why the function reports to compliance, not marketing. Regulators require the decisions to be independent."
+    }
+   ]
+  },
+  "payments-manager": {
+   "family": "Payments & anti-fraud",
+   "lead": "Keeps the money moving in and out: onboards providers, lifts deposit conversion and keeps acquiring costs under control.",
+   "about": "Gambling is a high-risk category, so payments here are always a patchwork: dozens of PSPs, local methods for every market (Pix in Brazil, SBP, e-wallets, crypto), routing cascades and providers dropping out without warning. A Payments Manager negotiates with PSPs, builds the cascades, digs into approval rate drops and watches payout speed — the metric players use to choose a casino.",
+   "responsibilities": [
+    "Onboarding and managing payment providers market by market",
+    "Setting up cascades and transaction routing",
+    "Monitoring approval rate and investigating drops",
+    "Controlling acquiring costs and fees",
+    "Speeding up payouts and managing the withdrawal queue",
+    "Working hand in hand with fraud and compliance"
+   ],
+   "kpis": [
+    "Deposit approval rate",
+    "Average payout time",
+    "Cost per processed transaction",
+    "Share of withdrawals completed without manual review"
+   ],
+   "hard_skills": [
+    "The PSP landscape and local payment methods",
+    "Cascades and transaction routing",
+    "Understanding of chargebacks and card scheme rules",
+    "Crypto payments and stablecoins",
+    "Payment funnel analytics"
+   ],
+   "soft_skills": [
+    "Negotiating with providers",
+    "Fast reaction to incidents",
+    "Precision with numbers"
+   ],
+   "tools": [
+    "Payment gateways and their back offices",
+    "BI dashboards",
+    "Excel",
+    "Jira"
+   ],
+   "languages": "English C1.",
+   "entry": "From fintech, an e-commerce payments team or a casino back office. Experience with high-risk acquiring is especially prized.",
+   "schedule": "Monday to Friday with on-call duty during incidents.",
+   "bonus": "10–25% annually, often tied to approval rate and processing cost.",
+   "growth": [
+    "Senior Payments Manager",
+    "Head of Payments",
+    "Chief Payments Officer",
+    "CFO"
+   ],
+   "demand": "High demand: high-risk payments expertise is a narrow market, and without it an operator cannot scale into new geos.",
+   "faq": [
+    {
+     "q": "Do I need to understand crypto payments?",
+     "a": "Increasingly, yes — crypto casinos and hybrid operators are now a sizeable part of the market, and stablecoin experience adds to the salary bracket."
+    }
+   ]
+  },
+  "fraud-analyst": {
+   "family": "Payments & anti-fraud",
+   "lead": "Catches multi-accounting, stolen cards, bonus abuse and schemes for cashing out other people's money — before the company loses it.",
+   "about": "A Fraud Analyst sifts through transaction flows and account behaviour: linking devices and payment details, catching multi-account farms milking bonuses, blocking withdrawals from stolen cards and building the evidence for chargeback disputes. It is detective work: a hypothesis, a check against the data, and a decision with real consequences for a real player.",
+   "responsibilities": [
+    "Investigating suspicious deposits and withdrawals",
+    "Detecting multi-accounting and linked accounts",
+    "Fighting bonus abuse and promo arbitrage",
+    "Configuring and tuning the fraud system's rules",
+    "Compiling evidence for chargeback disputes",
+    "Working shared cases with AML and payments"
+   ],
+   "kpis": [
+    "Value of losses prevented",
+    "Chargeback rate",
+    "False-positive rate",
+    "Case resolution time"
+   ],
+   "hard_skills": [
+    "Fraud platforms and device fingerprinting",
+    "SQL and working with large data extracts",
+    "Card scheme and chargeback rules",
+    "Gambling fraud patterns"
+   ],
+   "soft_skills": [
+    "An investigator's mindset",
+    "Defending your decisions with evidence",
+    "Holding firm under pressure from players and the commercial side"
+   ],
+   "tools": [
+    "SEON, Sift, Covery",
+    "SQL",
+    "BI dashboards",
+    "Platform back office"
+   ],
+   "languages": "English B2+.",
+   "entry": "From KYC, support or banking fraud. One of the natural next steps for people who started in verification.",
+   "schedule": "Often shift-based, including nights at larger companies.",
+   "bonus": "10–20% annually, sometimes tied to losses prevented.",
+   "growth": [
+    "Senior Fraud Analyst",
+    "Fraud Team Lead",
+    "Head of Risk & Fraud",
+    "Head of Payments"
+   ],
+   "demand": "Consistently high demand: fraud schemes evolve faster than the rules that catch them.",
+   "faq": [
+    {
+     "q": "How is fraud different from AML?",
+     "a": "Fraud protects the company's money from fraudsters; AML protects the company from having its infrastructure used for money laundering. The two often sit in the same department and pass cases back and forth."
+    }
+   ]
+  },
+  "chargeback-specialist": {
+   "family": "Payments & anti-fraud",
+   "lead": "Disputes chargebacks and gathers the evidence that the player really did play with their own money.",
+   "about": "Every chargeback means lost money plus a scheme fine, and a high chargeback ratio gets your acquiring switched off. A Chargeback Specialist prepares dispute representments, pulls together session logs, KYC documents and gameplay history, tracks the statistics by BIN and provider and proposes preventive measures. A narrow role, but one that pays for itself many times over.",
+   "responsibilities": [
+    "Preparing and filing dispute representments",
+    "Assembling the evidence: logs, KYC, gameplay and communication history",
+    "Monitoring chargeback rate by provider and market",
+    "Analysing chargeback reasons and putting preventive measures in place",
+    "Liaising with PSPs and acquiring banks"
+   ],
+   "kpis": [
+    "Dispute win rate",
+    "Chargeback rate",
+    "Amount of funds recovered"
+   ],
+   "hard_skills": [
+    "Visa and Mastercard dispute rules",
+    "Working in PSP back offices",
+    "Excel and reporting",
+    "Fraud fundamentals"
+   ],
+   "soft_skills": [
+    "Meticulous with paperwork",
+    "Persuasive writing",
+    "Patience with routine"
+   ],
+   "tools": [
+    "PSP back offices",
+    "Excel",
+    "In-house case management systems"
+   ],
+   "languages": "English B2+ — all correspondence with banks is in English.",
+   "entry": "From KYC, support or accounting. In smaller teams the role is often combined with fraud.",
+   "schedule": "Monday to Friday.",
+   "bonus": "5–15% annually, sometimes a percentage of the funds recovered.",
+   "growth": [
+    "Senior Chargeback Analyst",
+    "Head of Disputes",
+    "Payments Manager"
+   ],
+   "demand": "Moderate but constant: without this function, a high-risk operator's acquiring does not survive for long.",
+   "faq": [
+    {
+     "q": "How narrow is this specialisation?",
+     "a": "Narrow, but it opens a direct path into payments and fraud — and both neighbouring roles pay noticeably more."
+    }
+   ]
+  },
+  "support-agent": {
+   "family": "Player support",
+   "lead": "The player's first point of contact: live chat, email, sorting out deposit, bonus and verification issues — usually in the language of a specific market.",
+   "about": "Casino support is not a generic call centre: the agent has to understand the bonus terms, see why a payment failed, explain the status of a verification and do all of it without breaching responsible gambling requirements. That is why language pays here: a native German, Japanese, Finnish or Brazilian Portuguese speaker earns substantially more than an English-speaking agent. For most people, this is the most realistic way into the industry.",
+   "responsibilities": [
+    "Handling tickets across live chat, email and messengers",
+    "Resolving deposit, withdrawal and verification issues",
+    "Explaining bonus terms and promotions",
+    "Escalating cases to payments, fraud and compliance",
+    "Flagging signs of problem gambling and passing them to Responsible Gaming",
+    "Maintaining quality as rated by players"
+   ],
+   "kpis": [
+    "CSAT and chat ratings",
+    "First response time",
+    "Share of cases resolved without escalation",
+    "Tickets handled per shift"
+   ],
+   "hard_skills": [
+    "Market language at C1 or native level",
+    "Working in Zendesk, Intercom, LiveChat",
+    "Knowledge of bonus terms and payment methods",
+    "Responsible gambling fundamentals"
+   ],
+   "soft_skills": [
+    "Patience",
+    "Clear, well-written communication",
+    "Keeping to the brand's tone of voice"
+   ],
+   "tools": [
+    "Zendesk, Intercom, LiveChat",
+    "Platform back office",
+    "Internal knowledge bases"
+   ],
+   "languages": "The key driver of the rate. German, Japanese, Finnish, Norwegian, Danish, Turkish and Portuguese (BR) sit at the top of the bracket; English, Spanish and Polish are the baseline.",
+   "entry": "No industry experience needed. What you need is the language and a willingness to work shifts. Many heads of operations and VIP teams started right here.",
+   "schedule": "24/7 shift rota, including nights and weekends. Night shifts usually carry an allowance.",
+   "bonus": "Shift and language allowances, plus quarterly quality bonuses of 5–10%.",
+   "growth": [
+    "Senior Support Agent",
+    "Support Team Lead",
+    "VIP Manager",
+    "Retention Manager",
+    "KYC / fraud"
+   ],
+   "demand": "The industry's most common vacancy. Language agents are needed all year round, often with a paid relocation to Malta or Cyprus.",
+   "faq": [
+    {
+     "q": "Is this really a way into the industry from scratch?",
+     "a": "Yes. Support is the most common first step: after 12–18 months, people move on to VIP, retention, KYC or operations."
+    },
+    {
+     "q": "How much extra do you get for a rare language?",
+     "a": "Native Japanese, Finnish, Norwegian or Danish speakers earn 30–60% more than English-speaking agents, plus a relocation package."
+    }
+   ]
+  },
+  "support-team-lead": {
+   "family": "Player support",
+   "lead": "Runs a team of agents: shift rota, chat quality, training new starters and handling the tough escalations.",
+   "about": "Support Team Lead is the first rung of management in casino operations. You build the shift rota around 24/7 demand, review and score chats, train new starters, untangle contentious cases and stand up for the team in front of the operations leadership. At larger companies you will have 10–25 agents across several languages reporting to you.",
+   "responsibilities": [
+    "Planning shifts and 24/7 language coverage",
+    "Chat quality control and feedback to agents",
+    "Onboarding and training new hires",
+    "Handling complex escalations and contentious cases",
+    "Reporting on support metrics",
+    "Taking part in agent hiring"
+   ],
+   "kpis": [
+    "Team CSAT",
+    "Response-time SLA adherence",
+    "Team attrition",
+    "Time for a new starter to reach target"
+   ],
+   "hard_skills": [
+    "Rota and workload management",
+    "Helpdesk systems and their reporting",
+    "Service quality metrics",
+    "Expert-level product knowledge"
+   ],
+   "soft_skills": [
+    "People management",
+    "Giving feedback without conflict",
+    "Staying calm at peak load"
+   ],
+   "tools": [
+    "Zendesk, Intercom",
+    "Shift scheduling systems",
+    "BI dashboards"
+   ],
+   "languages": "English C1 plus the language of your team.",
+   "entry": "Promoted from within only: 1–2 years as an agent, then senior, then team lead.",
+   "schedule": "Shift-based with on-call duty, often on-site.",
+   "bonus": "10–15% annually based on team metrics.",
+   "growth": [
+    "Support Manager",
+    "Head of Customer Support",
+    "Head of Operations"
+   ],
+   "demand": "Steady demand from operators running large multilingual teams.",
+   "faq": [
+    {
+     "q": "How long do you need to work as an agent before becoming a team lead?",
+     "a": "Usually 1.5–3 years. Faster if you cover a rare language and take on training the new starters."
+    }
+   ]
+  },
+  "crm-manager": {
+   "family": "Marketing & CRM",
+   "lead": "Owns every touchpoint with the player: email, push, SMS, on-site — from the welcome journey through to reactivation.",
+   "about": "A CRM Manager owns the channels to the player base. You build campaigns, set up triggers, watch deliverability and make sure players are not bombarded with messages until they unsubscribe. Unlike classic e-commerce, communication here is tightly restricted by regulators: no messaging self-excluded players, no promising wins, and in several jurisdictions no bonus offers without explicit consent. The role calls for creativity, technical skill and caution all at once.",
+   "responsibilities": [
+    "Building and launching campaigns across email, push, SMS and on-site",
+    "Setting up triggered journeys based on player events",
+    "Segmenting the base and personalising offers",
+    "Monitoring deliverability and domain reputation",
+    "A/B testing creatives and mechanics",
+    "Keeping communications within regulatory restrictions"
+   ],
+   "kpis": [
+    "Open rate, CTR, deposit conversion",
+    "Revenue per message sent",
+    "Unsubscribe rate",
+    "Cohort retention"
+   ],
+   "hard_skills": [
+    "CRM platforms (Optimove, Fast Track, Braze, Solitics)",
+    "HTML/CSS for email",
+    "Segmentation and SQL extracts",
+    "Deliverability: SPF, DKIM, DMARC",
+    "A/B testing"
+   ],
+   "soft_skills": [
+    "Copywriting",
+    "Precision on launches",
+    "Quick reaction when metrics dip"
+   ],
+   "tools": [
+    "Optimove, Fast Track, Braze",
+    "Figma",
+    "Metabase",
+    "SQL"
+   ],
+   "languages": "English B2+; knowing the market language is a strong plus for localised campaigns.",
+   "entry": "From email marketing, support or content roles. One of the most common second steps after support.",
+   "schedule": "Monday to Friday, with peaks ahead of major promotions.",
+   "bonus": "10–20% annually based on CRM metrics.",
+   "growth": [
+    "Senior CRM Manager",
+    "Head of CRM",
+    "Head of Retention",
+    "CMO"
+   ],
+   "demand": "Very high: CRM is the engine of retention economics, and nearly every operator has a vacancy open.",
+   "faq": [
+    {
+     "q": "Do I need to design and code the emails?",
+     "a": "A basic understanding of HTML in email is almost always expected, although in larger teams a dedicated person handles the build."
+    }
+   ]
+  },
+  "head-of-marketing-igaming": {
+   "family": "Marketing & CRM",
+   "lead": "Owns the entire flow of new players and makes sure it pays back: budgets, channels, brand and the marketing team.",
+   "about": "A Head of Marketing (iGaming) splits the budget between affiliates, paid traffic, SEO, brand and CRM, and answers for acquisition cost and cohort payback. The extra layer of difficulty is advertising regulation that differs from country to country, plus the challenge of building a brand in a vertical where half the usual channels are closed to you.",
+   "responsibilities": [
+    "Acquisition strategy and allocation of the marketing budget",
+    "Leading the affiliate, paid, SEO, CRM and brand teams",
+    "Keeping CAC, LTV and cohort payback under control",
+    "Launching the brand in new markets within local regulation",
+    "Sponsorships and media partnerships",
+    "Reporting to the board"
+   ],
+   "kpis": [
+    "CAC and LTV/CAC",
+    "Market share and brand awareness",
+    "ROMI by channel",
+    "Delivery against the FTD plan"
+   ],
+   "hard_skills": [
+    "Acquisition unit economics",
+    "Budgeting and marketing P&L",
+    "Deep knowledge of every iGaming acquisition channel",
+    "Gambling advertising regulation"
+   ],
+   "soft_skills": [
+    "People leadership",
+    "Strategic thinking",
+    "Board-level communication"
+   ],
+   "tools": [
+    "BI dashboards",
+    "Attribution trackers",
+    "Excel / financial models"
+   ],
+   "languages": "English C1.",
+   "entry": "By running one of the disciplines first: affiliate, performance, CRM or brand.",
+   "schedule": "5/2, with travel to conferences and market offices.",
+   "bonus": "Annual bonus of 30–100% of base salary, sometimes stock options.",
+   "growth": [
+    "CMO",
+    "Managing Director",
+    "CEO"
+   ],
+   "demand": "Few openings, but employers compete hard for leaders with a proven track record.",
+   "faq": [
+    {
+     "q": "What do interviewers ask about first?",
+     "a": "Hard numbers: the budget you managed, the CAC and LTV you achieved, in which markets and through which channels. Broad talk about brand with no economics behind it does not get you through."
+    }
+   ]
+  },
+  "content-manager-igaming": {
+   "family": "Marketing & CRM",
+   "lead": "Writes and maintains all of the brand's copy: the website, game reviews, promos, emails and SEO articles, always aware of what can and cannot be said in this vertical.",
+   "about": "Gambling content is bound by regulation: you cannot promise winnings, you must show age restrictions and wagering requirements, and promo wording is signed off by compliance. At the same time the volume is huge: reviews for hundreds of games, landing pages for every geo, emails, promotion terms. The role often doubles up with SEO and localisation.",
+   "responsibilities": [
+    "Writing and editing website copy, promos and email campaigns",
+    "Game reviews and landing pages for SEO clusters",
+    "Running the content calendar and managing freelance writers",
+    "Getting wording approved by compliance",
+    "Localising content for individual markets"
+   ],
+   "kpis": [
+    "Organic traffic to your pages",
+    "Landing page conversion",
+    "Content volume and on-time delivery"
+   ],
+   "hard_skills": [
+    "Copywriting and editing",
+    "SEO fundamentals and keyword research",
+    "CMS",
+    "Understanding of advertising restrictions"
+   ],
+   "soft_skills": [
+    "Writing speed",
+    "Attention to detail",
+    "Ability to work within an editorial style guide"
+   ],
+   "tools": [
+    "CMS (WordPress and in-house)",
+    "Ahrefs/Semrush",
+    "Google Docs",
+    "Figma"
+   ],
+   "languages": "Native speaker of the brand's language plus English B2+ for working with the team.",
+   "entry": "From copywriting, journalism or SEO writing. One of the more accessible routes into the industry for people with a humanities background.",
+   "schedule": "5/2, often remote.",
+   "bonus": "5–12% annually.",
+   "growth": [
+    "Senior Content Manager",
+    "Head of Content",
+    "Head of SEO",
+    "Brand Manager"
+   ],
+   "demand": "Steady demand, especially for native speakers of growth-market languages: Portuguese, Spanish, Japanese.",
+   "faq": [
+    {
+     "q": "Do I need to understand gambling itself?",
+     "a": "Yes. Shallow copy stands out immediately in this vertical and does not rank. Employers check product knowledge with a test assignment."
+    }
+   ]
+  },
+  "product-manager-igaming": {
+   "family": "Marketing & CRM",
+   "lead": "Owns the product end to end: the registration and deposit funnel, the lobby, the mobile app, and how all of it moves the money.",
+   "about": "A Product Manager (iGaming) works with a funnel where every step is regulated: mandatory verification, limits, disclosure requirements. You find where players drop off between sign-up and first deposit, prioritise the backlog with engineering, run A/B tests and defend decisions with economics. In larger companies product is split into areas: payments, lobby, mobile apps, bonus engine.",
+   "responsibilities": [
+    "Funnel analysis and finding the drop-off points",
+    "Owning and prioritising the product backlog",
+    "Briefing engineering and accepting delivered work",
+    "A/B testing product hypotheses",
+    "Working with compliance on product requirements",
+    "Measuring the impact of releases on metrics"
+   ],
+   "kpis": [
+    "Registration → first deposit conversion",
+    "Retention and session frequency",
+    "Feature delivery velocity",
+    "ARPU"
+   ],
+   "hard_skills": [
+    "Product analytics and A/B testing",
+    "SQL",
+    "Working with design and engineering",
+    "Understanding of payment and bonus mechanics"
+   ],
+   "soft_skills": [
+    "Prioritisation",
+    "Making the case with numbers",
+    "Cross-team leadership"
+   ],
+   "tools": [
+    "Jira, Confluence",
+    "Amplitude / Mixpanel",
+    "Figma",
+    "SQL, Metabase"
+   ],
+   "languages": "English C1.",
+   "entry": "From product roles outside the industry, from analytics, or from casino operations with a strong product bent.",
+   "schedule": "5/2, with plenty of hybrid and remote openings.",
+   "bonus": "10–25% annually; product-led companies sometimes add stock options.",
+   "growth": [
+    "Senior Product Manager",
+    "Head of Product",
+    "CPO"
+   ],
+   "demand": "High demand, especially for PMs with payments and mobile app experience.",
+   "faq": [
+    {
+     "q": "Can I move over from product in fintech?",
+     "a": "Yes, it is one of the most natural transitions: the funnel, payments and regulatory constraints work in much the same way."
+    }
+   ]
+  },
+  "bi-analyst": {
+   "family": "Data & BI",
+   "lead": "Turns the stream of bets, deposits and sessions into reports and conclusions the company acts on.",
+   "about": "iGaming generates a lot of data, and all of it is money: every bet, spin, deposit and bonus. A BI Analyst (iGaming) builds data marts and dashboards, calculates cohorts and LTV, works out why NGR dipped in a particular geo and checks whether a promotion actually paid off. The key difference from analytics elsewhere is that you have to understand GGR, NGR, bonus cost and the gap between turnover and revenue.",
+   "responsibilities": [
+    "Building dashboards by vertical, geo and channel",
+    "Cohort analysis, LTV and acquisition payback calculations",
+    "Investigating metric drops and preparing conclusions",
+    "Measuring the effectiveness of promotions and A/B tests",
+    "Maintaining data marts together with data engineers"
+   ],
+   "kpis": [
+    "Report turnaround time",
+    "Share of decisions backed by data",
+    "Quality and stability of data marts"
+   ],
+   "hard_skills": [
+    "Advanced SQL",
+    "Tableau, Power BI, Metabase or Looker",
+    "Python for analysis (pandas)",
+    "Gambling metrics: GGR, NGR, RTP, bonus cost",
+    "Statistics and A/B testing"
+   ],
+   "soft_skills": [
+    "Knowing the right question to ask of the data",
+    "Presenting conclusions clearly",
+    "Healthy scepticism towards numbers that look too good"
+   ],
+   "tools": [
+    "SQL, Python",
+    "Tableau / Power BI / Metabase",
+    "dbt",
+    "Excel"
+   ],
+   "languages": "English B2+.",
+   "entry": "From analytics in any industry, it is a direct move. Inside iGaming people grow into it from operations and CRM.",
+   "schedule": "5/2, with plenty of remote openings.",
+   "bonus": "10–20% annually.",
+   "growth": [
+    "Senior BI Analyst",
+    "Analytics Lead",
+    "Head of BI",
+    "Chief Data Officer"
+   ],
+   "demand": "Very high: analytics is the bottleneck at most operators, especially in the growth phase.",
+   "faq": [
+    {
+     "q": "What comes up in the technical interview?",
+     "a": "SQL with window functions, a cohort exercise and the difference between GGR and NGR. That last one is what most often filters out candidates without domain experience."
+    }
+   ]
+  },
+  "data-engineer-igaming": {
+   "family": "Data & BI",
+   "lead": "Builds the warehouse and data pipelines that analytics draws its numbers from: game events, transactions, marketing sources.",
+   "about": "Event volumes in iGaming are large: every spin, bet and balance change. A Data Engineer (iGaming) collects these streams into a warehouse, keeps the data reliable and consistent, builds data marts and watches pipeline latency, because traffic decisions get made the same day. The stack is standard: Kafka, Airflow, dbt, Snowflake or ClickHouse.",
+   "responsibilities": [
+    "Designing and maintaining ETL/ELT pipelines",
+    "Ingesting gaming, payment and marketing events",
+    "Building data marts for analytics",
+    "Data quality and consistency checks",
+    "Optimising warehouse cost and performance"
+   ],
+   "kpis": [
+    "Pipeline latency",
+    "Rate of data quality incidents",
+    "Warehouse cost",
+    "Time to ship a new data mart"
+   ],
+   "hard_skills": [
+    "SQL and data modelling",
+    "Python",
+    "Kafka, Airflow, dbt",
+    "Snowflake, BigQuery or ClickHouse",
+    "Docker, Kubernetes"
+   ],
+   "soft_skills": [
+    "Systems thinking",
+    "Ability to find common ground with analysts",
+    "Ownership of the numbers being correct"
+   ],
+   "tools": [
+    "Airflow, dbt",
+    "Kafka",
+    "ClickHouse / Snowflake",
+    "Git, CI/CD"
+   ],
+   "languages": "English B1+ (technical).",
+   "entry": "From data engineering in any industry or from backend development. Very little domain knowledge is required.",
+   "schedule": "5/2, often fully remote.",
+   "bonus": "10–15% annually.",
+   "growth": [
+    "Senior Data Engineer",
+    "Data Platform Lead",
+    "Head of Data",
+    "CDO"
+   ],
+   "demand": "High demand and a shortage of candidates who have handled high-volume event streams.",
+   "faq": [
+    {
+     "q": "Is gambling experience a must?",
+     "a": "No. What counts here is the engineering stack; the metric specifics are picked up alongside the analysts."
+    }
+   ]
+  },
+  "head-of-casino": {
+   "family": "Executive",
+   "lead": "Owner of the casino vertical's P&L: content, promotions, retention and the team, everything that drives casino revenue.",
+   "about": "The Head of Casino answers for the vertical's money. You decide which content to buy, how to build the promo calendar, what bonus budget is acceptable and what the target player mix by segment should look like. Operations, content, promotions and part of CRM usually report to you. The role demands the ability to read a P&L and defend the plan in front of the board.",
+   "responsibilities": [
+    "Managing the casino vertical's P&L",
+    "Content, promotion and retention strategy",
+    "Leading the operations, content and promo teams",
+    "Budget planning and defending the plan to senior leadership",
+    "Launching the vertical in new markets",
+    "Negotiating with key game providers"
+   ],
+   "kpis": [
+    "Vertical GGR and NGR",
+    "Margin after bonus cost",
+    "Growth of the active player base",
+    "Delivery against the annual plan"
+   ],
+   "hard_skills": [
+    "P&L and budgeting",
+    "Complete command of casino metrics",
+    "Managing content and promotion strategies",
+    "Knowledge of regulatory constraints across markets"
+   ],
+   "soft_skills": [
+    "Managing managers",
+    "Strategic planning",
+    "Partnership-level negotiation"
+   ],
+   "tools": [
+    "BI dashboards",
+    "Excel / financial models",
+    "Platform back office"
+   ],
+   "languages": "English C1.",
+   "entry": "From casino operations, CRM or a head of content role, after several years at senior level.",
+   "schedule": "5/2, with business travel.",
+   "bonus": "Annual bonus of 30–100% of base salary, often stock options or profit share.",
+   "growth": [
+    "Managing Director",
+    "COO",
+    "CEO"
+   ],
+   "demand": "Few openings, yet a proven candidate is hard to find: the market is closed and the search runs through personal networks and executive search.",
+   "faq": [
+    {
+     "q": "How are people found for this role?",
+     "a": "Almost always through direct search and referrals. Public job ads at this level are rare."
+    }
+   ]
+  },
+  "country-manager": {
+   "family": "Executive",
+   "lead": "Launches and runs the brand in a specific market: localisation, licence, payment methods, marketing and the team on the ground.",
+   "about": "A Country Manager (iGaming) is a mini-CEO for one country. You make sure the product fits the market: local payment methods, support in the local language, the sports and games people there actually play, advertising that stays within that country's law. You also build the local team and strike deals with partners. The role is in demand across growth markets: Brazil, Mexico, Peru, India, Africa, the Balkans.",
+   "responsibilities": [
+    "Market entry and growth strategy for your assigned market",
+    "Localising the product, payments and support",
+    "Managing the local team and partners",
+    "Staying compliant with local regulation and licence conditions",
+    "Owning the market P&L and reporting to head office"
+   ],
+   "kpis": [
+    "NGR and market share",
+    "CAC and acquisition payback",
+    "Growth of the active player base",
+    "Meeting regulatory requirements"
+   ],
+   "hard_skills": [
+    "Knowledge of the market and its regulation",
+    "P&L and budgeting",
+    "Local payment methods",
+    "Acquisition marketing"
+   ],
+   "soft_skills": [
+    "Entrepreneurial mindset",
+    "Building a team from scratch",
+    "Negotiating with local partners"
+   ],
+   "tools": [
+    "BI dashboards",
+    "Excel",
+    "CRM"
+   ],
+   "languages": "English C1 plus the market language at native or C1 level.",
+   "entry": "From marketing, operations or sales in that market. The key requirement is genuine knowledge of the country, not just the language.",
+   "schedule": "5/2 with frequent travel; relocation to the market is common.",
+   "bonus": "30–100% of base salary, tied to market results.",
+   "growth": [
+    "Regional Director",
+    "Managing Director",
+    "COO"
+   ],
+   "demand": "Growing demand for managers covering LatAm, African and Asian markets.",
+   "faq": [
+    {
+     "q": "Do I have to live in the market?",
+     "a": "Not always, but employers strongly prefer candidates who grew up in the market or have lived there for several years."
+    }
+   ]
+  },
+  "coo-igaming": {
+   "family": "Executive",
+   "lead": "Runs the company's entire operating machine: product, support, payments, compliance and hiring, and makes sure it scales.",
+   "about": "A COO (iGaming) brings together what other industries keep apart: product and platform, high-risk payments, compliance across several licences, 24/7 support in ten languages. Your job is to grow the company without losing control and without regulatory breaches. The role calls for hands-on experience across every core function and the ability to work with the board.",
+   "responsibilities": [
+    "Operating strategy and company structure",
+    "Managing the heads of each function",
+    "Oversight of key operating metrics and the budget",
+    "Regulatory resilience and audit readiness",
+    "Scaling teams as the company enters new markets",
+    "Reporting to shareholders and the board"
+   ],
+   "kpis": [
+    "Operating margin",
+    "Uptime and service quality",
+    "Regulatory compliance",
+    "Speed of new market launches"
+   ],
+   "hard_skills": [
+    "P&L and financial planning",
+    "Understanding of every function inside an iGaming operator",
+    "Regulation in the key jurisdictions",
+    "Organisational design"
+   ],
+   "soft_skills": [
+    "Managing managers",
+    "Decision-making under uncertainty",
+    "Working with shareholders"
+   ],
+   "tools": [
+    "BI and management reporting",
+    "Financial models"
+   ],
+   "languages": "English C1/C2.",
+   "entry": "From Head of Casino, Head of Operations, Country Manager or CFO, after several years at director level.",
+   "schedule": "Irregular hours, regular travel.",
+   "bonus": "Annual bonus of 50–150% of base salary plus stock options or equity in the company.",
+   "growth": [
+    "CEO",
+    "Group Managing Director",
+    "Board of Directors"
+   ],
+   "demand": "A closed market: these roles are filled exclusively through executive search and personal networks.",
+   "faq": [
+    {
+     "q": "How are iGaming COOs recruited?",
+     "a": "Through direct search and referrals. Public job ads at this level almost never appear, which is why your reputation in the industry matters."
+    }
+   ]
+  }
+ }
+}

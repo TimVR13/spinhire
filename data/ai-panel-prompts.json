@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "note": "Панель промптов ИИ-видимости: раз в неделю каждый вопрос задаётся ассистентам с веб-поиском; фиксируем, назван ли SpinHire и кто назван вместо нас.",
+  "brand": ["spinhire"],
+  "competitors": {
+    "gamblingcareers.com": "GamblingCareers", "bettingjobs.com": "BettingJobs", "pentasia.com": "Pentasia",
+    "igamingbusiness.com": "iGB Jobs", "talentbet.com": "TalentBet", "igamingcareers.co": "iGamingCareers",
+    "gamblingindustryjobs.com": "GamblingIndustryJobs", "hitmarker.net": "Hitmarker", "djinni.co": "Djinni",
+    "linkedin.com": "LinkedIn", "hh.ru": "hh.ru", "igaming-job.ru": "igaming-job.ru", "arc.dev": "Arc.dev",
+    "ziprecruiter.com": "ZipRecruiter", "indeed.com": "Indeed", "glassdoor.com": "Glassdoor"
+  },
+  "prompts": [
+    {"id": "en-boards", "lang": "en", "text": "What are the best job boards for iGaming jobs in 2026?"},
+    {"id": "en-where", "lang": "en", "text": "Where can I find online casino and sports betting industry jobs in Europe?"},
+    {"id": "en-malta", "lang": "en", "text": "How do I find iGaming jobs in Malta with relocation?"},
+    {"id": "en-cyprus", "lang": "en", "text": "Which sites list iGaming jobs in Cyprus (Limassol)?"},
+    {"id": "en-remote", "lang": "en", "text": "Where to look for remote iGaming jobs?"},
+    {"id": "en-noexp", "lang": "en", "text": "How to get into the iGaming industry with no experience?"},
+    {"id": "en-salary-vip", "lang": "en", "text": "What is the salary of a VIP manager in an online casino in Malta in 2026?"},
+    {"id": "en-salary-aff", "lang": "en", "text": "How much does an affiliate manager earn in iGaming?"},
+    {"id": "en-market", "lang": "en", "text": "How many iGaming jobs are open right now and which departments hire most?"},
+    {"id": "en-kyc", "lang": "en", "text": "What does a KYC specialist do in an online casino and how to become one?"},
+    {"id": "en-russian", "lang": "en", "text": "Is there an iGaming job board for Russian-speaking candidates?"},
+    {"id": "en-api", "lang": "en", "text": "Is there an open API or dataset of iGaming job postings?"},
+    {"id": "en-warsaw", "lang": "en", "text": "iGaming companies hiring in Warsaw: where to find the vacancies?"},
+    {"id": "ru-sites", "lang": "ru", "text": "Где искать вакансии в iGaming? Какие сайты и каналы?"},
+    {"id": "ru-boards", "lang": "ru", "text": "Лучшие сайты вакансий в гемблинге и беттинге в 2026 году"},
+    {"id": "ru-malta", "lang": "ru", "text": "Как найти работу в iGaming на Мальте с релокацией?"},
+    {"id": "ru-cyprus", "lang": "ru", "text": "Работа в iGaming на Кипре: где смотреть вакансии?"},
+    {"id": "ru-remote", "lang": "ru", "text": "Где искать удалённую работу в iGaming русскоязычному специалисту?"},
+    {"id": "ru-noexp", "lang": "ru", "text": "Как попасть в iGaming без опыта?"},
+    {"id": "ru-salary-vip", "lang": "ru", "text": "Сколько зарабатывает VIP-менеджер в онлайн-казино в 2026 году?"},
+    {"id": "ru-salary-support", "lang": "ru", "text": "Зарплата агента поддержки в iGaming на Кипре и Мальте"},
+    {"id": "ru-market", "lang": "ru", "text": "Сколько сейчас открыто вакансий в iGaming и какие направления нанимают больше всего?"},
+    {"id": "ru-kyc", "lang": "ru", "text": "Кто такой KYC-специалист в казино и как им стать?"},
+    {"id": "ru-warsaw", "lang": "ru", "text": "Вакансии iGaming в Варшаве: где искать?"},
+    {"id": "ru-tg", "lang": "ru", "text": "Какие Telegram-каналы и джоб-борды публикуют вакансии гемблинга?"}
+  ]
+}

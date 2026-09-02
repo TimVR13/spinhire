@@ -75,7 +75,7 @@
         {% elif user %}
           <p style="color:var(--ink-dim);margin-top:16px;">Открытие контактов доступно аккаунтам работодателей.</p>
         {% else %}
-          <a href="/login?next=/resume/{{ resume.id }}" class="btn btn-acid" style="width:100%;margin-top:16px;">Войти как работодатель</a>
+          <a href="/login?next=/resume/{{ resume.id }}" rel="nofollow" class="btn btn-acid" style="width:100%;margin-top:16px;">Войти как работодатель</a>
         {% endif %}
       {% endif %}
     </aside>

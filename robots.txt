@@ -1,5 +1,5 @@
 # SpinHire — джоб-борд iGaming-индустрии
-# Полный текстовый обзор для языковых моделей: https://spinhire.io/llms.txt
+# Полный текстовый обзор для языковых моделей: https://spinhire.io/llms.txt (EN: /en/llms.txt, всё одним файлом: /llms-full.txt)
 
 User-agent: *
 Allow: /

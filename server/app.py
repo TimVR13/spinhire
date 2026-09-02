@@ -99,7 +99,10 @@ PATH_LANGS = {
 LANG_LABELS = {"ru": "Русский", **PATH_LANGS}
 
 engine = create_engine(f"sqlite:///{DB_PATH}",
-                       connect_args={"check_same_thread": False, "timeout": 30})
+                       connect_args={"check_same_thread": False, "timeout": 30},
+                       # пул 5+10 исчерпывался под краулерами (QueuePool limit … reached
+                       # — 223 ошибки 500 за неделю): sync-роуты крутятся в 40 потоках
+                       pool_size=20, max_overflow=40, pool_timeout=60)
 
 
 @event.listens_for(engine, "connect")
@@ -1086,6 +1089,70 @@ def backfill_categories(db: Session):
 
 
 app = FastAPI(title="SpinHire")
+
+
+def _public_openapi():
+    """Схема только открытого API — для GPT Actions, MCP-клиентов и /docs.
+
+    Автосхема FastAPI тянула бы админку и кабинеты; агентам нужны два метода.
+    """
+    if app.openapi_schema:
+        return app.openapi_schema
+    job_props = {
+        "id": {"type": "integer"}, "title": {"type": "string"}, "company": {"type": "string"},
+        "company_slug": {"type": "string"}, "location": {"type": "string"}, "country": {"type": "string"},
+        "format": {"type": "string", "description": "офис / удалёнка / гибрид"},
+        "category": {"type": "string"}, "salary": {"type": "string"},
+        "salary_min": {"type": "number", "nullable": True}, "salary_max": {"type": "number", "nullable": True},
+        "salary_currency": {"type": "string", "nullable": True}, "salary_unit": {"type": "string", "nullable": True},
+        "employment_type": {"type": "string"}, "languages": {"type": "array", "items": {"type": "string"}},
+        "tags": {"type": "array", "items": {"type": "string"}}, "posted_at": {"type": "string", "format": "date"},
+        "valid_through": {"type": "string", "format": "date"}, "url": {"type": "string", "format": "uri"},
+        "markdown_url": {"type": "string", "format": "uri"}, "source_url": {"type": "string", "format": "uri"},
+    }
+    app.openapi_schema = {
+        "openapi": "3.1.0",
+        "info": {"title": "SpinHire Open API", "version": "1.0.0",
+                 "description": "Открытый индекс вакансий iGaming (казино, беттинг, геймдев, аффилейты, "
+                                "платежи, комплаенс). Без ключа. Лицензия CC BY 4.0: используйте свободно "
+                                "со ссылкой на spinhire.io. Open index of iGaming jobs, no API key, CC BY 4.0.",
+                 "license": {"name": "CC BY 4.0", "url": "https://creativecommons.org/licenses/by/4.0/"},
+                 "contact": {"name": "SpinHire", "url": "https://spinhire.io", "email": "hello@spinhire.io"}},
+        "servers": [{"url": "https://spinhire.io"}],
+        "paths": {
+            "/api/jobs": {"get": {
+                "operationId": "searchJobs", "summary": "Поиск вакансий iGaming / Search iGaming jobs",
+                "parameters": [
+                    {"name": "q", "in": "query", "schema": {"type": "string"},
+                     "description": "Поиск по названию, компании и тегам (например, «VIP manager», «KYC», «Betsson»)"},
+                    {"name": "category", "in": "query", "schema": {"type": "string"},
+                     "description": "Направление, как на сайте: «Операции казино», «Разработка игр», «Маркетинг и CRM», «Комплаенс и AML»…"},
+                    {"name": "country", "in": "query", "schema": {"type": "string"},
+                     "description": "Страна или «Удалёнка» (Malta, Cyprus, Poland, Remote — латиница тоже понимается)"},
+                    {"name": "fmt", "in": "query", "schema": {"type": "string", "enum": ["офис", "удалёнка", "гибрид"]}},
+                    {"name": "page", "in": "query", "schema": {"type": "integer", "minimum": 1, "default": 1}},
+                    {"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 50}},
+                ],
+                "responses": {"200": {"description": "Страница вакансий", "content": {"application/json": {"schema": {
+                    "type": "object", "properties": {
+                        "total": {"type": "integer"}, "page": {"type": "integer"}, "pages": {"type": "integer"},
+                        "limit": {"type": "integer"},
+                        "jobs": {"type": "array", "items": {"type": "object", "properties": job_props}}}}}}}}}},
+            "/api/market-stats": {"get": {
+                "operationId": "getMarketStats",
+                "summary": "Рынок труда iGaming в цифрах / iGaming job market stats",
+                "description": "Открытые вакансии, новые за неделю, компании, разбивка по направлениям, странам, языкам и формату. Обновление каждые 6 часов.",
+                "responses": {"200": {"description": "Статистика", "content": {"application/json": {"schema": {"type": "object"}}}}}}},
+            "/api/market-history": {"get": {
+                "operationId": "getMarketHistory",
+                "summary": "Архив рынка по месяцам и дневные снимки / monthly archive and daily snapshots",
+                "responses": {"200": {"description": "История", "content": {"application/json": {"schema": {"type": "object"}}}}}}},
+        },
+    }
+    return app.openapi_schema
+
+
+app.openapi = _public_openapi
 templates = Jinja2Templates(directory=os.path.join(ROOT, "server", "templates"))
 
 
@@ -1188,6 +1255,151 @@ _BLOCKED_EXACT = {"/procfile", "/requirements.txt", "/.impeccable.md",
 # вакансий/компаний/профессий генерируются приложением — их пускаем
 _MD_ROUTE_PREFIXES = ("/job/", "/company/", "/profession/")
 _MD_ROUTE_EXACT = {"/market.md"}
+_JSON_ROUTE_EXACT = {"/openapi.json", "/market.csv"}  # генерируются приложением, не файлы репозитория
+
+# ---------- учёт ИИ-краулеров и переходов из ИИ-ассистентов ----------
+# Прокси пишет только ошибки, uvicorn — без User-Agent, поэтому приложение само
+# ведёт журнал: кто из ботов какие страницы забирает и откуда приходят люди.
+# ChatGPT-User / Perplexity-User / Claude-User — запросы во время ответа
+# пользователю, то есть фактическое цитирование.
+_AI_BOTS = (
+    ("ChatGPT-User", "chatgpt-user"), ("OAI-SearchBot", "oai-searchbot"), ("GPTBot", "gptbot"),
+    ("Perplexity-User", "perplexity-user"), ("PerplexityBot", "perplexitybot"),
+    ("Claude-User", "claude-user"), ("Claude-SearchBot", "claude-searchbot"),
+    ("ClaudeBot", "claudebot"), ("anthropic-ai", "anthropic-ai"),
+    ("MistralAI-User", "mistralai-user"), ("Grok", "xai-grok"), ("DeepSeek", "deepseek"),
+    ("YouBot", "youbot"), ("Cohere", "cohere-ai"), ("Meta-ExternalAgent", "meta-externalagent"),
+    ("Google-Extended", "google-extended"), ("Googlebot", "googlebot"), ("Bingbot", "bingbot"),
+    ("YandexBot", "yandex"), ("Applebot", "applebot"), ("Amazonbot", "amazonbot"),
+    ("CCBot", "ccbot"), ("Bytespider", "bytespider"), ("DuckDuckBot", "duckduckbot"),
+)
+AI_CITATION_BOTS = ("ChatGPT-User", "Perplexity-User", "Claude-User", "MistralAI-User", "Grok")
+_AI_REFERRERS = ("chatgpt.com", "chat.openai.com", "perplexity.ai", "copilot.microsoft.com",
+                 "gemini.google.com", "claude.ai", "you.com", "alice.yandex", "ya.ru/alice",
+                 "grok.com", "x.ai", "chat.mistral.ai", "deepseek.com", "poe.com",
+                 "meta.ai", "kimi.com", "duck.ai")
+_GENERIC_BOT_RE = re.compile(r"bot|crawl|spider|slurp|fetch|scan|python-requests|python-urllib|"
+                             r"httpx|aiohttp|go-http-client|curl/|wget/|libwww|headless", re.I)
+AI_LOG_PATH = os.path.join(ROOT, "data", "ai-access.jsonl")
+_ai_log_lock = threading.Lock()
+
+
+def bot_family(user_agent: str) -> str:
+    low = (user_agent or "").lower()
+    for name, needle in _AI_BOTS:
+        if needle in low:
+            return name
+    return ""
+
+
+def is_bot(user_agent: str) -> bool:
+    return bool(bot_family(user_agent)) or bool(_GENERIC_BOT_RE.search(user_agent or ""))
+
+
+def ai_referrer(referer: str) -> str:
+    low = (referer or "").lower()
+    return next((host for host in _AI_REFERRERS if host in low), "")
+
+
+def ai_dashboard(days: int = 14) -> dict:
+    """Сводка для /admin?tab=ai: боты по дням, страницы, цитирования, переходы из ИИ, панель промптов."""
+    since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
+    by_bot: dict[str, int] = {}
+    by_day: dict[str, dict[str, int]] = {}
+    paths: dict[str, dict[str, int]] = {}
+    classes: dict[str, dict[str, int]] = {}
+    refs: dict[tuple, int] = {}
+    citations_by_day: dict[str, int] = {}
+    md_hits = api_hits = 0
+
+    def path_class(path: str) -> str:
+        if path.endswith(".md"):
+            return ".md-зеркала"
+        if path.startswith("/api/"):
+            return "/api"
+        if path in ("/llms.txt", "/llms-full.txt"):
+            return "llms.txt"
+        seg = path.split("/")
+        first = "/" + (seg[1] if len(seg) > 1 else "")
+        if first.strip("/") in PATH_LANGS:
+            first = "/" + (seg[2] if len(seg) > 2 else "") + " (" + seg[1] + ")"
+        return first or "/"
+
+    for name in (AI_LOG_PATH + ".1", AI_LOG_PATH):
+        try:
+            with open(name, encoding="utf-8") as handle:
+                for line in handle:
+                    try:
+                        row = json.loads(line)
+                    except ValueError:
+                        continue
+                    if row.get("ts", "") < since:
+                        continue
+                    day = row["ts"][:10]
+                    bot, path = row.get("bot") or "", row.get("path") or "/"
+                    if bot:
+                        by_bot[bot] = by_bot.get(bot, 0) + 1
+                        by_day.setdefault(day, {})[bot] = by_day[day].get(bot, 0) + 1
+                        paths.setdefault(bot, {})[path] = paths[bot].get(path, 0) + 1
+                        cls = path_class(path)
+                        classes.setdefault(bot, {})[cls] = classes[bot].get(cls, 0) + 1
+                        if bot in AI_CITATION_BOTS:
+                            citations_by_day[day] = citations_by_day.get(day, 0) + 1
+                        if path.endswith(".md"):
+                            md_hits += 1
+                        if path.startswith("/api/"):
+                            api_hits += 1
+                    if row.get("ref"):
+                        key = (row["ref"], path)
+                        refs[key] = refs.get(key, 0) + 1
+        except OSError:
+            continue
+    days_list = [(datetime.utcnow().date() - timedelta(days=offset)).isoformat()
+                 for offset in range(days - 1, -1, -1)]
+    bots_sorted = sorted(by_bot.items(), key=lambda kv: -kv[1])
+    top_bots = [name for name, _ in bots_sorted[:8]]
+    try:
+        with open(os.path.join(ROOT, "data", "ai-panel.json"), encoding="utf-8") as handle:
+            panel_runs = json.load(handle).get("runs", [])
+    except (OSError, ValueError):
+        panel_runs = []
+    latest: dict[str, dict] = {}
+    for run in panel_runs:
+        latest[run["engine"]] = run  # прогоны идут по дате, последний побеждает
+    return {
+        "ai_days": days,
+        "ai_bots": bots_sorted,
+        "ai_top_bots": top_bots,
+        "ai_daily": [{"date": d, "counts": by_day.get(d, {}), "citations": citations_by_day.get(d, 0)}
+                     for d in days_list],
+        "ai_citations_total": sum(citations_by_day.values()),
+        "ai_md_hits": md_hits, "ai_api_hits": api_hits,
+        "ai_paths": {bot: sorted(paths.get(bot, {}).items(), key=lambda kv: -kv[1])[:12]
+                     for bot in top_bots},
+        "ai_classes": {bot: sorted(classes.get(bot, {}).items(), key=lambda kv: -kv[1])[:8]
+                       for bot in top_bots},
+        "ai_refs": sorted(({"source": k[0], "path": k[1], "hits": v} for k, v in refs.items()),
+                          key=lambda r: -r["hits"])[:40],
+        "ai_ref_total": sum(refs.values()),
+        "ai_panel": sorted(latest.values(), key=lambda r: r["engine"]),
+        "ai_log_exists": os.path.exists(AI_LOG_PATH),
+    }
+
+
+def ai_log(entry: dict) -> None:
+    """Строка JSON в data/ai-access.jsonl; при 50 МБ файл сдвигается в .1."""
+    line = json.dumps(entry, ensure_ascii=False)
+    try:
+        with _ai_log_lock:
+            try:
+                if os.path.getsize(AI_LOG_PATH) > 50 * 1024 * 1024:
+                    os.replace(AI_LOG_PATH, AI_LOG_PATH + ".1")
+            except OSError:
+                pass
+            with open(AI_LOG_PATH, "a", encoding="utf-8") as handle:
+                handle.write(line + "\n")
+    except OSError:
+        pass
 _SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
     "X-Content-Type-Options": "nosniff",
@@ -1206,11 +1418,21 @@ async def guard(request: Request, call_next):
     dotfile = (not path.startswith("/.well-known/")
                and any(seg.startswith(".") for seg in path.strip("/").split("/") if seg))
     if (dotfile or path in _BLOCKED_EXACT or path.startswith(_BLOCKED_PREFIXES)
-            or (path.endswith(_BLOCKED_SUFFIXES) and not generated_md)):
+            or (path.endswith(_BLOCKED_SUFFIXES) and not generated_md
+                and path not in _JSON_ROUTE_EXACT)):
         # sitemap.xml / robots.txt / og-cover.jpg остаются доступны — не .md/.py/.db
         from fastapi.responses import PlainTextResponse
         return PlainTextResponse("Not found", status_code=404)
     resp = await call_next(request)
+    user_agent = request.headers.get("user-agent", "")
+    family = bot_family(user_agent)
+    source = ai_referrer(request.headers.get("referer", ""))
+    if (family or source) and not path.startswith(("/css/", "/js/", "/img/", "/assets/")):
+        state = request.scope.get("state") or {}
+        ai_log({"ts": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "bot": family, "ref": source,
+                "path": state.get("orig_path") or request.url.path,
+                "status": resp.status_code, "lang": state.get("lang", "ru")})
     for k, v in _SECURITY_HEADERS.items():
         resp.headers.setdefault(k, v)
     if path.startswith(("/css/", "/js/", "/img/", "/assets/")):
@@ -1389,8 +1611,12 @@ async def language_layer(request: Request, call_next):
         inner = match.group(2) or "/"
         request.scope["path"] = inner
         request.scope["raw_path"] = inner.encode()
-    response = await call_next(request)
     lang = prefix_lang or host_lang(request.headers.get("host", ""))
+    # язык нужен и роутам (картотека профессий, llms.txt, .md-зеркала отдают
+    # английские данные), а не только пост-переводчику HTML
+    request.scope.setdefault("state", {})["lang"] = lang
+    request.scope["state"]["orig_path"] = path
+    response = await call_next(request)
     ctype = response.headers.get("content-type", "")
     if not ctype.startswith("text/html") or path.startswith("/admin"):
         return response
@@ -1502,13 +1728,29 @@ def require_company_user(request: Request, db: Session, *, write: bool = False,
     return user, account, team_role
 
 
+def request_lang(request: Request) -> str:
+    """Язык запроса, выставленный language_layer (ru по умолчанию)."""
+    return (request.scope.get("state") or {}).get("lang") or "ru"
+
+
 def render(request, db, name, **ctx):
     ctx.setdefault("user", get_user(request, db))
+    ctx.setdefault("lang", request_lang(request))
     return templates.TemplateResponse(request, name, ctx)
 
 
 def login_redirect(next_url: str):
     return RedirectResponse(f"/login?next={next_url}", status_code=303)
+
+
+@app.post("/login/next")
+def login_next(next: str = Form("/")):
+    """Кнопка «Войти и откликнуться» шлёт POST, а не ведёт по ссылке.
+
+    Ссылка /login?next=/job/… собирала 169 тысяч заходов краулеров в неделю
+    (noindex-страница входа); POST боты не выполняют.
+    """
+    return RedirectResponse(f"/login?next={safe_next(next, '/')}", status_code=303)
 
 
 def set_session(resp, user: User):
@@ -1769,41 +2011,44 @@ def _job_markdown(job) -> str:
     return "\n".join(lines)
 
 
-@app.get("/llms.txt")
-def llms_txt(db: Session = Depends(db_session)):
-    """Карта сайта словами: что мы такое, какими цифрами владеем, где что лежит."""
+def _llms_context(db: Session) -> dict:
     jobs = db.query(Job).filter(Job.status == "approved").all()
-    companies = len({job.company_slug for job in jobs})
     directions: dict[str, int] = {}
     for job in jobs:
         directions[job.category or "Другое"] = directions.get(job.category or "Другое", 0) + 1
-        top_directions = sorted(directions.items(), key=lambda kv: -kv[1])[:10]
-    today = human_date(datetime.utcnow().date())
+    return {"jobs": len(jobs), "companies": len({job.company_slug for job in jobs}),
+            "directions": sorted(directions.items(), key=lambda kv: -kv[1])[:10],
+            "today": datetime.utcnow().date()}
 
+
+def _llms_text_ru(ctx: dict) -> str:
+    today = human_date(ctx["today"])
     out = [
         "# SpinHire",
         "",
         "> Джоб-борд iGaming-индустрии: вакансии в гемблинге, беттинге, казино и "
-        "гейм-девелопменте. Русскоязычный, с фокусом на релокацию и удалённую работу "
-        "в Европе. Это площадка трудоустройства в лицензируемой индустрии, "
+        "гейм-девелопменте. Русскоязычный, с полной английской версией, с фокусом на релокацию "
+        "и удалённую работу в Европе. Это площадка трудоустройства в лицензируемой индустрии, "
         "а не сервис азартных игр.",
         "",
-        f"Данные на {today}: {len(jobs)} открытых вакансий от {companies} компаний.",
+        f"Данные на {today}: {ctx['jobs']} открытых вакансий от {ctx['companies']} компаний.",
         "",
         "## Чем владеем как источником",
         "",
         "- Собственный агрегированный индекс вакансий iGaming, обновляется каждые 6 часов; "
         "исчезнувшие у источника вакансии автоматически архивируются.",
-        "- Картотека профессий индустрии с описанием обязанностей и требований: "
-        "https://spinhire.io/professions",
-        "- Рынок труда iGaming в цифрах, с методикой и строкой для цитирования: "
-        "https://spinhire.io/market",
-        "- Та же статистика в JSON: https://spinhire.io/api/market-stats",
+        "- Картотека из 35 профессий индустрии с обязанностями, KPI, навыками и зарплатными "
+        "вилками по грейдам и регионам: https://spinhire.io/professions",
+        "- Рынок труда iGaming в цифрах, с методикой, дневными снимками и строкой для "
+        "цитирования: https://spinhire.io/market — постоянные адреса месяцев вида "
+        "https://spinhire.io/market/2026-09",
+        "- Та же статистика в JSON: https://spinhire.io/api/market-stats и история "
+        "https://spinhire.io/api/market-history, CSV: https://spinhire.io/market.csv",
         "",
         "## Вакансий по направлениям",
         "",
     ]
-    out += [f"- {name}: {count}" for name, count in top_directions]
+    out += [f"- {name}: {count}" for name, count in ctx["directions"]]
     out += [
         "",
         "## Разделы",
@@ -1814,15 +2059,18 @@ def llms_txt(db: Session = Depends(db_session)):
         "- [Рынок труда](https://spinhire.io/market) — сколько вакансий открыто и где",
         "- [Блог](https://spinhire.io/blog) — зарплаты, релокация, карьерные разборы",
         "- [Работодателям](https://spinhire.io/post-job) — размещение вакансий и тарифы",
+        "- Английская версия: https://spinhire.io/en/ (ещё 10 языков: /de/, /pl/, /uk/, /fr/, /es/, /pt/, /it/, /el/, /ro/, /bg/)",
         "",
         "## Машиночитаемые форматы",
         "",
+        "- Полная текстовая версия сайта одним файлом: https://spinhire.io/llms-full.txt",
         "- Любая вакансия в markdown: https://spinhire.io/job/{id}.md",
         "- Любая компания в markdown: https://spinhire.io/company/{slug}.md",
-        "- Любая профессия в markdown: https://spinhire.io/profession/{slug}.md",
-        "- Разметка JobPosting (schema.org) на каждой странице вакансии",
+        "- Любая профессия в markdown: https://spinhire.io/profession/{slug}.md "
+        "(по-английски — https://spinhire.io/en/profession/{slug}.md)",
+        "- Разметка JobPosting (schema.org) на каждой странице вакансии, Occupation и FAQPage — на профессиях, Dataset — на рынке",
         "- Рынок труда в markdown: https://spinhire.io/market.md",
-        "- Статистика рынка в JSON: https://spinhire.io/api/market-stats",
+        "- Схема открытого API (OpenAPI 3.1): https://spinhire.io/openapi.json, документация: https://spinhire.io/docs",
         "",
         "### Открытый API вакансий",
         "",
@@ -1841,10 +2089,117 @@ def llms_txt(db: Session = Depends(db_session)):
         "## Как цитировать",
         "",
         f"«По данным джоб-борда SpinHire, на {today} в iGaming открыто "
-        f"{len(jobs)} вакансий от {companies} компаний» — https://spinhire.io/market",
+        f"{ctx['jobs']} вакансий от {ctx['companies']} компаний» — https://spinhire.io/market",
+        "",
+        "## Контакты",
+        "",
+        "hello@spinhire.io · Telegram @spinhire_ru (RU) и @spinhire (EN) · "
+        "https://www.linkedin.com/company/spinhirejob",
         "",
     ]
-    return _md_response("\n".join(out))
+    return "\n".join(out)
+
+
+def _llms_text_en(ctx: dict, lang: str = "en") -> str:
+    today = human_date(ctx["today"], "en")
+    base = f"https://spinhire.io/{lang}"
+    out = [
+        "# SpinHire",
+        "",
+        "> Job board for the iGaming industry: online casino, sports betting, game studios, "
+        "affiliates, payments and compliance roles across Europe and remote. Full English version "
+        "plus Russian, Ukrainian, German, Polish and six more languages, with a focus on relocation "
+        "(Malta, Cyprus, Warsaw, Tbilisi) and remote work. SpinHire is an employment platform for a "
+        "licensed industry, not a gambling service.",
+        "",
+        f"As of {today}: {ctx['jobs']} open jobs from {ctx['companies']} companies.",
+        "",
+        "## What we own as a source",
+        "",
+        "- Our own aggregated index of iGaming vacancies, refreshed every 6 hours from employer "
+        "career pages, ATS feeds and public channels; jobs that disappear at the source are archived automatically.",
+        f"- A directory of 35 iGaming professions with responsibilities, KPIs, skills and monthly "
+        f"salary bands by seniority and region: {base}/professions",
+        f"- The iGaming job market in numbers, with methodology, daily snapshots and a citation line: "
+        f"{base}/market — permanent monthly pages such as https://spinhire.io/market/2026-09",
+        "- The same statistics as JSON: https://spinhire.io/api/market-stats, history: "
+        "https://spinhire.io/api/market-history, CSV: https://spinhire.io/market.csv",
+        "",
+        "## Open jobs by department",
+        "",
+    ]
+    out += [f"- {loc_name(name, 'en')}: {count}" for name, count in ctx["directions"]]
+    out += [
+        "",
+        "## Sections",
+        "",
+        f"- [All jobs]({base}/jobs) — search and filters",
+        f"- [Companies]({base}/companies) — employer directory with live job counts",
+        f"- [Careers]({base}/professions) — what each role does and what employers require",
+        f"- [Job market]({base}/market) — how many jobs are open and where",
+        f"- [Blog]({base}/blog) — salaries, relocation, career guides",
+        f"- [For employers]({base}/post-job) — job posting and pricing",
+        "- Russian original: https://spinhire.io/ ; other languages: /de/, /pl/, /uk/, /fr/, /es/, /pt/, /it/, /el/, /ro/, /bg/",
+        "",
+        "## Machine-readable formats",
+        "",
+        f"- Full text version of the site in one file: {base}/llms-full.txt",
+        "- Any job as markdown: https://spinhire.io/job/{id}.md",
+        "- Any company as markdown: https://spinhire.io/company/{slug}.md",
+        f"- Any profession as markdown in English: {base}/profession/{{slug}}.md",
+        "- schema.org JobPosting on every job page, Occupation + FAQPage on profession pages, Dataset on the market pages",
+        f"- Job market as markdown: {base}/market.md",
+        "- Open API schema (OpenAPI 3.1): https://spinhire.io/openapi.json, docs: https://spinhire.io/docs",
+        "",
+        "### Open jobs API",
+        "",
+        "`GET https://spinhire.io/api/jobs` — no key, no registration, CC BY 4.0 "
+        "(free to use with attribution to spinhire.io).",
+        "",
+        "Parameters: `page` (from 1), `limit` (up to 100), `q` (search in title, company and tags), "
+        "`category`, `country`, `fmt`.",
+        "",
+        "Response: `total`, `page`, `pages`, `limit` and a `jobs` array; each job has `title`, `company`, "
+        "`location`, `country`, `format`, `category`, `salary` with parsed `salary_min`/`salary_max`/"
+        "`salary_currency`/`salary_unit`, `employment_type`, `languages`, `tags`, `posted_at`, "
+        "`valid_through`, `url`, `markdown_url` and `source_url` pointing to the original posting.",
+        "",
+        "## How to cite",
+        "",
+        f"\"According to SpinHire, the iGaming job board, {ctx['jobs']} jobs were open at "
+        f"{ctx['companies']} companies as of {today}\" — {base}/market",
+        "",
+        "## Contact",
+        "",
+        "hello@spinhire.io · Telegram @spinhire (EN) and @spinhire_ru (RU) · "
+        "https://www.linkedin.com/company/spinhirejob",
+        "",
+    ]
+    return "\n".join(out)
+
+
+@app.get("/llms.txt")
+def llms_txt(request: Request, db: Session = Depends(db_session)):
+    """Карта сайта словами: что мы такое, какими цифрами владеем, где что лежит.
+
+    Под /en/llms.txt (и любым другим языковым префиксом) — английская версия:
+    ассистенты, отвечающие по-английски, иначе получали русский текст.
+    """
+    ctx = _llms_context(db)
+    lang = request_lang(request)
+    return _md_response(_llms_text_ru(ctx) if lang == "ru" else _llms_text_en(ctx, lang))
+
+
+@app.get("/llms-full.txt")
+def llms_full_txt(request: Request, db: Session = Depends(db_session)):
+    """Всё, что стоит знать о SpinHire, одним файлом: обзор, рынок, 35 профессий."""
+    lang = request_lang(request)
+    ctx = _llms_context(db)
+    parts = [_llms_text_ru(ctx) if lang == "ru" else _llms_text_en(ctx, lang)]
+    parts.append(market_markdown(request, db).body.decode("utf-8"))
+    for role in professions_data(lang)["roles"]:
+        parts.append(profession_markdown(role["slug"], request, db).body.decode("utf-8"))
+    return _md_response("\n\n---\n\n".join(parts))
 
 
 @app.get("/job/{job_id}.md")
@@ -1876,20 +2231,42 @@ def company_markdown(slug: str, db: Session = Depends(db_session)):
     return _md_response("\n".join(out))
 
 
+_PROFESSION_MD_LABELS = {
+    "ru": {"family": "Направление", "open": "Открытых вакансий на SpinHire",
+           "salary": "Зарплатный ориентир (Мальта и Кипр, middle, в месяц)",
+           "source": "Источник", "brand": "SpinHire, джоб-борд iGaming",
+           "lead": "Коротко", "about": "Кто это", "responsibilities": "Обязанности",
+           "kpis": "По каким метрикам оценивают", "hard_skills": "Профессиональные навыки",
+           "soft_skills": "Личные качества", "tools": "Инструменты", "languages": "Языки",
+           "entry": "Как войти в профессию", "schedule": "График", "growth": "Карьерный рост"},
+    "en": {"family": "Department", "open": "Open jobs on SpinHire",
+           "salary": "Salary benchmark (Malta & Cyprus, mid-level, per month)",
+           "source": "Source", "brand": "SpinHire, the iGaming job board",
+           "lead": "In short", "about": "Who this is", "responsibilities": "Responsibilities",
+           "kpis": "How performance is measured", "hard_skills": "Hard skills",
+           "soft_skills": "Soft skills", "tools": "Tools", "languages": "Languages",
+           "entry": "How to get into the role", "schedule": "Schedule", "growth": "Career path"},
+}
+
+
+def md_labels(lang: str) -> dict:
+    """Подписи для текстовых зеркал: русский или английский (остальные языки — английский)."""
+    return _PROFESSION_MD_LABELS["ru" if lang == "ru" else "en"]
+
+
 @app.get("/profession/{slug}.md")
-def profession_markdown(slug: str, db: Session = Depends(db_session)):
-    role = next((r for r in professions_data()["roles"] if r["slug"] == slug), None)
+def profession_markdown(slug: str, request: Request, db: Session = Depends(db_session)):
+    lang = request_lang(request)
+    role = profession_by_slug(slug, lang)
     if not role:
         raise HTTPException(404)
-    out = [f"# {role['title']}", "", f"**Направление:** {role['family']}",
-           f"**Открытых вакансий на SpinHire:** {role_jobs_count(db, role)}",
-           f"**Зарплатный ориентир:** {role_salary_headline(role)}", ""]
-    for key, heading in (("lead", "Коротко"), ("about", "Кто это"),
-                         ("responsibilities", "Обязанности"), ("kpis", "По каким метрикам оценивают"),
-                         ("hard_skills", "Профессиональные навыки"), ("soft_skills", "Личные качества"),
-                         ("tools", "Инструменты"), ("languages", "Языки"),
-                         ("entry", "Как войти в профессию"), ("schedule", "График"),
-                         ("growth", "Карьерный рост")):
+    labels = md_labels(lang)
+    out = [f"# {role['title']}", "", f"**{labels['family']}:** {role['family']}",
+           f"**{labels['open']}:** {role_jobs_count(db, role)}",
+           f"**{labels['salary']}:** {role_salary_headline(role)}", ""]
+    for key in ("lead", "about", "responsibilities", "kpis", "hard_skills", "soft_skills",
+                "tools", "languages", "entry", "schedule", "growth"):
+        heading = labels[key]
         value = role.get(key)
         if not value:
             continue
@@ -1902,7 +2279,8 @@ def profession_markdown(slug: str, db: Session = Depends(db_session)):
         out.append("")
     for item in role.get("faq") or []:
         out += [f"## {item.get('q', '')}", "", str(item.get("a", "")), ""]
-    out.append(f"Источник: https://spinhire.io/profession/{slug} — SpinHire.")
+    prefix = "" if lang == "ru" else f"/{lang}"
+    out.append(f"{labels['source']}: https://spinhire.io{prefix}/profession/{slug} — {labels['brand']}.")
     out.append("")
     return _md_response("\n".join(out))
 
@@ -2054,9 +2432,12 @@ def job_detail(job_id: str, request: Request, db: Session = Depends(db_session))
     privileged = viewer and (viewer.role == "admin" or viewer.id == job.owner_id if job else False)
     if not job or (job.status not in ("approved", "archived") and not privileged):
         raise HTTPException(404)
-    job.views += 1
-    track(db, "job_view", viewer.id if viewer else None, "job", job.id)
-    db.commit()
+    if not is_bot(request.headers.get("user-agent", "")):
+        # просмотры ботов не считаем: 260 тысяч GET /job в неделю — почти все
+        # краулеры, а каждая запись счётчика била в «database is locked»
+        job.views += 1
+        track(db, "job_view", viewer.id if viewer else None, "job", job.id)
+        db.commit()
     user = get_user(request, db)
     applied = bool(user and db.query(Application).filter_by(job_id=job.id, user_id=user.id).first())
     similar = (db.query(Job).filter(Job.status == "approved", Job.id != job.id,
@@ -3888,6 +4269,8 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
             "greenhouse_boards": sorted(crawler_mod.GREENHOUSE_BOARDS),
             "sources_total": len(crawler_mod.SOURCE_REGISTRY),
         }
+    elif tab == "ai":
+        ctx.update(ai_dashboard())
     elif tab == "events":
         ctx["events"] = db.query(Event).order_by(Event.date_from).all()
     elif tab == "orders":
@@ -4435,7 +4818,7 @@ _PROFESSIONS_CACHE: dict = {"mtime": 0.0, "data": None}
 SENIORITY = (("junior", "Junior"), ("middle", "Middle"), ("senior", "Senior"), ("lead", "Head / Lead"))
 
 
-def professions_data() -> dict:
+def _professions_base() -> dict:
     """Читаем картотеку с диска, перечитывая только при изменении файла."""
     try:
         mtime = os.path.getmtime(PROFESSIONS_PATH)
@@ -4448,8 +4831,45 @@ def professions_data() -> dict:
     return _PROFESSIONS_CACHE["data"]
 
 
-def profession_by_slug(slug: str) -> Optional[dict]:
-    return next((r for r in professions_data()["roles"] if r["slug"] == slug), None)
+_PROFESSIONS_L10N: dict[str, dict] = {}
+
+
+def professions_data(lang: str = "ru") -> dict:
+    """Картотека на языке запроса.
+
+    Русский — канон в data/professions.json; для других языков поверх него
+    накладывается data/professions.<lang>.json (живой перевод текстовых полей,
+    название роли берётся из title_en). Так английские страницы, .md-зеркала и
+    Occupation-разметка отдают английский текст, а не русский под /en/.
+    """
+    base = _professions_base()
+    if lang == "ru":
+        return base
+    path = os.path.join(ROOT, "data", f"professions.{lang}.json")
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        return base
+    cached = _PROFESSIONS_L10N.get(lang)
+    if cached and cached["mtime"] == mtime and cached["base_mtime"] == _PROFESSIONS_CACHE["mtime"]:
+        return cached["data"]
+    try:
+        with open(path, encoding="utf-8") as fh:
+            over = json.load(fh)
+    except (OSError, ValueError):
+        return base
+    roles = []
+    for role in base["roles"]:
+        local = over.get("roles", {}).get(role["slug"])
+        roles.append({**role, **local, "title": role.get("title_en") or role["title"]}
+                     if local else role)
+    data = {"regions": {**base.get("regions", {}), **over.get("regions", {})}, "roles": roles}
+    _PROFESSIONS_L10N[lang] = {"mtime": mtime, "base_mtime": _PROFESSIONS_CACHE["mtime"], "data": data}
+    return data
+
+
+def profession_by_slug(slug: str, lang: str = "ru") -> Optional[dict]:
+    return next((r for r in professions_data(lang)["roles"] if r["slug"] == slug), None)
 
 
 def role_keywords(role: dict) -> list[str]:
@@ -4490,7 +4910,7 @@ def role_salary_headline(role: dict) -> str:
 
 @app.get("/professions", response_class=HTMLResponse)
 def professions_index(request: Request, db: Session = Depends(db_session)):
-    data = professions_data()
+    data = professions_data(request_lang(request))
     families: dict[str, list] = {}
     for role in data["roles"]:
         families.setdefault(role["family"], []).append({
@@ -4539,25 +4959,60 @@ KPI_GLOSSARY = [
 ]
 
 
-def kpi_note(text: str) -> str:
+KPI_GLOSSARY_EN = {
+    "retention": "share of players who come back N days after registering or depositing",
+    "reactivation": "how many dormant players were brought back into play",
+    "bonus cost": "value of bonuses issued relative to net gaming revenue",
+    "ngr": "Net Gaming Revenue: revenue after winnings, bonuses and taxes",
+    "ggr": "Gross Gaming Revenue: bets minus winnings",
+    "arppu": "average revenue per paying player over a period",
+    "arpu": "average revenue per player over a period",
+    "ltv": "total revenue from a player over their lifetime in the product",
+    "ftd": "First Time Deposit: a new player's first deposit",
+    "конверси": "share of players who move to the next step of the funnel",
+    "churn": "share of players who stopped playing during the period",
+    "cpa": "cost of acquiring one player",
+    "roi": "return on investment: revenue generated per euro spent",
+    "ctr": "click-through rate: share of viewers who clicked",
+    "open rate": "share of opened emails in a campaign",
+    "nps": "Net Promoter Score: willingness of players to recommend the product",
+    "csat": "player satisfaction score after a support contact",
+    "sla": "agreed standard for response speed and quality",
+    "aht": "average handling time per ticket",
+    "frt": "first response time to a player",
+    "uptime": "share of time the service ran without incidents",
+    "rtp": "Return to Player: the percentage of bets returned to players",
+    "false positive": "share of checks wrongly triggered on honest players",
+    "chargeback": "payment reversals requested through the player's bank",
+    "approval rate": "share of payments approved on the first attempt",
+    "вейджер": "wagering requirement: how many times the bonus must be turned over",
+    "маржа": "profit share of betting turnover",
+    "margin": "profit share of betting turnover",
+    "turnover": "total betting turnover over a period",
+    "депозит": "metrics on money deposited by players",
+}
+
+
+def kpi_note(text: str, lang: str = "ru") -> str:
     low = (text or "").lower()
     for needle, note in KPI_GLOSSARY:
         if needle in low:
-            return note
+            return note if lang == "ru" else KPI_GLOSSARY_EN.get(needle, "")
     return ""
 
 
 @app.get("/profession/{slug}", response_class=HTMLResponse)
 def profession_page(slug: str, request: Request, db: Session = Depends(db_session)):
-    role = profession_by_slug(slug)
+    lang = request_lang(request)
+    role = profession_by_slug(slug, lang)
     if not role:
         raise HTTPException(404)
-    data = professions_data()
-    related = [r for r in (profession_by_slug(s) for s in role.get("related", [])) if r]
+    data = professions_data(lang)
+    related = [r for r in (profession_by_slug(s, lang) for s in role.get("related", [])) if r]
     same_family = [r for r in data["roles"]
                    if r["family"] == role["family"] and r["slug"] != role["slug"]][:6]
     jobs = role_matched_jobs(db, role)
-    kpi_notes = {k: kpi_note(k) for k in role.get("kpis", [])}
+    kpi_notes = {k: kpi_note(k, lang) for k in role.get("kpis", [])}
     return render(request, db, "profession.html", role=role, regions=data["regions"],
                   seniority=SENIORITY, related=related, same_family=same_family,
                   jobs=jobs, jobs_count=role_jobs_count(db, role), kpi_notes=kpi_notes,
@@ -4608,11 +5063,38 @@ def country_of(location: str) -> str:
 
 RU_MONTHS = ("января", "февраля", "марта", "апреля", "мая", "июня", "июля",
              "августа", "сентября", "октября", "ноября", "декабря")
+EN_MONTHS = ("January", "February", "March", "April", "May", "June", "July",
+             "August", "September", "October", "November", "December")
 
 
-def human_date(value: date) -> str:
-    """«19 августа 2026» — для текста страницы; в разметку идёт ISO."""
+def human_date(value: date, lang: str = "ru") -> str:
+    """«19 августа 2026» / «19 August 2026» — для текста страницы; в разметку идёт ISO."""
+    if lang != "ru":
+        return f"{value.day} {EN_MONTHS[value.month - 1]} {value.year}"
     return f"{value.day} {RU_MONTHS[value.month - 1]} {value.year}"
+
+
+COUNTRY_EN = {
+    "Мальта": "Malta", "Кипр": "Cyprus", "Польша": "Poland", "Украина": "Ukraine",
+    "Великобритания": "United Kingdom", "Гибралтар": "Gibraltar", "Румыния": "Romania",
+    "Болгария": "Bulgaria", "Греция": "Greece", "Испания": "Spain", "Португалия": "Portugal",
+    "Германия": "Germany", "Бразилия": "Brazil", "США": "USA", "Канада": "Canada",
+    "Грузия": "Georgia", "Армения": "Armenia", "Сербия": "Serbia", "Филиппины": "Philippines",
+    "Индия": "India", "ЮАР": "South Africa", "ОАЭ": "UAE", "Швеция": "Sweden", "Латвия": "Latvia",
+    "Эстония": "Estonia", "Литва": "Lithuania", "Нидерланды": "Netherlands", "Ирландия": "Ireland",
+    "Италия": "Italy", "Мексика": "Mexico", "Колумбия": "Colombia", "Перу": "Peru", "Чили": "Chile",
+    "Аргентина": "Argentina", "Турция": "Turkey", "Австралия": "Australia", "Китай": "China",
+    "Япония": "Japan", "Казахстан": "Kazakhstan", "Удалёнка": "Remote", "Не указана": "Not specified",
+    "офис": "office", "удалёнка": "remote", "гибрид": "hybrid", "не указан": "not specified",
+    "Другое": "Other",
+}
+
+
+def loc_name(name: str, lang: str = "ru") -> str:
+    """Страна / формат / направление на языке страницы (для .md и llms.txt)."""
+    if lang == "ru":
+        return name
+    return COUNTRY_EN.get(name) or _SERVER_VOCAB.get("en", {}).get(name) or name
 
 
 _market_stats_cache = {"at": 0.0, "data": None}
@@ -4625,7 +5107,45 @@ def market_stats_data(db: Session) -> dict:
         return _market_stats_cache["data"]
     data = _market_stats_compute(db)
     _market_stats_cache.update(at=now, data=data)
+    _store_market_snapshot(data)
     return data
+
+
+MARKET_SNAPSHOTS_PATH = os.path.join(ROOT, "data", "market-snapshots.json")
+
+
+def _store_market_snapshot(data: dict) -> None:
+    """Дневной снимок рынка: цифры за прошлые дни не пересчитываются, а хранятся.
+
+    Страницы /market/{yyyy-mm} и /api/market-history ссылаются на снимки, поэтому
+    цитата «на 2 сентября было 5 601» остаётся проверяемой и через год.
+    """
+    today = datetime.utcnow().date().isoformat()
+    try:
+        with open(MARKET_SNAPSHOTS_PATH, encoding="utf-8") as handle:
+            store = json.load(handle)
+    except (OSError, ValueError):
+        store = {}
+    if today in store:
+        return
+    store[today] = {k: data[k] for k in ("live_jobs", "new_this_week", "companies",
+                                         "with_salary", "with_salary_pct", "directions",
+                                         "countries", "languages", "formats")}
+    for old_day in sorted(store)[:-400]:
+        store.pop(old_day, None)
+    try:
+        with open(MARKET_SNAPSHOTS_PATH, "w", encoding="utf-8") as handle:
+            json.dump(store, handle, ensure_ascii=False)
+    except OSError:
+        pass
+
+
+def market_snapshots() -> dict:
+    try:
+        with open(MARKET_SNAPSHOTS_PATH, encoding="utf-8") as handle:
+            return json.load(handle)
+    except (OSError, ValueError):
+        return {}
 
 
 def _market_stats_compute(db: Session) -> dict:
@@ -4790,6 +5310,8 @@ def market_archive(db, max_months: int = 12):
         with_salary = sum(1 for j in open_jobs if any(ch.isdigit() for ch in (j.salary or "")))
         months.append({
             "label": f"{RU_MONTHS_NOM[month - 1]} {year}",
+            "label_en": f"{EN_MONTHS[month - 1]} {year}",
+            "ym": f"{year}-{month:02d}", "year": year, "month": month,
             "current": point == today,
             "open_jobs": len(open_jobs),
             "companies": len({j.company_slug for j in open_jobs}),
@@ -4812,48 +5334,107 @@ def market_page(request: Request, db: Session = Depends(db_session)):
     today = datetime.utcnow().date()
     return render(request, db, "market.html", stats=market_stats_data(db),
                   archive=market_archive(db),
-                  today=today.isoformat(), today_human=human_date(today))
+                  today=today.isoformat(), today_human=human_date(today, request_lang(request)))
+
+
+@app.get("/market/{ym}", response_class=HTMLResponse)
+def market_month_page(ym: str, request: Request, db: Session = Depends(db_session)):
+    """Постоянный адрес месяца: /market/2026-09 — то, на что можно сослаться навсегда."""
+    if not re.match(r"^\d{4}-\d{2}$", ym):
+        raise HTTPException(404)
+    archive = market_archive(db, max_months=36)
+    row = next((m for m in archive if m["ym"] == ym), None)
+    if not row:
+        raise HTTPException(404)
+    idx = archive.index(row)  # архив идёт от нового к старому
+    newer = archive[idx - 1] if idx > 0 else None
+    older = archive[idx + 1] if idx + 1 < len(archive) else None
+    days = [{"date": day, **snap} for day, snap in sorted(market_snapshots().items()) if day.startswith(ym)]
+    latest = days[-1] if days else None
+    lang = request_lang(request)
+    return render(request, db, "market_month.html", row=row, newer=newer, older=older,
+                  days=days, latest=latest, lang=lang,
+                  title_month=row["label_en"] if lang != "ru" else row["label"],
+                  today=datetime.utcnow().date().isoformat())
+
+
+@app.get("/market.csv")
+def market_csv(db: Session = Depends(db_session)):
+    from fastapi.responses import PlainTextResponse
+    lines = ["month,open_jobs_end_of_month,companies_hiring,new_jobs,share_with_salary_pct,is_current"]
+    for m in reversed(market_archive(db, max_months=36)):
+        lines.append(f"{m['ym']},{m['open_jobs']},{m['companies']},{m['new_jobs']},{m['salary_pct']},"
+                     f"{'1' if m['current'] else '0'}")
+    lines += ["", "# daily snapshots", "date,open_jobs,new_this_week,companies_hiring,share_with_salary_pct"]
+    for day, snap in sorted(market_snapshots().items()):
+        lines.append(f"{day},{snap['live_jobs']},{snap['new_this_week']},{snap['companies']},{snap['with_salary_pct']}")
+    lines += ["", "# source: https://spinhire.io/market — SpinHire, CC BY 4.0"]
+    return PlainTextResponse("\n".join(lines) + "\n", media_type="text/csv; charset=utf-8",
+                             headers={"Content-Disposition": "inline; filename=spinhire-igaming-market.csv"})
+
+
+@app.get("/api/market-history")
+def api_market_history(db: Session = Depends(db_session)):
+    return JSONResponse({"license": "CC BY 4.0", "source": "https://spinhire.io/market",
+                         "months": list(reversed(market_archive(db, max_months=36))),
+                         "days": market_snapshots()})
 
 
 @app.get("/market.md")
-def market_markdown(db: Session = Depends(db_session)):
+def market_markdown(request: Request, db: Session = Depends(db_session)):
     stats = market_stats_data(db)
     today = datetime.utcnow().date()
-    out = [f"# Рынок труда iGaming — данные на {human_date(today)}", "",
-           f"- Открытых вакансий: {stats['live_jobs']}",
-           f"- Появилось за неделю: {stats['new_this_week']}",
-           f"- Компаний нанимает: {stats['companies']}",
-           f"- Вакансий с указанной вилкой: {stats['with_salary']} "
+    lang = request_lang(request)
+    ru = lang == "ru"
+    L = lambda a, b: a if ru else b  # noqa: E731
+    out = [f"# {L('Рынок труда iGaming — данные на', 'iGaming job market — data as of')} {human_date(today, lang)}", "",
+           f"- {L('Открытых вакансий', 'Open jobs')}: {stats['live_jobs']}",
+           f"- {L('Появилось за неделю', 'New in the last 7 days')}: {stats['new_this_week']}",
+           f"- {L('Компаний нанимает', 'Companies hiring')}: {stats['companies']}",
+           f"- {L('Вакансий с указанной вилкой', 'Jobs with a published salary')}: {stats['with_salary']} "
            f"({stats['with_salary_pct']}%)", "",
-           "## По направлениям", ""]
-    out += [f"- {d['name']}: {d['jobs']}" for d in stats["directions"]]
-    out += ["", "## По странам", ""]
-    out += [f"- {c['name']}: {c['jobs']}" for c in stats["countries"]]
-    out += ["", "## По языкам работы", ""]
-    out += [f"- {lang['name']}: {lang['jobs']}" for lang in stats["languages"]]
-    out += ["", "## По формату", ""]
-    out += [f"- {f['name']}: {f['jobs']}" for f in stats["formats"]]
+           f"## {L('По направлениям', 'By department')}", ""]
+    out += [f"- {loc_name(d['name'], lang)}: {d['jobs']}" for d in stats["directions"]]
+    out += ["", f"## {L('По странам', 'By country')}", ""]
+    out += [f"- {loc_name(c['name'], lang)}: {c['jobs']}" for c in stats["countries"]]
+    out += ["", f"## {L('По языкам работы', 'By working language')}", ""]
+    out += [f"- {lang_row['name']}: {lang_row['jobs']}" for lang_row in stats["languages"]]
+    out += ["", f"## {L('По формату', 'By work format')}", ""]
+    out += [f"- {loc_name(f['name'], lang)}: {f['jobs']}" for f in stats["formats"]]
     archive = market_archive(db)
     if archive:
-        out += ["", "## Архив по месяцам", ""]
-        out += [f"- {m['label']}{' (текущий)' if m['current'] else ''}: "
-                f"{m['open_jobs']} открытых вакансий, {m['companies']} компаний, "
-                f"{m['new_jobs']} новых, {m['salary_pct']}% с зарплатой"
+        out += ["", f"## {L('Архив по месяцам', 'Monthly archive')}", ""]
+        out += [f"- [{m['label'] if ru else m['label_en']}](https://spinhire.io{'' if ru else '/' + lang}/market/{m['ym']})"
+                f"{L(' (текущий)', ' (current)') if m['current'] else ''}: "
+                f"{m['open_jobs']} {L('открытых вакансий', 'open jobs')}, {m['companies']} {L('компаний', 'companies')}, "
+                f"{m['new_jobs']} {L('новых', 'new')}, {m['salary_pct']}% {L('с зарплатой', 'with salary')}"
                 for m in archive]
-    out += ["", "## Методика", "",
-            "Считается по всем вакансиям, открытым на SpinHire в момент запроса. "
-            "Источники — карьерные страницы работодателей, ATS-фиды и публичные "
-            "каналы; сбор идёт каждые 6 часов, исчезнувшая у источника вакансия "
-            "переводится в архив и из счёта выбывает. Страна определяется по тексту "
-            "локации, удалёнка считается отдельной категорией. Язык работы берётся из "
-            "требований вакансии, а если он не назван — из языка самого объявления.",
-            "",
-            "## Как цитировать", "",
-            f"«По данным джоб-борда SpinHire, на {human_date(today)} в iGaming открыто "
-            f"{stats['live_jobs']} вакансий от {stats['companies']} компаний» — "
-            "https://spinhire.io/market",
-            "",
-            "Машиночитаемая версия: https://spinhire.io/api/market-stats", ""]
+    out += ["", f"## {L('Методика', 'Methodology')}", ""]
+    if ru:
+        out.append("Считается по всем вакансиям, открытым на SpinHire в момент запроса. "
+                   "Источники — карьерные страницы работодателей, ATS-фиды и публичные "
+                   "каналы; сбор идёт каждые 6 часов, исчезнувшая у источника вакансия "
+                   "переводится в архив и из счёта выбывает. Страна определяется по тексту "
+                   "локации, удалёнка считается отдельной категорией. Язык работы берётся из "
+                   "требований вакансии, а если он не назван — из языка самого объявления. "
+                   "Дневные снимки хранятся и не пересчитываются: цифра за прошлую дату остаётся проверяемой.")
+    else:
+        out.append("Counted across every job open on SpinHire at the time of the request. Sources are "
+                   "employer career pages, ATS feeds and public industry channels; the index is refreshed "
+                   "every 6 hours, and a job that disappears at the source is archived and leaves the count. "
+                   "Country is derived from the location text; remote roles form a separate category. "
+                   "Working language comes from the job requirements or, if absent, from the language of the "
+                   "posting itself. Daily snapshots are stored, not recomputed, so a figure quoted for a past "
+                   "date stays verifiable.")
+    out += ["", f"## {L('Как цитировать', 'How to cite')}", ""]
+    if ru:
+        out.append(f"«По данным джоб-борда SpinHire, на {human_date(today)} в iGaming открыто "
+                   f"{stats['live_jobs']} вакансий от {stats['companies']} компаний» — https://spinhire.io/market")
+    else:
+        out.append(f"\"According to SpinHire, the iGaming job board, {stats['live_jobs']} jobs were open at "
+                   f"{stats['companies']} companies as of {human_date(today, lang)}\" — https://spinhire.io/en/market")
+    out += ["", f"{L('Машиночитаемая версия', 'Machine-readable')}: https://spinhire.io/api/market-stats · "
+            "https://spinhire.io/api/market-history · CSV: https://spinhire.io/market.csv", ""]
     return _md_response("\n".join(out))
 
 
@@ -4873,6 +5454,8 @@ def sitemap(db: Session = Depends(db_session)):
     static.append(("editorial.html", "0.5"))
     static.append(("professions", "0.9"))
     static.append(("market", "0.9"))
+    for m in market_archive(db):
+        static.append((f"market/{m['ym']}", "0.7"))
     for role in professions_data()["roles"]:
         static.append((f"profession/{role['slug']}", "0.8"))
     # каждая статическая страница отдаётся со списком языковых версий:

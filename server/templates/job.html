@@ -116,7 +116,7 @@
             <span style="color: var(--ink-faint); font-size: 0.85rem;">Сейчас вы вошли как {{ 'администратор' if user.role == 'admin' else 'работодатель' }} — внутренние отклики доступны профилю соискателя.</span>
           {% else %}
             <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
-              <a class="btn btn-acid btn-lg" href="/login?next=/job/{{ job.id }}">Войти и откликнуться →</a>
+              <form method="post" action="/login/next" style="display:inline"><input type="hidden" name="next" value="/job/{{ job.id }}"><button class="btn btn-acid btn-lg" type="submit">Войти и откликнуться →</button></form>
               {% if job.source_url %}<a href="{{ job.source_url }}" target="_blank" rel="noopener nofollow" style="color: var(--ink-dim); font-size: 0.85rem;">или у источника ↗</a>{% endif %}
             </div>
           {% endif %}
@@ -160,7 +160,7 @@
           <a class="btn btn-acid" href="#apply">Откликнуться →</a>
           <p>Добавьте пару слов и отправьте отклик через SpinHire.</p>
         {% elif not user %}
-          <a class="btn btn-acid" href="/login?next=/job/{{ job.id }}">Войти и откликнуться →</a>
+          <form method="post" action="/login/next"><input type="hidden" name="next" value="/job/{{ job.id }}"><button class="btn btn-acid" type="submit" style="width:100%">Войти и откликнуться →</button></form>
           <p>Вход нужен, чтобы работодатель получил ваш профиль.</p>
         {% else %}
           {% if job.source_url %}<a class="btn btn-acid" href="{{ job.source_url }}" target="_blank" rel="noopener nofollow">Откликнуться у работодателя ↗</a>{% endif %}

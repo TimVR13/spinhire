@@ -1,19 +1,19 @@
 {% extends "base.html" %}
 {% set active = 'market' %}
-{% block title %}Рынок труда iGaming: {{ stats.live_jobs }} вакансий | SpinHire{% endblock %}
-{% block desc %}Сколько вакансий открыто в iGaming сейчас: {{ stats.live_jobs }} позиций от {{ stats.companies }} компаний. Срезы по направлениям, странам и языкам.{% endblock %}
+{% block title %}{% if lang == 'en' %}iGaming job market: {{ stats.live_jobs }} open jobs | SpinHire{% else %}Рынок труда iGaming: {{ stats.live_jobs }} вакансий | SpinHire{% endif %}{% endblock %}
+{% block desc %}{% if lang == 'en' %}How many iGaming jobs are open right now: {{ stats.live_jobs }} positions at {{ stats.companies }} companies. Breakdown by department, country and language, updated every 6 hours, with methodology and monthly archive.{% else %}Сколько вакансий открыто в iGaming сейчас: {{ stats.live_jobs }} позиций от {{ stats.companies }} компаний. Срезы по направлениям, странам и языкам.{% endif %}{% endblock %}
 {% block robots %}<link rel="canonical" href="https://spinhire.io/market">
 <link rel="alternate" type="text/markdown" href="https://spinhire.io/market.md" title="Текстовая версия для языковых моделей">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Рынок труда iGaming в цифрах">
-<meta property="og:description" content="{{ stats.live_jobs }} открытых вакансий от {{ stats.companies }} компаний. Разбивка по направлениям, странам и языкам.">
+<meta property="og:title" content="{% if lang == 'en' %}The iGaming job market in numbers{% else %}Рынок труда iGaming в цифрах{% endif %}">
+<meta property="og:description" content="{% if lang == 'en' %}{{ stats.live_jobs }} open jobs at {{ stats.companies }} companies. Breakdown by department, country and language.{% else %}{{ stats.live_jobs }} открытых вакансий от {{ stats.companies }} компаний. Разбивка по направлениям, странам и языкам.{% endif %}">
 <meta property="og:url" content="https://spinhire.io/market">
 <meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
 <script type="application/ld+json">{{ {
   "@context": "https://schema.org",
   "@type": "Dataset",
-  "name": "Рынок труда iGaming — открытые вакансии",
-  "description": "Число открытых вакансий в iGaming-индустрии с разбивкой по направлениям, странам, языкам работы и формату занятости. Считается по агрегированному индексу вакансий SpinHire, обновление каждые 6 часов.",
+  "name": ("iGaming job market — open vacancies index" if lang == "en" else "Рынок труда iGaming — открытые вакансии"),
+  "description": ("Number of open jobs in the iGaming industry broken down by department, country, working language and work format. Computed from the SpinHire aggregated job index, refreshed every 6 hours." if lang == "en" else "Число открытых вакансий в iGaming-индустрии с разбивкой по направлениям, странам, языкам работы и формату занятости. Считается по агрегированному индексу вакансий SpinHire, обновление каждые 6 часов."),
   "url": "https://spinhire.io/market",
   "license": "https://creativecommons.org/licenses/by/4.0/",
   "creator": {"@type": "Organization", "name": "SpinHire", "url": "https://spinhire.io/"},
@@ -75,9 +75,11 @@
     <span class="kicker">Обновлено {{ today_human }}</span>
     <h1 style="font-size: clamp(1.7rem, 4vw, 2.8rem); margin: 10px 0 14px;">Рынок труда iGaming в цифрах</h1>
     <p class="mk-lead">
-      На {{ today_human }} в индустрии открыто <b>{{ stats.live_jobs }}</b> вакансий от
+      {% if lang == 'en' %}As of {{ today_human }} the industry has <b>{{ stats.live_jobs }}</b> open jobs at
+      <b>{{ stats.companies }}</b> companies, <b>{{ stats.new_this_week }}</b> of them posted in the last 7 days.
+      Counted from our own job index: refreshed every 6 hours, closed positions leave the count.{% else %}На {{ today_human }} в индустрии открыто <b>{{ stats.live_jobs }}</b> вакансий от
       <b>{{ stats.companies }}</b> компаний, из них <b>{{ stats.new_this_week }}</b> появились за последнюю неделю.
-      Считаем по собственному индексу вакансий: сбор идёт каждые 6 часов, закрытые позиции из счёта выбывают.
+      Считаем по собственному индексу вакансий: сбор идёт каждые 6 часов, закрытые позиции из счёта выбывают.{% endif %}
     </p>
   </div>
 
@@ -109,14 +111,14 @@
   {% if archive %}
   <section class="mk-archive">
     <h2>Архив по месяцам</h2>
-    <p style="color: var(--ink-dim); font-size: 0.92rem; max-width: 78ch; margin-bottom: var(--sp-4);">Как менялся рынок: открытые вакансии на конец месяца, нанимающие компании и приток новых позиций. Текущий месяц — по состоянию на сегодня.</p>
+    <p style="color: var(--ink-dim); font-size: 0.92rem; max-width: 78ch; margin-bottom: var(--sp-4);">Как менялся рынок: открытые вакансии на конец месяца, нанимающие компании и приток новых позиций. Текущий месяц — по состоянию на сегодня. У каждого месяца постоянный адрес, дневные снимки не пересчитываются. Выгрузка: <a href="/market.csv">CSV</a> · <a href="/api/market-history">JSON</a>.</p>
     <div class="table-wrap">
       <table class="adm">
         <thead><tr><th>Месяц</th><th>Открытых вакансий</th><th>Компаний нанимало</th><th>Новых за месяц</th><th>С зарплатой</th></tr></thead>
         <tbody>
         {% for m in archive %}
           <tr>
-            <td>{{ m.label }}{% if m.current %} <span style="color: var(--acid); font-size: 0.75rem;">· идёт</span>{% endif %}</td>
+            <td><a href="/market/{{ m.ym }}" style="color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong);">{{ m.label_en if lang == 'en' else m.label }}</a>{% if m.current %} <span style="color: var(--acid); font-size: 0.75rem;">· идёт</span>{% endif %}</td>
             <td>{{ m.open_jobs }}</td>
             <td>{{ m.companies }}</td>
             <td>{{ m.new_jobs }}</td>
@@ -130,7 +132,7 @@
   {% endif %}
 
   <div class="mk-note">
-    <details class="mk-faq">
+    <details class="mk-faq" id="methodology" open>
       <summary>Как мы это считаем?</summary>
       <p>
         В счёт идут все вакансии, открытые на SpinHire в момент запроса страницы. Источники —
@@ -152,8 +154,8 @@
 
     <h2 style="margin-top: var(--sp-5);">Как цитировать</h2>
     <p class="mk-quote">
-      По данным джоб-борда SpinHire, на {{ today_human }} в iGaming открыто {{ stats.live_jobs }}
-      вакансий от {{ stats.companies }} компаний.
+      {% if lang == 'en' %}“According to SpinHire, the iGaming job board, {{ stats.live_jobs }} jobs were open at {{ stats.companies }} companies as of {{ today_human }}” — https://spinhire.io/en/market{% else %}По данным джоб-борда SpinHire, на {{ today_human }} в iGaming открыто {{ stats.live_jobs }}
+      вакансий от {{ stats.companies }} компаний.{% endif %}
     </p>
     <p style="margin-top: var(--sp-3);">
       Данные открыты для цитирования со ссылкой на источник. Ссылаться лучше на этот адрес —
