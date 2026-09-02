@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="/js/analytics.js?v=20260821c"></script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-0W5XWDYPZ3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-0W5XWDYPZ3');
+</script>
+<base href="/">
+<title>Продакт-менеджер в iGaming: чем отличается | SpinHire</title>
+<link rel="icon" href="/favicon.svg?v=3" type="image/svg+xml">
+<link rel="icon" href="/img/favicons/favicon-32.png?v=3" sizes="32x32" type="image/png">
+<link rel="icon" href="/img/favicons/favicon-16.png?v=3" sizes="16x16" type="image/png">
+<link rel="icon" href="/favicon.ico?v=3" sizes="any">
+<link rel="apple-touch-icon" href="/img/favicons/apple-touch-icon.png?v=3">
+<meta name="description" content="Чем продакт в казино и беттинге отличается от продакта в обычном IT: регуляторика как ограничение фич, провайдеры игр, GGR/NGR, вилки по грейдам, интервью.">
+<link rel="canonical" href="https://spinhire.io/blog/product-manager-igaming">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="SpinHire">
+<meta property="og:title" content="Продакт-менеджер в iGaming: чем отличается от классического продукта">
+<meta property="og:description" content="Регуляторика вместо бэклога, провайдеры игр вместо своей разработки, GGR/NGR вместо DAU и MRR — разбираем специфику продукта в гемблинге.">
+<meta property="og:url" content="https://spinhire.io/blog/product-manager-igaming">
+<meta property="og:image" content="https://spinhire.io/img/blog-product-manager-igaming.jpg">
+<meta property="article:published_time" content="2026-09-02">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Продакт-менеджер в iGaming: чем отличается от классического продукта",
+  "description": "Регуляторика как ограничение фич, казино vs спортсбук vs платформа, работа с провайдерами игр, метрики GGR/NGR, вилки по грейдам и переход из обычного IT.",
+  "datePublished": "2026-09-02",
+  "dateModified": "2026-09-02",
+  "author": { "@type": "Organization", "name": "SpinHire", "url": "https://spinhire.io" },
+  "publisher": { "@type": "Organization", "name": "SpinHire", "url": "https://spinhire.io" },
+  "mainEntityOfPage": "https://spinhire.io/blog/product-manager-igaming",
+  "inLanguage": "ru"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Главная", "item": "https://spinhire.io/" },
+    { "@type": "ListItem", "position": 2, "name": "Блог", "item": "https://spinhire.io/blog" },
+    { "@type": "ListItem", "position": 3, "name": "Продакт-менеджер в iGaming" }
+  ]
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=20260821c">
+<style>
+  .article-head { border-bottom: 2px solid var(--line); padding-block: var(--sp-7) var(--sp-6);
+    background: linear-gradient(90deg, oklch(0.13 0.02 305 / 0.92) 35%, oklch(0.13 0.02 305 / 0.55)), url('img/blog-product-manager-igaming.jpg') right center / cover no-repeat, var(--bg); }
+  .article-head h1 { max-width: 24ch; }
+  .article-head .meta { color: var(--ink-faint); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; margin-top: var(--sp-4); }
+  .article-layout { display: grid; grid-template-columns: 1fr 300px; gap: var(--sp-7); align-items: start; padding-top: var(--sp-6); }
+  .article-body { max-width: 72ch; }
+  .article-body > p, .article-body li { color: var(--ink-dim); font-size: 1.02rem; line-height: 1.7; }
+  .article-body > p { margin-bottom: var(--sp-4); }
+  .article-body h2 { font-size: 1.3rem; margin: var(--sp-7) 0 var(--sp-4); color: var(--acid); }
+  .article-body h2::before { content: "▮ "; }
+  .article-body ul, .article-body ol { padding-left: 1.2em; margin-bottom: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); }
+  .article-body li::marker { color: var(--pink); }
+  .salary-table-wrap { overflow-x: auto; border: 2px solid var(--line); margin-block: var(--sp-5); }
+  table.salary-table { border-collapse: collapse; width: 100%; min-width: 480px; font-size: 0.9rem; }
+  .salary-table th { background: var(--bg-deep); color: var(--acid); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.12em; text-align: left; padding: 12px 14px; border-bottom: 2px solid var(--line); }
+  .salary-table td { padding: 10px 14px; border-bottom: 1px solid var(--line); color: var(--ink-dim); }
+  .salary-table td:first-child { color: var(--ink); font-weight: 600; }
+  .salary-table td.money { color: var(--acid); font-weight: 700; white-space: nowrap; }
+  .salary-table tr:last-child td { border-bottom: none; }
+  .callout { border: 2px dashed var(--pink); background: oklch(0.2 0.06 350); padding: var(--sp-5); margin-block: var(--sp-5); }
+  .callout b { color: var(--pink); }
+  .timeline { border: 2px solid var(--line); background: var(--surface); margin-block: var(--sp-5); }
+  .timeline .t-row { display: grid; grid-template-columns: 90px 1fr; gap: var(--sp-4); padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--line); }
+  .timeline .t-row:last-child { border-bottom: none; }
+  .timeline .t-time { font-family: var(--font-display); font-weight: 800; color: var(--yellow); font-size: 0.85rem; }
+  .timeline .t-what { color: var(--ink-dim); font-size: 0.95rem; }
+  .toc { border: 2px solid var(--line); background: var(--surface); padding: var(--sp-5); position: sticky; top: 92px; }
+  .toc h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-faint); margin-bottom: var(--sp-3); }
+  .toc ol { list-style: none; display: flex; flex-direction: column; gap: var(--sp-2); counter-reset: toc; }
+  .toc a { text-decoration: none; color: var(--ink-dim); font-size: 0.9rem; counter-increment: toc; display: flex; gap: 10px; }
+  .toc a::before { content: "0" counter(toc); color: var(--acid); font-weight: 800; font-family: var(--font-display); font-size: 0.8rem; }
+  .toc a:hover { color: var(--acid); }
+  .toc .cta { margin-top: var(--sp-4); }
+  @media (max-width: 900px) { .article-layout { grid-template-columns: 1fr; } .article-layout > * { min-width: 0; max-width: 100%; } .toc { position: static; order: -1; } }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="/index.html" class="logo" aria-label="SpinHire — главная"><img class="logo__mark" src="/img/spinhire-slot.svg" alt="" width="60" height="36">spin<b>hire</b></a>
+    <nav class="main-nav" aria-label="Основная навигация">
+      <a href="/jobs.html">Вакансии</a>
+      <a href="/companies.html">Компании</a>
+      <a href="/blog.html">Блог</a>
+      <a href="/post-job.html">Работодателям</a>
+    </nav>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" data-auth>Войти</button>
+      <button class="nav-burger" aria-label="Меню">☰</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="article-head">
+    <div class="container">
+      <nav class="crumbs" aria-label="Хлебные крошки"><a href="/index.html">Главная</a> / <a href="/blog.html">Блог</a> / Продакт-менеджер</nav>
+      <span class="kicker" style="color: var(--yellow);">Профессии</span>
+      <h1 style="margin-top: 8px;">Продакт-менеджер в iGaming: чем отличается от классического продукта</h1>
+      <p class="meta">30 августа 2026 · 11 минут · серия «Профессии iGaming»</p>
+    </div>
+  </div>
+
+  <div class="container article-layout">
+    <article class="article-body">
+      <p>«Продакт-менеджер» в вакансии гемблинг-компании выглядит почти как в любой другой IT-индустрии: беклог, спринты, метрики, кросс-функциональная команда. Разница становится заметна на первом же созвоне — рядом с продактом за столом сидит комплаенс-менеджер, а фича сначала проходит юридическую проверку по каждой лицензируемой юрисдикции, и только потом дизайн-ревью. Разбираем, чем продакт в iGaming принципиально отличается от продакта в обычном SaaS или e-commerce: какие ограничения диктует регуляторика, чем казино-продукт отличается от спортсбука и платформы, что считают вместо DAU и MRR, сколько за это платят и что нужно, чтобы перейти в индустрию со стороны.</p>
+      <p>Индустрия при этом растёт быстрее многих классических вертикалей, и спрос на продактов, которые умеют одновременно думать метриками и регуляторными ограничениями, стабильно превышает предложение — именно поэтому вилки в гемблинге на средних и старших грейдах часто обгоняют обычный IT-продукт. Но вход туда не такой прямой, как кажется по названию должности: ниже — конкретика по каждому пункту, без общих слов про «уникальный рынок».</p>
+
+      <h2 id="difference">Регуляторика как ограничение фич</h2>
+      <p>В классическом продукте главное ограничение — ресурсы команды и техдолг. В iGaming к этому добавляется третий, самый жёсткий слой: лицензионные требования, которые продакт не выбирает и не может обойти A/B-тестом. Один и тот же экран пополнения баланса выглядит по-разному для игрока с Мальты, из Онтарио и из Германии — потому что у каждой юрисдикции свои правила по лимитам, верификации и раскрытию рисков.</p>
+      <ul>
+        <li><b>Депозитные и временные лимиты</b> обязательны в одних странах (Германия, Швеция) и опциональны в других — «мягкий онбординг без лишних полей» невозможен там, где регулятор требует установить лимит до первого депозита.</li>
+        <li><b>Верификация (KYC)</b> может держать первый вывод игрока в статусе «на проверке», даже если продукт хочет упростить воронку — у комплаенса и антифрода здесь право вето поверх продуктовой метрики.</li>
+        <li><b>Бонусные механики и вейджер</b> регулируются по-разному: в одних странах ограничена сама реклама бонусов, в других — механизм отыгрыша должен укладываться в максимальный размер ставки за спин.</li>
+        <li><b>Инструменты ответственной игры</b> (самоисключение, паузы, лимиты на сессию) — не фича для лояльности, а обязательный элемент интерфейса, который в глазах регулятора часто важнее конверсии.</li>
+        <li><b>Рекламные креативы</b> и даже формулировки на лендинге могут подпадать под ограничения рекламы азартных игр в конкретной стране.</li>
+      </ul>
+      <p>Из-за этого продакт в гемблинге тратит заметную часть времени не на генерацию гипотез, а на согласование с комплаенсом: закладывает multi-jurisdiction логику в архитектуру фичи заранее, а не патчит её постфактум. На практике это означает, что один и тот же релиз может выкатываться волнами по рынкам в течение месяцев — фича, готовая технически на 100%, физически не может уйти в Германию или Онтарио, пока не пройдёт локальное юридическое ревью. Продакт, который планирует roadmap как единый релиз «для всех», в гемблинге быстро упирается в кассовый разрыв между «готово» и «разрешено». С кем именно продакт сверяет почти каждое решение, завязанное на деньги игрока, — в профиле <a href="/profession/compliance-manager" style="color: var(--acid);">комплаенс-менеджера</a>.</p>
+
+      <h2 id="tracks">Казино, спортсбук или платформа — три разных продукта</h2>
+      <p>«Продакт в iGaming» — зонтичное название сразу для нескольких профессий, и переход между ними не тривиальнее, чем переход из fintech в edtech.</p>
+      <div class="salary-table-wrap">
+        <table class="salary-table">
+          <thead><tr><th>Трек</th><th>Кто «пользователь» продукта</th><th>Главная зависимость</th><th>Ключевая метрика</th></tr></thead>
+          <tbody>
+            <tr><td>Казино</td><td>Игрок</td><td>Контент провайдеров игр</td><td>GGR/NGR слотов, retention</td></tr>
+            <tr><td>Спортсбук</td><td>Игрок</td><td>Трейдинг, линии, live-данные</td><td>Маржа букмекера, конверсия в live</td></tr>
+            <tr><td>Платформа / B2B</td><td>Оператор-лицензиат</td><td>Интеграции, инфраструктура</td><td>ARR по партнёрам, их churn</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>В казино-продукте фокус на лобби, каталоге слотов, персонализации выдачи игр и бонусной механике — при этом собственная разработка контента почти всегда отсутствует, продукт управляет чужим. В спортсбуке продакт зависит от риск-менеджмента и линий, которые считает трейдинг, а не сам продукт: фокус смещается на live-ставки, кэш-аут и скорость обновления интерфейса в момент пиковой нагрузки топ-матча — подробнее о том, как устроена эта роль, в профиле <a href="/profession/sportsbook-trader" style="color: var(--acid);">спортсбук-трейдера</a>. Платформенный продукт вообще не видит конечного игрока — его клиент это оператор, который покупает White Label или API, и метрики здесь ближе к классическому B2B SaaS, чем к консьюмерскому гемблингу.</p>
+      <p>На практике границы между треками размыты сильнее, чем в описании вакансии: крупный оператор с собственным казино и спортсбуком часто держит одного Head of Product над обоими направлениями, а продакт-менеджер отвечает за один вертикальный кусок — например, только за бонусную систему или только за платёжную воронку. Из-за этого при переходе между компаниями важно уточнять не название роли, а конкретный периметр ответственности: «продакт казино» в одной компании может значить «владелец лобби и каталога», а в другой — «владелец всей игровой экономики, включая VIP-программу».</p>
+
+      <h2 id="providers">Работа с провайдерами игр</h2>
+      <p>В казино-продукте контент — не то, что пишет своя команда разработки, а то, что покупается или интегрируется у десятков студий через агрегатор. Продакт фактически управляет портфелем чужого контента:</p>
+      <ul>
+        <li>Приоритизирует, какие провайдеры и слоты добавить в лобби, на основе performance-данных: RTP, hold%, среднее время сессии, конверсия из демо в реальную ставку.</li>
+        <li>Участвует в переговорах об эксклюзивности и revenue share с крупными студиями — решения здесь напрямую влияют на маржу компании.</li>
+        <li>Синхронизируется с провайдером по срокам сертификации игры под конкретную лицензию: игра может быть готова технически, но не запущена в стране месяцами, пока не пройдёт сертификацию у локального регулятора.</li>
+        <li>Разбирает математику новых слотов вместе с провайдером — не создаёт её сам, но должен понимать RTP и волатильность настолько, чтобы аргументированно спорить с цифрами вендора.</li>
+      </ul>
+      <p>По математике и волатильности игр продакт сверяется с <a href="/profession/game-mathematician" style="color: var(--acid);">гейм-математиком</a>, а стабильность и совместимость каждой новой интеграции проверяет вместе с <a href="/profession/qa-engineer-igaming" style="color: var(--acid);">QA-инженером</a> — тестирование выхода на новый рынок здесь постоянный процесс, а не разовая задача перед релизом.</p>
+      <p>Здесь же возникает вечное напряжение между широтой каталога и его управляемостью: чем больше слотов в лобби, тем выше шанс зацепить нишевую аудиторию, но тем сложнее держать метрики по каждому провайдеру под контролем и тем дороже сертификация под каждый новый рынок. Хороший продакт-казино умеет резать каталог так же уверенно, как расширять его — убирать низкоэффективный контент, который просто занимает место в лобби и размывает внимание игрока, вместо того чтобы бесконечно добавлять новые тайтлы «на всякий случай».</p>
+
+      <h2 id="metrics">Метрики: GGR, NGR, конверсия, ретеншн</h2>
+      <p>Первое, что должен переучить продакт из классического IT: здесь не измеряют успех фичи через DAU или NPS в отрыве от денег. iGaming — один из немногих консьюмерских продуктов, где экономика игрока считается почти в реальном времени, и продакт обязан говорить на языке финансового результата.</p>
+      <div class="salary-table-wrap">
+        <table class="salary-table">
+          <thead><tr><th>Метрика</th><th>Что значит</th><th>Зачем продакту</th></tr></thead>
+          <tbody>
+            <tr><td>GGR</td><td>Сумма ставок минус выплаты игрокам</td><td>Базовый «оборот» продукта, но ещё не прибыль</td></tr>
+            <tr><td>NGR</td><td>GGR минус бонусы, лицензионные отчисления, чарджбэки</td><td>То, на что реально смотрит бизнес при оценке фичи</td></tr>
+            <tr><td>Hold %</td><td>Доля от ставок, которая остаётся оператору</td><td>Баланс между привлекательностью игры и маржой</td></tr>
+            <tr><td>Конверсия Reg→FTD</td><td>Доля зарегистрированных, сделавших первый депозит</td><td>Ключевая метрика воронки онбординга</td></tr>
+            <tr><td>Retention D30</td><td>Доля игроков, активных на 30-й день</td><td>Похоже на обычный retention, но привязано к депозиту, а не к сессии</td></tr>
+            <tr><td>LTV/CAC</td><td>Доход с игрока за период к стоимости привлечения</td><td>Определяет, какие бонусы и креативы вообще можно себе позволить</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Отдельная сложность в том, что продуктовые и маркетинговые метрики здесь пересекаются сильнее, чем в SaaS: бонус — одновременно UX-фича, влияющая на retention, и прямые расходы, влияющие на NGR. Продакт, который приносит на ревью «конверсия выросла на 12%», но не посмотрел, что случилось с NGR через квартал из-за возросшего бонусного оттока, получит от финансового директора закономерный вопрос. За более глубокую аналитику по когортам и GGR/NGR обычно отвечает <a href="/profession/bi-analyst" style="color: var(--acid);">BI-аналитик</a>, с которым продакт работает почти ежедневно — о том, чем аналитика в казино отличается от продуктовой в обычном IT, подробнее в статье <a href="/blog/data-analyst-casino" style="color: var(--acid);">про аналитика в казино</a>.</p>
+      <p>Из этого же вытекает другая привычка, которую приходится вырабатывать заново: любой эксперимент в гемблинге запускают с guardrail-метриками по умолчанию, а не только с метрикой успеха. Прежде чем катить фичу на 100% трафика, продакт закладывает нижнюю границу по NGR на игрока и по доле жалоб в поддержку — если график хотя бы одной из guardrail-метрик уходит за флажки, эксперимент останавливают вне зависимости от того, как выглядит основная метрика. В обычном SaaS такая дисциплина тоже существует, но в гемблинге она обязательна, а не «best practice для зрелых команд».</p>
+
+      <h2 id="salary">Вилки по грейдам</h2>
+      <div class="salary-table-wrap">
+        <table class="salary-table">
+          <thead><tr><th>Грейд</th><th>Мальта/Кипр net/мес</th><th>Европа (офис) net/мес</th><th>Удалёнка net/мес</th></tr></thead>
+          <tbody>
+            <tr><td>Junior / Associate PM (0–2 года)</td><td class="money">€2.6–3.4K</td><td class="money">€2.2–2.8K</td><td class="money">€2–2.6K</td></tr>
+            <tr><td>Middle Product Manager (2–4 года)</td><td class="money">€3.5–5K</td><td class="money">€2.9–4K</td><td class="money">€2.6–3.6K</td></tr>
+            <tr><td>Senior Product Manager (4–7 лет)</td><td class="money">€5.2–7.5K</td><td class="money">€4.2–6K</td><td class="money">€3.8–5.5K</td></tr>
+            <tr><td>Head of Product / Director (7+ лет)</td><td class="money">€8–15K</td><td class="money">€6.5–11K</td><td class="money">€6–9K</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Сверху часто добавляется бонус по итогам года, завязанный на NGR продукта или направления (5–20% от базы), а у Head of Product на некоторых операторах встречаются опционы. Внутри одного грейда вилка чаще всего определяется тремя факторами: опытом работы именно с лицензируемыми рынками (а не просто продуктовым стажем), количеством юрисдикций, с которыми уже приходилось работать одновременно, и владением языком аналитики — SQL и способность самостоятельно проверить цифры BI-дашборда без похода к аналитику ценятся отдельно. Полную картотеку с вилками по 20+ ролям индустрии смотрите в <a href="/professions" style="color: var(--acid);">картотеке профессий</a>.</p>
+
+      <h2 id="interview">Как проходит собеседование продакта в гемблинг</h2>
+      <ol>
+        <li><b>Скрининг с рекрутером.</b> Проверяют базовое знание индустрии: разницу GGR/NGR, что такое hold%, знаком ли кандидат с принципами ответственной игры.</li>
+        <li><b>Кейс с продакт-лидом.</b> Типичная формулировка: «Регулятор нового рынка запрещает автоспин выше N раундов подряд — как перепроектируете фичу и что скажете команде разработки», или «Провайдер хочет добавить 40 новых слотов, комплаенс требует убрать автоплей в стране X — как приоритизируете».</li>
+        <li><b>Встреча со стейкхолдерами</b> (трейдинг, комплаенс, CRM). Оценивают, умеет ли кандидат говорить на языке разных функций, а не только продуктовым жаргоном.</li>
+        <li><b>Финал с руководителем продукта.</b> Стратегическое мышление: как расставлять приоритеты между рынками, часть которых уже закрыта регуляторно.</li>
+      </ol>
+      <p>Формальные сертификаты вроде CSPO почти никогда не спрашивают отдельно от опыта, зато обязательно проверяют, понимает ли кандидат разницу между лицензированным и «серым» рынком — потому что от этого зависит весь roadmap. О том, как в целом устроены технические и поведенческие интервью в индустрии, — в статье <a href="/blog/sobesedovanie-v-igaming" style="color: var(--acid);">как проходит собеседование в iGaming</a>.</p>
+
+      <div class="callout"><b>Совет:</b> если на собеседовании спрашивают только про фреймворки приоритизации и ни разу не про регуляторику или KYC — присмотритесь к компании внимательнее: возможно, продуктовые процессы там ещё не выстроены под реальные лицензионные требования.</div>
+
+      <h2 id="switch">Как перейти из обычного IT-продукта</h2>
+      <ol>
+        <li><b>Разберитесь со словарём индустрии заранее.</b> GGR/NGR, RTP, hold%, wagering requirement, responsible gambling — на собеседовании это фильтр номер один, а не приятный бонус к резюме.</li>
+        <li><b>Выберите трек осознанно.</b> Аналитический продакт из fintech органичнее заходит в казино или на платформу, продакт с опытом работы в реальном времени (маркетплейсы, трейдинговые сервисы) — в спортсбук.</li>
+        <li><b>Рассмотрите соседнюю роль как вход.</b> CRM-продакт, продуктовый аналитик или BI-специалист внутри гемблинг-компании часто дорастают до product manager за 12–18 месяцев, уже зная индустрию изнутри.</li>
+        <li><b>Переупакуйте портфолио под экономику, а не только UX.</b> Оператору важнее история «как фича подвинула NGR или retention», чем красивый кейс про рост DAU без денежного контекста.</li>
+        <li><b>Будьте готовы к меньшей автономии на старте.</b> Комплаенс и юридический департамент здесь имеют право вето, которого нет в обычном стартапе — это часть индустрии, а не признак слабого менеджмента.</li>
+        <li><b>Заложите на адаптацию 2–3 месяца.</b> Даже опытный продакт первое время тратит на изучение регуляторной карты компании и внутреннего словаря больше времени, чем на сами продуктовые задачи — это нормально и обычно закладывается в план онбординга самим работодателем.</li>
+      </ol>
+      <p>Хорошая новость: опыт в других регулируемых индустриях (fintech, финтех-платежи, здравоохранение) в гемблинге ценится выше, чем чистый SaaS-бэкграунд без опыта работы с ограничениями. Открытые продуктовые роли с вилками — в разделе <a href="/jobs?q=Product%20Manager" style="color: var(--acid);">вакансий продактов</a>: отфильтруйте по треку «Казино» или «Спортсбук», чтобы сузить поиск до своего профиля.</p>
+
+      <h2 id="faq">Частые вопросы</h2>
+      <p><b>Нужно ли знание конкретного языка программирования?</b> Нет, но нужно понимание архитектуры интеграций — API агрегаторов игр, RGS, платёжных провайдеров — достаточное, чтобы разговаривать с разработкой без переводчика.</p>
+      <p><b>Можно ли работать удалённо?</b> Да, особенно на платформенных и B2B-продуктах, но многие операторы держат продуктовых лидов на Мальте или Кипре из-за близости к лицензированию и комплаенсу.</p>
+      <p><b>Правда ли, что продакт в гемблинге зарабатывает больше среднего по IT?</b> На senior+ грейдах — да, за счёт премии за регуляторную сложность и прямой связи бонусов с NGR; на junior-уровне вилки сопоставимы с обычным IT-продуктом.</p>
+      <p><b>Обязателен ли переезд на Мальту или Кипр?</b> Нет, но офисные роли на месте лицензирования обычно платят выше и дают более прямой доступ к комплаенсу и юридической команде — для первых полутора-двух лет в индустрии это ощутимо ускоряет обучение.</p>
+    </article>
+
+    <aside class="toc">
+      <h3>Содержание</h3>
+      <ol>
+        <li><a href="#difference">Регуляторика</a></li>
+        <li><a href="#tracks">Казино / спортсбук / платформа</a></li>
+        <li><a href="#providers">Провайдеры игр</a></li>
+        <li><a href="#metrics">Метрики GGR/NGR</a></li>
+        <li><a href="#salary">Зарплаты</a></li>
+        <li><a href="#interview">Собеседование</a></li>
+        <li><a href="#switch">Переход из IT</a></li>
+      </ol>
+      <div class="cta">
+        <a href="/jobs?q=Продакт-менеджер" class="btn btn-acid btn-block btn-sm">Вакансии продактов →</a>
+        <button class="btn btn-ghost btn-block btn-sm" style="margin-top: 8px;" data-auth>Создать профиль</button>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <a href="/index.html" class="logo"><img class="logo__mark" src="/img/spinhire-slot.svg" alt="" width="60" height="36">spin<b>hire</b></a>
+        <p class="footer-tagline" style="margin-top: 16px;">Самый громкий джоб-борд в iGaming.</p>
+        <div class="footer-social" data-no-translate>
+          <a href="https://t.me/spinhire_ru" target="_blank" rel="noopener" aria-label="Telegram-канал на русском">✈️ Telegram · RU</a>
+          <a href="https://t.me/spinhire" target="_blank" rel="noopener" aria-label="Telegram channel in English">✈️ Telegram · EN</a>
+          <a href="https://www.linkedin.com/company/spinhirejob/" target="_blank" rel="noopener" aria-label="SpinHire в LinkedIn">💼 LinkedIn</a>
+        </div>
+      </div>
+      <div>
+        <h4>Кандидатам</h4>
+        <ul>
+          <li><a href="/jobs.html">Вакансии</a></li>
+          <li><a href="/profile.html">Мой профиль</a></li>
+          <li><a href="/professions">Профессии и зарплаты</a></li>
+          <li><a href="/events.html">Календарь событий</a></li>
+          <li><a href="/games.html">🎡 Игровая зона</a></li>
+          <li><a href="/blog.html">Карьерный блог</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Работодателям</h4>
+        <ul>
+          <li><a href="/post-job.html">Разместить вакансию</a></li>
+          <li><a href="/employer.html">Кабинет работодателя</a></li>
+          <li><a href="/post-job.html#pricing">Тарифы</a></li>
+          <li><a href="/post-job.html#pricing">База резюме</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>О проекте</h4>
+        <ul>
+          <li><a href="/about.html">О нас</a></li>
+          <li><a href="mailto:hello@spinhire.io">Контакты</a></li>
+          <li><a href="/privacy.html">Конфиденциальность</a></li>
+          <li><a href="/terms.html">Условия</a></li>
+          <li><a href="/game-rules.html">Правила игр</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 SpinHire — играй ответственно, работай громко</span>
+      <span>Индустрия 18+ · лицензии проверяем</span>
+    </div>
+  </div>
+</footer>
+
+<div class="modal-backdrop" id="auth-modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Регистрация">
+    <button class="modal__close" aria-label="Закрыть">✕</button>
+    <span class="kicker">Присаживайся к столу</span>
+    <h3 style="margin-top: 8px; font-size: 1.4rem;">Входи в игру</h3>
+    <a class="btn btn-acid btn-block" href="/register?role=talent">Регистрация соискателя →</a>
+    <a class="btn btn-pink btn-block" style="margin-top: 10px;" href="/register?role=employer">Регистрация работодателя →</a>
+    <p style="margin-top: 14px; font-size: 0.85rem; color: var(--ink-faint); text-align: center;">Уже есть аккаунт? <a href="/login" style="color: var(--acid);">Войти</a></p>
+    <div style="display: flex; gap: 8px; margin-top: 14px;">
+      <a href="/profile.html" class="btn btn-ghost btn-sm" style="flex: 1;">Кабинет соискателя</a>
+      <a href="/employer.html" class="btn btn-ghost btn-sm" style="flex: 1;">Кабинет работодателя</a>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/app.js?v=20260821c"></script>
+</body>
+</html>

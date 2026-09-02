@@ -4363,6 +4363,16 @@ ARTICLE_FILES = {
     "data-analyst-casino": "post-data-analyst-casino.html",
     "kak-sostavit-resume-igaming": "post-kak-sostavit-resume-igaming.html",
     "sportsbook-trader-career": "post-sportsbook-trader-career.html",
+    "game-mathematician-career": "post-game-mathematician-career.html",
+    "kyc-specialist-career": "post-kyc-specialist-career.html",
+    "retention-manager-career": "post-retention-manager-career.html",
+    "product-manager-igaming": "post-product-manager-igaming.html",
+    "rabota-v-varshave-igaming": "post-rabota-v-varshave-igaming.html",
+    "game-designer-slotov": "post-game-designer-slotov.html",
+    "linkedin-dlya-igaming": "post-linkedin-dlya-igaming.html",
+    "perehod-iz-it-v-igaming": "post-perehod-iz-it-v-igaming.html",
+    "bonus-manager-career": "post-bonus-manager-career.html",
+    "support-team-lead-career": "post-support-team-lead-career.html",
 }
 
 
