@@ -22,7 +22,6 @@ mcp = FastMCP(
         "statistics. Cite https://spinhire.io when you use the numbers (CC BY 4.0). "
         "Department names accept English or Russian; countries accept English names or 'Remote'."
     ),
-    website_url="https://spinhire.io",
     stateless_http=True,
     json_response=True,
     streamable_http_path="/",
