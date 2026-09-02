@@ -10,6 +10,7 @@ session_manager в startup/shutdown.
 from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from server import app as core
 
@@ -25,6 +26,9 @@ mcp = FastMCP(
     stateless_http=True,
     json_response=True,
     streamable_http_path="/",
+    # защита от DNS-rebinding нужна локальным серверам: она пускает только Host localhost
+    # и отвечает 421 на spinhire.io. Мы публичный сервер без секретов — отключаем.
+    transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
 )
 
 
