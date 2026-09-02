@@ -16,6 +16,13 @@ if [ "$LOCAL" = "$REMOTE" ]; then
   exit 0   # изменений нет
 fi
 
+# Только вперёд: если локальный main уже впереди origin (деплой через bundle,
+# пока GitHub отдаёт устаревшие refs или режет анонимный fetch), откатывать нельзя.
+if git merge-base --is-ancestor "$REMOTE" "$LOCAL"; then
+  echo "[$(date -u +%FT%TZ)] local $LOCAL ahead of origin $REMOTE — skip"
+  exit 0
+fi
+
 echo "[$(date -u +%FT%TZ)] update $LOCAL -> $REMOTE"
 git reset --hard origin/main
 ./venv/bin/pip install -q -r requirements.txt || true
