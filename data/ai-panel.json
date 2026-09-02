@@ -1,0 +1,680 @@
+{
+ "runs": [
+  {
+   "date": "2026-09-03",
+   "engine": "gemini",
+   "summary": {
+    "prompts": 25,
+    "answered": 24,
+    "errors": 1,
+    "mentioned": 1,
+    "cited": 1,
+    "share": 4,
+    "top_competitors": [
+     [
+      "Pentasia",
+      10
+     ],
+     [
+      "Indeed",
+      6
+     ],
+     [
+      "BettingJobs",
+      5
+     ],
+     [
+      "ZipRecruiter",
+      4
+     ],
+     [
+      "GamblingCareers",
+      3
+     ],
+     [
+      "TalentBet",
+      2
+     ],
+     [
+      "LinkedIn",
+      2
+     ],
+     [
+      "Arc.dev",
+      1
+     ]
+    ]
+   },
+   "results": [
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "BettingJobs",
+      "GamblingCareers",
+      "Pentasia"
+     ],
+     "sources": [
+      "https://clutch.co",
+      "https://echoglobal.tech",
+      "https://europeangaming.eu",
+      "https://evotalents.com",
+      "https://gamblingcareers.com",
+      "https://hirico.io",
+      "https://vankaizen.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEXNjgGQ2aXk1EMi1DV3Bf8NsnrY1qDH10msI05INXn3kVnJIRxGUFyr9INgPbBh5BiEnF6p3-VuLNkHX2HlcGYHYebhOO9lbHb_1KGbmaax3AtFV4G862IvVUjSc_a_U31OhQWo0NfLihvKtZD6Lk=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFGIXi0p7cv6Xzu7S1bZoyr69Fyh11C08KiNgiUk3jzbv3_kxVok8b8y9orrfcUHjOa5EHBe5fGU6LChSr4oayUMV0a5dKP-6Wj66xfFPxM0-5Cm8rxoLXemzVNYbI=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFWRiLy7TK3V1bkVga2I6eXXhj7fTn999FD9Uf6a6mT7Irb6-bTf17LMGpswdnfFBT-5162K5PQQjbB8_ayi6oU0NostcYU0FEhhPIixH20mlML0SsZZVKvukfXZzlFb9pEoYgIIHUztKVQqMg=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFyBF7zPb4HNowpGaZU-_18b9LZtShiFvZdjsnxN6CgSrv0v3ObJWDrR0fPvs25I5qN2qVspOzF4uTWKk4A8ILwfjKC9cR6i9qKapjah8ATPPLkFzKC5frGYk6jkPatgfY1iHQh2GCmeuPpoJcvrg==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGCnabfQZaY5Zqwapv0Hg78hT0jXr85_BBLWQilFRxKIyOvs-5vlHmH3gl82njQuPQ96Zs6mG-fNT3A-KGJeN7CO-B3CVzIUZYPJAkQljlRXWeaJtExRsbENCGejO6A",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGeWjq44J-068eIfKDurqb0D3mu-mWn9aqRc8oFAH2eBWkI5Iuz6t1qRsi2kqEfYfb_Cs9eu9vmshZ0aU_yYTWUjflO5P6PBT9zo6FqMZ_Y-CExruqP4-3PfUPHN65a9I7LEV4Cyo8=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHL767ooDAIpPGRTucnCZvfXT_fTBB5M6m8msNbhKcXoFmbVcE9SSuC6CMcS4oYTA9r20krH1bTO6ycZXQ2E1P_E2MmK21JLnlXDuWPVue6eCsiUa0vp0srMzJQ",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH_f-_WOnjp5VJ1oZj9G4EeIA9jdSoInzytwxe_WMVIgrALP-eiwO04a4k7BN-1rnTQp1ipH9ifbLhGoR2uaZhFiTPZyBCDENJ6Y3EWH7THYaYa2Bzn4v94nhD-SzYVlo_Ee-cTDWzEeC0n"
+     ],
+     "id": "en-boards",
+     "lang": "en",
+     "snippet": "For those seeking opportunities in the dynamic iGaming sector in 2026, several specialized job boards and recruitment agencies stand out as prime resources. These platforms cater specifically to the online gambling industry, offering a wide range of roles from technical to operational positions.\n\n**Leading iGaming Job Boards:**\n\n*   **GamblingCareers.com** is recognized as a leading job board dedi"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "Indeed",
+      "Pentasia"
+     ],
+     "sources": [
+      "https://europeangaming.eu",
+      "https://gamingcareer.eu",
+      "https://igameers.com",
+      "https://indeed.com",
+      "https://maltajobs.eu",
+      "https://nordicjobsworldwide.com",
+      "https://pentasia.com",
+      "https://totaljobs.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEBGYR5NzsrqSWdMs2WyxCVkPSG9HKd2WG04CfOuVanZJO423whW1wctbWGSabicMTl8qDKEho33i3ot_lW9YDa-kCKzao-FLRGhz6XZ-AqhM41al-hsiaKBj-Vqrm_xENzGLGbgmDhGkwc-rObf79m7A==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEmXgGd4m9xw6NypHnhq6Yb1N40wX0WiP_RCorDwUIDyQJh88S_7vu2189wwDxcQCgOPg9WlzV9njyodEXu0fwpwbMdxayUHb8KM092Ky2w0KcSBBL6cShNGnRdt4fk3asXXrDURMDGiQKb4Q==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF8SfM2PsaQXitlFpJWoz-Kjxwb8q--XkVJUuL4M_LJePr4ywusYYFj_Fz4O-5rxKPXKCrXJkGtTrKbQr6HUi8CgMeAA47MD1-crGVC3oIzXg==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFa1Ajn7KpfiyWU5aR8bWqrH9BbInCNYX0KnH0v0RQEI7YzHzd4DG9ZaaMK_bSZtthnYGmC-P3QtK3sSFw-IaSrHB3tY2MxNLVqtL1NnxyQ5cRGfnOmmGC4rvPcNsYybd9MnWmkDET7H0nYmRIxyg==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG-L2Dhv5kYEMz-irDfmucrQkhrPDSYTZRA4AmsVsUxJTVT--btB0k3gVjHqgaOlwQ2BJTev6oOTBQNT7A-yaXAdueFqwCotiCHBELI997SepaImAwaYLWeZCA96Pq5O1j6KqiOxYjJ-VeINPSCgt1-ius-88q47JjcJTEuRQtFLi5h",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGHmRWYC_PaAgaWxGpIM4q1zhjX50qzAH6-GsKhzlg2r1Bc313LGIuGXFjVj3nArD77R7vUi1TbHrU2VLS6vRDasMU9TCIZ9JRzvPyTUAwT3Toncg==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHC4EqaC5NZFoLDA111Zv_BwrMELJMJ8bYiPovKUkiT1fmzu4NnlQzcaCQw_VEZoz7o2vfaAHmMt9wX4zq95hNAkVp6h6Vq3tTZT7I7lOgXNqfOnQgAQGnfNPJ3"
+     ],
+     "id": "en-where",
+     "lang": "en",
+     "snippet": "If you're looking for online casino and sports betting industry jobs in Europe, you'll find a diverse and rapidly growing market with numerous opportunities. The industry, often referred to as iGaming, offers roles across various sectors, from technical development to marketing, compliance, and customer support. Europe is a primary hub for iGaming talent, with several key locations and specialized"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "Pentasia",
+      "TalentBet"
+     ],
+     "sources": [
+      "https://bebee.com",
+      "https://boston-link.com",
+      "https://careerjet.com.mt",
+      "https://ceektalent.com",
+      "https://igameers.com",
+      "https://igamingrecruitment.io",
+      "https://immensegroup.com",
+      "https://italentplus.com",
+      "https://jobhound.mt",
+      "https://jobleads.com",
+      "https://jobsinmalta.com",
+      "https://pentasia.com",
+      "https://smartrecruiters.com",
+      "https://talentbet.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEMCOjaMEsCP9JuCAiS_YvBP6oJ-bdTpfyl6WSZ4JS2qxkUCY0dmGwgCAVD21EQtU-B2h0fZuJZUD1KLIun9d1Qf9ZIX8H1Mxt8YWgMQUTpz_HGDI_lug=="
+     ],
+     "id": "en-malta",
+     "lang": "en",
+     "snippet": "Malta has established itself as a prominent global hub for the iGaming industry, attracting professionals worldwide with numerous job opportunities and often, comprehensive relocation packages.\n\nTo find iGaming jobs in Malta with relocation assistance, consider the following approaches:\n\n**1. Specialist Recruitment Agencies:**\nSeveral recruitment agencies specialize in connecting talent with iGami"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [],
+     "sources": [
+      "https://bazaraki.com",
+      "https://careerfinders.com.cy",
+      "https://careers-page.com",
+      "https://emeraldzebra.cy",
+      "https://facebook.com",
+      "https://grs-recruit.com",
+      "https://grsrecruitment.com",
+      "https://smstaffmatters.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEL_1QsKE0hYYKSbknsQ8pkSeKFQcXOTUroyQinstxomEh6VD7CHz2IilHSsawikDZXhopYTFLr1g_Q55X4p8RTmb1btAuziCj4H0nWhkgLZlHS1I0KO23klLQOsxaMHjfGzo2gQHIaaksNzVLQPgf7e4CMLw==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQExtgvZRt5vHa85CJkYhtK9rdiLmcaBFOsDXhnai8jQCoZD9qOWHNYLdTtQnsZpLP8NU47iL7e_Ebddk0ASD8lXcp4tQqVN0u9acLe-QDfRLhab7NdMhej2yWMuJIxiFpq3zi8ris_wsI_wkzg=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEzKS80l1ti887imKJjN4vuFskshuebS42zKjmabd8OBjHB7etdFNzQlREexlJorzL054GjVsItlRcv-DFjBbsBM7kNPrvKAJ3kNcPjomnStMRnBAQF9QVQOZPuu6ptA1SrwJcGU1QnYvn5yLLMX718np04SdJUjKXo__xYhHbqcmFSgT5yTPldDpQFvOIP5e6D3z0f",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFthEjWcHQNT8_R7dE3zZW5kefn_j5AH8iCf8oe_B5FYztWjxVZ4ljYWK6b5P4XXrBdybEnaWXJAUHH2UPrmyNKel4oYzki2BgLAV2lhHSVSur2gxWJoApkTm5Jv7tRnZv9gA==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG-ttfgQDGihLthMKQqARQ1T0_WQ_YCZLXUZpqaq4njWqF9ROg5QHgUhJ3SthMMkjLbsAP4cOCxWSpdl3y0nsN3CVut_5K-Nx9b9aaO1kuYvH25PtwY0VsLLSgOrWYqwZc-iOer0vbNHzIkj1ORZm_r_gjRgUcx",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHHXBPwHeXNJwwMRiO7HudqWI4X8w9Du3hF1zB-S-8H3Iws08lEVRK-LjldEhq3n9c3_XJy_hViE9VKckHP7NyDqv9FEfUnUZRjPt9Wem4axSnD6ExNYeQq7HluW7KAaytGc9C-X7SUB2ke",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHqg7gVQjX4CltHYxCQL3bJqBcM94b9OqednYkeU6w0gyhBCw8jDT8HcJ30Kcl-9LJ55HRI7oMIpy2oXnx5k_fD8zLUHKvoOVOqJDPPypjOZC5uaL-4j6v3TIlKrfoRFc-G94ZQDqM1nlirlVV5XQq0GCP8QU62kaQR"
+     ],
+     "id": "en-cyprus",
+     "lang": "en",
+     "snippet": "Several websites and recruitment agencies specialize in listing iGaming jobs in Limassol, Cyprus. These platforms often feature a range of positions within the online gaming and gambling sectors.\n\nKey sites to consider include:\n\n*   **Emerald Zebra Recruitment** frequently advertises iGaming roles in Limassol, such as Programmatic Campaign Manager, Native Campaign Manager, Digital Marketing Direct"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "Arc.dev",
+      "Indeed",
+      "Pentasia"
+     ],
+     "sources": [
+      "https://arc.dev",
+      "https://facebook.com",
+      "https://igameers.com",
+      "https://igaming.com",
+      "https://indeed.com",
+      "https://pentasia.com",
+      "https://simplyhired.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFJmAsK1q5XrUU0DLkXSie93SygBuwncKgbtrWmcrgqX-w13b_wECP6updFVFUckfV0Px1jzIjt9AZ3GbaZJAZxqe1uvPo3VQgX2sPUxMCLEI1vAtICkz0p5-75vX5Lpw2x6Ot7wWZFjXUjig3PTJoS",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFSfbDfwKKtJyZtrnMyQZP7e4L3VkqF4DvZuociUVdDzdO0wvFE58RjCS9NY5tew8701kNuiiBIcpSVEY3MQqLrpZLL7_Sy0agBG_qP4yg5x6kYDRfTpZI0jurhQqoFLLKkuTzf03kSnx-5T6tqeA==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFYSnB7uH85REsWtR90B7Ugquj3ZxyKu-K6FZ2qLZYMkSl6sdbll08Ot3XJ3OaQ3oOSII173hysdhc32g7vT8sYzhYmowc2jb2549ZU6njYszQmATF44mnXVgRdl9AQ04qKo6X6A4q33nWXWzeSfUUKNn0zEg==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG-k2pnL9kHNAUzPI2UqwyLixTy0oLYXg7NLP_TmOESg3Fv_VozONGu6GUsWVawtC9uFRLY6cU0n6Tn2eNH7yvJ7W0r5KZOw0RwFcrCBq1Xs2OW17D8AU8V3Y4fa0gnfj9jOsCBcLzhhiXasQ==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGHQnHBaoYMgv2k4QGOW9wnfUloY-xWktrLTWkC03-gDGMpvRp4XMA5T8p12-HAlT-J3haJiaivyVaNBuGA6RaIM475zA8VC1AfTKVSu0RO61ApcbCmb0-5Ko13",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGfhKQ-WHIeb-cXgh3PSdCwflK5a_SMcUGUGJZAsGt9OMFkn7hNfCZlLVYbG07rdIm2hrgMf-2I0KUHv5UGgeWuJ0N1MsnHE6Ff3kCtExgqWcHW-zz0wkdcEzdpJjY3QoIYB7LjdokZmAW4Z-NkWeA0rkO2ag==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH1LC3wz2XX-byoIlr9D5ZFAAOFYlpoEbqMTOZeFpWgNEHKceqJFYkuP_Cp55e93B98mjNd3QbvYZpbu78-okCfPvveLRet2-9lfqOMkMkVkbd9X-doIW9X_CHUPvKG2_jij7p-5OotDw==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH6cSsRS-jRYTRRUTVq90hPAFZZT-kwKjGas2SAkiTmD5WHdUmkn0dUFTq8p1rQiPTve6k0cBJFS6II7Dm9suuazskI4aLRK_lwwL76umIiNGj4ysPd5SFPvuYswqCg"
+     ],
+     "id": "en-remote",
+     "lang": "en",
+     "snippet": "To find remote iGaming jobs, you can explore a variety of platforms, including general job boards, specialized iGaming recruitment agencies, and company-specific career pages.\n\nHere's a breakdown of where to look:\n\n**1. General Job Boards:**\nMany mainstream job search engines list remote iGaming positions. These often include roles such as iGaming Affiliate Manager, Online Casino Reviewer, AML Com"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "ZipRecruiter"
+     ],
+     "sources": [
+      "https://builtin.com",
+      "https://builtinchicago.org",
+      "https://igamingrecruitment.io",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQED1DJeEQ4Cd9llUzvO5yySW0sn_OEjHX0TkknCGKwXl3qKKxPSzhNwjA7SmDjZuyLkpMmI6kvcz7vw4tTRYIvUU4d7pp-IsA1n2SL-lJ1us2w5pSE_l2AoPnNl7O6u3ftHTtUPHLfpCNtysiXQ6Mb87xY=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFzA75nsdbPQNaVo7si4Nl5cMW_4Ej9r4cB9NNLlAwBG5BGB56dX8DJ5k0awgmpPqFmlVud0cJxLKQQC_2RZlhQTcRdURI5mnjBoIppkTpAhNNBIdmtYotWullgoevkWEJlYGoBrpvynz-BLX0nb4LrsA==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGxIDU69BTQkDUKdLCr5mxUkkhs6beZ1zEGjZNXZpuqsT8jgLVnMY8Z5Jdbmgsjle9vAc1rpqOmwtCuDmRqS3WepuSwD8p17C8q-W82DEKxaubjX9CqoaZdy4miIfG-oo4aho8QxyiqoTzENvc_i5cq",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHdgvRo5ja2G3JhCIAaeSzsIBApi_YNXDttNELccdREYpqQgDgkZM310ttacbCRhCjPb4CljMRgZ9Q2uj4JTUpwooqKko8UAcxf3rJkW3UgI8sXSwQBcHCr0uglzhqAw_a6p0IG16HZXbsjY1X-",
+      "https://ziprecruiter.com"
+     ],
+     "id": "en-noexp",
+     "lang": "en",
+     "snippet": "Breaking into the iGaming industry without prior experience is achievable, with several entry-level positions available that offer opportunities for growth and on-the-job training. These roles often serve as a foundation for understanding the industry from the ground up.\n\nCommon entry points into the iGaming industry for individuals with no experience include:\n\n*   **Customer Support:** These role"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [],
+     "sources": [
+      "https://freemalta.com",
+      "https://igameers.com",
+      "https://igamingcareer.com",
+      "https://igamingrecruitment.io",
+      "https://movingonupaway.com",
+      "https://platingaming.com",
+      "https://prezi.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE8mMW_l1rRIZ0EXkn_EU5CmFOaJJdQCZyfGTp_wdumEwtVF6PH8vycKKGfXC_Yt6TZR1VHe1_gt2C2jgxRjx_Wbxg144NOu7_6P9_6kQs1bettkj7g2gsU9lFRHMpSwO41HN0acTL0cYHhq8B4Ikw6qrvDn47bCq1uM6pONH1Q",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEUZsdCyoeziFuUACUOtAxa0sEgZ07YstVyaFHggoQ-2RdUjLMWSANeyoNP9d2ouTSnL_U4X0_0S9BWBB1hnFh-G4q4N6X1qp1f8bKjQ9LB2Qpi-0UF41gj2TRVkvhKFtCraXL9N4yznGd-yMY=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFAJYzsVXdfM5NtWbYOeCkoja0hXDhBBOCeTQ7KliOk1FLT6rmafWjM5MCRwBc5FO8d5pePGPcoO6VzQ9DlzmdpGa8VseUx8nWob7gsY5VgVpTEVLDk0B7I6NasIsDkp1lF87jzww==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFDpOdiEydIUd_4Tn4Eq6-M2PHuQhs5Js8rtLlXVp0co3u5-UkeinpMiuJcGp7ZBBXOy0Oobe0kuoepmxA6L3riI3gpY0zOJ0w7uqUqBocTO6qIZa2-LBHrD_P9e7vd2ikZ4R8-tsWe36iNPocq-ZPPpjw=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGQom7b3Pe_O5aO9Rpvwq6EGG6Al3MQEjNHYKfcalci3_DEeATCkJa0Ajrq35TSn9UayJHa_RbA2RrEqGLCJa8-9MTuyx5pLwlKC5qb33CFqOXDlBkepGOi9Z3RA6OXvfbA-pdSQ_5b1Y4WQskU3LFlwd2_Jg==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHHHCu3Y11QXQ7uBBqybNPHbZsb9GPbJlxx0gAyIHNAUXJSyOUJq9FZuDBuJyWHJQrn1EqczqaWpOf7rXiN0GtKsETVWC6iqSKdyGPYshhokGFxFKqa8csck-bt9Ca3Ej78JgHIyZQkZUL_",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHv-BoZ-BG5nvqgnr7auEc2KbLZfQjoZW36OB0xx7ODOd0DNpDheuqWcWREsAF0RXLkdnNbQJx77PhjlB8vCS8F3Qz8Ng6B0xtbB-F9kt35EAeIDD-wELa061etjKO8lCEeDQGOwuG-U2zMzF7WoYPFBWHR7y3S5CXb",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHvyzcD5IbJv173AW11SFdwV4BaO0zWGlOKyGcUrVgQiu-j2Lkt4D55k-vLV3ttLnprqmuS5G0lDNn_XIMnyA5fEVRmv6hQt0mYc96LW4E0YvmGDXNVCqHOWZfczWDfdRImg6uOMxzPjhEUnOH4fiilvggW6jyd0X1XiKIaujZHYuI="
+     ],
+     "id": "en-salary-vip",
+     "lang": "en",
+     "snippet": "The salary of a VIP manager in an online casino in Malta in 2026 can vary significantly based on experience, the specific role, and the employer. However, available data provides a clear range for these positions.\n\nFor a general VIP Manager role, salaries in 2026 are estimated to be between €35,000 and €60,000 annually. More detailed breakdowns by experience level indicate the following:\n*   **Jun"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [],
+     "sources": [
+      "https://careeraddict.com",
+      "https://igameers.com",
+      "https://igamingjobs.io",
+      "https://movingonupaway.com",
+      "https://track360.io",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE-hCZOaD9-FRXrnGqiZOrHW4RCbndHXqLNR9ZeWo_k02tQIGuVgQcq56keNNgqhxa1SZphlbjYhPTURmHT0r67jlUf6HacEdtPayRoOSGE4Gr5TNCH_I-sNouXYsMl35BdKUvSJz9ITAlMy5cu",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEBrSNLpncH3mF-9gKctc933HFn9zm9EHB2lIGZiOrWe05KMKtRnACNeJIXQ2Hf3wzmpwucUU0UTkKxl-wEWbFXP05bZKV0Jz0_8e8tavPap6SMw8QCEVcK0NXda7afTWZgNVbXLSkM-_j97cM=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFPZHua5cWe4wK4RqMAS-VwERYvQtUKvzFN7TiHULoE_fsbPh9ytYtyMRO7P5_uJvvbOsnBfKprott1JxD0f4gCd1EAi8RaKZ4vIMh-QlD0MRygFHO1UcT3EreDvhYBqDYLSOi0djo1Imiywku4LxTmEDisf64_9zy2ILqYnPLEXyGpqnoCb2MfkTiyTg8=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGHzRLDpEH7yq-InbfHOVUOLjVWes9fRL3QPLqmiznbwH9yMM4wWfcCwLi0ADOJOQWDjvn5IShARc7KiTKb3798Bv-70dRgt4NZ1To_yLuSv9chhBQJCUkhjroqD4M0tvAqj1A344mK-WQb8aTR3aoNKhJv1sKhth3gKiMfyKbvE1Q=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHPdNEEWNiB5UgrxWkHpq4_HGKMGuC4ATev9JZ4yIv7i7-_ZqyXJY8gkkV9rGEbvSqGrztECMkAUd63gJPyPb0ySYmw0pKmGf_jXwjPW0S9lpKjXJUPTzMrZPpglMwn3uIfGvRAylEvt8JGY1svjpGZEcqjtvy6"
+     ],
+     "id": "en-salary-aff",
+     "lang": "en",
+     "snippet": "The earnings of an affiliate manager in the iGaming industry vary significantly based on experience, location, and the size and type of the employing company. Compensation typically includes a base salary, performance bonuses, and sometimes direct commission on revenue or Net Gaming Revenue (NGR) managed.\n\nHere's a breakdown of typical salary ranges by career level, according to 2026 market data:\n"
+    },
+    {
+     "id": "en-market",
+     "lang": "en",
+     "error": "HTTPSConnectionPool(host='aiplatform.googleapis.com', port=443): Read timed out. (read timeout=120)",
+     "mentioned": false,
+     "cited": false,
+     "competitors": [],
+     "sources": []
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "ZipRecruiter"
+     ],
+     "sources": [
+      "https://builtin.com",
+      "https://gamingcareer.eu",
+      "https://gaminglabs.com",
+      "https://kyc-chain.com",
+      "https://kycaid.com",
+      "https://remoterocketship.com",
+      "https://smile.id",
+      "https://softgamings.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE5XRTBtFBjgIxdJN2DToLPccrNeXWBoIxn_LiMnqovl_iHw_ccITSSg1LtSO3HtTfoL-cGMx2MAn1qXAV4qm0ZNI8PzBDmw3mURvogJPHdJL_IYh1ZxODwHcMvXRNgnJymIxIColb7iTUFaftWw1ElDm7RRT8YOw==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEHZoJOVT3E5i0vFUFFkTkfBGED1-fIgU7oPBBD_Ed8ULRuD-ChcYJPGnAB9iDN0PtVm7uBD-5niDx9rAsUL8sT8lT6Xt3FLwauK7IcgefZAJ29LyXEBl8DzmjC8I48_LvnKHU4z917Utr9WWU86OqcVq5DRIdBp8yOWQ==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFOwPnxEe9IB8gd9mKa9VFd5CcBC6E2DIqbevynuTyeJxB6D2ZDHKhtD2GXESSIZEjOIcw_DCFQ_K5-0flLAlvDFSZdaGr8_M-rB8T306Kz2qdlJd8KeoauXmuj4P6WrjJ5kjEFJDA87K7KCEVzP6XSHg==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFWKRT_6qBGi9y5JQaKldFtEDznqJFHpJAD9g-_lwHz1TplGybmkHoe9sGbYtKDH2mCRCrqYbZ0nPENqf99l_dTJu2Fwd1wrTeN_VpEbBX3Oky2bSNvtQjShMsDZjevhP5qRRnqQXcGWwRvMLfycmCM77_95fAPo6lSxrgxeJ8UV2_uuvW_jcrAGnk41DspRQsfwI3eqtuOenWOdLMoF6FpqNCYK4I-Jw==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFsotPkYL15j9DTiDCY-1rRnB32Zmk1uws2P7Tp11-MGTUgRaGlGrEBQ8ccr5c34feIfVK0ED-gJLHtFRqCmNkkxteaWHNo-i1AbJdsTPtUSoL7vJhEwBdbq9qfiPJ9d_GK_z-iNAWeVmAB0p2pNQ6QPEBLZjP1VDVOSLTMqIlvQf6gIZDcpWOos9ZtalNMeDSJ",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGEi3EVX0JoIrCOKFZbTCZuGi14Kkc13cz0MhutOYNqrY92LUXd7HnlJrA5QqCLf2s6Embbk6Yx97MsolPOXRzA-a_Lxon3cN5vScDgkxo5Lg_QQcSHQOidKHu53VoFCfVqzF-4O1-dVDzsYGzXzovp1IxCXaPGGURaCFskzl1bjzz7Ok27xJcXSe4zT_7s5oVp",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGvagnNfDR-Htxt1oIEmEeAtTDAh00iJ0yS8oogz2vWoJsbX8QLIdT1tU7S-DT2-SSSyQv9TEejtTfojhA8_Y3sVCUna2NqfXmooE4q_PK2c0RIFJ45njrP3h6E60pUCQh_kt-dIQO1W2bl_oR-IPz-b8o="
+     ],
+     "id": "en-kyc",
+     "lang": "en",
+     "snippet": "A Know Your Customer (KYC) specialist in an online casino plays a crucial role in ensuring regulatory compliance, preventing financial crime, and maintaining a secure gaming environment. Their primary responsibility is to verify the identity of players and monitor their activity to mitigate risks such as fraud, money laundering, and underage gambling.\n\n**What a KYC Specialist Does:**\n\n*   **Identi"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [],
+     "sources": [
+      "https://himalayas.app",
+      "https://igamingrecruitment.io",
+      "https://meetfrank.com",
+      "https://smartrecruiters.com",
+      "https://teamtailor.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQESFDbfX589eU-Cx9s7_-dDgN7xBJ9IXlr1XGsvWPbtcSoUVDwNmevvmpoBdchD9nDh4q88Pi_SaZS_D-bmBC5eu_nv2xlANMe7ybRWRmNLWmAXVX5kCFfL5tKoAVx4pk2MCAZ0NXVhZ86dxPE1nUOf2QczKQdikaSM8r5ritQPPXLxevFX183Hd_k6jfDYViJZkep2dDpfB8z5L_97UCif9TsOhbwSz4MVNnhZRM1wjJETPx2hH7kguCRZTUNx0wIMSpxyFiJVKc0mHeqja9Ex",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEpO8a6ZgItKlZLoBiiqjX-5y4il4TL2LbD5UF1nMkXrixf3CRozACbWjqrH8fV1hfLw1RMemaqXHeUr9RXU57H4cKHtEUXw_eQzkDLshFNvIzgunEL6DTKfVs7ZAmzJbMtgNU1eNezrTu5pqm3P4YgZ9_vkjvVmTRAtubscYguEwQVubY1qtYP97bn3xvbbmhBOaEF6Q==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFjb0H_64pNM-cEoaZoxpelaodWFiR34YEcULivldUZeMT2C7IB18tBVxZ5EBJ8N2iTmSdWLtZbwZRkxLaYo0AL6JhAEV7zQFNPglQWlEYxgsB2QoA6a-3O3b5GseFcV4ngnwLvaRmmsyGzZ2shXmlM_ujspbenrPKhlbOfgVMAarlTIS6m07_d7aGErBchx50yo1uOg4186_assDjNMAl3MmIN",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG13J0wlwl2mHYqhgEleDGiUNqqK5AqqTIl34pI-19PLUnpH1BO9e2oKpSokNcB-rP6kyr03Oc0kPnXtSn73KtkZJXOGK-QqflT_vda9EHBIHiQmpY3azB-4aNw3hn3U5qA_5NQBiAFrLDKOU_P",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGh2ak4sMAlKYUBEipCuv4Pxm3aNj4n5ZbUpQRRMCjHLdhUn7xwBY8IjAArLDHXnHvyefLR7xUIpowg287TzAsUEWAW0O-QKGHnw_TbMw8EnyU82Bbi5Adu3ZvXD66X8JAQHdzPC_XZ4q5YGNlNRAdM0FZ0SwH2Rbl-KSKuH7IIyVQ=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHtMVXgwINAZFTcYYW2hxKEIxGGpasuN0ayASBoGH5yC9Omuw-pyc92faFenACRJEVednfkQaglQhhTFU3IOcVnB5l8ZzzBRBXsGlJ_UbcxPsGRgIU0Zt2YH4uxpaFO4oATFtZgA7wHFF7FUd9VPyJi_gsMB4Xwbz4LpQ==",
+      "https://workable.com"
+     ],
+     "id": "en-russian",
+     "lang": "en",
+     "snippet": "While there isn't one single, dedicated iGaming job board exclusively for Russian-speaking candidates, several iGaming companies and general job platforms actively recruit for roles requiring Russian language proficiency. These opportunities often include positions like Game Presenter, Affiliate Manager, Customer Support Agent, and Sales Manager.\n\nCompanies such as Evolution and Enlabs frequently "
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "BettingJobs",
+      "Indeed",
+      "Pentasia",
+      "iGB Jobs"
+     ],
+     "sources": [
+      "https://bettingjobs.com",
+      "https://igameers.com",
+      "https://igamingbusiness.com",
+      "https://igamingrecruitment.io",
+      "https://igbaffiliate.com",
+      "https://indeed.com",
+      "https://onrec.com",
+      "https://pentasia.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF6hB54o-d1EUrqm2yiHJgOo9JSXmNfcFHTfqjSM_kJoawn4HO_zxNCR7FlVDx9O047wf4nTbNH1jxmVp1SM8KnGZjnTyr79HNRLIsA4Z6b2n34YfXyVdl0ggk9uBwker0=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFo3LEE7bWIVQHBxxR8qZyFHNFBsFIdXqa_tztTNp7BIpe6ndJhtMzBOtwVs6KfYwRVXRi3sKg8JJZ4NvPCZ0oPMvHP_G0ZI86h9Gkwff1wQe5-M7X6IXQnD0xvNw==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGHyo9cS_94Vf-ye6L4qjcyH-wraqXVoWDztmfoQW2wdkwxSrTNbcn1kWZEkyPM_bZt84k99w_OdzdfKmTArerytSgwFxuOqypLq8B0i3y__sF-bEOATmSkQZz1tb_cTIfZ5fveZL3U8ximuhgfUVjYVUGVJhuNwnWm-nwuU_WjVw==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH8QRd6dDZ7DnTvP7NoDWR9sDx-MQAtofOBVLxTwfR8dpna0Yxa33BNiZegqvqMIXXnHrhgsmlnWAJA8JaGuVx0PwLjaw14sb9iVAQi4YJhalUd19iCIFROeQRHxMOGa6EMDnOy",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHAvNMazvIyyaFZqxerzC_EyAhxp6or_OfoHhml0ua0v6Wo551rkC07bTfo5RaTa8a1F7-SzjAGvtqT5yo6xRSLXdCIGLww5yuFq1MyVCHOY82XsxLtkY9whKvbRft7wdtigFSSoSYpD-Wx02QyuNoAUGRzCKzQJVE=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHTA5Gx3lHe3vqeVv8auvlgoaq7VPi9r5oR-RnGZeXZjBy69Btzj7EG4wQMpyFTNUA8DBMYx1QaNBI9tkqc9loU49Mq947t1zl03aKx3CH5y2jhC-mGaCiu7Tg_nJ6VYodeFSH4k2_SJTftyg8ffPz_dFSCreZwlr-SqOI=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHb2GsQw2Y5sE1CyXy07RAbFUpLVFTs4vBEHEtHD9KX5x9P5teo91bpNtDor04SdAC8IUc5hQcv69-d3CmO_--F4Fa4Pe5ztpvp4N-TNYpjLGB6hqZZZt1THt1Xx4M5rfT4kh-ZKBA3EIWXbMzjiSQqf3Mgdp9fLsIpnVo="
+     ],
+     "id": "en-api",
+     "lang": "en",
+     "snippet": "Based on the current search results, there does not appear to be a readily available \"open API\" or a public \"dataset\" specifically for iGaming job postings.\n\nWhile the iGaming industry heavily utilizes APIs for platform integrations, game mechanics, and data management, and there's a high demand for roles like Product Managers specializing in API ecosystems and Data Analysts, this refers to APIs a"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "Glassdoor",
+      "Indeed",
+      "LinkedIn"
+     ],
+     "sources": [
+      "https://ensun.io",
+      "https://goodfirms.co",
+      "https://startupblink.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGmZepRf7h3iHPIlID6LpyyYyfiWVbmzcGC5O-Tq4qb-Jz1pk7JdoGOXYLWVeYbcSTIANtLehCKZsQzAKNhB7l2vEIlVFJ1LGOOXsz-_-nsBXJpVxS6g05yBuDpR7_nPF7e7y02m_tBvQR5W33yYa3f7KTTfSGlRJl9zYWONbuEzGMnOg==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH4cWJtSlWj8ZD0qsA85H-Ho3uBRVAelO27w44OkEWbw4ITzHovo64KFsBgK9a__NR_S4-sRPhbkZMfVGZN0Et2GOB2OjEeYE8zo6ix1FGyR-JamEec7uSAIWlf0RmV2UaU1ywVALKYgdi6rV5z4dKhvQkEFw==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHsI3qf1skQDXA7YobKZpVPQBO-g5gK0pp9JP-1iv2taoWRsB7Nj4SNEdZxQUxAw_-RkOpQfQJeo3L1PRb334QUb9HVES3mYAu-DJvnAxnkK3M-G3kn5Gy1ZYe08_pko0uG"
+     ],
+     "id": "en-warsaw",
+     "lang": "en",
+     "snippet": "To find iGaming vacancies in Warsaw, you should focus on companies explicitly involved in online gambling, sports betting, and iGaming software development, as well as general job boards.\n\nHere's a breakdown of where to look:\n\n**1. Identified iGaming-Related Companies in Warsaw:**\n\n*   **Totalizator Sportowy:** This is a state-owned lottery company in Poland that also operates online.\n    *   Sear"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "BettingJobs",
+      "GamblingCareers",
+      "Pentasia"
+     ],
+     "sources": [
+      "https://affilka.com",
+      "https://bettingjobs.com",
+      "https://evotym.com",
+      "https://gamblingcareers.com",
+      "https://hirify.me",
+      "https://igameers.com",
+      "https://igamingjobs.co",
+      "https://igamingnews.com",
+      "https://igamingrecruitment.io",
+      "https://magicmondayz.com",
+      "https://partnerkin.com",
+      "https://pentasia.com",
+      "https://talentgrator.com",
+      "https://telemetr.me",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE8hKOZoU-dBUH4Q-WevQf3Tb0AmR1UzupexBxKwo3VTGn2IFxQbzmhqR5TdRUR_5r_pJ9ISV_fR-B9OuPTPvaqU1N7m4hDOF1BT0R_a6N-PypjAjLq9c_U5YpJw6eo0CL1WgA2UQw="
+     ],
+     "id": "ru-sites",
+     "lang": "ru",
+     "snippet": "Для поиска вакансий в сфере iGaming существует множество специализированных ресурсов и каналов. Вот основные из них:\n\n**1. Специализированные сайты по поиску работы в iGaming:**\n\n*   **GamblingCareers.com** является ведущей платформой для поиска работы в индустрии iGaming, соединяющей соискателей с ведущими работодателями в этом секторе.\n*   **iGamingJobs** — это ведущая доска объявлений для профе"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "BettingJobs"
+     ],
+     "sources": [
+      "https://bettingjobs.com",
+      "https://igamingcareer.com",
+      "https://jooble.org",
+      "https://proglib.io",
+      "https://talent-move.ru",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE9rNEyKSi7UbJ2K98FelkSvouOE1H7-qJSK6j--guCX206ImpDCbmTXDIybzNh4tQKE_-CwFcfho2ugH8qk86mzipjX5P9K8d-V2SqJuGUxcM-mCgdlelfoBsQk4svPABt4A==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQERiUeENwc6eU_9Itmg3HTDnDVeamqF38bmShMtDM9ZT4-OBcrB5CEGi50nHcfpcfLEjIYBhtiogtmUdCVe133pGBXmNspd1d4M98shU0Hg3NN_8OQ9Zg==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQET6RQBu6kko3lDUedI0qI0rBC1eNRRh-m3T4SHIyhxrMxzy1F-CHfr5Qnh01zdH9GSd0cJA-DF4w21tz3RHW1HLfO6es2zPrAOIvXEUMPx33v39ebaOF6h7TbwG3wzIwoWlxq8AVZ-pSE6CnjQTMXNofguEHdWs0kuN5OmiVadbBXLrq38Pdk=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFLqXBide-IIsCYG5f2jDXEDxZjghwIqb0kWBSR3Szc61PpN8H92B2xDyKrGL468c78ocsyrvYZeQ8EedyiyUGb1SH6ioAvk0fnX4WHAnMW78-wVf6o9535ESOvt4bruOER4Z8eXa6fSPN9ew==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG9sfa3ZFNIkUMnkrJvGvY_EXescOpKF4dvpmIUFsmlqoPDReP_Vz8ndrmbUeydQMzuzHdaMTpuIQ6X33EpG9t34db_b7U9yrJxxH3C8aowF6WrH55vnQzihPmzMGsu1nTCpGr2Yzo4cDUV",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGdGvvea6N2AnzeMK5lN4XHlbKq_OAZRDDSHr4LjBXUQHry7vVB4YLIsmf5ocVASAUKMH8ldElyUx_LFZJrk0YMH-lAiSF95OrcQB3t6MkeW7Nh8K2Mc3z9en_Vgkhz5SMIO42p3JW5snRtBQ6LuJ0Sey8hqAVupI_7QwOdpnfRGojSQw==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHRI9JiJx1ESy5hU3CILFkDtW6-wh_J4lw35FpfaGXrxnCIoaa_iL6VlsxVfh1dB9clK8zkOzavdUeroVdv_ojmlIOMGx2ha_vnliSCEq3lF7Fg_K3oX-Qf234GGn-0NYfuXtmw7tfsc3kQCw3TMMFM0ZT6S90pVxKxyUX2fA==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHmHdiVpkt56Yo92oVjxksEcfjyBWAJ5ZUeuxYTr3UTZ16CyvNngpRZcp8EYM3d_T4x0_qZ9iIaWTwNJBHTDuIS98qazZPZHEH6I6mwVl9zVRVjxMU=",
+      "https://wellfound.com"
+     ],
+     "id": "ru-boards",
+     "lang": "ru",
+     "snippet": "В 2026 году для поиска работы в сфере гемблинга и беттинга рекомендуется обратить внимание на следующие специализированные и общие платформы:\n\n**Специализированные сайты и рекрутинговые агентства:**\n\n*   **BettingJobs** — это эксперты по подбору персонала в iGaming с более чем 22-летним опытом работы по всему миру.\n*   **iGaming Career** позиционируется как ведущая платформа для карьер в iGaming, "
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "BettingJobs",
+      "LinkedIn",
+      "Pentasia",
+      "TalentBet"
+     ],
+     "sources": [
+      "https://bebee.com",
+      "https://boston-link.com",
+      "https://careerjet.com.mt",
+      "https://ceektalent.com",
+      "https://csbgroup.com",
+      "https://igameers.com",
+      "https://igamingjobs.io",
+      "https://igamingrecruitment.io",
+      "https://italentplus.com",
+      "https://jobhound.mt",
+      "https://maltapathway.com",
+      "https://migrationoverseas.com",
+      "https://pentasia.com",
+      "https://rootsschools.com",
+      "https://talentbet.com"
+     ],
+     "id": "ru-malta",
+     "lang": "ru",
+     "snippet": "Мальта является ведущим мировым центром iGaming-индустрии, что делает ее привлекательным направлением для поиска работы в этой сфере с возможностью релокации. Сотни лицензированных операторов, поставщиков и сервисных компаний базируются на острове, и значительная часть их сотрудников переехала туда ради работы.\n\n**Как найти работу:**\n\n1.  **Специализированные рекрутинговые агентства:** Наиболее эф"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [],
+     "sources": [
+      "https://alpha.jobs",
+      "https://emeraldzebra.cy",
+      "https://facebook.com",
+      "https://gamingcareer.eu",
+      "https://himalayas.app",
+      "https://hrbar.ru",
+      "https://igamingrecruitment.io",
+      "https://jobcyprus.online",
+      "https://reddit.com",
+      "https://smstaffmatters.com",
+      "https://talent-move.ru",
+      "https://talentxd.com",
+      "https://vankaizen.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE2n2blyIM__3HOf-k1FQh73BNBAewQksWxWrsuH8cMWU_RDMvfQyfRbLpNFp3KMzuqO7aUjeQ8kYojzKeGwzduHmEUodKcZgidjt-TX17k9F08",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE32NnBJDvq1TWSPTQsByFZ-ZaoRZKaqGYy12RJSk4FZBiYfqUSMJKqcu2eMhVb3g8bygnbbo0B4vy0kAV1vXn7bUa0UTu6-51gXo8N2tW5R-FlVqwwRmN_V-dxE6sgasWBrL1ijZi3F8aCTeuBNnvDtAvSkXo="
+     ],
+     "id": "ru-cyprus",
+     "lang": "ru",
+     "snippet": "Для поиска вакансий в сфере iGaming на Кипре рекомендуется использовать следующие ресурсы:\n\n**Специализированные рекрутинговые агентства:**\n\n*   **Emerald Zebra:** Это специализированное агентство по подбору персонала и исполнительному поиску, базирующееся в Лимассоле, Кипр. Они занимаются поиском талантов в сферах FinTech, Tech, финансовых услуг и iGaming.\n*   **StaffMatters Recruitment Agency:**"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "Pentasia",
+      "hh.ru"
+     ],
+     "sources": [
+      "https://hh.ru",
+      "https://himalayas.app",
+      "https://hirify.me",
+      "https://jooble.org",
+      "https://pentasia.com",
+      "https://rabota.by",
+      "https://remote-job.ru",
+      "https://talent-move.ru",
+      "https://talentgrator.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE8ueq86XL0QbAk_lXiFqkhGJ1coLQVAkhVLRrWBnXUVawZY7h0STYgmO_msThlraYu3Qhky9joT5qmuw3etrypi6gBNKMqQiJiMNlUJV_y1MYBRk4NOBVqoj9TkJQuoCKBTfx6kwko5LoYTeml1eGkZCAN7n6x5IlBqhzI4FW_WilsV6_DQg5W4xjPRK9IQEY_AwjESND1sAWfafvDmgZZqms=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEU4sZvKqmOh4u2mmQY11jGwOQpVFpuotvWDwoYkP3nDedTMG8GCDqz7gJpUZ8AlPsoffIZZmsajbZB-D0sQ0k7oSNK6DBnDM6EXL4i7ZNFQ4bEpYkFTag10e4OR13aPEvQthzk869mVQ==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFBMBEq1H7jY8yXuEhG07JTWg_lqnUAifVad6mbkdprpIoyC22sTnkHwo10GeoNAlBaYhklznnbmiMxk_fBRfynEyjUlpYTh3exH7E7pCPs9nZcoIrSm67FzvQUB5u97bwhP1vzSESfoXi75cT92nn0FLRq1h451EJN4xGdFGn4ke1JuKL2Bjr5LiqCobffSvYkDki1yLTR2uAiZ50d2R4w1JeU6oVWNFGmU3Kk8YIIDkPsybGTI2odurNwxgXIifSgMh1ozTdE19rd5KIYQQLOV5b390JC78sn",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFoya3Z0HqOl7iOSn9R5Dh81TDK2iuwqfsxiVgbIdLVA3Rf4U0eGsYooy4Fm4Usn1cI18D8WhxaIoaaLX_iFX8wwWKe9GxUGsc_6EQOJyav5efDfvT6BLWLMP6KpbsdRSyLRGtyXpxeka_iEy9Zr4G4HYs=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG9imPVbSqoFNVLUx3jhcwUGFVCFbYpGaQDll1EuArA_MGz2rWR1kZVEBDlXGR46NdiTcupP3Dhfsi0ytiwgBRG2tAG5oERlw4Y1pgptFqgNkhdyOCM37suopBhE3qSFs2R7eUMS9Uyi5sHlc61YSawe3zRFvMNyFQD3ekxKkpFWoasJFfByhjHxJK8_8-QkhfcvixPWxdwGKUngswQvmWrL_1GAadwG3at74ugGC4HQauXKrbiJoQG8DL7zaNsZJrmHZv4qnEkmPxj2qFLPwg-kSUHnMvMwO0PQQvsyTFHmSACYB5VVsCH_TcRv-a4",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGH2cQ2SA4U50KJ6EMfMf_7lHkewBEfz3l-6XcNadbeH3rXedKmoVjjeDYDJT0wt_H4OoQUWaw4yLhyr_WF9fjcGUmXpVCm63WUrJ4X7lCTGhFn7L0J71iYwQ=="
+     ],
+     "id": "ru-remote",
+     "lang": "ru",
+     "snippet": "Русскоязычные специалисты, ищущие удаленную работу в сфере iGaming, могут найти вакансии на различных специализированных платформах, рекрутинговых агентствах и в Telegram-каналах. Индустрия iGaming активно развивается и предлагает множество удаленных позиций.\n\n**Специализированные сайты и агрегаторы вакансий:**\n\n*   **Remote-job.ru** является хорошим источником удаленных вакансий в iGaming, включа"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [],
+     "sources": [
+      "https://leadpanda.media",
+      "https://talent-move.ru",
+      "https://talentgrator.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE1ZdnYW2nzjFLNO9ui1zBDpEf_0MQpXdAgFsSuv9rymUdtjbXLDW7SckY_oVbsiOwpiKXKx8LrELRDDWbMM-oLDaCThiAuQ-Y827n-WbbpAFIRGWrW6kDw3o9C_LkFC-y_2a73NjKHEUWKx1XK3opoPzKrhzLzA5UMZxTWako4oDgK_NX_IBWxBCXgtHIMy-760WIMKSzi7t2L_4pk36_ZJqSZWCas1grqYb8o3Q==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEC9yJ-lhDUWcUdIFKOglDUe_KQ0xdiLL0s4KPasj-cYpXlzV4uobcNnk2YB8HDDiqVMFLDkyz-e-aWtkaDmpcAaTVZAMVWO9RQPSC2v_0eSc8w_Jt2LupdK2-rl2-pVc9FnVoW2Q==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFqUWWqchGZukZl8oETWbf0-g-R5a3xCKZw_r9GlOQQkutI0pDkn65YU21TksuwVaOoOxYaUSBm943aq4gS6xsqqSULZZGUlgHRR7Zi7g4_I7pn1ApvVcSEAtLFrQGSJE7rKQ4f1f8=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGNEAYNrshJxZ6Iz9QWTpcsejV881kwjwRIHdKHnDl9RvjhvkGnui2bAoOgMYt1xHdPdQyK4O_BIUH-iqn4lq3VUzN01wQ1cJcrPs1iqbxtR0S64cpXxj2P_BXKUnrxhPUSD8fzKPJHRWFpv45YpmTAFv_AcbsDRC8EK7_71tX0FlUDTvzTohzPVdXp6g==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH0ikPXk91HUqqbDBFLIG105xHiD2D01_pUNYzdotbI9rA6YKe6FpZKyN4ol2g6ZOi8J-t6S5GAmAuIDmXnthFJwPvvsf33CKOg2syLk0EfI8zwTFBZ6TuhcO3f86tBgaBkeA1HEuE=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHtfdBAOds-zzUn_96zwo9BfkYPoT3nQMQNI0U6ySlUC-Ixc82DdXsi2D09z_JyOIH6cCuzcIuap4rO6ySz-aD7v-Elidh5ALC9vbtJ0t3ywjYHCcZgcSilV6qMuKk9Ug96ZtE=",
+      "https://youtube.com"
+     ],
+     "id": "ru-noexp",
+     "lang": "ru",
+     "snippet": "Попасть в iGaming-индустрию без опыта возможно, особенно если вы готовы учиться и демонстрировать свои навыки. Хотя многие компании предпочитают кандидатов с релевантным опытом, индустрия не перенасыщена такими специалистами, и есть возможности для новичков.\n\nВот несколько ключевых шагов и советов, которые помогут вам начать карьеру в iGaming без опыта:\n\n*   **Оцените свои навыки и достижения.** П"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "Pentasia",
+      "ZipRecruiter"
+     ],
+     "sources": [
+      "https://partnerkin.com",
+      "https://pentasia.com",
+      "https://salary.com",
+      "https://traffnews.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE4zolRRWx98smhNJFZ5JYEz55EJ2rbHfch4tWKEwFWDMN1jeDhrEBK0s-kEKEu5d_Q2CmjyX5d0QyYbQyZ_XF7hNL7GLHBe3xnBf-LcttOB42so4yB5kLt9ePNeSajnBggdjbd4hWIEL_22g40yCCV5NALJrvzE-_qIeyvIDHp77Y0RVGiMQrpBxRLUbzSkFIBf-n3zKezNGA=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF3o8tUnWaP5_WpCcYp65-3usz6TfVcc3NAvvmBE3y4pFP0DL-hKYBj-hY5aGwTykyXJdiBh7tFOMFLtiJ07FzPPDdLdz1lr1-4aqBIIkElwKGbnUvD8HbuEPol2_etkw-dLhe2i-vZNqClTTUVtJGRntEWSv8PpfFgdgAe5xOcxy2bdAhVpign",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFF61ShYUM7o7zL0quOMQKnfomRwm3C043_JqN5k0QoPvrV_Q9gO5RiSRLUktA8wWlYNrwrvEyGRcuC3jMKcnL11MSnAu3vQ8GPXRfW4pyKDvPXyfS_2_9KmVnYcSzZSLyV1xFGKL3aB9b-4uKmD6-nMp-_xLlTV6zHdVl6sRlgYspzIYvlQ_1xFQeB9Y4f4CTq",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFSnqhj4SS3rYXF07LMdB5DOS3fZUrtjSyIQbQjE9Rj6Oxo_3uMzCWN3SIGMs8XXnGWBwtRqHC9iOO4-2wXBQ9QKmKSKQ17hPJNC5pi7uQaBlKmVtfrxNS1Mj-Mwi9-w_6FXdvxxKSX5BkhpRqTAxo=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF_h193-N0yiyK5PnAihTTF143gufZsY_4ZvckKtja2KXjVy9ucexuWZVwzBh8Hu_M6hwYRIRIDal69ZQ2ptLXC0I4NMGLqfhr0zlAHGuSvx4YM4QlxsBlohHcWWnEcdhrg1Sz76sV_OCTn0slaZSyuLvBP7XAyVqmZD_Rf5LI4hzSF",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFuES7OTTXGyT6AAOBvYCiJ-2ffyA0kIqAKMj6HO4DnTCeqwK7teiU0NBak46XinWaG1oTqrq5NwDt9qKpk7-1Knhb06P8AWZio6_9EL16zGCStNIxRItjKWA1wEwoUgufwEsFvPtkCuE-w0b5a42J3hwzhxE19x_h_gHI=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG8ss7Uoe3t7tLy2vYIP0lwh-bUJ9_tr4tEGe6VZZtCgbDUm9bz6I9fcoBV-i8fPPcLXkenhJlIIqxsTDoUSu5wVibhXkM5rC4xv2ChcQ5_4zvs41SM0bK1-UBDttRh-in_vcCmcLt1gmLcodux8LqoZPAPmUiU",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHTDRZBNRdIkVcDCxusF1Vb44SfKvduiBeB_xSCJAo6rtzkWHwknkuRwMJrhcr1TN1KKcC4avIRBrfIZIU6XvZO-lPHCIFSRVzEJEJXbjYOIcMmur6Uc57Y6qBlgoFpSpYblrFGtXv-Aedgj-d3YVrKG3CQGN3p",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHc0RSbLi6ApWAel-VRiq3VN3ds8HBlkXPXThm_QnagiHfi4Yu3voBHsT-d9OrjBy9dAUyl4myDNF_OdNlVsuZix5Tz2gCORy2bOd9fCk8n9XXWo_wmmuHjIiwHSlCf7sENdTZkr8vUt2VJ3p2w9KlP_ZMyAhJ_DS8=",
+      "https://ziprecruiter.com"
+     ],
+     "id": "ru-salary-vip",
+     "lang": "ru",
+     "snippet": "Согласно данным за 2026 год, зарплата VIP-менеджера в онлайн-казино может значительно варьироваться в зависимости от опыта, местоположения и работодателя.\n\nВ США средняя годовая зарплата VIP-менеджера онлайн-казино по состоянию на август 2026 года составляет примерно 76 756 долларов США. Большинство специалистов на этой должности зарабатывают от 35 000 до 91 500 долларов США в год. В Калифорнии ср"
+    },
+    {
+     "mentioned": true,
+     "cited": true,
+     "competitors": [],
+     "sources": [
+      "https://app2top.ru",
+      "https://igamingcareer.com",
+      "https://layboard.com",
+      "https://movingonupaway.com",
+      "https://reddit.com",
+      "https://spinhire.io",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF7fH_HUnxjoN0F2Z19faBZczepnVw843tgTjwBYJ2xbLuUit3meVdstVRnxw97IGQEcf1L_Enej1kHO92t2n_juHJhL4Ll8Huha_MaiYGPVuTSy_EH4Vf1D_-lLNUdF6e8HrmLnomNUw4GDSogfVhqaf_pZJlu5uKZDzwJahY2lnI=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFc8RvwmiJwXJJighEGsiYeE5N1PXkGgXGD348sOZUL6MOzJBOuFifojK48oeDPe6TONL79fK0-E0aJhR2pfnADMyxIaTtox86gfwC_EWrN5u01EloWEzH6JR6vkgccBFTksUwDeKGq",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFcsnLhp-CGsvZ19HGpKC-XqJvwm_eUNCs4HSDc40nYoe2yp8I9hlAXy1N2BH8fCKbBfkkhba07nIjAhs-RfVqUdsLKic5WwMmlMGJ8Igom3nufIWegKg8XaLa4yJR-lr4QbMtc3GQLIG0s87jPpyRD1BCTR1agYOLGY5Tr8JS0XUtcxLPgUxhDexboxLIGbwCujYvtb_0cILT4scIOSYpFIiTtGfdyAbI2F3pdvuxhCVhGPnGNMOE26lCzyauKhJgILapWyOlD21QCnRRO",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGkEuUywUpglq7DQHIRkCDjNDhiu0n1n_5ABv4AnU4EnSLQarTsKEvht9KSrBESzmJHIukO4JjoUfriocyAZrddcGtzaFXtygwjnrsNtUTj-TkFM_QzF1VN8Ayw-8KltAvJ1ki0SDImep_Df6_4CPRbrU3NJgDM3eyMS26GVPMkGfj3x487YdvaTtmz8xxccBBmsBVYh7z17D7qY_kQ",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH5m2mxa5t0rb3pyffSuVk4W20JZ-V32FfNse71Y-CsEllSswUolcqpX2FUQPk-rszFUs-VgyBAtsNFinl4xgN8hfiVTrvjAMxSWghwCJ8_aUbhCk2gxwjFWzJKlm9UEhMzgy5VuoYtXNqQ",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHVyjE6yWCEp8dBwOP5p7O9g9xhhN_3qBTyJsG1_j9-XaUgqkEIxX85NVf9Cd5WrctPXF7SqnK-CfCKvlSqudFOswmKIiDrsqq0cqPDgVBef0BHx2r52UOUQLQeb6zpb6wLpQhSd8ybkriv3TMMr18SIx8vUFY-wiXZgD0PtK5hgOl_Owgt_NlM_-wrRMtDInHkXyxu1w7IwKvZTs9QDw==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH_llzjx7tQmZxqolFruGTm_Sr4b4fja_kkNpEZjb20A9WFr8FD5Lt3NO3VW2Otoga1QBOcw3_Ufou-0U5KtYkOEKaa0l0zNvrvQfGBbqCDTUzCCUpxYOWftnej5gBLoibJhgeKXJMaQPO0UNc="
+     ],
+     "id": "ru-salary-support",
+     "lang": "ru",
+     "snippet": "Зарплата агента поддержки в сфере iGaming на Кипре и Мальте варьируется в зависимости от опыта, уровня владения языками и конкретной компании.\n\n**Мальта:**\n\nНа Мальте зарплаты агентов поддержки в iGaming могут значительно отличаться.\n\n*   **Диапазон зарплат:** В целом, зарплаты в сфере обслуживания клиентов на Мальте составляют от 22 000 до 75 000 евро в год. Для агентов поддержки начального уровн"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "Indeed",
+      "igaming-job.ru"
+     ],
+     "sources": [
+      "https://finance.ua",
+      "https://igaming-job.ru",
+      "https://indeed.com",
+      "https://nda.world",
+      "https://partnerkin.com",
+      "https://sky.pro",
+      "https://talent-move.ru",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEfgYe5DWptNtqjHGxzJm22CiHCyk0Mrot-2J7eCTY7DzBST9O3IFhQF733nysbdtajoPbuF65SnK67CWWdm_Cgo2Gn37e_c8_md6JuUPeXYCW5-JpCEKa01ph_gaGkTNXouxFOL2kO3UuZ1PJW_bRx1oVU-BsnH0yzFn7klUQjkVpZd-BI4BkwIAI0OYKdkrJtLx2kXXaI",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFFyi3bY5eg9HfJczUTfaDNy22zOzZLo49jNRk3r1o-saCY6_aHDnIrkB2q5lpclQrsAEgz8vjdaJsrWqPOlZNGev8ej-vWrN6je7ZjNzMr7_cfBepAWN-bhqA-PQKdUyOgr4ITc3hcvaImK9W13bfxbj6hLuiBd4oOdTc=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFYSaQgO3SiSmpNOVbOavpBgE9XaePVvRjDdG-R9wRU5G9vcJPe6sYGBAE8-gz_6exFPB7HTeikviMcOFGgQyqBxtu-X68HdnnSVxEsujxoJiAsuEIio1hp7tpEOkieDjtiHYy2x-Ooh8xn9A-Y82nFrKXp-FvaShaISMk3CTqi4wUjoAxNyQ0dBClugvS4Vc1GjzmLdH_HtwJGUlJStg==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFo4zIjDrCZa0GTBWAFVNzMSv5Mb10p5ydT2WImorvj-DC0zlZHU7LqPTl1IozxLxg4XFob6feBXD4mucVWrbTCupN_wXMupQfxTXy55xMu1qZKuWgX-gLHddiydbmSgyTMZOlNFQ==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGD7L-7rNWI3uGErtuMtr7hXx_E_DoTm4q0-ECmT7pZJRIwthD-l4WJf_uhgW8sc3cgcmSd9KCOvExZAUAGt3fIdXecrb-AJIGejh8vdW0J7Pz3V5AxY1wNzF2YlKGGTCX-hfk=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGJkvfA6aOzkenF8HhT_9LQ2I5wT9cUO9aF9j_lLJK4rM-l0pa18lYGVAZW6y62KO8DejvzQ5QXXzjTCI9yZdACVuqVH0tMobQfNg4IB5r08SuKivlZQ-R43FQqtldUoqDVJZKXJJghxQhx9rMi2MjJrGn8zdErySoyO9FoGYvW8IbIlP4iBg==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGOambMxh22nGQZ8E9vAVE87ZfJRruYrHfBUG-t2xFGaUJuuTAGFRCgOmNgp9dynN-2Guyget3HAQ3LfztMXXr6X_Ut5bBN00X4AitMY6T2WSR1"
+     ],
+     "id": "ru-market",
+     "lang": "ru",
+     "snippet": "В индустрии iGaming наблюдается устойчивый рост, и, хотя точное количество открытых вакансий постоянно меняется, можно отметить высокий спрос на специалистов. Например, на платформе Indeed упоминается около 1000 вакансий, связанных с iGaming. Другие источники также указывают на активное развитие рынка труда в этой сфере, прогнозируя рост числа вакансий, особенно требующих навыков работы с искусств"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "ZipRecruiter"
+     ],
+     "sources": [
+      "https://alessa.com",
+      "https://blackjackinfo.com",
+      "https://gamblingvo.ru",
+      "https://jackcode.io",
+      "https://jurisprudential.eu",
+      "https://kycaid.com",
+      "https://sb-sb.com",
+      "https://slotegrator.pro",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF1U_lEXkFywryuY0raU1PqrI_zERdRhqJZx28KybtxEB4-aDlnPVrM7nvOy3KgLRQxx8g6Pbbd160atEj9LFaGBJVNSkGHveh759iHJVbKEqIqY8UwWZfdsubN0DYFVZKPcp56K9k=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFCzVGTnjVqevcZqFUfMnF9n-Ut_usNuY9NVkEWc1JLFXDQX6v6sAnRycnzsXcdXE2Cp0QOK6EFK5LF7WPcIk0GlmWo8RtNm4RshugPddCuSyFY8slmPMPaGfmrkdyG-hBJeLLI5xGe1C56W9YI9Fh4rOR8124nrfWDSg==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGBn3KMVqSrfZ1ANZ1430baP3vOQ3PU7wj6c64at3a8QXnSZKqvtRBqoo_iFKt4_h0IcminokT2mZR1irhXCBpcfzjIxV-CEc_3XAhhhysNYTeUvFwulLoUcb_mku-a6KVtlsUhqKWSw8oT",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGcw_PBzSNIKppakQIBwgNuPyGUXCwPCflm_TTl5fXZBzgrZPDOfayySoRfHHB-m7NUqfLejon8ECvosCUoLL2n3RjgLZIhAvn_E3z1d_U5NB6b8vDVQfNGJhVgwtcfhSfwx5f02dJTdFCN0PgO960i",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGh--2UX8x7jj82HRTt2ebh-k4zAIgm7GpRv6p8SYuSl3Z6PoBc51mR5ptvKDJcD1yugH3qc7jDR9vwVNIQDZB9MGeblSHFYUXKCI7d7pOnjhpo6Kwf",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGtB0zKI82S7Dlnr6mQwK0dpYRtZtSAwWc4z0ABhPU9PormtHVVmfz1C05yuGYYSxz-VzfJSTr5j7gnLPsM-T6J9FvkfWM3Ydli7qq0irAvbxoKb-lU8-JRcj-1JmADvYPMijUo93WfCtRwch_5YkNFelSaoL5nJuHBAddrV5xrvF1yEOfqj8StqeneoxT55HEA",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH-7JFJySs45NfDeSdgNJTZEqF72_3z6F3ywLSriOj70yTCnVJTgLljG8_XXuI3DaQfr1OzjKCCahlXikpocWn32Too8_flZgPayR4PQ8hdmevMTCURIBA0S8lwuwWApanbiUrzQxTTMtt6WvSgJ1qKB4hNUWMHs2g="
+     ],
+     "id": "ru-kyc",
+     "lang": "ru",
+     "snippet": "KYC-специалист в казино (от англ. Know Your Customer — «Знай своего клиента») — это сотрудник, ответственный за выполнение процедур по идентификации и верификации личности игроков. Эта роль является ключевой для обеспечения безопасности и соблюдения законодательства в игорной индустрии, особенно в онлайн-казино.\n\n**Основные задачи и обязанности KYC-специалиста:**\n\n*   **Предотвращение мошенничеств"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [],
+     "sources": [
+      "https://dou.ua",
+      "https://evotym.com",
+      "https://flagma.pl",
+      "https://himalayas.app",
+      "https://hirify.me",
+      "https://hrme.agency",
+      "https://jooble.org",
+      "https://meetfrank.com",
+      "https://talentgrator.com",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE8WmRG88Vrxim1ug0B6tkqZaPzEOnqfnYdoSV8_VSUwQ3JaI-I3K3H_x3oWK0KN6RvCEFFGXfg6PXI0SgAtEb97iCMxX-2jk91cTdw33A4aC_sbvRbLg==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEPXBapT4HtOXVmFFo1-jpExeWwBiB5kTDU8p7hxwEgX189pm5fl4_r2-q3YOjZZtffDQe0uOdy_q3IVLwQzbt6Bl6JL8mXAzIKRwR_gPiI7JONC_B9lFMq7KmtMKgEwThQ43IBgMKOQUjxlBvLNdXm5BnrnA5dnwUON4VVe0yRGOOR6Zp0SJ2fQmpmdLhfkHezTA-OWVlDWgeOSZM7tDs1qlNJ0fbtgSXfSuj1uPDZuoroeQJkoqJsADRc3de09tRicoiosl-lnygCPrcFG835JXCVVwF6OOQn",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEkcc6mAdNzqn99FHlNHvikB-Nk2ORUSiSCqa3OcnKTjKffmud2_PszTxrO38dUND3ciqMufmkHli1EQOvPz_-3IDtcv57lQ8m5hxeuM0SzGejtqJGmk5l_eV9m49C6zDNFXk3tvbyJdKM1alAvXwclPjnK1Z1BIUFXm8Fu-Gv7eB_8GU1eQyllFAfp6SMki40y-BMm9arphUf5JH823USCPavKd8AGeaackY_ibf6rZTo66sL8ADbMSukFquG3KC6SHro9P0G3aQ3PQ0ZvAtpEznGcamIzfw27xlZtceL5pi3xPsBKmJ__eayhrOkU",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEv9r9_E6x4pQ6VJliBO_Cawo2UKH2G-OeEXRaZBWBCFaI-ZeqFZbVFZWfCP3FM1XWyv9EwhV8fxMqRPnqYf41Z_hEuCTD9eab7b5V_8QOABiH1mzMjvzjhlhtBCERokQX_2eUIVmfzZjM4fpY9uw==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEvTcNpzHa7WuDzuw_-G9f1pyCAMFW8-0SCvqgIX4VGUxpQ0qzHBm0I1_LN7uPNY-O8MAEjD6Ns46jHQaRIAfwFPiylj0CFk8lcVkt2isLRrjbYFZ3TcjEZmGoXNXWfUrBYp7d_NeBmsrtBwinxJS0rQsL-ok0-MHnbrJ5pBhuH73nXJNozR_Hfb89dotM9v4buxeqrtDw2AAIaKC9MgFrfvfGIwwAKUBLqBTZ2OTdMA6poMkaOKbJkPBvzFoAm-7g=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFjHZSLsTPOepRyYNk2NkemIw49xlu4SRi0L0X8WkQlZTn8A1nT_pAYJchvcYnB9RKC8NvyuGIv99a8x-OIvMeMR-YvHbOsfRh2QYNCtqx3iSGgoA2S9m0GRF9z16j4dBx9gZHjbgtckQmIjPqqGWoGIQ=="
+     ],
+     "id": "ru-warsaw",
+     "lang": "ru",
+     "snippet": "Если вы ищете вакансии в сфере iGaming в Варшаве, существует несколько эффективных способов и платформ для поиска работы:\n\n**1. Сайты по поиску работы и агрегаторы вакансий:**\n\n*   **Jooble:** На этом сайте можно найти множество актуальных вакансий, связанных с iGaming и гемблингом в Варшаве и Польше, включая такие позиции, как Senior SEO Specialist, CCO, CRM Lead, Business Development Manager, UX"
+    },
+    {
+     "mentioned": false,
+     "cited": false,
+     "competitors": [
+      "GamblingCareers",
+      "Indeed",
+      "Pentasia"
+     ],
+     "sources": [
+      "https://gamblingcareers.com",
+      "https://hirify.me",
+      "https://igamingcareer.com",
+      "https://igamingjobs.co",
+      "https://indeed.com",
+      "https://jooble.org",
+      "https://pentasia.com",
+      "https://talent-move.ru",
+      "https://talentgrator.com",
+      "https://telegram.me",
+      "https://telemetr.me",
+      "https://tgstat.ru",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEExIDK3G80V-NhkrbDMrz_RZLQprMXy9jkSuVTemVEXMwuUQzf59He_10CxUBx2GLSWw4ylKzz6Ru2yMTsUpqENqfMAiO8ypwZy5DV9XxXzYaL30Bd7WSkHGbVhSboUqOHVPkVP-yYQSn9yzErKwenrknXF-Ul1g==",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEMek2frphPy1W4i-lpEFTE3QEDsie-GziggB0Urf6hM5sp9CbIAMXqcGIMBYuZQxXF1p24iHl1Qz7VbTMaRi0u9LPDubr8NHInBvaJq8MGqFhBI_v_ki2jLDOC3qQIs3W7crM=",
+      "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEnImdIc_h6SIddGFKSRV0i5M1M7_JVim00mTMiXjWRMny5PyWFOIjR66o0TXYESOc5vg2wONKHv7HGi332IkHVT5jpewOp1c5Z8PPVJxO3cJmWKlpG70w8JfvceEGy0Y-4tY1C"
+     ],
+     "id": "ru-tg",
+     "lang": "ru",
+     "snippet": "Для поиска вакансий в сфере гемблинга можно использовать как специализированные Telegram-каналы, так и джоб-борды.\n\n**Telegram-каналы, публикующие вакансии гемблинга:**\n\n*   **@GamblingServices (\"Гемблинг объявления\")** — этот канал публикует объявления в сфере гемблинга, включая вакансии и информацию для разработчиков.\n*   **@betting_job (\"Работа в ставках | Betting, Gambling, IGaming вакансии\")*"
+    }
+   ]
+  }
+ ]
+}
