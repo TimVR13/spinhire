@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% set active = 'jobs' %}
+{% set en = lang != 'ru' %}
+{% block title %}{% if en %}iGaming jobs by country, department and language: {{ total }} live positions | SpinHire{% else %}Вакансии iGaming по странам, направлениям и языкам: {{ total }} позиций | SpinHire{% endif %}{% endblock %}
+{% block desc %}{% if en %}Browse {{ total }} live iGaming jobs by country (Malta, Cyprus, Poland, remote…), department (casino operations, game development, compliance…) and working language. Live counts, updated every 6 hours.{% else %}{{ total }} живых вакансий iGaming по странам (Мальта, Кипр, Польша, удалёнка…), направлениям (операции казино, разработка игр, комплаенс…) и языкам работы. Живые счётчики, обновление каждые 6 часов.{% endif %}{% endblock %}
+{% block robots %}<link rel="canonical" href="https://spinhire.io/jobs/browse">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{% if en %}iGaming jobs by country and department{% else %}Вакансии iGaming по странам и направлениям{% endif %}">
+<meta property="og:url" content="https://spinhire.io/jobs/browse">
+<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">{% endblock %}
+{% block style %}
+  .br-wrap { max-width: 1040px; margin: 0 auto; }
+  .br-h2 { font-family: var(--font-display); font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.05em; margin: var(--sp-6) 0 var(--sp-3); }
+  .br-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 8px; }
+  .br-grid a { display: flex; justify-content: space-between; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); text-decoration: none; color: var(--ink); font-size: 0.92rem; }
+  .br-grid a:hover { border-color: var(--acid); }
+  .br-grid b { color: var(--acid); font-variant-numeric: tabular-nums; }
+  .br-row { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .br-row > a { font-weight: 800; text-decoration: none; color: var(--ink); }
+  .br-cells { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .br-cells a { font-size: 0.8rem; border: 1px solid var(--line-strong); padding: 4px 9px; text-decoration: none; color: var(--ink-dim); }
+  .br-cells a:hover { border-color: var(--acid); color: var(--acid); }
+{% endblock %}
+{% block content %}
+<section class="section"><div class="container br-wrap">
+  <nav class="crumbs"><a href="/">Главная</a> / <a href="/jobs">Вакансии</a> / {% if en %}By country and department{% else %}По странам и направлениям{% endif %}</nav>
+  <span class="kicker">{% if en %}Live index · {{ total }} jobs{% else %}Живой индекс · {{ total }} вакансий{% endif %}</span>
+  <h1 style="font-size: clamp(1.6rem, 4vw, 2.6rem); margin: 8px 0 10px;">{% if en %}iGaming jobs by country, department and language{% else %}Вакансии iGaming по странам, направлениям и языкам{% endif %}</h1>
+  <p style="color: var(--ink-dim); max-width: 74ch;">{% if en %}Every page below is a live slice of the SpinHire index with its own numbers, companies, salary benchmarks and FAQ. Slices with fewer than 3 jobs are not published.{% else %}Каждая страница ниже — живой срез индекса SpinHire со своими цифрами, компаниями, зарплатными ориентирами и ответами на вопросы. Срезы меньше 3 вакансий не публикуются.{% endif %}</p>
+
+  <h2 class="br-h2">{% if en %}By country{% else %}По странам{% endif %}</h2>
+  <div class="br-grid">{% for link, name, n in countries %}<a href="{{ link }}"><span>{{ name }}</span><b>{{ n }}</b></a>{% endfor %}</div>
+
+  <h2 class="br-h2">{% if en %}By department{% else %}По направлениям{% endif %}</h2>
+  <div class="br-grid">{% for link, name, n in families %}<a href="{{ link }}"><span>{{ name }}</span><b>{{ n }}</b></a>{% endfor %}</div>
+
+  <h2 class="br-h2">{% if en %}By working language{% else %}По языку работы{% endif %}</h2>
+  <div class="br-grid">{% for link, name, n in langs %}<a href="{{ link }}"><span>{{ name }}</span><b>{{ n }}</b></a>{% endfor %}</div>
+
+  <h2 class="br-h2">{% if en %}Country × department{% else %}Страна × направление{% endif %}</h2>
+  {% for cname, clink, cells in matrix %}
+  <div class="br-row"><a href="{{ clink }}">{{ cname }}</a>
+    <div class="br-cells">{% for link, name, n in cells %}<a href="{{ link }}">{{ name }} · {{ n }}</a>{% endfor %}</div>
+  </div>
+  {% endfor %}
+</div></section>
+{% endblock %}

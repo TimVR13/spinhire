@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% set active = 'jobs' %}
+{% set en = lang != 'ru' %}
+{% set top_fams = s.families[:3] %}
+{% block title %}{{ names.title }}: {{ total }} {% if en %}open positions{% else %}открытых позиций{% endif %} | SpinHire{% endblock %}
+{% block desc %}{% if en %}{{ total }} live {{ names.phrase }} at {{ s.companies | length }} companies, {{ s.fresh }} added this week, {{ s.salary_pct }}% with a published salary. Updated {{ today_human }}, refreshed every 6 hours.{% else %}{{ total }} живых {{ names.phrase }}. {{ s.companies | length }} компаний, {{ s.fresh }} новых за неделю, {{ s.salary_pct }}% с указанной зарплатой. Обновлено {{ today_human }}, сбор каждые 6 часов.{% endif %}{% endblock %}
+{% block robots %}<link rel="canonical" href="https://spinhire.io{{ path }}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ names.title }} — {{ total }} {% if en %}jobs{% else %}вакансий{% endif %}">
+<meta property="og:description" content="{% if en %}{{ s.companies | length }} companies hiring, {{ s.fresh }} new this week. Live index by SpinHire.{% else %}{{ s.companies | length }} компаний нанимают, {{ s.fresh }} новых за неделю. Живой индекс SpinHire.{% endif %}">
+<meta property="og:url" content="https://spinhire.io{{ path }}">
+<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
+<script type="application/ld+json">{{ schema_collection | tojson }}</script>
+<script type="application/ld+json">{{ schema_breadcrumbs | tojson }}</script>
+<script type="application/ld+json">{{ schema_faq | tojson }}</script>{% endblock %}
+{% block style %}
+  .cl-wrap { max-width: 1040px; margin: 0 auto; }
+  .cl-lead { font-size: 1.05rem; color: var(--ink-dim); line-height: 1.65; max-width: 78ch; margin: 12px 0 var(--sp-5); }
+  .cl-lead b { color: var(--ink); }
+  .cl-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-6); }
+  .cl-stat { border: 2px solid var(--line); padding: 12px 16px; }
+  .cl-stat b { display: block; font-family: var(--font-display); font-size: 1.5rem; color: var(--acid); line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .cl-stat span { font-size: 0.74rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+  .cl-h2 { font-family: var(--font-display); font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.05em; margin: var(--sp-6) 0 var(--sp-3); }
+  .cl-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--sp-5); }
+  .cl-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .cl-list a { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; border: 1px solid var(--line); text-decoration: none; color: var(--ink); font-size: 0.92rem; transition: border-color .15s; }
+  .cl-list a:hover, .cl-list a:focus-visible { border-color: var(--acid); }
+  .cl-list b { font-variant-numeric: tabular-nums; color: var(--acid); }
+  .cl-prof { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--sp-3); }
+  .cl-prof a { border: 2px solid var(--line); padding: 12px 14px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 4px; }
+  .cl-prof a:hover { border-color: var(--acid); }
+  .cl-prof .pay { color: var(--emerald, var(--acid)); font-weight: 800; }
+  .cl-prof small { color: var(--ink-faint); font-size: 0.78rem; }
+  .cl-faq details { border-bottom: 1px solid var(--line); padding: 10px 0; }
+  .cl-faq summary { cursor: pointer; font-weight: 700; }
+  .cl-faq p { color: var(--ink-dim); margin-top: 8px; line-height: 1.6; }
+  .jobs-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+  .cl-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cl-chips a { border: 1px solid var(--line-strong); padding: 7px 12px; font-size: 0.84rem; text-decoration: none; color: var(--ink); }
+  .cl-chips a:hover { border-color: var(--acid); color: var(--acid); }
+{% endblock %}
+{% block content %}
+<section class="section"><div class="container cl-wrap">
+  <nav class="crumbs"><a href="/">Главная</a> / <a href="/jobs">Вакансии</a> / <a href="/jobs/browse">{% if en %}By country and department{% else %}По странам и направлениям{% endif %}</a> / {{ names.title }}</nav>
+  <span class="kicker">{% if en %}Live index · updated {{ today_human }}{% else %}Живой индекс · обновлено {{ today_human }}{% endif %}</span>
+  <h1 style="font-size: clamp(1.6rem, 4vw, 2.6rem); margin: 8px 0 0;">{{ names.title }}</h1>
+  <p class="cl-lead">
+    {% if en %}
+      As of {{ today_human }}, SpinHire lists <b>{{ total }}</b> open {{ names.phrase }} at <b>{{ s.companies | length }}</b> companies. <b>{{ s.fresh }}</b> were added in the last 7 days{% if kind != 'country' or country != 'Удалёнка' %}, <b>{{ s.remote_pct }}%</b> allow remote work{% endif %}, and <b>{{ s.salary_pct }}%</b> publish a salary.
+      {% if family_links %}Largest departments: {% for link, name, n in family_links[:3] %}<a href="{{ link }}">{{ name }}</a> ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}
+      {% if country_links and kind != 'country' %}Top locations: {% for link, name, n in country_links[:3] %}<a href="{{ link }}">{{ name }}</a> ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}
+      {% if professions %}Mid-level benchmark ({{ region_label }}): {% for p in professions[:3] %}{{ p.title }} {{ p.band }}{% if not loop.last %}, {% endif %}{% endfor %} per month.{% endif %}
+    {% else %}
+      На {{ today_human }} на SpinHire открыто <b>{{ total }}</b> {{ names.phrase }} у <b>{{ s.companies | length }}</b> компаний. За последние 7 дней появилось <b>{{ s.fresh }}</b>{% if country != 'Удалёнка' %}, <b>{{ s.remote_pct }}%</b> допускают удалёнку{% endif %}, зарплату публикуют <b>{{ s.salary_pct }}%</b> объявлений.
+      {% if family_links %}Больше всего вакансий: {% for link, name, n in family_links[:3] %}<a href="{{ link }}">{{ name }}</a> ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}
+      {% if country_links and kind != 'country' %}Где нанимают: {% for link, name, n in country_links[:3] %}<a href="{{ link }}">{{ name }}</a> ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}
+      {% if professions %}Ориентир для middle ({{ region_label }}): {% for p in professions[:3] %}{{ p.title }} {{ p.band }}{% if not loop.last %}, {% endif %}{% endfor %} в месяц.{% endif %}
+    {% endif %}
+  </p>
+
+  <div class="cl-stats">
+    <div class="cl-stat"><b>{{ total }}</b><span>{% if en %}open jobs{% else %}открытых вакансий{% endif %}</span></div>
+    <div class="cl-stat"><b>{{ s.companies | length }}</b><span>{% if en %}companies hiring{% else %}компаний нанимают{% endif %}</span></div>
+    <div class="cl-stat"><b>{{ s.fresh }}</b><span>{% if en %}new in 7 days{% else %}новых за 7 дней{% endif %}</span></div>
+    <div class="cl-stat"><b>{{ s.remote_pct }}%</b><span>{% if en %}remote-friendly{% else %}с удалёнкой{% endif %}</span></div>
+    <div class="cl-stat"><b>{{ s.salary_pct }}%</b><span>{% if en %}publish salary{% else %}указали зарплату{% endif %}</span></div>
+  </div>
+
+  <h2 class="cl-h2">{% if en %}Fresh jobs{% else %}Свежие вакансии{% endif %}</h2>
+  <div class="jobs-list">{% include "_landing_jobs.html" %}</div>
+  <div style="margin-top: var(--sp-4);"><a href="{{ all_link }}" class="btn btn-acid">{% if en %}All {{ total }} jobs with filters →{% else %}Все {{ total }} вакансий с фильтрами →{% endif %}</a></div>
+
+  <div class="cl-cols" style="margin-top: var(--sp-6);">
+    {% if family_links %}
+    <section>
+      <h2 class="cl-h2" style="margin-top:0">{% if en %}By department{% else %}По направлениям{% endif %}</h2>
+      <ul class="cl-list">{% for link, name, n in family_links %}<li><a href="{{ link }}"><span>{{ name }}</span><b>{{ n }}</b></a></li>{% endfor %}</ul>
+    </section>
+    {% endif %}
+    {% if country_links %}
+    <section>
+      <h2 class="cl-h2" style="margin-top:0">{% if kind == 'country' %}{% if en %}Same department elsewhere{% else %}То же направление в других странах{% endif %}{% else %}{% if en %}By country{% else %}По странам{% endif %}{% endif %}</h2>
+      <ul class="cl-list">{% for link, name, n in country_links %}<li><a href="{{ link }}"><span>{{ name }}</span><b>{{ n }}</b></a></li>{% endfor %}</ul>
+    </section>
+    {% endif %}
+    <section>
+      <h2 class="cl-h2" style="margin-top:0">{% if en %}Companies hiring{% else %}Кто нанимает{% endif %}</h2>
+      <ul class="cl-list">{% for c in s.companies[:12] %}<li><a href="/company/{{ c.slug }}"><span>{{ c.name }}</span><b>{{ c.jobs }}</b></a></li>{% endfor %}</ul>
+    </section>
+  </div>
+
+  {% if professions %}
+  <h2 class="cl-h2">{% if en %}Roles and salary benchmarks · {{ region_label }}{% else %}Профессии и вилки · {{ region_label }}{% endif %}</h2>
+  <div class="cl-prof">
+    {% for p in professions %}<a href="/profession/{{ p.slug }}"><b>{{ p.title }}</b><span class="pay">{{ p.band }}</span><small>{% if en %}mid-level, per month · {{ p.jobs }} live jobs{% else %}middle, в месяц · {{ p.jobs }} живых вакансий{% endif %}</small></a>{% endfor %}
+  </div>
+  {% endif %}
+
+  <h2 class="cl-h2">{% if en %}Frequently asked{% else %}Частые вопросы{% endif %}</h2>
+  <div class="cl-faq">
+    {% for q, a in faq %}<details{% if loop.first %} open{% endif %}><summary>{{ q }}</summary><p>{{ a }}</p></details>{% endfor %}
+  </div>
+
+  <h2 class="cl-h2">{% if en %}See also{% else %}Смотрите также{% endif %}</h2>
+  <div class="cl-chips">
+    <a href="/jobs/browse">{% if en %}All countries and departments{% else %}Все страны и направления{% endif %}</a>
+    <a href="/market">{% if en %}Job market in numbers{% else %}Рынок труда в цифрах{% endif %}</a>
+    <a href="/professions">{% if en %}Careers and salaries{% else %}Профессии и зарплаты{% endif %}</a>
+    <a href="/blog/luchshie-saity-vakansiy-igaming">{% if en %}Where to look for iGaming jobs{% else %}Где искать работу в iGaming{% endif %}</a>
+  </div>
+  <p style="font-size: 0.82rem; color: var(--ink-faint); margin-top: var(--sp-5);">{% if en %}Figures are computed from the live SpinHire index and can be quoted with a link to this page. Machine-readable: <a href="/api/jobs">/api/jobs</a> (CC BY 4.0).{% else %}Цифры считаются по живому индексу SpinHire, их можно цитировать со ссылкой на эту страницу. Машиночитаемо: <a href="/api/jobs">/api/jobs</a> (CC BY 4.0).{% endif %}</p>
+</div></section>
+{% endblock %}

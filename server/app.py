@@ -1503,7 +1503,10 @@ if os.path.isdir(_I18N_DIR):
         _SERVER_VOCAB.setdefault(_code, {}).update(_data)
 for _code in set(_SERVER_VOCAB) | set(_I18N_SERVER):
     _keys = sorted(_SERVER_VOCAB.get(_code, {}), key=len, reverse=True)
-    _VOCAB_RE[_code] = re.compile("|".join(re.escape(k) for k in _keys)) if _keys else None
+    # границы по кириллице: иначе короткие ключи («в», «и») подменялись внутри слов —
+    # «Дизайн» превращался в «Дvonайн», «игроков» в «игрокоto»
+    _VOCAB_RE[_code] = (re.compile(r"(?<![А-Яа-яЁёІіЇїЄєҐґ])(?:" + "|".join(re.escape(k) for k in _keys)
+                                   + r")(?![А-Яа-яЁёІіЇїЄєҐґ])") if _keys else None)
 
 _HTML_TEXT_RE = re.compile(r">([^<>]+)<")
 _HTML_ATTR_RE = re.compile(r'((?:placeholder|aria-label|title|content|alt)=")([^"]+)(")')
@@ -2059,6 +2062,9 @@ def _llms_text_ru(ctx: dict) -> str:
         "- [Рынок труда](https://spinhire.io/market) — сколько вакансий открыто и где",
         "- [Блог](https://spinhire.io/blog) — зарплаты, релокация, карьерные разборы",
         "- [Работодателям](https://spinhire.io/post-job) — размещение вакансий и тарифы",
+        "- [Срезы по странам, направлениям и языкам](https://spinhire.io/jobs/browse) — например, "
+        "https://spinhire.io/jobs/malta, https://spinhire.io/jobs/malta/compliance-aml, "
+        "https://spinhire.io/jobs/remote, https://spinhire.io/jobs/german-speaking — с живыми цифрами и вилками",
         "- Английская версия: https://spinhire.io/en/ (ещё 10 языков: /de/, /pl/, /uk/, /fr/, /es/, /pt/, /it/, /el/, /ro/, /bg/)",
         "",
         "## Машиночитаемые форматы",
@@ -2071,6 +2077,8 @@ def _llms_text_ru(ctx: dict) -> str:
         "- Разметка JobPosting (schema.org) на каждой странице вакансии, Occupation и FAQPage — на профессиях, Dataset — на рынке",
         "- Рынок труда в markdown: https://spinhire.io/market.md",
         "- Схема открытого API (OpenAPI 3.1): https://spinhire.io/openapi.json, документация: https://spinhire.io/docs",
+        "- MCP-сервер для ИИ-агентов (Streamable HTTP, без ключа): https://spinhire.io/mcp — инструменты "
+        "search_jobs, get_job, market_stats, market_history, list_professions, get_profession, get_company",
         "",
         "### Открытый API вакансий",
         "",
@@ -2139,6 +2147,8 @@ def _llms_text_en(ctx: dict, lang: str = "en") -> str:
         f"- [Job market]({base}/market) — how many jobs are open and where",
         f"- [Blog]({base}/blog) — salaries, relocation, career guides",
         f"- [For employers]({base}/post-job) — job posting and pricing",
+        f"- [Jobs by country, department and language]({base}/jobs/browse) — e.g. {base}/jobs/malta, "
+        f"{base}/jobs/malta/compliance-aml, {base}/jobs/remote, {base}/jobs/german-speaking, each with live counts and salary benchmarks",
         "- Russian original: https://spinhire.io/ ; other languages: /de/, /pl/, /uk/, /fr/, /es/, /pt/, /it/, /el/, /ro/, /bg/",
         "",
         "## Machine-readable formats",
@@ -2150,6 +2160,8 @@ def _llms_text_en(ctx: dict, lang: str = "en") -> str:
         "- schema.org JobPosting on every job page, Occupation + FAQPage on profession pages, Dataset on the market pages",
         f"- Job market as markdown: {base}/market.md",
         "- Open API schema (OpenAPI 3.1): https://spinhire.io/openapi.json, docs: https://spinhire.io/docs",
+        "- MCP server for AI agents (Streamable HTTP, no key): https://spinhire.io/mcp — tools search_jobs, "
+        "get_job, market_stats, market_history, list_professions, get_profession, get_company",
         "",
         "### Open jobs API",
         "",
@@ -5091,6 +5103,25 @@ COUNTRY_EN = {
 }
 
 
+_COUNTRY_RU_BY_EN = {v.lower(): k for k, v in COUNTRY_EN.items()}
+
+
+def country_ru(name: str) -> str:
+    """«Malta» / «Мальта» / «remote» → каноническое русское имя страны из country_of()."""
+    value = (name or "").strip()
+    return _COUNTRY_RU_BY_EN.get(value.lower(), value)
+
+
+def category_ru(name: str) -> str:
+    """«Compliance & AML» / «compliance-aml» / «Комплаенс и AML» → русское имя направления."""
+    value = (name or "").strip()
+    low = value.lower().replace("anti-fraud", "antifraud")
+    for ru, en in _SERVER_VOCAB.get("en", {}).items():
+        if ru in CATEGORIES and (en.lower() == low or en.lower().replace(" & ", "-").replace(" ", "-") == low):
+            return ru
+    return value
+
+
 def loc_name(name: str, lang: str = "ru") -> str:
     """Страна / формат / направление на языке страницы (для .md и llms.txt)."""
     if lang == "ru":
@@ -5235,8 +5266,10 @@ def api_jobs(db: Session = Depends(db_session),
         rows = [j for j in rows
                 if needle in f"{j.title} {j.company_name} {j.tags}".lower()]
     if category:
+        category = category_ru(category)
         rows = [j for j in rows if (j.category or "").lower() == category.lower()]
     if country:
+        country = country_ru(country)
         rows = [j for j in rows if country_of(j.location).lower() == country.lower()]
     fmt = normalize_fmt(fmt)
     if fmt:
@@ -5457,6 +5490,9 @@ def sitemap(db: Session = Depends(db_session)):
     static.append(("market", "0.9"))
     for m in market_archive(db):
         static.append((f"market/{m['ym']}", "0.7"))
+    from server import clusters as _clusters
+    for path_ in _clusters.sitemap_paths(db):
+        static.append((path_, "0.8" if path_.count("/") == 1 else "0.7"))
     for role in professions_data()["roles"]:
         static.append((f"profession/{role['slug']}", "0.8"))
     # каждая статическая страница отдаётся со списком языковых версий:
@@ -5521,6 +5557,40 @@ app.include_router(crm.router)
 from server import tgpost  # noqa: E402
 app.include_router(tgpost.router)
 tgpost.start_scheduler()  # молчит, пока не заданы SPINHIRE_TG_BOT_TOKEN и каналы
+
+# ---------- программные кластеры вакансий: страна × направление × язык ----------
+from server import clusters  # noqa: E402
+app.include_router(clusters.router)
+
+# ---------- удалённый MCP-сервер поверх открытого API: https://spinhire.io/mcp ----------
+try:
+    from server import mcp_server  # noqa: E402
+    from starlette.routing import Route as _Route
+
+    class _McpRoot:
+        """/mcp без завершающего слэша: Mount сам его не ловит, а клиенты шлют именно так."""
+
+        async def __call__(self, scope, receive, send):
+            scope = dict(scope)
+            scope["root_path"] = scope.get("root_path", "") + "/mcp"
+            scope["path"], scope["raw_path"] = "/", b"/"
+            await mcp_server.mcp_app(scope, receive, send)
+
+    app.router.routes.insert(0, _Route("/mcp", endpoint=_McpRoot(), methods=["GET", "POST", "DELETE"]))
+    app.mount("/mcp", mcp_server.mcp_app)
+
+    @app.on_event("startup")
+    async def _mcp_start():
+        app.state.mcp_session_cm = mcp_server.mcp.session_manager.run()
+        await app.state.mcp_session_cm.__aenter__()
+
+    @app.on_event("shutdown")
+    async def _mcp_stop():
+        cm = getattr(app.state, "mcp_session_cm", None)
+        if cm:
+            await cm.__aexit__(None, None, None)
+except ImportError as _mcp_exc:  # пакет mcp не установлен — сайт работает без него
+    print(f"[mcp] сервер не поднят: {_mcp_exc}")
 
 # ---------- static site (последним — перекрывается роутами выше) ----------
 app.mount("/", StaticFiles(directory=ROOT, html=True), name="site")

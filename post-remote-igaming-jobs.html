@@ -35,7 +35,7 @@
   "headline": "Удалённая работа в iGaming: где платят в евро и не требуют переезда",
   "description": "Какие роли в iGaming реально удалённые, кто платит в EUR, а кто в USDT, B2B-контракт против штата, налоги удалёнщика и таймзоны — вилки 2026 года.",
   "datePublished": "2026-08-29",
-  "dateModified": "2026-08-29",
+  "dateModified": "2026-09-03",
   "author": { "@type": "Organization", "name": "SpinHire", "url": "https://spinhire.io" },
   "publisher": { "@type": "Organization", "name": "SpinHire", "url": "https://spinhire.io" },
   "mainEntityOfPage": "https://spinhire.io/blog/remote-igaming-jobs",
@@ -50,6 +50,54 @@
     { "@type": "ListItem", "position": 1, "name": "Главная", "item": "https://spinhire.io/" },
     { "@type": "ListItem", "position": 2, "name": "Блог", "item": "https://spinhire.io/blog" },
     { "@type": "ListItem", "position": 3, "name": "Удалённая работа в iGaming" }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Можно ли зайти в iGaming на удалёнке без опыта в индустрии?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Да, чаще всего через медиабаинг, поддержку на редком языке или джуниорский QA — базовые сценарии входа с нуля мы разбирали в статье «Как попасть в iGaming без опыта»."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Что выгоднее — EUR-зарплата в штате или USDT по B2B?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Однозначного ответа нет: штат в евро даёт стабильность и соцпакет, B2B в USDT — обычно более высокую номинальную ставку, но всю ответственность за налоги и отсутствие подстраховки на себе. Выбор зависит от готовности самостоятельно вести бухгалтерию."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Нужно ли уведомлять работодателя о смене страны проживания?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Да — смена налогового резидентства меняет и то, как компания обязана оформлять выплаты, особенно при найме через EOR. Скрывать переезд — верный способ получить проблемы с обеими налоговыми юрисдикциями одновременно."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Где смотреть актуальные удалённые вакансии?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Фильтр по формату работы в базе SpinHire (см. раздел «Как искать» выше) обновляется вместе со всей базой вакансий, так что закладку на него стоит открывать раз в неделю, а не разово."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Есть ли гео-ограничения для удалёнщиков в iGaming?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Да, и это отдельная тема от налогов. Некоторые операторы и партнёрские сети по регуляторным причинам не могут официально нанимать резидентов определённых стран или платить на счета в определённых юрисдикциях — это указывают прямо в вакансии или уточняют на первом созвоне. Уточняйте этот момент до финального собеседования, а не после оффера: смена формы оформления под конкретную страну проживания иногда требует недели дополнительных согласований на стороне работодателя."
+      }
+    }
   ]
 }
 </script>
@@ -84,6 +132,14 @@
   .timeline .t-row:last-child { border-bottom: none; }
   .timeline .t-time { font-family: var(--font-display); font-weight: 800; color: var(--yellow); font-size: 0.85rem; }
   .timeline .t-what { color: var(--ink-dim); font-size: 0.95rem; }
+  .tldr { border-left: 3px solid var(--acid); padding: 12px 16px; margin: 0 0 24px; background: var(--surface); }
+  .tldr p { color: var(--ink); font-size: 1.02rem; line-height: 1.7; margin: 0; }
+  .tldr b { color: var(--acid); }
+  .faq h3 { font-size: 1.02rem; margin: 18px 0 6px; color: var(--ink); }
+  .faq p { color: var(--ink-dim); font-size: 1.02rem; line-height: 1.7; margin: 0; }
+  .sources ul { font-size: .9rem; color: var(--ink-dim); }
+  .sources li { margin: 4px 0; }
+  .sources a { color: var(--acid); }
   .toc { border: 2px solid var(--line); background: var(--surface); padding: var(--sp-5); position: sticky; top: 92px; }
   .toc h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-faint); margin-bottom: var(--sp-3); }
   .toc ol { list-style: none; display: flex; flex-direction: column; gap: var(--sp-2); counter-reset: toc; }
@@ -124,6 +180,8 @@
 
   <div class="container article-layout">
     <article class="article-body">
+      <div class="tldr"><p><b>Коротко:</b> полностью удалённые роли в iGaming: аффилейт-менеджер, медиабайер, CRM-менеджер, QA и геймдев. VIP, трейдинг, комплаенс и платежи почти всегда требуют офиса на Мальте или Кипре. Лицензированные операторы платят в евро на SEPA-счёт, крипто-казино и партнёрки в USDT. Вилки на удалёнке: junior €1–1.6K, senior €2.8–4.2K, lead до €6.5K net в месяц.</p></div>
+
       <p>iGaming — редкая индустрия, где удалёнка не эксперимент, а норма для половины бэк-офиса, и одновременно там, где часть ролей физически не вытащить из офиса на Мальте или Кюрасао. Ниже — трезвый разбор без «работайте откуда угодно» из вакансий: какие позиции реально дают работать из любой точки, кто платит в евро, а кто в USDT, чем B2B-контракт отличается от оформления в штат, что с налогами, если паспорт один, а работодатель зарегистрирован в другой юрисдикции, и как не попасть в вакансию, где «remote» означает «удалённо, но обязательно на Мальте».</p>
 
       <h2 id="roles">Какие роли реально удалённые</h2>
@@ -218,6 +276,17 @@
       <p><b>Нужно ли уведомлять работодателя о смене страны проживания?</b> Да — смена налогового резидентства меняет и то, как компания обязана оформлять выплаты, особенно при найме через EOR. Скрывать переезд — верный способ получить проблемы с обеими налоговыми юрисдикциями одновременно.</p>
       <p><b>Где смотреть актуальные удалённые вакансии?</b> Фильтр по формату работы в базе SpinHire (см. раздел «Как искать» выше) обновляется вместе со всей базой вакансий, так что закладку на него стоит открывать раз в неделю, а не разово.</p>
       <p><b>Есть ли гео-ограничения для удалёнщиков в iGaming?</b> Да, и это отдельная тема от налогов. Некоторые операторы и партнёрские сети по регуляторным причинам не могут официально нанимать резидентов определённых стран или платить на счета в определённых юрисдикциях — это указывают прямо в вакансии или уточняют на первом созвоне. Уточняйте этот момент до финального собеседования, а не после оффера: смена формы оформления под конкретную страну проживания иногда требует недели дополнительных согласований на стороне работодателя.</p>
+      <section class="sources">
+        <h2 id="sources">Источники</h2>
+        <ul>
+          <li><a href="https://www.mga.org.mt/" target="_blank" rel="noopener">Malta Gaming Authority (MGA): регулятор онлайн-гемблинга Мальты, реестр лицензий</a></li>
+          <li><a href="https://www.gamblingcommission.gov.uk/" target="_blank" rel="noopener">UK Gambling Commission: регулятор Великобритании, отраслевая статистика</a></li>
+          <li><a href="https://ec.europa.eu/eurostat" target="_blank" rel="noopener">Eurostat: статистика зарплат и стоимости жизни по странам ЕС</a></li>
+          <li><a href="https://www.gov.cy/mof/" target="_blank" rel="noopener">Министерство финансов Кипра: подоходный налог, GHS, статус non-dom</a></li>
+          <li><a href="https://spinhire.io/market" target="_blank" rel="noopener">SpinHire: живая статистика рынка вакансий iGaming</a></li>
+          <li><a href="https://spinhire.io/professions" target="_blank" rel="noopener">SpinHire: картотека профессий iGaming с вилками по грейдам и локациям</a></li>
+        </ul>
+      </section>
     </article>
 
     <aside class="toc">
