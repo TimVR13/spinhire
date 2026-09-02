@@ -1110,6 +1110,26 @@ def clean_static_pages(request: Request):
     # «Чистые» URL служебных страниц — 301 на канонические .html
     return RedirectResponse(request.url.path + ".html", status_code=301)
 
+
+def _fmt_stat(n: int, step: int) -> str:
+    v = max(step, n // step * step)
+    return f"{v:,}".replace(",", " ") + "+"
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def homepage(db: Session = Depends(db_session)):
+    # Живые hero-цифры прямо в HTML (JS их потом лишь уточняет): статический
+    # фолбэк устаревал и расходился с реальностью — жалоба аудита.
+    html = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+    try:
+        stats = market_stats_data(db)
+        for key, step in (("live_jobs", 100), ("companies", 50), ("new_this_week", 100)):
+            html = re.sub(rf'(data-hero-stat="{key}">)[^<]*',
+                          rf'\g<1>{_fmt_stat(stats[key], step)}', html, count=1)
+    except Exception:
+        pass  # при сбое статистики отдаём статический фолбэк
+    return HTMLResponse(html)
+
 # ---------- красивый рендер описаний вакансий ----------
 from markupsafe import Markup, escape  # noqa: E402
 
