@@ -4789,6 +4789,7 @@ ARTICLE_FILES = {
     "perehod-iz-it-v-igaming": "post-perehod-iz-it-v-igaming.html",
     "bonus-manager-career": "post-bonus-manager-career.html",
     "support-team-lead-career": "post-support-team-lead-career.html",
+    "seo-specialist-gambling": "post-seo-specialist-gambling.html",
 }
 
 
