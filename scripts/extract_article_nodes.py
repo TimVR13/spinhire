@@ -27,7 +27,9 @@ def nodes_of(path: str):
         if re.search(r"[А-Яа-я]", text):
             seen.add(text)
             out.append(text)
-    for raw in re.findall(r">([^<>]{8,400})<", body):
+    # верхняя граница 900, а не 400: длинные абзацы (TL;DR, вступление) иначе
+    # не попадали в словарь и оставались по-русски на языковых версиях
+    for raw in re.findall(r">([^<>]{8,900})<", body):
         text = " ".join(raw.split())
         if not re.search(r"[А-Яа-я]", text) or text in seen:
             continue
