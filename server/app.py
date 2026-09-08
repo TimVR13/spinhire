@@ -2862,18 +2862,45 @@ async def paykilla_webhook(request: Request):
         raise HTTPException(400)
     event = json.loads(raw or b"{}")
     data = event.get("data") or {}
-    if event.get("eventType") == "INVOICE_PAID":
-        client_ref = str(data.get("clientOrderId") or "")
-        inv_id = str(data.get("id") or "")
+    kind = str(event.get("eventType") or event.get("type") or "").upper()
+    if kind in ("INVOICE_PAID", "PAYMENT_COMPLETED", "PAYMENT_OVERPAID", "INVOICE_SUCCESSFUL"):
+        # в дашборде события называются PAYMENT_*, в доке — INVOICE_*: ищем заказ по любому id
+        client_ref = str(data.get("clientOrderId") or (data.get("invoice") or {}).get("clientOrderId") or "")
+        inv_ids = [str(v) for v in (data.get("invoiceId"), (data.get("invoice") or {}).get("id"), data.get("id")) if v]
         with SessionLocal() as db:
             o = None
             if client_ref.startswith("SH-") and client_ref[3:].isdigit():
                 o = db.get(Order, int(client_ref[3:]))
-            if not o and inv_id:
+            for inv_id in inv_ids:
+                if o:
+                    break
                 o = db.query(Order).filter(Order.method == f"paykilla:{inv_id}").first()
-            if o:
-                mark_order_paid(db, o, source="paykilla")
-                db.commit()
+            if not o:
+                # платёжное событие без clientOrderId: спрашиваем инвойс у API
+                for inv_id in inv_ids:
+                    try:
+                        inv = paykilla_request("GET", f"/api/v2/invoice/{inv_id}")
+                    except Exception:  # noqa: BLE001
+                        continue
+                    ref = str(inv.get("clientOrderId") or (inv.get("data") or {}).get("clientOrderId") or "")
+                    if ref.startswith("SH-") and ref[3:].isdigit():
+                        o = db.get(Order, int(ref[3:]))
+                        break
+            if o and o.status != "paid":
+                paid_ok = True
+                if kind.startswith("PAYMENT"):
+                    # для частичных оплат подтверждаем статус инвойса, чтобы не начислить услугу за недоплату
+                    inv_id = o.method.split(":", 1)[1] if (o.method or "").startswith("paykilla:") else ""
+                    if inv_id:
+                        try:
+                            inv = paykilla_request("GET", f"/api/v2/invoice/{inv_id}")
+                            status = str(inv.get("status") or (inv.get("data") or {}).get("status") or "").upper()
+                            paid_ok = status in ("SUCCESSFUL", "PAID", "COMPLETED", "OVERPAID", "")
+                        except Exception:  # noqa: BLE001
+                            paid_ok = True
+                if paid_ok:
+                    mark_order_paid(db, o, source="paykilla")
+                    db.commit()
     return JSONResponse({"ok": True})
 
 
