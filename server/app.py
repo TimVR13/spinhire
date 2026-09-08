@@ -4902,8 +4902,38 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         users_q = db.query(User)
         if role in ("employer", "talent", "admin"):
             users_q = users_q.filter(User.role == role)
+        # период регистрации: today / week / month / custom (from, to — YYYY-MM-DD);
+        # created_at хранится в UTC, границы берём по UTC-суткам
+        period = request.query_params.get("period") or ""
+        date_from = request.query_params.get("from") or ""
+        date_to = request.query_params.get("to") or ""
+        today = datetime.utcnow().date()
+        since = until = None
+        if period == "today":
+            since = today
+        elif period == "week":
+            since = today - timedelta(days=6)
+        elif period == "month":
+            since = today - timedelta(days=29)
+        elif period == "custom":
+            try:
+                since = date.fromisoformat(date_from) if date_from else None
+                until = date.fromisoformat(date_to) if date_to else None
+            except ValueError:
+                since = until = None
+            if since and until and until < since:
+                since, until = until, since
+                date_from, date_to = since.isoformat(), until.isoformat()
+        else:
+            period = ""
+        if since:
+            users_q = users_q.filter(User.created_at >= datetime.combine(since, datetime.min.time()))
+        if until:
+            users_q = users_q.filter(User.created_at < datetime.combine(until + timedelta(days=1), datetime.min.time()))
         ctx["users"] = users_q.order_by(User.created_at.desc()).all()
         ctx["role"] = role
+        ctx["period"], ctx["date_from"], ctx["date_to"] = period, date_from, date_to
+        ctx["today_iso"] = today.isoformat()
     elif tab == "apps":
         ctx["apps"] = db.query(Application).order_by(Application.created_at.desc()).all()
     elif tab == "resumes":

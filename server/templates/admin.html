@@ -25,6 +25,15 @@
   .subtabs button { border:0; background:transparent; padding:10px 14px; font:700 0.85rem var(--font-body); color:var(--ink-dim); border-bottom:2px solid transparent; margin-bottom:-1px; }
   .subtabs button.on { color:var(--acid-deep, var(--acid)); border-bottom-color:var(--acid); }
   .subpane[hidden] { display:none; }
+  .adm-filters { display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+  .adm-filters__row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0; }
+  .adm-filters__custom { display:inline-flex; align-items:center; gap:6px; padding-left:8px; margin-left:4px; border-left:1px solid var(--line); }
+  .adm-filters__date { width:auto; padding:6px 10px; font-size:.85rem; color-scheme:light; }
+  html[data-ws-theme="dark"] .adm-filters__date { color-scheme:dark; }
+  @media (max-width: 640px) { .adm-filters__custom { border-left:0; padding-left:0; margin-left:0; flex-wrap:wrap; } .adm-filters__count { margin-left:0; width:100%; } }
+  .adm-filters__custom.on .adm-filters__date { border-color:var(--acid); }
+  .adm-filters__dash { color:var(--ink-faint); }
+  .adm-filters__count { margin-left:auto; color:var(--ink-faint); font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
   .source-head h2 { margin:0; font-size:1.15rem; }
   .source-note { color:var(--ink-faint); font-size:.8rem; max-width:72ch; }
   .source-status { display:inline-flex; align-items:center; gap:7px; }
@@ -143,10 +152,28 @@
     </table></div>
 
   {% elif tab == 'users' %}
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      {% for value, label in [('', 'Все'), ('employer', 'Работодатели'), ('talent', 'Соискатели'), ('admin', 'Админы')] %}
-      <a class="tag {% if role == value %}tag-acid{% endif %}" href="/admin?tab=users{% if value %}&role={{ value }}{% endif %}">{{ label }}</a>
-      {% endfor %}
+    {% set period_qs = (('&period=' ~ period) if period else '') ~ (('&from=' ~ date_from) if period == 'custom' and date_from else '') ~ (('&to=' ~ date_to) if period == 'custom' and date_to else '') %}
+    <div class="adm-filters">
+      <div class="adm-filters__row">
+        {% for value, label in [('', 'Все'), ('employer', 'Работодатели'), ('talent', 'Соискатели'), ('admin', 'Админы')] %}
+        <a class="tag {% if role == value %}tag-acid{% endif %}" href="/admin?tab=users{% if value %}&role={{ value }}{% endif %}{{ period_qs }}">{{ label }}</a>
+        {% endfor %}
+      </div>
+      <form class="adm-filters__row" method="get" action="/admin" id="users-period">
+        <input type="hidden" name="tab" value="users">
+        {% if role %}<input type="hidden" name="role" value="{{ role }}">{% endif %}
+        {% for value, label in [('', 'За всё время'), ('today', 'Сегодня'), ('week', 'Неделя'), ('month', 'Месяц')] %}
+        <a class="tag {% if period == value %}tag-acid{% endif %}" href="/admin?tab=users{% if role %}&role={{ role }}{% endif %}{% if value %}&period={{ value }}{% endif %}">{{ label }}</a>
+        {% endfor %}
+        <span class="adm-filters__custom {% if period == 'custom' %}on{% endif %}">
+          <input type="hidden" name="period" value="custom">
+          <input class="input adm-filters__date" type="date" name="from" value="{{ date_from }}" aria-label="Дата с" max="{{ today_iso }}">
+          <span class="adm-filters__dash">—</span>
+          <input class="input adm-filters__date" type="date" name="to" value="{{ date_to }}" aria-label="Дата по" max="{{ today_iso }}">
+          <button class="btn btn-ghost" type="submit">Показать</button>
+        </span>
+        <span class="adm-filters__count">{{ users|length }} {{ 'пользователь' if users|length % 10 == 1 and users|length % 100 != 11 else ('пользователя' if users|length % 10 in [2,3,4] and users|length % 100 not in [12,13,14] else 'пользователей') }}</span>
+      </form>
     </div>
     <div class="table-wrap"><table class="adm">
       <tr><th>Email</th><th>Имя</th><th>Роль</th><th>Компания</th><th>С нами</th><th>Действия</th></tr>
