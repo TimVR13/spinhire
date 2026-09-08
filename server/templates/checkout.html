@@ -24,7 +24,24 @@
     {% if request.query_params.get('claimed') %}
       <div class="flash">✓ Спасибо, мы получили уведомление. Сверим поступление и активируем услугу, обычно в течение пары часов.</div>
     {% endif %}
+    {% if request.query_params.get('paid') %}
+      <div class="flash">✓ Платёж получен. Услуга активируется автоматически в течение минуты, страницу можно обновить.</div>
+    {% elif request.query_params.get('cancelled') %}
+      <div class="flash" style="border-color: var(--yellow);">Оплата не завершена. Можно выбрать другой способ ниже.</div>
+    {% elif request.query_params.get('error') == 'paykilla' %}
+      <div class="flash" style="border-color: var(--pink);">Крипто-шлюз не ответил. Попробуйте ещё раз через минуту или оплатите USDT напрямую ниже.</div>
+    {% endif %}
     <div style="display: flex; flex-direction: column; gap: 12px;">
+      {% if gateways.stripe or gateways.paykilla %}
+      <div class="card" style="border-color: var(--acid);">
+        <b style="font-family: var(--font-display); text-transform: uppercase; font-size: .9rem;">Оплатить онлайн</b>
+        <p style="color: var(--ink-dim); font-size: .88rem; margin: 6px 0 12px;">Мгновенно, услуга активируется сразу после подтверждения платежа.</p>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          {% if gateways.stripe %}<form method="post" action="/checkout/order/{{ order.id }}/stripe"><button class="btn btn-acid btn-lg" type="submit">💳 Картой · €{{ order.amount }}</button></form>{% endif %}
+          {% if gateways.paykilla %}<form method="post" action="/checkout/order/{{ order.id }}/paykilla"><button class="btn {% if gateways.stripe %}btn-ghost{% else %}btn-acid{% endif %} btn-lg" type="submit">₮ Криптой · USDT, BTC, ETH</button></form>{% endif %}
+        </div>
+      </div>
+      {% endif %}
       {% if crypto.enabled %}
       <div class="card" style="border-color: var(--acid);">
         <b style="font-family: var(--font-display); text-transform: uppercase; font-size: .9rem;">₮ Оплата в USDT</b>
@@ -58,8 +75,7 @@
         </div>
       </div>
 
-      <button class="btn btn-ghost btn-block" disabled style="opacity: 0.6;">Оплата картой — скоро</button>
-      <p style="color: var(--ink-faint); font-size: 0.8rem; text-align: center;">iGaming — high-risk сфера: оплату картой подключаем через специализированного провайдера. Пока принимаем USDT и банковские переводы.</p>
+      {% if not gateways.stripe %}<button class="btn btn-ghost btn-block" disabled style="opacity: 0.6;">Оплата картой — скоро</button>{% endif %}
     </div>
     {% elif order.status == 'paid' %}
       <div class="flash">✓ Оплачено. Услуга активна. Спасибо!</div>

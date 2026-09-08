@@ -61,7 +61,7 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 RESEND_FROM = os.environ.get("RESEND_FROM", "")
-BASE_URL = os.environ.get("BASE_URL", "").rstrip("/")
+BASE_URL = os.environ.get("BASE_URL", "https://spinhire.io").rstrip("/")
 CV_UPLOAD_DIR = os.environ.get("CV_UPLOAD_DIR", os.path.join(ROOT, "data", "cv_uploads"))
 CV_MAX_BYTES = 5 * 1024 * 1024
 AVATAR_UPLOAD_DIR = os.environ.get("AVATAR_UPLOAD_DIR", os.path.join(ROOT, "data", "avatars"))
@@ -2635,7 +2635,7 @@ def checkout_view(order_id: int, request: Request, db: Session = Depends(db_sess
         track(db, "checkout_view", user.id, "order", o.id)
         db.commit()
     return render(request, db, "checkout.html", order=o, plans=PLANS,
-                  crypto=crypto_payment_details(o), legal=legal_details())
+                  crypto=crypto_payment_details(o), legal=legal_details(), gateways=payment_methods_available())
 
 
 @app.post("/checkout/order/{order_id}/invoice")
@@ -2680,6 +2680,201 @@ def checkout_claim(order_id: int, request: Request, tx: str = Form(""),
                   + (f" · tx {tx.strip()[:60]}" if tx.strip() else ""), "/admin?tab=orders")
     db.commit()
     return RedirectResponse(f"/checkout/order/{order_id}?claimed=1", status_code=303)
+
+
+# ---------- Stripe (карты) и PayKilla (крипта) ----------
+# Ключи только из окружения: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
+# PAYKILLA_SECRET_KEY (+ PAYKILLA_PUBLIC_KEY). Без ключей кнопки не показываются.
+PAYKILLA_API = "https://account-api.paykilla.com"
+PAYKILLA_PAY_URL = "https://gopay.paykilla.com/"
+PAYKILLA_PUBLIC_DEFAULT = "opuz4dNldja9T3LUOmtq0Q"
+
+
+def stripe_enabled() -> bool:
+    return bool(os.environ.get("STRIPE_SECRET_KEY"))
+
+
+def paykilla_enabled() -> bool:
+    return bool(os.environ.get("PAYKILLA_SECRET_KEY"))
+
+
+def payment_methods_available() -> dict:
+    return {"stripe": stripe_enabled(), "paykilla": paykilla_enabled()}
+
+
+def _paykilla_sign(query: str) -> str:
+    import hmac, hashlib
+    return hmac.new(os.environ.get("PAYKILLA_SECRET_KEY", "").encode(), query.encode(), hashlib.sha256).hexdigest()
+
+
+def paykilla_request(method: str, path: str, body: dict | None = None, params: dict | None = None) -> dict:
+    """Подписанный запрос к PayKilla V2: timestamp+recvWindow в query, HMAC-SHA256 секретом."""
+    import requests as _rq
+    ts = str(int(time.time() * 1000))
+    query = {"timestamp": ts, "recvWindow": "5000"}
+    if method == "GET" and params:
+        query = {**params, **query}
+    qs = "&".join(f"{k}={v}" for k, v in query.items())
+    query["signature"] = _paykilla_sign(qs)
+    headers = {"X-API-KEY": os.environ.get("PAYKILLA_PUBLIC_KEY", PAYKILLA_PUBLIC_DEFAULT),
+               "Content-Type": "application/json"}
+    resp = _rq.request(method, PAYKILLA_API + path, params=query, json=body if method != "GET" else None,
+                       headers=headers, timeout=25)
+    if resp.status_code >= 400:
+        raise RuntimeError(f"PayKilla {resp.status_code}: {resp.text[:300]}")
+    return resp.json()
+
+
+_paykilla_currencies = {"at": 0.0, "value": []}
+
+
+def paykilla_payment_currencies() -> list:
+    """Доступные тикеры (USDT в приоритете); кэш на час, запасной список — если API не отвечает."""
+    now = time.time()
+    if _paykilla_currencies["value"] and now - _paykilla_currencies["at"] < 3600:
+        return _paykilla_currencies["value"]
+    tickers = []
+    try:
+        data = paykilla_request("GET", "/api/v2/currency")
+        rows = data if isinstance(data, list) else data.get("data") or data.get("items") or []
+        for row in rows:
+            code = row.get("code") or row.get("ticker") or row.get("currency") or row.get("id") if isinstance(row, dict) else str(row)
+            if code:
+                tickers.append(str(code))
+    except Exception as exc:  # noqa: BLE001
+        print(f"[paykilla] currencies: {str(exc)[:120]}")
+    preferred = [t for t in tickers if t.upper().startswith("USDT")] + [t for t in tickers if t.upper() in ("USDC", "BTC", "ETH", "TRX", "TON")]
+    value = preferred or ["USDTTRC"]
+    _paykilla_currencies.update(at=now, value=value[:6])
+    return _paykilla_currencies["value"]
+
+
+@app.post("/checkout/order/{order_id}/stripe")
+def checkout_stripe(order_id: int, request: Request, db: Session = Depends(db_session)):
+    """Оплата картой через Stripe Checkout: сессия создаётся на лету, товар не нужен."""
+    user = get_user(request, db)
+    o = db.get(Order, order_id)
+    if not user or not o or o.user_id != user.id or o.status != "pending":
+        raise HTTPException(403)
+    if not stripe_enabled():
+        raise HTTPException(404)
+    import stripe
+    stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
+    base = BASE_URL.rstrip("/")
+    session = stripe.checkout.Session.create(
+        mode="payment",
+        line_items=[{"quantity": 1, "price_data": {
+            "currency": "eur", "unit_amount": int(o.amount * 100),
+            "product_data": {"name": f"SpinHire · {o.plan_name}",
+                             "description": (PLANS[o.plan][2] if o.plan in PLANS else "")[:200]}}}],
+        customer_email=user.email,
+        client_reference_id=str(o.id),
+        metadata={"order_id": str(o.id), "plan": o.plan},
+        success_url=f"{base}/checkout/order/{o.id}?paid=1",
+        cancel_url=f"{base}/checkout/order/{o.id}?cancelled=1",
+    )
+    o.method = f"stripe:{session.id}"
+    track(db, "stripe_started", user.id, "order", o.id)
+    db.commit()
+    return RedirectResponse(session.url, status_code=303)
+
+
+@app.post("/webhooks/stripe")
+async def stripe_webhook(request: Request):
+    """Stripe сообщает об оплате: проверяем подпись, отмечаем заказ, начисляем услугу."""
+    import stripe
+    payload = await request.body()
+    secret = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+    if not secret:
+        raise HTTPException(503)
+    try:
+        event = stripe.Webhook.construct_event(payload, request.headers.get("stripe-signature", ""), secret)
+    except Exception:  # noqa: BLE001 — неверная подпись
+        raise HTTPException(400)
+    if event["type"] in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
+        session = event["data"]["object"]
+        session = session.to_dict() if hasattr(session, "to_dict") else dict(session)
+        if session.get("payment_status") in ("paid", None):
+            order_id = (session.get("metadata") or {}).get("order_id") or session.get("client_reference_id")
+            with SessionLocal() as db:
+                o = db.get(Order, int(order_id)) if order_id and str(order_id).isdigit() else None
+                if o:
+                    o.method = f"stripe:{session.get('id', '')}"
+                    mark_order_paid(db, o, source="stripe")
+                    db.commit()
+    return JSONResponse({"received": True})
+
+
+@app.post("/checkout/order/{order_id}/paykilla")
+def checkout_paykilla(order_id: int, request: Request, db: Session = Depends(db_session)):
+    """Криптооплата через PayKilla: создаём инвойс в EUR, платёж в USDT/BTC/ETH на их странице."""
+    user = get_user(request, db)
+    o = db.get(Order, order_id)
+    if not user or not o or o.user_id != user.id or o.status != "pending":
+        raise HTTPException(403)
+    if not paykilla_enabled():
+        raise HTTPException(404)
+    base = BASE_URL.rstrip("/")
+    body = {
+        "type": "FIAT_BASED", "purpose": f"SpinHire order {o.id}", "currency": "EUR",
+        "totalPrice": str(o.amount), "paymentCurrencies": paykilla_payment_currencies(),
+        "clientOrderId": f"SH-{o.id}", "payerEmail": user.email,
+        "description": f"{o.plan_name} for {user.company_name or user.email}"[:200],
+        "expiredAt": (datetime.utcnow() + timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "urls": [{"type": "SUCCESS", "url": f"{base}/checkout/order/{o.id}?paid=1", "autoRedirect": True},
+                 {"type": "CANCEL", "url": f"{base}/checkout/order/{o.id}?cancelled=1"},
+                 {"type": "RETURN", "url": f"{base}/checkout/order/{o.id}"}],
+    }
+    try:
+        inv = paykilla_request("POST", "/api/v2/invoice", body=body)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[paykilla] invoice failed for order {o.id}: {str(exc)[:200]}")
+        return RedirectResponse(f"/checkout/order/{o.id}?error=paykilla", status_code=303)
+    inv_id = inv.get("id") or (inv.get("data") or {}).get("id")
+    if not inv_id:
+        return RedirectResponse(f"/checkout/order/{o.id}?error=paykilla", status_code=303)
+    o.method = f"paykilla:{inv_id}"
+    track(db, "paykilla_started", user.id, "order", o.id)
+    db.commit()
+    return RedirectResponse(PAYKILLA_PAY_URL + str(inv_id), status_code=303)
+
+
+@app.post("/webhooks/paykilla")
+async def paykilla_webhook(request: Request):
+    """Вебхук PayKilla: подпись HMAC-SHA256(timestamp + POST + url + body) секретным ключом."""
+    import hmac, hashlib
+    raw = await request.body()
+    secret = os.environ.get("PAYKILLA_SECRET_KEY", "")
+    if not secret:
+        raise HTTPException(503)
+    ts = request.headers.get("x-api-timestamp", "")
+    sign = request.headers.get("x-api-sign", "")
+    recv = int(request.headers.get("x-api-recv-window", "300000") or 300000)
+    try:
+        if abs(time.time() * 1000 - int(ts)) > max(recv, 60000):
+            raise HTTPException(400)
+    except ValueError:
+        raise HTTPException(400)
+    url = BASE_URL.rstrip("/") + "/webhooks/paykilla"
+    expected = hmac.new(secret.encode(), (ts + "POST" + url + raw.decode("utf-8", "replace")).encode(),
+                        hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, sign.lower()):
+        raise HTTPException(400)
+    event = json.loads(raw or b"{}")
+    data = event.get("data") or {}
+    if event.get("eventType") == "INVOICE_PAID":
+        client_ref = str(data.get("clientOrderId") or "")
+        inv_id = str(data.get("id") or "")
+        with SessionLocal() as db:
+            o = None
+            if client_ref.startswith("SH-") and client_ref[3:].isdigit():
+                o = db.get(Order, int(client_ref[3:]))
+            if not o and inv_id:
+                o = db.query(Order).filter(Order.method == f"paykilla:{inv_id}").first()
+            if o:
+                mark_order_paid(db, o, source="paykilla")
+                db.commit()
+    return JSONResponse({"ok": True})
 
 
 @app.get("/checkout/order/{order_id}/invoice.pdf")
@@ -4735,43 +4930,57 @@ def admin_event_action(ev_id: int, action: str, request: Request, db: Session = 
 
 
 # заказы — админ отмечает оплату
+def mark_order_paid(db: Session, o, source: str = "admin") -> bool:
+    """Отметить заказ оплаченным и начислить услугу. Идемпотентно: повторный вызов не дублирует кредиты.
+
+    Вызывается из админки («Оплачен») и из вебхуков Stripe и PayKilla.
+    """
+    if not o:
+        return False
+    already_paid = o.status == "paid"
+    o.status = "paid"
+    if not already_paid:
+        track(db, "order_paid", o.user_id, "order", o.id, plan=o.plan, amount=o.amount, method=o.method, source=source)
+        if o.user:
+            add_notification(db, o.user.id, "order", f"Заказ #{o.id} оплачен",
+                             f"{o.plan_name} активирован. Спасибо!", "/employer")
+    # применяем плюшку: featured-план поднимает вакансию
+    if o.plan == "featured" and o.job_id:
+        job = db.get(Job, o.job_id)
+        if job:
+            job.featured = True
+            job.status = "approved"
+    if not already_paid and o.user and o.plan in PLAN_JOB_CREDITS:
+        o.user.job_credits = (o.user.job_credits or 0) + PLAN_JOB_CREDITS[o.plan]
+    if not already_paid and o.user and o.plan in PLAN_ACCESS_DAYS:
+        o.user.job_access_until = (
+            datetime.utcnow() + timedelta(days=PLAN_ACCESS_DAYS[o.plan])).isoformat()
+    if not already_paid and o.user and o.plan == "cv1":
+        o.user.cv_credits = (o.user.cv_credits or 0) + 1
+        db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=1,
+                                  balance_after=o.user.cv_credits, action="purchase"))
+    elif not already_paid and o.user and o.plan == "cv10":
+        o.user.cv_credits = (o.user.cv_credits or 0) + 10
+        db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=10,
+                                  balance_after=o.user.cv_credits, action="purchase"))
+    elif not already_paid and o.user and o.plan == "cv40":
+        o.user.cv_credits = (o.user.cv_credits or 0) + 40
+        db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=40,
+                                  balance_after=o.user.cv_credits, action="purchase"))
+    elif not already_paid and o.user and o.plan == "cvunlim":
+        o.user.cv_access_until = (datetime.utcnow() + timedelta(days=30)).isoformat()
+        db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=0,
+                                  balance_after=o.user.cv_credits or 0, action="unlimited"))
+    return not already_paid
+
+
 @app.post("/admin/order/{order_id}/{action}")
 def admin_order_action(order_id: int, action: str, request: Request, db: Session = Depends(db_session)):
     need_admin(request, db)
     o = db.get(Order, order_id)
     if o:
         if action == "paid":
-            already_paid = o.status == "paid"
-            o.status = "paid"
-            if not already_paid:
-                track(db, "order_paid", o.user_id, "order", o.id, plan=o.plan, amount=o.amount, method=o.method)
-            # применяем плюшку: featured-план поднимает вакансию
-            if o.plan == "featured" and o.job_id:
-                job = db.get(Job, o.job_id)
-                if job:
-                    job.featured = True
-                    job.status = "approved"
-            if not already_paid and o.user and o.plan in PLAN_JOB_CREDITS:
-                o.user.job_credits = (o.user.job_credits or 0) + PLAN_JOB_CREDITS[o.plan]
-            if not already_paid and o.user and o.plan in PLAN_ACCESS_DAYS:
-                o.user.job_access_until = (
-                    datetime.utcnow() + timedelta(days=PLAN_ACCESS_DAYS[o.plan])).isoformat()
-            if not already_paid and o.user and o.plan == "cv1":
-                o.user.cv_credits = (o.user.cv_credits or 0) + 1
-                db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=1,
-                                          balance_after=o.user.cv_credits, action="purchase"))
-            elif not already_paid and o.user and o.plan == "cv10":
-                o.user.cv_credits = (o.user.cv_credits or 0) + 10
-                db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=10,
-                                          balance_after=o.user.cv_credits, action="purchase"))
-            elif not already_paid and o.user and o.plan == "cv40":
-                o.user.cv_credits = (o.user.cv_credits or 0) + 40
-                db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=40,
-                                          balance_after=o.user.cv_credits, action="purchase"))
-            elif not already_paid and o.user and o.plan == "cvunlim":
-                o.user.cv_access_until = (datetime.utcnow() + timedelta(days=30)).isoformat()
-                db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=0,
-                                          balance_after=o.user.cv_credits or 0, action="unlimited"))
+            mark_order_paid(db, o, source="admin")
         elif action == "cancel":
             o.status = "cancelled"
         db.commit()
