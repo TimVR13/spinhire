@@ -108,7 +108,7 @@
   {% for family, roles in families.items() %}
   <section class="fam" id="fam-{{ loop.index }}">
     {% set ico = fam_icons.get(family, 'sym-star') %}
-    <h2>{% if ico.startswith('emoji:') %}<span class="fam-ico fam-ico--emoji">{{ ico[6:] }}</span>{% else %}<img class="fam-ico" src="/img/{{ ico }}.jpg" alt="" width="48" height="48" loading="lazy">{% endif %}{{ family }} <span style="color: var(--ink-faint); font-weight: 400;">· {{ roles|length }}</span></h2>
+    <h2>{{ family }} <span style="color: var(--ink-faint); font-weight: 400;">· {{ roles|length }}</span></h2>
     <div class="prof-grid">
       {% for r in roles %}
       <a class="prof-card" href="/profession/{{ r.slug }}">
