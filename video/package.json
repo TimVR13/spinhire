@@ -1,0 +1,2 @@
+{ "name": "spinhire-video", "private": true, "scripts": { "studio": "remotion studio", "render": "remotion render" },
+  "dependencies": { "@remotion/cli": "^4.0.471", "@remotion/google-fonts": "^4.0.471", "react": "^19.2.7", "react-dom": "^19.2.7", "remotion": "^4.0.471", "zod": "^3.22.3" } }
