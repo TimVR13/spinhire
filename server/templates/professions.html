@@ -46,8 +46,7 @@
   .prof-nores p { color: var(--ink-dim); margin: 10px 0 18px; }
   .prof-nores__btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   .fam h2 { display: flex; align-items: center; gap: 12px; }
-  .fam-ico { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; box-shadow: 0 6px 18px oklch(0 0 0 / 0.45); }
-  .fam-ico--emoji { display: inline-grid; place-items: center; font-size: 28px; background: var(--bg-deep); border: 1px solid var(--line); }
+  .fam-ico { width: 34px; height: 34px; flex: none; color: var(--acid); }
   .prof-card[hidden] { display: none; }
   @media (max-width: 760px) {
     .prof-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: var(--sp-4) 0 var(--sp-5); }
@@ -77,9 +76,20 @@
   {# иконки — по смыслу семейства: рулетка = казино, график = трейдинг, слот = игры,
      самолётик = трафик, щит = комплаенс, монеты = платежи, звонок = саппорт,
      молния = маркетинг, лупа = данные, корона = топы #}
-  {% set fam_icons = {'Операции казино':'asset-roulette','Беттинг и трейдинг':'pricing/p-stats','Разработка игр':'emoji:🕹️',
-                      'Аффилейты и медиабаинг':'pricing/p-telegram','Комплаенс и AML':'pricing/p-moderation','Платежи и антифрод':'pricing/p-salary',
-                      'Поддержка игроков':'sym-bell','Маркетинг и CRM':'pricing/t-promo','Данные и BI':'pricing/p-google','Топ-менеджмент':'sym-crown'} %}
+  {# Схематичные линейные иконки направлений (stroke = цвет акцента), без растровых картинок #}
+  {% set fam_svg = {
+    'Операции казино': '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>',
+    'Беттинг и трейдинг': '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>',
+    'Разработка игр': '<rect x="2" y="7" width="20" height="11" rx="5.5"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="11.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="18.5" cy="13.5" r="0.9" fill="currentColor" stroke="none"/>',
+    'Аффилейты и медиабаинг': '<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/>',
+    'Комплаенс и AML': '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+    'Платежи и антифрод': '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
+    'Поддержка игроков': '<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13" width="4" height="6" rx="1.5"/><rect x="17" y="13" width="4" height="6" rx="1.5"/>',
+    'Маркетинг и CRM': '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/>',
+    'Данные и BI': '<path d="M5 20v-7M11 20V6M17 20v-10"/><path d="M3 20h18"/>',
+    'Финансы, право и HR': '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 13.5a6 6 0 0 1 3.5 6.5"/>',
+    'Топ-менеджмент': '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 12h18"/>'
+  } %}
   <div class="prof-toolbar" id="profToolbar">
     <div class="prof-panel">
       <div class="prof-search-row">
@@ -107,8 +117,7 @@
 
   {% for family, roles in families.items() %}
   <section class="fam" id="fam-{{ loop.index }}">
-    {% set ico = fam_icons.get(family, 'sym-star') %}
-    <h2>{{ family }} <span style="color: var(--ink-faint); font-weight: 400;">· {{ roles|length }}</span></h2>
+    <h2><svg class="fam-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ fam_svg.get(family, '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>')|safe }}</svg>{{ family }} <span style="color: var(--ink-faint); font-weight: 400;">· {{ roles|length }}</span></h2>
     <div class="prof-grid">
       {% for r in roles %}
       <a class="prof-card" href="/profession/{{ r.slug }}">
