@@ -181,6 +181,51 @@
       <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-telegram.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Анонс в Telegram</b><p>Вакансии с продвижением уходят отдельным постом в канал SpinHire, где сидит аудитория, которая не мониторит сайты каждый день.</p></div></div>
     </div>
 
+    <h2 class="tariff-group-title">База резюме и подбор</h2>
+    <p class="tariff-group-sub">Профили видно бесплатно. Платите только за открытие контакта — открытие — это имя, e-mail и Telegram кандидата. Цена на уровне рынка (Indeed ~€5 за контакт), пакеты дешевле.</p>
+    <div class="tariff-grid">
+      <div class="card tariff"><div class="tariff-ico"><img src="/img/pricing/t-cv1.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">1 открытие</b>
+        <div class="salary">€5</div><span class="per">Попробовать базу на одном кандидате</span>
+        <ul>
+          <li>Имя, Telegram и e-mail кандидата</li>
+          <li>Просмотр профилей и поиск по базе — бесплатно</li>
+          <li>Если кандидат не ответил за 14 дней, открытие вернётся</li>
+          <li>Открытый контакт остаётся доступен навсегда</li>
+        </ul>
+        <form method="post" action="/checkout/cv1"><button class="btn btn-ghost btn-sm btn-block" type="submit">Открыть 1 контакт за €5</button></form></div>
+
+      <div class="card tariff"><div class="tariff-ico"><img src="/img/pricing/t-cv10.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">10 открытий</b>
+        <div class="salary">€45</div><span class="per">Закрыть одну-две позиции</span>
+        <span class="unit">€4,5 за контакт</span>
+        <ul>
+          <li>Открытия не сгорают</li>
+          <li>Общий баланс на всю команду</li>
+          <li>Видно, кто уже открывал кандидата</li>
+        </ul>
+        <form method="post" action="/checkout/cv10"><button class="btn btn-ghost btn-sm btn-block" type="submit">Взять 10 за €45</button></form></div>
+
+      <div class="card tariff"><div class="tariff-ico"><img src="/img/pricing/t-cv30.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">30 открытий</b>
+        <div class="salary">€120</div><span class="per">Пакет для активного найма</span>
+        <span class="unit">€4 за контакт</span>
+        <ul>
+          <li>Всё из пакета на 10 открытий</li>
+          <li>Выгрузка открытых контактов в CSV</li>
+          <li>Приоритетная помощь с поиском по базе</li>
+        </ul>
+        <form method="post" action="/checkout/cv30"><button class="btn btn-ghost btn-sm btn-block" type="submit">Взять 30 за €120</button></form></div>
+
+      <div class="card tariff pinkc" style="border-color: var(--pink);"><div class="tariff-ico"><img src="/img/pricing/t-hunt.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">Подбор под ключ</b>
+        <div class="salary" style="color: var(--pink);">1 зарплата</div><span class="per">Полный поиск и найм одного сотрудника</span>
+        <ul>
+          <li>Предоплата €1 000 для начала поиска</li>
+          <li>Поиск и проверка кандидатов по согласованному профилю</li>
+          <li>Мы проводим первые интервью и проверяем языки</li>
+          <li>Вы знакомитесь только с заинтересованными кандидатами</li>
+          <li>Бесплатная замена, если сотрудник уйдёт в первые 60 дней</li>
+        </ul>
+        <form method="post" action="/checkout/hunt"><button class="btn btn-pink btn-sm btn-block" type="submit">Начать подбор за €1 000</button></form></div>
+    </div>
+
     <h2 class="tariff-group-title">Как это работает</h2>
     <div class="steps">
       <div class="step"><span>01</span><b>Регистрируетесь как работодатель</b><p>Заполняете профиль компании: название, сайт, описание, логотип.</p></div>
@@ -195,43 +240,8 @@
       <div class="qa-item"><b>Сгорают ли размещения из пакета?</b><p>Нет. Размещения из пакетов на 3 и 10 вакансий доступны в течение года — публикуйте по мере открытия ролей.</p></div>
       <div class="qa-item"><b>Можно ли обойтись без зарплатной вилки?</b><p>Нет. Это принципиальное правило площадки, исключений не делаем.</p></div>
       <div class="qa-item"><b>Есть ли возвраты?</b><p>Нет. Оплата за размещение и продвижение не возвращается. Контакты кандидатов — другое дело: если кандидат не ответил за 14 дней, контакт возвращается на баланс.</p></div>
-      <div class="qa-item"><b>Как оплатить?</b><p>Сейчас — по инвойсу на компанию. Оплата картой в разработке: iGaming относится к high-risk, и мы подключаем платёжного провайдера, который работает с индустрией.</p></div>
+      <div class="qa-item"><b>Как оплатить?</b><p>Картой через Stripe, криптой (USDT) или по инвойсу на компанию — способ выбирается на странице заказа, счёт PDF формируется автоматически.</p></div>
       <div class="qa-item"><b>Нужна ли лицензия?</b><p>При первом размещении мы проверяем, что компания реально работает в индустрии. Лицензию спрашиваем у операторов, у студий и подрядчиков — подтверждение деятельности.</p></div>
-    </div>
-
-    <h2 class="tariff-group-title">База резюме и подбор</h2>
-    <p class="tariff-group-sub">Профили видно бесплатно. Платите только за открытие контакта — цена на уровне рынка (Indeed ~€5 за контакт).</p>
-    <div class="tariff-grid">
-      <div class="card tariff"><div class="tariff-ico"><img src="/img/pricing/t-cv1.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">1 контакт</b>
-        <div class="salary">€5</div><span class="per">Одно открытие контактов кандидата</span>
-        <ul>
-          <li>Telegram и e-mail каждого кандидата</li>
-          <li>Просмотр профилей и поиск по базе — бесплатно</li>
-          <li>Если кандидат не ответил за 14 дней, контакт вернётся</li>
-          <li>Открытый контакт остаётся доступен навсегда</li>
-        </ul>
-        <form method="post" action="/checkout/cv1"><button class="btn btn-ghost btn-sm btn-block" type="submit">Открыть 1 контакт за €5</button></form></div>
-
-      <div class="card tariff"><div class="tariff-ico"><img src="/img/pricing/t-cv40.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">40 контактов</b>
-        <div class="salary">€200</div><span class="per">Пакет открытий для активного найма</span>
-        <span class="unit">€5 за контакт</span>
-        <ul>
-          <li>Контакты не сгорают</li>
-          <li>Видно, кто уже открывал кандидата</li>
-          <li>Выгрузка открытых контактов в CSV</li>
-        </ul>
-        <form method="post" action="/checkout/cv40"><button class="btn btn-ghost btn-sm btn-block" type="submit">Взять 40 контактов</button></form></div>
-
-      <div class="card tariff pinkc" style="border-color: var(--pink);"><div class="tariff-ico"><img src="/img/pricing/t-hunt.jpg" alt="" loading="lazy" width="84" height="84"></div><b style="font-family: var(--font-display);">Подбор под ключ</b>
-        <div class="salary" style="color: var(--pink);">1 зарплата</div><span class="per">Полный поиск и найм одного сотрудника</span>
-        <ul>
-          <li>Предоплата €1 000 для начала поиска</li>
-          <li>Поиск и проверка кандидатов по согласованному профилю</li>
-          <li>Мы проводим первые интервью и проверяем языки</li>
-          <li>Вы знакомитесь только с заинтересованными кандидатами</li>
-          <li>Бесплатная замена, если сотрудник уйдёт в первые 60 дней</li>
-        </ul>
-        <form method="post" action="/checkout/hunt"><button class="btn btn-pink btn-sm btn-block" type="submit">Начать подбор за €1 000</button></form></div>
     </div>
   </section>
 

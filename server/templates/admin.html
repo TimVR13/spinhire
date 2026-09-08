@@ -3,6 +3,9 @@
 {% block title %}Админка — SpinHire{% endblock %}
 {% block robots %}<meta name="robots" content="noindex">{% endblock %}
 {% block style %}
+  .source-head.funnel-head { margin: var(--sp-7) 0 var(--sp-5); align-items: flex-start; gap: var(--sp-6); }
+  .source-head.funnel-head h2 { margin: 6px 0 0; }
+  .source-head.funnel-head .source-note { text-align: right; max-width: 560px; margin: 0; }
   .adm-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-block: var(--sp-4) var(--sp-5); }
   .adm-tabs a { text-decoration: none; border: 1px solid var(--line); border-radius: 10px; padding: 8px 16px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-dim); background: var(--surface); }
   .adm-tabs a.on { background: var(--acid); color: var(--on-acid); border-color: var(--acid); }
@@ -200,7 +203,7 @@
       <div class="stat-card"><div class="n">{{ orders|length }}</div><div class="l">Всего заказов</div></div>
     </div>
 
-    <div class="source-head"><div><span class="kicker" style="color:var(--pink)">Воронка оплат · {{ funnel.days }} дней</span><h2>Тарифы → заказ → оплата</h2></div><p class="source-note">Заходы людей на /post-job (боты не считаются), созданные заказы, выбранный способ, сообщения «я оплатил» и фактические оплаты. За всё время: {{ funnel_all.started }} заказов, {{ funnel_all.paid }} оплачено, €{{ funnel_all.revenue }}.</p></div>
+    <div class="source-head funnel-head"><div><span class="kicker" style="color:var(--pink)">Воронка оплат · {{ funnel.days }} дней</span><h2>Тарифы → заказ → оплата</h2></div><p class="source-note">Заходы людей на /post-job (боты не считаются), созданные заказы, выбранный способ, сообщения «я оплатил» и фактические оплаты. За всё время: {{ funnel_all.started }} заказов, {{ funnel_all.paid }} оплачено, €{{ funnel_all.revenue }}.</p></div>
     <div class="stat-grid">
       <div class="stat-card"><div class="n">{{ funnel.pricing }}</div><div class="l">Открыли тарифы</div></div>
       <div class="stat-card"><div class="n">{{ funnel.started }}</div><div class="l">Создали заказ · {{ funnel.c_start }}%</div></div>

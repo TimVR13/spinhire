@@ -50,7 +50,7 @@
     <aside class="contact-panel {% if unlocked %}unlocked{% endif %}">
       {% if unlocked %}
         {% if resume.user.avatar_file_path %}<img class="contact-avatar" src="/resume/{{ resume.id }}/avatar" alt="Фото кандидата">{% endif %}
-        <span class="kicker">Контакты открыты</span>
+        <span class="kicker">{% if user and user.role == 'admin' %}Режим админа · работодателям без оплаты скрыто{% elif user and user.id == resume.user_id %}Ваш профиль · работодатели видят это после оплаты{% else %}Контакты открыты{% endif %}</span>
         <h2 style="margin:10px 0 20px;">{{ resume.user.name or 'Связаться с кандидатом' }}</h2>
         {% if user and user.role == 'admin' %}
         <p><b>Аккаунт (видит только админ)</b><br>{{ resume.user.email }}</p>
@@ -69,8 +69,8 @@
         {% elif user and user.role == 'employer' %}
           <div class="plan-actions">
             {% if cv_team_role == 'owner' %}<form method="post" action="/checkout/cv1"><button class="btn btn-acid">1 контакт · €5</button></form>
-            <form method="post" action="/checkout/cv10"><button class="btn btn-ghost">10 контактов · €50</button></form>
-            <form method="post" action="/checkout/cvunlim"><button class="btn btn-ghost">Безлимит на месяц · €349</button></form>{% else %}<p style="color:var(--ink-dim);">Попросите владельца кабинета пополнить общий баланс.</p>{% endif %}
+            <form method="post" action="/checkout/cv10"><button class="btn btn-ghost">10 открытий · €45</button></form>
+            <form method="post" action="/checkout/cv30"><button class="btn btn-ghost">30 открытий · €120</button></form>{% else %}<p style="color:var(--ink-dim);">Попросите владельца кабинета пополнить общий баланс.</p>{% endif %}
           </div>
         {% elif user %}
           <p style="color:var(--ink-dim);margin-top:16px;">Открытие контактов доступно аккаунтам работодателей.</p>

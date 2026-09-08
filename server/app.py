@@ -693,8 +693,8 @@ PLANS = {
     "pack10": ("Пакет 10 вакансий", 420, "Десять размещений по 30 дней, €42 за вакансию"),
     "unlim30": ("Безлимит на месяц", 599, "Сколько угодно вакансий 30 дней подряд"),
     "cv1": ("1 контакт из базы", 5, "Открытие одного контакта резюме"),
-    "cv10": ("10 контактов из базы", 50, "Открытие 10 контактов резюме (€5/контакт)"),
-    "cv40": ("40 контактов из базы", 200, "Открытие 40 контактов резюме (€5/контакт)"),
+    "cv10": ("10 контактов из базы", 45, "Открытие 10 контактов резюме (€4.5/контакт)"),
+    "cv30": ("30 контактов из базы", 120, "Открытие 30 контактов резюме (€4/контакт)"),
     "cvunlim": ("База резюме — безлимит / мес", 349, "Безлимитные контакты на 30 дней"),
     "hunt": ("Подбор под ключ — предоплата", 1000, "Итоговая стоимость — 1 зарплата кандидата"),
 }
@@ -702,6 +702,9 @@ PLANS = {
 # Цена для сравнения «было → стало». У пакетов это честная поштучная стоимость
 # (3 × €49 и 10 × €49), а не выдуманная зачёркнутая цифра.
 PLAN_LIST_PRICE = {"single": 99, "featured": 199, "pack3": 147, "pack10": 490}
+
+# Сколько открытий контактов начисляет тариф (cv40 — старый пакет, оставлен для уже созданных заказов).
+PLAN_CV_CREDITS = {"cv1": 1, "cv10": 10, "cv30": 30, "cv40": 40}
 
 # Что начисляется работодателю после оплаты.
 PLAN_JOB_CREDITS = {"single": 1, "featured": 1, "pack3": 3, "pack10": 10}
@@ -3431,6 +3434,66 @@ def track(db: Session, name: str, user_id=None, entity_type="", entity_id=None, 
                           entity_id=entity_id, meta=json.dumps(meta, ensure_ascii=False)[:2000]))
 
 
+CV_SKILL_WORDS = ["Customer Support", "VIP", "KYC", "AML", "Compliance", "Retention", "CRM", "Affiliate", "Media Buying",
+                  "SEO", "PPC", "Payments", "Fraud", "Chargeback", "Risk", "Sportsbook", "Trading", "Odds", "Casino",
+                  "Live Casino", "Slots", "Game Design", "Mathematics", "Unity", "HTML5", "Python", "Java", "Kotlin",
+                  "Swift", "JavaScript", "TypeScript", "React", "Vue", "Node.js", "PHP", "Laravel", "SQL", "PostgreSQL",
+                  "MySQL", "MongoDB", "Redis", "Kafka", "Docker", "Kubernetes", "AWS", "GCP", "Azure", "Linux", "QA",
+                  "Selenium", "Playwright", "Jira", "Zendesk", "Intercom", "Salesforce", "HubSpot", "Optimove", "Braze",
+                  "Excel", "Power BI", "Tableau", "Looker", "Figma", "Photoshop", "After Effects", "Spine",
+                  "Account Management", "Sales", "Business Development", "Project Management", "Scrum", "Product Management",
+                  "Data Analysis", "Machine Learning", "Blockchain", "Crypto", "Web3", "DeFi", "Telegram", "English",
+                  "German", "Spanish", "French", "Portuguese", "Italian", "Polish", "Turkish", "Ukrainian", "Russian"]
+CV_TITLE_HINTS = ["manager", "specialist", "engineer", "developer", "analyst", "lead", "head", "director", "agent",
+                  "designer", "officer", "coordinator", "operator", "trader", "dealer", "presenter", "consultant",
+                  "менеджер", "специалист", "инженер", "разработчик", "аналитик", "руководитель", "оператор", "агент",
+                  "дизайнер", "тестировщик", "маркетолог"]
+
+
+def heuristic_cv_fields(path: str) -> dict:
+    """Черновые поля профиля из PDF/DOCX без внешних сервисов: заголовок, навыки, «о себе», локация, опыт."""
+    text = ""
+    try:
+        if path.lower().endswith(".pdf"):
+            from pypdf import PdfReader
+            text = "\n".join((pg.extract_text() or "") for pg in PdfReader(path).pages[:4])
+        elif path.lower().endswith(".docx"):
+            import zipfile
+            text = re.sub(r"<[^>]+>", " ", zipfile.ZipFile(path).read("word/document.xml").decode("utf8", "ignore"))
+    except Exception:  # noqa: BLE001
+        return {}
+    text = re.sub(r"[ \t]+", " ", text)
+    if len(text) < 200:
+        return {}
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    title = ""
+    for ln in lines[:25]:
+        low = ln.lower()
+        if 6 <= len(ln) <= 80 and any(h in low for h in CV_TITLE_HINTS) and "@" not in ln and not re.search(r"\d{4}", ln):
+            title = ln.strip(" |•-–—:")
+            break
+    found = []
+    low_text = text.lower()
+    for word in CV_SKILL_WORDS:
+        if re.search(r"(?<![a-zа-я])" + re.escape(word.lower()) + r"(?![a-zа-я])", low_text) and word not in found:
+            found.append(word)
+    years = 0
+    m = re.search(r"(\d{1,2})\+?\s*(?:years?|yrs|лет|года)\s*(?:of\s*)?(?:experience|опыт)", low_text)
+    if m:
+        years = min(int(m.group(1)), 40)
+    location = ""
+    for name in list(COUNTRY_ALIASES):
+        if len(name) > 3 and re.search(r"(?<![a-zа-я])" + re.escape(name) + r"(?![a-zа-я])", low_text):
+            location = COUNTRY_EN.get(COUNTRY_ALIASES[name], COUNTRY_ALIASES[name])
+            break
+    # «о себе»: первые содержательные абзацы без контактов, до 700 знаков
+    body = " ".join(ln for ln in lines[1:60] if len(ln) > 30 and "@" not in ln and not re.search(r"\+?\d[\d\s()-]{8,}", ln))
+    about = anonymize_resume_text(body)[:700].rsplit(" ", 1)[0] if body else ""
+    langs = ", ".join(w for w in found if w in ("English", "German", "Spanish", "French", "Portuguese", "Italian", "Polish", "Turkish", "Ukrainian", "Russian"))
+    return {"title": title, "skills": ", ".join(w for w in found if w not in langs.split(", "))[:400],
+            "about": about, "location": location, "experience_years": years, "languages": langs}
+
+
 def anonymize_resume_text(value: str) -> str:
     """Убрать случайно вставленные контакты из публичной части CV."""
     import re
@@ -4154,9 +4217,23 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
     elif row.status == "approved" and old_public == new_public:
         row.status = "approved"
     else:
-        row.status = "pending"
+        # Автомодерация (решение владельца 08.09.2026): публикуем сразу. Если это быстрая
+        # загрузка с заглушкой «Резюме на обработке» — вытаскиваем поля из PDF эвристикой,
+        # а ежечасная задача Claude потом переписывает такие профили начисто (маркер auto:).
         row.submitted_at = datetime.utcnow().isoformat() + "Z"
-        row.moderation_note = ""
+        placeholder = (row.title or "").strip() in ("", "Резюме на обработке") or len(row.about or "") < 80
+        if placeholder and row.cv_file_path:
+            for key, value in heuristic_cv_fields(row.cv_file_path).items():
+                if value and (not getattr(row, key) or key in ("title", "about") and placeholder):
+                    setattr(row, key, value)
+        complete = bool((row.title or "").strip()) and (row.title or "").strip() != "Резюме на обработке" and len(row.about or "") >= 80
+        row.status = "approved" if complete else "pending"
+        row.published = complete
+        row.moderation_note = "auto:heuristic" if (placeholder or not complete) else ""
+        if complete:
+            add_notification(db, row.user_id, "resume", "CV опубликован",
+                             "Ваш анонимный профиль появился в базе работодателей. Мы дополнительно причешем текст в течение часа.",
+                             f"/resume/{row.id}")
     row.updated_at = datetime.utcnow()
     if full_name.strip():
         user.name = full_name.strip()[:160]
@@ -4982,17 +5059,10 @@ def mark_order_paid(db: Session, o, source: str = "admin") -> bool:
     if not already_paid and o.user and o.plan in PLAN_ACCESS_DAYS:
         o.user.job_access_until = (
             datetime.utcnow() + timedelta(days=PLAN_ACCESS_DAYS[o.plan])).isoformat()
-    if not already_paid and o.user and o.plan == "cv1":
-        o.user.cv_credits = (o.user.cv_credits or 0) + 1
-        db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=1,
-                                  balance_after=o.user.cv_credits, action="purchase"))
-    elif not already_paid and o.user and o.plan == "cv10":
-        o.user.cv_credits = (o.user.cv_credits or 0) + 10
-        db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=10,
-                                  balance_after=o.user.cv_credits, action="purchase"))
-    elif not already_paid and o.user and o.plan == "cv40":
-        o.user.cv_credits = (o.user.cv_credits or 0) + 40
-        db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=40,
+    if not already_paid and o.user and o.plan in PLAN_CV_CREDITS:
+        delta = PLAN_CV_CREDITS[o.plan]
+        o.user.cv_credits = (o.user.cv_credits or 0) + delta
+        db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=delta,
                                   balance_after=o.user.cv_credits, action="purchase"))
     elif not already_paid and o.user and o.plan == "cvunlim":
         o.user.cv_access_until = (datetime.utcnow() + timedelta(days=30)).isoformat()
