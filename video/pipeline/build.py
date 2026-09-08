@@ -242,7 +242,58 @@ def build_profession(seed: str, args) -> dict:
             "title": title[:100], "description": desc, "tags": ["igaming", "профессии", r["title"], r["title_en"], "карьера", "spinhire"]}
 
 
-BUILDERS = {"hot_jobs": build_hot_jobs, "salary": build_salary, "profession": build_profession}
+def build_market_stat(seed: str, args) -> dict:
+    """«Цифра дня»: рынок в одной цифре + топ направлений."""
+    from common import market_stats
+    m = market_stats()
+    dirs = m.get("directions", [])[:4]
+    mx = dirs[0]["jobs"] if dirs else 1
+    bars = [{"label": d["name"], "text": f"{d['jobs']:,}".replace(",", " "), "pct": round(d["jobs"] / mx, 3)} for d in dirs]
+    live, new, comp = m.get("live_jobs", 0), m.get("new_this_week", 0), m.get("companies", 0)
+    fmt_n = lambda n: f"{n:,}".replace(",", " ")
+    scenes = [
+        {"id": "hook", "type": "hook", "kicker": "Цифра дня", "title": f"+{fmt_n(new)} вакансий", "sub": "в iGaming за неделю"},
+        {"id": "big", "type": "big", "kicker": "Сейчас открыто", "number": fmt_n(live), "label": f"вакансий от {fmt_n(comp)} компаний"},
+        {"id": "dirs", "type": "bars", "title": "Где больше всего", "sub": "открытых вакансий по направлениям", "bars": bars},
+        {"id": "cta", "type": "cta", "line": "Живая статистика рынка", "url": "spinhire.io/jobs"},
+    ]
+    phrases = [
+        {"id": "hook", "scene": "hook", "text": f"Цифра дня. За неделю в iGaming появилось {fmt_n(new)} новых вакансий."},
+        {"id": "big", "scene": "big", "text": f"Всего сейчас открыто {fmt_n(live)} вакансий от {fmt_n(comp)} компаний."},
+    ] + [{"id": f"d{i}", "scene": "dirs", "text": f"{d['name']} — {fmt_n(d['jobs'])}." if i else f"Больше всего ищут в направлении «{d['name']}» — {fmt_n(d['jobs'])} вакансий."}
+         for i, d in enumerate(dirs)] + [
+        {"id": "cta", "scene": "cta", "text": "Полная статистика и все вакансии — на spinhire.io, ссылка в описании."},
+    ]
+    day = dt.date.today()
+    title = f"Рынок iGaming сегодня: {fmt_n(live)} вакансий, +{fmt_n(new)} за неделю | статистика найма в гемблинге"
+    desc = (f"Живая статистика рынка труда iGaming на {day.isoformat()}:\n• открыто вакансий: {fmt_n(live)}\n• новых за неделю: {fmt_n(new)}\n"
+            f"• компаний нанимают: {fmt_n(comp)}\n\nПо направлениям:\n" + "\n".join(f"• {d['name']}: {fmt_n(d['jobs'])}" for d in dirs)
+            + f"\n\nВсе вакансии → {SITE}/jobs\nTelegram → {TG}\n\n{HASHTAGS} #рыноктруда")
+    return {"format": "market_stat", "playlist": "jobs", "mood": "dramatic", "bg": "hero.jpg", "scenes": scenes, "phrases": phrases,
+            "title": title[:100], "description": desc, "tags": ["igaming", "вакансии", "рынок труда", "гемблинг", "статистика", "spinhire"]}
+
+
+BUILDERS = {"hot_jobs": build_hot_jobs, "salary": build_salary, "profession": build_profession, "market_stat": build_market_stat}
+
+
+def apply_script(spec: dict, path: str) -> dict:
+    """Правки агента поверх автосборки: {"phrases": [...], "scenes": [...], "title": "...", "description": "...", "tags": [...]}.
+    Фразы заменяются целиком (id/scene обязаны совпадать со сценами), сцены — по id (обновляются поля)."""
+    over = json.load(open(path, encoding="utf-8"))
+    if over.get("phrases"):
+        ids = {s["id"] for s in spec["scenes"]}
+        bad = [p for p in over["phrases"] if p.get("scene") not in ids]
+        if bad:
+            raise SystemExit(f"фразы ссылаются на несуществующие сцены: {bad}")
+        spec["phrases"] = over["phrases"]
+    for sc in over.get("scenes", []):
+        for cur in spec["scenes"]:
+            if cur["id"] == sc["id"]:
+                cur.update(sc)
+    for k in ("title", "description", "tags", "mood", "bg"):
+        if over.get(k):
+            spec[k] = over[k]
+    return spec
 
 
 def assemble(spec: dict, vid: str) -> dict:
@@ -281,8 +332,14 @@ if __name__ == "__main__":
     ap.add_argument("id")
     ap.add_argument("--slug", default="")
     ap.add_argument("--dative", default="", help="профессия в дательном падеже для заголовка «сколько платят …»")
+    ap.add_argument("--script", default="", help="JSON с правками агента (фразы/сцены/заголовок)")
+    ap.add_argument("--spec-only", action="store_true", help="только собрать spec в stdout, без озвучки")
     a = ap.parse_args()
     spec = BUILDERS[a.format](a.id, a)
+    if a.spec_only:
+        print(json.dumps(spec, ensure_ascii=False, indent=1)); raise SystemExit
+    if a.script:
+        spec = apply_script(spec, a.script)
     props = assemble(spec, a.id)
     print(json.dumps({"id": a.id, "duration": props["duration"], "scenes": [(s["id"], s["start"], s["end"]) for s in props["scenes"]],
                       "title": spec["title"]}, ensure_ascii=False))

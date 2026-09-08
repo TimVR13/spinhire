@@ -63,12 +63,13 @@ if __name__ == "__main__":
     ap.add_argument("video")
     ap.add_argument("--publish-at", default="", help="RFC3339 UTC, напр. 2026-09-09T07:00:00Z")
     ap.add_argument("--privacy", default="private", choices=["private", "unlisted", "public"])
+    ap.add_argument("--slug", default="", help="профессия/компания для истории планировщика")
     a = ap.parse_args()
     video = Path(a.video)
     meta = json.load(open(OUT / f"{video.stem}.meta.json", encoding="utf-8"))
     vid = upload(video, meta, a.publish_at or None, a.privacy)
     entry = {"id": video.stem, "video_id": vid, "url": f"https://youtube.com/shorts/{vid}", "format": meta["format"],
-             "playlist": meta.get("playlist"), "title": meta["title"], "publish_at": a.publish_at or None,
+             "playlist": meta.get("playlist"), "title": meta["title"], "publish_at": a.publish_at or None, "slug": a.slug or None,
              "uploaded_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")}
     log(entry)
     print(json.dumps(entry, ensure_ascii=False))
