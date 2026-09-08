@@ -185,7 +185,7 @@ def build_salary(seed: str, args) -> dict:
         {"id": "big", "scene": "big", "text": f"Итого потолок на Мальте — {say_money(lead, 'USD')} в месяц. Плюс бонусы: {(lambda b: b[:1].lower() + b[1:])(first_sentence(r.get('bonus', '') or 'зависят от компании'))}"},
         {"id": "cta", "scene": "cta", "text": "Вилки по тридцати пяти профессиям — на spinhire.io, ссылка в описании."},
     ]
-    title = f"Зарплата {r['title'].lower()} в iGaming 2026: Мальта, Кипр, Европа, удалёнка | сколько платят {dative}"
+    title = f"Сколько платят {dative} в iGaming 2026: зарплаты на Мальте, Кипре, в Европе и на удалёнке"
     desc = (f"Зарплата {r['title']} в iGaming по регионам (middle, $ в месяц):\n"
             + "\n".join(f"• {b['label']}: {b['text']}" for b in bars)
             + f"\n• Senior (Мальта/Кипр): до ${sen:,}\n• Lead: до ${lead:,}\n\n"
