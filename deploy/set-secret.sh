@@ -3,9 +3,18 @@
 # Запуск на проде:  bash /opt/spinhire/deploy/set-secret.sh STRIPE_SECRET_KEY
 # Значение вводится скрытно с клавиатуры. Файл виден только root. Сервис перезапускается.
 set -euo pipefail
-NAME="${1:?usage: set-secret.sh VAR_NAME}"
+NAME="${1:?usage: set-secret.sh VAR_NAME   (например STRIPE_SECRET_KEY)}"
 FILE=/etc/systemd/system/spinhire.service.d/payments.conf
-read -r -s -p "Введите значение для $NAME (ввод скрыт): " VALUE; echo
+if ! [[ "$NAME" =~ ^[A-Z][A-Z0-9_]+$ ]]; then
+  echo "Первый аргумент — ИМЯ переменной (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, PAYKILLA_SECRET_KEY), не сам ключ."
+  echo "Ключ вводится после запуска, скрытно. Если ключ попал в командную строку — удалите строку из истории терминала."
+  exit 2
+fi
+if [ ! -t 0 ]; then
+  echo "Нужен терминал для скрытого ввода: запустите через  ssh -t -i ~/.ssh/coex root@165.232.79.152 'bash /opt/spinhire/deploy/set-secret.sh $NAME'"
+  exit 3
+fi
+read -r -s -p "Вставьте значение $NAME и нажмите Enter (ввод скрыт): " VALUE; echo
 [ -n "$VALUE" ] || { echo "пусто — ничего не записано"; exit 1; }
 mkdir -p "$(dirname "$FILE")"; touch "$FILE"; chmod 600 "$FILE"
 grep -q '^\[Service\]' "$FILE" || printf '[Service]\n' >> "$FILE"
