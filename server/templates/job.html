@@ -99,7 +99,7 @@
           {% if job.category %}<span class="tag">{{ job.category }}</span>{% endif %}
           {% for t in job.tag_list %}<span class="tag tag-acid" data-no-translate>{{ t }}</span>{% endfor %}
         </div>
-        <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}<span style="color: var(--ink-faint); font-size: 0.7em; font-weight: 400;">зарплата не указана работодателем</span>{% endif %}</p>
+        <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}<span style="color: var(--ink-faint); font-size: 0.7em; font-weight: 400;">{% if job.source and job.source != 'internal' %}вилка не указана в источнике{% else %}зарплата не указана работодателем{% endif %}</span>{% endif %}</p>
         <div style="display: flex; flex-direction: column; gap: 12px; margin-top: var(--sp-4);">
           {% if is_closed %}
             <a class="btn btn-acid btn-lg" href="/jobs?cat={{ job.category|urlencode }}">Смотреть актуальные вакансии →</a>

@@ -239,6 +239,45 @@ def _fetch_html(url, user_agent=None):
         return r.read().decode("utf-8", "replace")
 
 
+def salary_from_jsonld(it):
+    """Строка вилки из baseSalary разметки JobPosting (Djinni кладёт её и в листинг, и на страницу)."""
+    base = it.get("baseSalary") if isinstance(it, dict) else None
+    if not isinstance(base, dict):
+        return ""
+    try:
+        from .salary import SYMBOL
+    except ImportError:
+        from salary import SYMBOL
+    currency = str(base.get("currency") or "").upper()
+    value = base.get("value")
+    lo = hi = 0
+    period = ""
+    if isinstance(value, dict):
+        period = str(value.get("unitText") or "").upper()
+        lo = float(value.get("minValue") or value.get("value") or 0)
+        hi = float(value.get("maxValue") or 0)
+    elif value not in (None, ""):
+        try:
+            lo = float(value)
+        except (TypeError, ValueError):
+            return ""
+    if not lo and not hi:
+        return ""
+    if currency not in SYMBOL:
+        return ""
+    sign = SYMBOL[currency]
+    money = lambda v: f"{int(v):,}".replace(",", " ")  # noqa: E731
+    if lo and hi and hi > lo:
+        body = f"{sign}{money(lo)}–{money(hi)}"
+    elif hi and not lo:
+        body = f"до {sign}{money(hi)}"
+    elif lo and not hi:
+        body = f"от {sign}{money(lo)}"
+    else:
+        body = f"{sign}{money(lo or hi)}"
+    return body + {"YEAR": " в год", "HOUR": " в час"}.get(period, "")
+
+
 def crawl_jsonld(url, source):
     """Собрать вакансии из JobPosting JSON-LD на странице листинга (Djinni и др.)."""
     import json as _json
@@ -294,7 +333,7 @@ def crawl_jsonld(url, source):
                 "title": title, "company_name": company, "location": loc,
                 "fmt": _fmt_from(loc, desc), "tags": _tags_from(title, desc, lang),
                 "description": desc, "source_url": u, "source": source,
-                "ext_id": str(ext), "salary": "по запросу",
+                "ext_id": str(ext), "salary": salary_from_jsonld(it) or "по запросу",
                 "posted_at": (it.get("datePosted") or "")[:10],
                 "deadline": (it.get("validThrough") or "")[:10],
             })
