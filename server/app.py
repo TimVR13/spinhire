@@ -3450,7 +3450,34 @@ CV_TITLE_HINTS = ["manager", "specialist", "engineer", "developer", "analyst", "
                   "дизайнер", "тестировщик", "маркетолог"]
 
 
-def heuristic_cv_fields(path: str) -> dict:
+ROLE_WORDS = {"senior", "junior", "middle", "lead", "head", "chief", "principal", "staff", "frontend", "front-end", "backend",
+              "back-end", "full-stack", "fullstack", "product", "project", "customer", "support", "account", "business",
+              "data", "qa", "game", "marketing", "sales", "affiliate", "payment", "payments", "risk", "fraud", "compliance",
+              "kyc", "aml", "vip", "crm", "retention", "content", "seo", "ppc", "mobile", "ios", "android", "web", "ui", "ux",
+              "software", "machine", "learning", "devops", "system", "systems", "security", "hr", "talent", "finance",
+              "legal", "operations", "casino", "sportsbook", "live", "slot", "slots", "poker", "bingo", "lottery", "igaming",
+              "betting", "trading", "odds", "media", "buying", "buyer", "growth", "performance", "brand", "community",
+              "technical", "it", "python", "java", "php", "unity", "react", "node", "cloud", "network", "lead-generation",
+              "generation", "research", "digital", "email", "crypto", "blockchain", "bi", "analytics", "of", "and", "&", "/", "-", "|"}
+
+
+def clean_role_title(title: str, person_name: str = "") -> str:
+    """Убрать из строки-заголовка имя человека и всё, что не похоже на название роли."""
+    words = title.replace("|", " | ").split()
+    for tok in (person_name or "").replace(",", " ").split():
+        if len(tok) > 1:
+            words = [w for w in words if w.strip(".,").lower() != tok.lower()]
+    # отбрасываем ведущие слова, которые не роль и не подсказка (обычно имя и фамилия)
+    while words and words[0].lower().strip(".,") not in ROLE_WORDS and not any(h in words[0].lower() for h in CV_TITLE_HINTS):
+        words.pop(0)
+    out = " ".join(words).strip(" |•-–—:/,")
+    out = re.split(r"\s+[|•·]\s+", out)[0].strip()
+    if len(out.split()) < 2 or len(out) < 8 or len(out) > 80:
+        return ""
+    return out
+
+
+def heuristic_cv_fields(path: str, person_name: str = "") -> dict:
     """Черновые поля профиля из PDF/DOCX без внешних сервисов: заголовок, навыки, «о себе», локация, опыт."""
     text = ""
     try:
@@ -3469,9 +3496,10 @@ def heuristic_cv_fields(path: str) -> dict:
     title = ""
     for ln in lines[:25]:
         low = ln.lower()
-        if 6 <= len(ln) <= 80 and any(h in low for h in CV_TITLE_HINTS) and "@" not in ln and not re.search(r"\d{4}", ln):
-            title = ln.strip(" |•-–—:")
-            break
+        if 6 <= len(ln) <= 90 and any(h in low for h in CV_TITLE_HINTS) and "@" not in ln and not re.search(r"\d{4}", ln):
+            title = clean_role_title(ln, person_name)
+            if title:
+                break
     found = []
     low_text = text.lower()
     for word in CV_SKILL_WORDS:
@@ -3489,6 +3517,10 @@ def heuristic_cv_fields(path: str) -> dict:
     # «о себе»: первые содержательные абзацы без контактов, до 700 знаков
     body = " ".join(ln for ln in lines[1:60] if len(ln) > 30 and "@" not in ln and not re.search(r"\+?\d[\d\s()-]{8,}", ln))
     about = anonymize_resume_text(body)[:700].rsplit(" ", 1)[0] if body else ""
+    for tok in (person_name or "").replace(",", " ").split():
+        if len(tok) > 2:
+            about = re.sub(r"(?i)(?<!\w)" + re.escape(tok) + r"(?!\w)", "", about)
+    about = re.sub(r"\s{2,}", " ", about).strip()
     langs = ", ".join(w for w in found if w in ("English", "German", "Spanish", "French", "Portuguese", "Italian", "Polish", "Turkish", "Ukrainian", "Russian"))
     return {"title": title, "skills": ", ".join(w for w in found if w not in langs.split(", "))[:400],
             "about": about, "location": location, "experience_years": years, "languages": langs}
@@ -4223,7 +4255,7 @@ async def profile_resume_save(request: Request, title: str = Form(""), location:
         row.submitted_at = datetime.utcnow().isoformat() + "Z"
         placeholder = (row.title or "").strip() in ("", "Резюме на обработке") or len(row.about or "") < 80
         if placeholder and row.cv_file_path:
-            for key, value in heuristic_cv_fields(row.cv_file_path).items():
+            for key, value in heuristic_cv_fields(row.cv_file_path, (user.name or "") + " " + (user.email or "").split("@")[0]).items():
                 if value and (not getattr(row, key) or key in ("title", "about") and placeholder):
                     setattr(row, key, value)
         complete = bool((row.title or "").strip()) and (row.title or "").strip() != "Резюме на обработке" and len(row.about or "") >= 80
