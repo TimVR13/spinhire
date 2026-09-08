@@ -12,7 +12,7 @@
   .cv-hero { padding:var(--sp-5) 0 var(--sp-6); }
   .cv-hero h1 { font-size:clamp(2rem,3.2vw,3rem); line-height:1.04; margin-bottom:14px; }
   .cv-note { color:var(--ink-dim); max-width:70ch; line-height:1.6; }
-  .cv-rules { display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin-top:14px; font-size:0.86rem; color:var(--ink-dim); }
+  .cv-rules { display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin-top:10px; font-size:0.86rem; color:var(--ink-dim); }
   .cv-rules span { display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border:1px solid var(--line-strong); border-radius:999px; background:var(--bg-deep); }
   .cv-rules b { color:var(--acid); }
   .cv-rules a { color:var(--acid); font-weight:700; text-decoration:none; }
@@ -62,18 +62,17 @@
   <section class="cv-hero">
     <span class="kicker">Закрытая база талантов</span>
     <h1>Специалисты iGaming</h1>
-    <p class="cv-note">Опыт, навыки и зарплатные ожидания видны бесплатно. Имя, email и Telegram открываются работодателю за контакт — и возвращаются на баланс, если кандидат не ответил.</p>
     <p class="cv-rules"><span>Контакты <b>закрыты</b></span><span>Профиль — <b>бесплатно</b></span><span>Контакт — <b>€5</b></span><span>Не ответил — <b>возврат</b></span><a href="/post-job#pricing">Тарифы на контакты →</a></p>
     {% if request.query_params.get('quick_error') == 'consent' %}<div class="flash err" style="margin-top:14px;">Нужно согласие на обработку данных.</div>
     {% elif request.query_params.get('quick_error') == 'email' %}<div class="flash err" style="margin-top:14px;">Проверьте адрес почты.</div>
     {% elif request.query_params.get('quick_error') == 'file' %}<div class="flash err" style="margin-top:14px;">Принимаем PDF до 5 МБ.</div>{% endif %}
     <details class="cv-quick" {% if request.query_params.get('quick_error') %}open{% endif %}>
-      <summary>📄 У меня есть готовое CV — загрузить PDF</summary>
+      <summary>📄 Есть готовое CV? Загрузите PDF</summary>
       <form method="post" action="/resumes/quick" enctype="multipart/form-data">
         <input class="input" type="email" name="email" placeholder="Почта" required>
         <input class="input" type="file" name="cv" accept=".pdf" required>
         <button class="btn btn-acid" type="submit">Загрузить →</button>
-        <label class="check" style="flex-basis:100%;font-size:0.82rem;color:var(--ink-dim);"><input type="checkbox" name="consent" value="1" required> Согласен на обработку данных. Мы разберём PDF, соберём черновик профиля — публикуете его вы сами.</label>
+        <label class="check" style="flex-basis:100%;font-size:0.82rem;color:var(--ink-dim);"><input type="checkbox" name="consent" value="1" required> Согласен на обработку данных: профиль публикуется анонимно, без имени и контактов.</label>
       </form>
     </details>
   </section>

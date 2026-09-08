@@ -867,3 +867,10 @@ body.workspace h1, body.workspace h2 { letter-spacing: 0; }
 .lang-links a:not(:last-child)::after, .lang-links b:not(:last-child)::after {
   content: "·"; color: var(--line-strong); margin-left: 12px;
 }
+
+/* Выбор файла: нативная кнопка браузера выглядела чужеродно — рисуем свою через ::file-selector-button */
+input[type=file].input { padding: 6px 8px 6px 6px; color: var(--ink-dim); cursor: pointer; }
+input[type=file].input::file-selector-button { font: inherit; font-weight: 700; font-size: 0.82rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 999px; padding: 8px 14px; margin-right: 12px; cursor: pointer;
+  transition: border-color .15s, color .15s; }
+input[type=file].input:hover::file-selector-button { border-color: var(--acid); color: var(--acid); }
