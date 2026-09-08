@@ -1751,6 +1751,17 @@ def login_redirect(next_url: str):
     return RedirectResponse(f"/login?next={next_url}", status_code=303)
 
 
+@app.get("/api/me")
+def api_me(request: Request, db: Session = Depends(db_session)):
+    """Кто вошёл — для шапки статических страниц (главная, лендинги): они собираются
+    без сессии и иначе показывают «Войти» уже вошедшему админу."""
+    user = get_user(request, db)
+    resp = JSONResponse({"logged_in": bool(user), "name": user.name if user else "",
+                         "role": user.role if user else "", "dest": dest_for(user) if user else "/login"})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 @app.post("/login/next")
 def login_next(next: str = Form("/")):
     """Кнопка «Войти и откликнуться» шлёт POST, а не ведёт по ссылке.
@@ -4182,7 +4193,11 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         "employers": db.query(User).filter(User.role == "employer").count(),
         "talents": db.query(User).filter(User.role == "talent").count(),
         "apps": db.query(Application).count(),
-        "views": db.query(func.sum(Job.views)).scalar() or 0,
+        # счётчик Job.views до 3 сентября копил заходы краулеров (390 тысяч) —
+        # честная цифра: просмотры людьми из событий аналитики после фильтра ботов
+        "views": db.query(AnalyticsEvent).filter(
+            AnalyticsEvent.name == "job_view",
+            AnalyticsEvent.created_at >= datetime(2026, 9, 3)).count(),
         "resumes_live": db.query(Resume).filter(Resume.status == "approved", Resume.published == True).count(),  # noqa: E712
         "resumes_pending": db.query(Resume).filter(Resume.status == "pending").count(),
         "resume_unlocks": db.query(ResumeUnlock).count(),
@@ -4356,7 +4371,8 @@ def admin_resume_action(resume_id: int, action: str, request: Request,
         raise HTTPException(400)
     row.updated_at = datetime.utcnow()
     db.commit()
-    return RedirectResponse("/admin?tab=resumes", status_code=303)
+    back = request.query_params.get("back")
+    return RedirectResponse(f"/admin/user/{back}" if back else "/admin?tab=resumes", status_code=303)
 
 
 # редактирование вакансии
@@ -4485,10 +4501,40 @@ def admin_job(job_id: int, action: str, request: Request, db: Session = Depends(
     return RedirectResponse(dest, status_code=303)
 
 
+@app.get("/admin/user/{user_id}", response_class=HTMLResponse)
+def admin_user_page(user_id: int, request: Request, db: Session = Depends(db_session)):
+    """Карточка пользователя: профиль, резюме с модерацией, отклики, вакансии, заказы."""
+    need_admin(request, db)
+    u = db.get(User, user_id)
+    if not u:
+        raise HTTPException(404)
+    resume = db.query(Resume).filter_by(user_id=u.id).first()
+    apps = db.query(Application).filter_by(user_id=u.id).order_by(Application.created_at.desc()).all()
+    jobs = db.query(Job).filter_by(owner_id=u.id).order_by(Job.created_at.desc()).all()
+    unlocks = db.query(ResumeUnlock).filter_by(employer_id=u.id).order_by(ResumeUnlock.created_at.desc()).all()
+    orders = db.query(Order).filter_by(user_id=u.id).order_by(Order.created_at.desc()).all()
+    notifications = (db.query(Notification).filter_by(user_id=u.id)
+                     .order_by(Notification.id.desc()).limit(15).all())
+    return render(request, db, "admin_user.html", u=u, resume=resume, apps=apps, jobs=jobs,
+                  unlocks=unlocks, orders=orders, notifications=notifications)
+
+
+@app.get("/admin/resume/{resume_id}/file")
+def admin_resume_file(resume_id: int, request: Request, db: Session = Depends(db_session)):
+    """Оригинальный файл CV — только админу, для проверки перед публикацией."""
+    from fastapi.responses import FileResponse
+    need_admin(request, db)
+    row = db.get(Resume, resume_id)
+    if not row or not row.cv_file_path or not os.path.exists(row.cv_file_path):
+        raise HTTPException(404)
+    return FileResponse(row.cv_file_path, filename=row.cv_file_name or f"cv-{resume_id}.pdf")
+
+
 @app.post("/admin/user/{user_id}/{action}")
 def admin_user(user_id: int, action: str, request: Request, db: Session = Depends(db_session)):
     me = need_admin(request, db)
     u = db.get(User, user_id)
+    back_to_card = request.query_params.get("back") and action != "delete"
     if not u or u.id == me.id:
         return RedirectResponse("/admin?tab=users", status_code=303)
     if action == "delete":
@@ -4506,7 +4552,7 @@ def admin_user(user_id: int, action: str, request: Request, db: Session = Depend
     elif action in ("talent", "employer", "admin"):
         u.role = action
     db.commit()
-    return RedirectResponse("/admin?tab=users", status_code=303)
+    return RedirectResponse(f"/admin/user/{user_id}" if back_to_card else "/admin?tab=users", status_code=303)
 
 
 

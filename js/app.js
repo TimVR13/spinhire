@@ -134,6 +134,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const translateInterface = async lang => {
     document.documentElement.lang = lang;
     if (lang === 'ru') return;
+    // кабинеты и админка (body.workspace) живут на русском: подстрочный словарь
+    // превращал «Вакансии» в «Вакансії» и ломал подписи таблиц
+    if (document.body && document.body.classList.contains('workspace')) return;
     let complete = {};
     try {
       const response = await fetch(`/js/i18n-${lang}.js?v=20260819d`, { credentials: 'same-origin' });
@@ -378,6 +381,22 @@ document.addEventListener('DOMContentLoaded', () => {
       if (nav.classList.contains('open') && !nav.contains(e.target) && !burger.contains(e.target)) setNav(false);
     });
     window.addEventListener('resize', () => { if (window.innerWidth > 900) setNav(false); });
+  }
+
+  // статические страницы (главная, лендинги) не знают о сессии: спрашиваем сервер
+  // и заменяем «Войти» на ссылку в кабинет, чтобы админ не «вылетал» при клике по логотипу
+  if (!document.body.classList.contains('workspace') && document.querySelector('[data-auth], a[href^="/login"]')) {
+    fetch('/api/me', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).then(me => {
+      if (!me || !me.logged_in) return;
+      const label = me.role === 'admin' ? 'Админка' : me.role === 'employer' ? 'Кабинет' : 'Профиль';
+      document.querySelectorAll('[data-auth], a[href^="/login"]').forEach(el => {
+        const link = document.createElement('a');
+        link.href = me.dest;
+        link.className = el.className || 'btn btn-ghost btn-sm';
+        link.textContent = label;
+        el.replaceWith(link);
+      });
+    }).catch(() => {});
   }
 
   // auth modal

@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% set active = 'admin' %}
+{% block bodyclass %}workspace{% endblock %}
+{% block title %}{{ u.name or u.email }} · пользователь #{{ u.id }} | Админка SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex,nofollow">{% endblock %}
+{% block style %}
+  .au-wrap { max-width: 1100px; margin: 0 auto; }
+  .au-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--sp-4); margin-bottom: var(--sp-5); }
+  .au-head h1 { font-size: clamp(1.4rem, 3vw, 2rem); margin: 6px 0 4px; }
+  .au-meta { color: var(--ink-dim); font-size: .92rem; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+  .au-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: var(--sp-4); }
+  .au-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: var(--sp-4); }
+  .au-card h2 { font-family: var(--font-display); font-size: .95rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: var(--sp-3); }
+  .au-kv { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; font-size: .9rem; }
+  .au-kv dt { color: var(--ink-faint); }
+  .au-kv dd { color: var(--ink); word-break: break-word; }
+  .au-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .au-actions form { display: inline; }
+  .au-text { white-space: pre-wrap; font-size: .9rem; color: var(--ink-dim); line-height: 1.55; }
+  .adm td, .adm th { font-size: .88rem; }
+{% endblock %}
+{% block content %}
+<section class="section"><div class="container au-wrap">
+  <nav class="crumbs"><a href="/admin">Админка</a> / <a href="/admin?tab=users">Пользователи</a> / #{{ u.id }}</nav>
+  <div class="au-head">
+    <div>
+      <span class="kicker">{{ {'talent': 'Соискатель', 'employer': 'Работодатель', 'admin': 'Администратор'}.get(u.role, u.role) }} · #{{ u.id }}</span>
+      <h1>{{ u.name or 'Без имени' }}</h1>
+      <div class="au-meta">
+        <span><a href="mailto:{{ u.email }}" style="color: inherit;">{{ u.email }}</a></span>
+        {% if resume and resume.title %}<span>· {{ resume.title }}</span>{% elif u.headline %}<span>· {{ u.headline }}</span>{% endif %}
+        {% if u.location %}<span>· {{ u.location }}</span>{% endif %}
+        <span>· с нами с {{ u.created_at.strftime('%d.%m.%Y') }}</span>
+        {% if u.incognito %}<span>· 🥷 инкогнито для работодателей</span>{% endif %}
+      </div>
+    </div>
+    <div class="au-actions">
+      {% if u.role != 'talent' %}<form method="post" action="/admin/user/{{ u.id }}/talent?back=1"><button class="btn btn-ghost btn-sm">→ соискатель</button></form>{% endif %}
+      {% if u.role != 'employer' %}<form method="post" action="/admin/user/{{ u.id }}/employer?back=1"><button class="btn btn-ghost btn-sm">→ работодатель</button></form>{% endif %}
+      {% if u.role != 'admin' %}<form method="post" action="/admin/user/{{ u.id }}/admin?back=1" onsubmit="return confirm('Дать права админа?')"><button class="btn btn-ghost btn-sm" style="color: var(--yellow);">→ админ</button></form>{% endif %}
+      <form method="post" action="/admin/user/{{ u.id }}/delete" onsubmit="return confirm('Удалить пользователя, его резюме и отклики? Это необратимо.')"><button class="btn btn-ghost btn-sm" style="color: var(--pink);">Удалить</button></form>
+    </div>
+  </div>
+
+  <div class="au-grid">
+    <div class="au-card">
+      <h2>Профиль</h2>
+      <dl class="au-kv">
+        <dt>Роль</dt><dd>{{ u.role }}</dd>
+        <dt>Заголовок</dt><dd>{{ u.headline or '—' }}</dd>
+        <dt>Локация</dt><dd>{{ u.location or '—' }}</dd>
+        <dt>Языки</dt><dd>{{ u.languages or '—' }}</dd>
+        <dt>Зарплата</dt><dd>{{ u.salary_expect or '—' }}</dd>
+        <dt>Статус поиска</dt><dd>{{ u.job_search_status or '—' }}</dd>
+        <dt>SpinCoins</dt><dd>{{ u.coins or 0 }}</dd>
+        {% if u.role == 'employer' %}
+        <dt>Компания</dt><dd>{{ u.company_name or '—' }}{% if u.company_website %} · <a href="{{ u.company_website }}" target="_blank" rel="noopener">сайт</a>{% endif %}</dd>
+        <dt>Кредиты CV</dt><dd>{{ u.cv_credits or 0 }}{% if u.cv_access_until %} · безлимит до {{ u.cv_access_until }}{% endif %}</dd>
+        <dt>Кредиты вакансий</dt><dd>{{ u.job_credits or 0 }}{% if u.job_access_until %} · безлимит до {{ u.job_access_until }}{% endif %}</dd>
+        {% endif %}
+      </dl>
+    </div>
+
+    <div class="au-card">
+      <h2>Резюме {% if resume %}· <span class="status {{ resume.status }}">{{ resume.status }}</span>{% endif %}</h2>
+      {% if resume %}
+        <dl class="au-kv">
+          <dt>Публичный код</dt><dd><a href="/resume/{{ resume.id }}" style="color: inherit;">{{ resume.public_code }}</a>{% if resume.published %} · опубликовано{% endif %}</dd>
+          <dt>Должность</dt><dd>{{ resume.title or '—' }}</dd>
+          <dt>Опыт</dt><dd>{{ resume.experience_years }} лет · {{ resume.desired_format }}</dd>
+          <dt>Локация</dt><dd>{{ resume.location or '—' }}{% if resume.relocation %} · готов к релокации{% endif %}</dd>
+          <dt>Навыки</dt><dd>{{ resume.skills or '—' }}</dd>
+          <dt>Языки</dt><dd>{{ resume.languages or '—' }}</dd>
+          <dt>Контакты</dt><dd>{{ resume.contact_email or u.email }}{% if resume.contact_telegram %} · {{ resume.contact_telegram }}{% endif %}</dd>
+          <dt>Файл CV</dt><dd>{% if resume.cv_file_name %}<a href="/admin/resume/{{ resume.id }}/file" style="color: var(--acid);">{{ resume.cv_file_name }}</a>{% else %}—{% endif %}</dd>
+          <dt>Метрики</dt><dd>{{ resume.views or 0 }} просмотров · {{ resume.unlock_count or 0 }} открытий контактов</dd>
+          {% if resume.moderation_note %}<dt>Заметка</dt><dd style="color: var(--pink);">{{ resume.moderation_note }}</dd>{% endif %}
+        </dl>
+        <div class="au-actions" style="margin-top: var(--sp-3);">
+          {% if resume.status != 'approved' %}<form method="post" action="/admin/resume/{{ resume.id }}/approve?back={{ u.id }}"><button class="btn btn-acid btn-sm">Опубликовать</button></form>{% endif %}
+          {% if resume.status == 'approved' %}<form method="post" action="/admin/resume/{{ resume.id }}/pause?back={{ u.id }}"><button class="btn btn-ghost btn-sm">Снять с публикации</button></form>{% endif %}
+          <form method="post" action="/admin/resume/{{ resume.id }}/reject?back={{ u.id }}" style="display: flex; gap: 6px;"><input class="input" name="moderation_note" placeholder="Причина возврата"><button class="btn btn-ghost btn-sm">Вернуть на доработку</button></form>
+        </div>
+        {% if resume.about %}<h3 style="font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; margin: var(--sp-4) 0 6px; color: var(--ink-faint);">О себе</h3><div class="au-text">{{ resume.about }}</div>{% endif %}
+        {% if resume.employment_history %}<h3 style="font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; margin: var(--sp-4) 0 6px; color: var(--ink-faint);">Опыт</h3><div class="au-text">{{ resume.employment_history }}</div>{% endif %}
+        {% if resume.education %}<h3 style="font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; margin: var(--sp-4) 0 6px; color: var(--ink-faint);">Образование</h3><div class="au-text">{{ resume.education }}</div>{% endif %}
+      {% else %}
+        <p style="color: var(--ink-dim);">Резюме не создано.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="au-card" style="margin-top: var(--sp-4);">
+    <h2>Отклики · {{ apps | length }}</h2>
+    {% if apps %}
+    <div class="table-wrap"><table class="adm">
+      <tr><th>Когда</th><th>Вакансия</th><th>Компания</th><th>Статус</th><th>Сопроводительное</th></tr>
+      {% for a in apps %}
+      <tr>
+        <td style="white-space: nowrap;">{{ a.created_at.strftime('%d.%m.%y %H:%M') }}</td>
+        <td><a href="/job/{{ a.job.id }}" style="color: inherit;">{{ a.job.title }}</a></td>
+        <td>{{ a.job.company_name }}</td>
+        <td><span class="status {{ a.status }}">{{ a.status }}</span></td>
+        <td style="color: var(--ink-dim); max-width: 420px;">{{ (a.cover or '')[:200] }}</td>
+      </tr>
+      {% endfor %}
+    </table></div>
+    {% else %}<p style="color: var(--ink-dim);">Откликов нет.</p>{% endif %}
+  </div>
+
+  {% if u.role == 'employer' %}
+  <div class="au-card" style="margin-top: var(--sp-4);">
+    <h2>Вакансии работодателя · {{ jobs | length }}</h2>
+    {% if jobs %}<div class="table-wrap"><table class="adm"><tr><th>Вакансия</th><th>Статус</th><th>Просмотры</th><th>Откликов</th><th>Создана</th></tr>
+      {% for j in jobs %}<tr><td><a href="/job/{{ j.id }}" style="color: inherit;">{{ j.title }}</a></td><td><span class="status {{ j.status }}">{{ j.status }}</span></td><td>{{ j.views }}</td><td>{{ j.applications | length }}</td><td>{{ j.created_at.strftime('%d.%m.%y') }}</td></tr>{% endfor %}
+    </table></div>{% else %}<p style="color: var(--ink-dim);">Вакансий нет.</p>{% endif %}
+  </div>
+  <div class="au-card" style="margin-top: var(--sp-4);">
+    <h2>Открытые контакты · {{ unlocks | length }}</h2>
+    {% if unlocks %}<div class="table-wrap"><table class="adm"><tr><th>Когда</th><th>CV</th><th>Тип доступа</th></tr>
+      {% for r in unlocks %}<tr><td>{{ r.created_at.strftime('%d.%m.%y %H:%M') }}</td><td><a href="/resume/{{ r.resume_id }}" style="color: inherit;">#{{ r.resume_id }}</a></td><td>{{ r.access_kind }}</td></tr>{% endfor %}
+    </table></div>{% else %}<p style="color: var(--ink-dim);">Контакты не открывал.</p>{% endif %}
+  </div>
+  {% endif %}
+
+  <div class="au-grid" style="margin-top: var(--sp-4);">
+    <div class="au-card">
+      <h2>Заказы · {{ orders | length }}</h2>
+      {% if orders %}<div class="table-wrap"><table class="adm"><tr><th>Когда</th><th>План</th><th>Сумма</th><th>Статус</th></tr>
+        {% for o in orders %}<tr><td>{{ o.created_at.strftime('%d.%m.%y') }}</td><td><a href="/admin/order/{{ o.id }}" style="color: inherit;">{{ o.plan_name or o.plan }}</a></td><td>€{{ o.amount }}</td><td><span class="status {{ o.status }}">{{ o.status }}</span></td></tr>{% endfor %}
+      </table></div>{% else %}<p style="color: var(--ink-dim);">Заказов нет.</p>{% endif %}
+    </div>
+    <div class="au-card">
+      <h2>Уведомления · последние {{ notifications | length }}</h2>
+      {% if notifications %}<ul style="list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: .88rem;">
+        {% for n in notifications %}<li><span style="color: var(--ink-faint);">{{ n.created_at.strftime('%d.%m %H:%M') if n.created_at else '' }}</span> · <b>{{ n.title }}</b>{% if n.body %} — <span style="color: var(--ink-dim);">{{ n.body[:120] }}</span>{% endif %}{% if not n.read_at %} <span class="status new">не прочитано</span>{% endif %}</li>{% endfor %}
+      </ul>{% else %}<p style="color: var(--ink-dim);">Уведомлений нет.</p>{% endif %}
+    </div>
+  </div>
+</div></section>
+{% endblock %}

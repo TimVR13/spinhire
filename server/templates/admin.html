@@ -58,7 +58,7 @@
       <a class="stat-card" href="/admin?tab=users&role=employer"><div class="n">{{ stats.employers }}</div><div class="l">Работодателей&nbsp;→</div></a>
       <a class="stat-card" href="/admin?tab=users&role=talent"><div class="n">{{ stats.talents }}</div><div class="l">Соискателей&nbsp;→</div></a>
       <a class="stat-card" href="/admin?tab=apps"><div class="n">{{ stats.apps }}</div><div class="l">Откликов&nbsp;→</div></a>
-      <a class="stat-card" href="/admin?tab=jobs&sort=views"><div class="n">{{ stats.views }}</div><div class="l">Просмотров вакансий&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=jobs&sort=views"><div class="n">{{ stats.views }}</div><div class="l">Просмотров людьми · с 3.09&nbsp;→</div></a>
       <a class="stat-card" href="/admin?tab=resumes&st=live"><div class="n">{{ stats.resumes_live }}</div><div class="l">CV опубликовано&nbsp;→</div></a>
       <a class="stat-card" href="/admin?tab=resumes&st=pending" {% if stats.resumes_pending %}style="border-color:var(--pink);"{% endif %}><div class="n">{{ stats.resumes_pending }}</div><div class="l">CV на модерации&nbsp;→</div></a>
       <a class="stat-card" href="/admin?tab=unlocks"><div class="n">{{ stats.resume_unlocks }}</div><div class="l">Контактов открыто&nbsp;→</div></a>
@@ -125,7 +125,7 @@
       {% for cv in resumes %}
       <tr>
         <td><a href="/resume/{{ cv.id }}" style="color:inherit;">{{ cv.public_code }}</a><br><span style="color:var(--ink-faint);font-size:.75rem;">{{ cv.location or 'без локации' }}</span></td>
-        <td><b>{{ cv.user.name or '—' }}</b><br><span style="color:var(--ink-faint);font-size:.75rem;">{{ cv.user.email }}</span></td>
+        <td><a href="/admin/user/{{ cv.user.id }}" style="color: inherit;"><b>{{ cv.user.name or '—' }}</b></a><br><span style="color:var(--ink-faint);font-size:.75rem;">{{ cv.user.email }}</span></td>
         <td><b>{{ cv.title or 'Без названия' }}</b><br><span style="color:var(--ink-faint);font-size:.75rem;">{{ cv.skill_list[:4]|join(', ') }}</span></td>
         <td>{{ cv.experience_years }} лет</td>
         <td><span class="status {{ cv.status }}">{{ cv.status }}</span>{% if cv.moderation_note %}<br><span style="color:var(--pink);font-size:.75rem;">{{ cv.moderation_note }}</span>{% endif %}</td>
@@ -149,8 +149,8 @@
       <tr><th>Email</th><th>Имя</th><th>Роль</th><th>Компания</th><th>С нами</th><th>Действия</th></tr>
       {% for u in users %}
       <tr>
-        <td>{{ u.email }}</td>
-        <td>{{ u.name or '—' }}</td>
+        <td><a href="/admin/user/{{ u.id }}" style="color: inherit; font-weight: 700;">{{ u.email }}</a></td>
+        <td><a href="/admin/user/{{ u.id }}" style="color: inherit;">{{ u.name or '—' }}</a>{% if u.headline %}<br><span style="color: var(--ink-faint); font-size: .75rem;">{{ u.headline }}</span>{% endif %}</td>
         <td><span class="status {% if u.role == 'admin' %}invited{% elif u.role == 'employer' %}viewed{% else %}new{% endif %}">{{ u.role }}</span></td>
         <td>{{ u.company_name or '—' }}</td>
         <td>{{ u.created_at.strftime('%d.%m.%y') }}</td>
@@ -169,7 +169,7 @@
       <tr><th>Кандидат</th><th>Вакансия</th><th>Компания</th><th>Статус</th><th>Когда</th></tr>
       {% for a in apps %}
       <tr>
-        <td>{% if a.user.incognito %}🥷 #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</td>
+        <td><a href="/admin/user/{{ a.user.id }}" style="color: inherit; font-weight: 700;">{{ a.user.name or a.user.email }}</a>{% if a.user.incognito %} <span title="Инкогнито для работодателей">🥷</span>{% endif %}<br><span style="color: var(--ink-faint); font-size: .75rem;">{{ a.user.email }}{% if a.user.headline %} · {{ a.user.headline }}{% elif a.user.resume and a.user.resume.title %} · {{ a.user.resume.title }}{% endif %}</span></td>
         <td><a href="/job/{{ a.job.id }}" style="color: inherit;">{{ a.job.title }}</a></td>
         <td>{{ a.job.company_name }}</td>
         <td><span class="status {{ a.status }}">{{ a.status }}</span></td>

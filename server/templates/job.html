@@ -28,6 +28,8 @@
 }
 </script>{% endif %}{% endblock %}
 {% block style %}
+  .back-link { display: inline-block; margin-bottom: 10px; color: var(--acid); text-decoration: none; font-weight: 700; font-size: .9rem; }
+  .back-link:hover { text-decoration: underline; }
   .job-layout { display: grid; grid-template-columns: 1fr 300px; gap: var(--sp-6); align-items: start; }
   .job-hero { border: 1px solid var(--line-strong); background: var(--surface); box-shadow: 0 10px 30px oklch(0.02 0 0 / 0.5); padding: var(--sp-6); margin-bottom: var(--sp-5); }
   .job-hero h1 { font-size: clamp(1.4rem, 3vw, 2.2rem); margin-block: var(--sp-3); overflow-wrap: anywhere; }
@@ -69,6 +71,7 @@
   }
 {% endblock %}
 {% block content %}
+  <a href="/jobs" class="back-link" onclick="if (document.referrer && new URL(document.referrer).origin === location.origin) { history.back(); return false; }">← Назад к вакансиям</a>
   <nav class="crumbs" aria-label="Хлебные крошки"><a href="/">Главная</a> / <a href="/jobs">Вакансии</a> / {{ job.title }}</nav>
 
   {% if request.query_params.get('ok') %}<div class="flash">✓ Отклик отправлен — работодатель увидит его в кабинете.{% if request.query_params.get('extra') %} Дневной лимит был исчерпан — списано {{ request.query_params.get('extra') }} SC.{% endif %}</div>{% endif %}
@@ -96,7 +99,7 @@
           {% if job.category %}<span class="tag">{{ job.category }}</span>{% endif %}
           {% for t in job.tag_list %}<span class="tag tag-acid" data-no-translate>{{ t }}</span>{% endfor %}
         </div>
-        <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% elif job.salary_estimate %}<span class="salary--est">≈ {{ job.salary_estimate }}</span> <small style="color:var(--ink-faint);font-size:0.55em;font-weight:400;">оценка SpinHire</small>{% else %}вилка по запросу{% endif %}</p>
+        <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}<span style="color: var(--ink-faint); font-size: 0.7em; font-weight: 400;">зарплата не указана работодателем</span>{% endif %}</p>
         <div style="display: flex; flex-direction: column; gap: 12px; margin-top: var(--sp-4);">
           {% if is_closed %}
             <a class="btn btn-acid btn-lg" href="/jobs?cat={{ job.category|urlencode }}">Смотреть актуальные вакансии →</a>
@@ -142,7 +145,7 @@
             <p class="job-card__meta"><b>{{ s.company_name }}</b> · {{ s.location or '—' }} · {{ s.fmt }}</p>
           </div>
           <div class="job-card__side">
-            {% if s.has_salary %}<span class="salary">{{ s.salary }}</span>{% elif s.salary_estimate %}<span class="salary salary--est">≈ {{ s.salary_estimate }}</span>{% else %}<span class="salary" style="color: var(--ink-faint); font-size: 0.85rem;">по запросу</span>{% endif %}
+            {% if s.has_salary %}<span class="salary">{{ s.salary }}</span>{% else %}<span class="salary" style="color: var(--ink-faint); font-size: 0.85rem;">по запросу</span>{% endif %}
           </div>
         </a>
         {% endfor %}
@@ -176,7 +179,8 @@
           {% if job.category %}<dt>Направление</dt><dd>{{ job.category }}</dd>{% endif %}
           <dt>Формат</dt><dd>{{ job.fmt }}</dd>
           {% if job.location %}<dt>Локация</dt><dd>{{ job.location }}</dd>{% endif %}
-          <dt>Зарплата</dt><dd>{% if job.has_salary %}{{ job.salary }}{% elif job.salary_estimate %}≈ {{ job.salary_estimate }} · оценка{% else %}по запросу{% endif %}</dd>
+          <dt>Зарплата</dt><dd>{% if job.has_salary %}{{ job.salary }}{% else %}не указана{% endif %}</dd>
+          {% if not job.has_salary and job.salary_estimate %}<dt>Рынок по роли</dt><dd title="Ориентир из картотеки профессий SpinHire для похожих ролей и региона. Это не условия этого работодателя.">{{ job.salary_estimate }} <a href="/professions" style="color: var(--ink-faint); font-size: .8em;">ориентир картотеки</a></dd>{% endif %}
           <dt>Размещена</dt><dd>{% if job.posted_at %}{{ job.posted_at }}{% else %}{{ job.created_at.strftime('%d.%m.%Y') }}{% endif %}</dd>
           {% if job.deadline %}<dt>Дедлайн</dt><dd>{{ job.deadline }}</dd>{% endif %}
           {% if is_closed %}<dt>Статус</dt><dd style="color: var(--yellow);">Закрыта</dd>{% endif %}
