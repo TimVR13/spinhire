@@ -28,6 +28,8 @@ import bcrypt as _bcrypt
 from itsdangerous import BadSignature, URLSafeSerializer
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from server.mail_i18n import mail_t
+
 
 def hash_pw(pw: str) -> str:
     return _bcrypt.hashpw(pw.encode()[:72], _bcrypt.gensalt()).decode()
