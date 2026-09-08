@@ -1954,7 +1954,22 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
         # их лениво лишь для 100 вакансий страницы — так /jobs отдаётся за 100 мс, а не за секунду
         from sqlalchemy.orm import defer as _defer
         qs = qs.options(_defer(Job.description))
-    jobs = qs.order_by(Job.featured.desc(), Job.created_at.desc()).all()
+    ordered = qs.order_by(Job.featured.desc(), Job.created_at.desc())
+    python_filters = bool(q or salary_only or lang)
+    if not python_filters:
+        # обычный листинг и SQL-фильтры: страница берётся из базы, а не из 6 тысяч объектов
+        found = ordered.count()
+        total_pages = max(1, (found + JOBS_PER_PAGE - 1) // JOBS_PER_PAGE)
+        page = max(1, min(page, total_pages))
+        page_jobs = ordered.offset((page - 1) * JOBS_PER_PAGE).limit(JOBS_PER_PAGE).all()
+        from urllib.parse import urlencode
+        active = {k: v for k, v in (("fmt", fmt), ("cat", cat), ("loc", loc)) if v}
+        return render(request, db, "jobs.html", jobs=page_jobs, q=q, fmt=fmt, cat=cat,
+                      loc=loc, lang=lang, salary_only=salary_only, formats=FORMATS, categories=CATEGORIES,
+                      job_languages=JOB_LANGUAGES, locations=job_locations_cached(db), page=page,
+                      total_pages=total_pages, found=found, qs_base=urlencode(active),
+                      total=base.count())
+    jobs = ordered.all()
     if q:
         # регистронезависимо, включая кириллицу (SQLite LIKE не сворачивает регистр не-ASCII)
         ql = q.strip().lower()
