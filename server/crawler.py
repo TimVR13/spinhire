@@ -2009,6 +2009,49 @@ def company_is_offtopic(company: str, title: str = "", description: str = "") ->
     return len(_UA_IGAMING_RE.findall(haystack)) < 2
 
 
+# Универсальные борды (Djinni, hh, work.ua, justjoin…) отдают раздел «gambling»
+# вперемешку с e-commerce, Amazon PPC и AI-стартапами. Для них вакансия остаётся,
+# только если в тексте есть отраслевой маркер или компания уже известна как iGaming
+# (есть на профильных источниках или в каталоге компаний).
+GENERIC_SOURCES = ("djinni", "hh.ru", "work.ua", "rabota.ua", "partner:", "justjoin.it", "arbeitnow", "dev.bg")
+IGAMING_SIGNAL_RE = re.compile(
+    r"igaming|i-gaming|gambl|гембл|casino|казино|bett?ing|беттінг|беттинг|bookmak|букмекер|sportsbook|"
+    r"ставк[аи] на спорт|ставок на спорт|\bslots?\b|слот|poker|покер|bingo|бинго|lotter|лотере|азарт|игорн|"
+    r"live[ -]?dealer|croupier|крупье|круп'є|game (?:provider|studio|presenter)|wager|jackpot|джекпот|roulette|рулетк|"
+    r"esports? bet|fantasy sports|sweepstake|social casino|\bkyc\b|\baml\b|responsible gaming|gaming (?:operator|industry|licen)|"
+    r"\bmga\b|curacao licen|ukgc|gaming authority", re.I)
+
+
+def is_generic_source(source: str) -> bool:
+    return any((source or "").startswith(p) for p in GENERIC_SOURCES)
+
+
+def known_igaming_companies(db, Job) -> set:
+    """Компании, которые точно из индустрии: пришли с профильных источников или есть в каталоге."""
+    names = set()
+    rows = db.query(Job.company_name, Job.source).filter(Job.source != "").distinct().all()
+    for name, source in rows:
+        if name and not is_generic_source(source):
+            names.add(name.strip().lower())
+    try:
+        for c in json.loads((Path(__file__).resolve().parent.parent / "data" / "companies.json").read_text(encoding="utf-8")):
+            if c.get("name"):
+                names.add(c["name"].strip().lower())
+    except Exception:  # noqa: BLE001
+        pass
+    return names
+
+
+def generic_job_offtopic(source: str, title: str, company: str, description: str, known: set) -> bool:
+    """Вакансия с универсального борда без отраслевых маркеров и от неизвестной компании — не наша."""
+    if not is_generic_source(source):
+        return False
+    comp = (company or "").strip().lower()
+    if comp in known or _UA_BRANDS_RE.search(comp):
+        return False
+    return not IGAMING_SIGNAL_RE.search(f"{title}\n{company}\n{description or ''}")
+
+
 def job_is_irrelevant(title: str) -> bool:
     """Название говорит, что роль не про iGaming-карьеру."""
     t = title or ""
@@ -2017,19 +2060,24 @@ def job_is_irrelevant(title: str) -> bool:
     return bool(_IRRELEVANT_TITLE_RE.search(t))
 
 
-def sweep_irrelevant(db, Job) -> int:
+def sweep_irrelevant(db, Job, dry: bool = False, samples: list | None = None) -> int:
     """Снять с публикации уже одобренные нерелевантные вакансии краулера.
     Компании без живых вакансий сами исчезают из каталога и с /company/…"""
     rows = (db.query(Job).filter(Job.status == "approved", Job.source != "")
             .all())
+    known = known_igaming_companies(db, Job)
     rejected = 0
     for row in rows:
         if job_is_irrelevant(row.title) or company_is_offtopic(
-                row.company_name, row.title, row.description or ""):
-            row.status = "rejected"
-            row.closed_at = datetime.utcnow().date().isoformat()
+                row.company_name, row.title, row.description or "") or generic_job_offtopic(
+                row.source, row.title, row.company_name, row.description or "", known):
+            if samples is not None:
+                samples.append((row.id, row.source, row.title, row.company_name))
+            if not dry:
+                row.status = "rejected"
+                row.closed_at = datetime.utcnow().date().isoformat()
             rejected += 1
-    if rejected:
+    if rejected and not dry:
         db.commit()
     return rejected
 
@@ -2039,6 +2087,7 @@ def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
     added = updated = closed = 0
     changed_rows, closed_rows = [], []
     seen = set()
+    known = known_igaming_companies(db, Job) if any(is_generic_source(it["source"]) for it in items) else set()
     for it in items:
         key = (it["source"], it["ext_id"])
         seen.add(key)
@@ -2092,7 +2141,10 @@ def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
                       status="rejected" if (job_is_irrelevant(it["title"])
                                            or company_is_offtopic(it["company_name"],
                                                                   it["title"],
-                                                                  it.get("description", "")))
+                                                                  it.get("description", ""))
+                                           or generic_job_offtopic(it["source"], it["title"],
+                                                                   it["company_name"],
+                                                                   it.get("description", ""), known))
                              else ("approved" if approve else "pending"))
             db.add(row)
             changed_rows.append(row)
