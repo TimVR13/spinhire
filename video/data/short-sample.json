@@ -1,0 +1,4 @@
+{"id":"sample","format":"hot_jobs","bg":"hero-v.jpg","music":"audio/music.mp3","voice":"audio/pop.wav","duration":6,
+ "scenes":[{"id":"hook","type":"hook","kicker":"Вакансии дня","title":"3 вакансии дня","sub":"с зарплатой до $5 000","start":0,"end":3},
+           {"id":"cta","type":"cta","line":"Все вакансии","url":"spinhire.io/jobs","start":3,"end":6}],
+ "captions":[{"text":"Три горячие вакансии дня","start":0.3,"end":2.5}]}
