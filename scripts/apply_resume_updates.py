@@ -19,7 +19,11 @@ FIELDS = ("title", "location", "experience_years", "skills", "about", "languages
 PII = re.compile(r"(\+?\d[\d\s().-]{8,}\d)|([\w.+-]+@[\w-]+\.[\w.]+)|(https?://\S+)", re.I)
 
 
-def clean(v):
+def clean(v, joiner=", "):
+    if isinstance(v, list):
+        v = joiner.join(str(x) for x in v if x)
+    if isinstance(v, dict):
+        v = "\n".join(f"{k}: {val}" for k, val in v.items())
     if isinstance(v, str):
         return PII.sub("", v).strip()
     return v
@@ -59,7 +63,7 @@ def main():
             elif f == "desired_format" and v not in ("удалёнка", "гибрид", "офис"):
                 continue
             else:
-                v = clean(v)
+                v = clean(v, "\n" if f in ("employment_history", "education") else ", ")
             values[f] = v
         values.update(title=title, about=about, skills=skills)
         published.append((rid, title))

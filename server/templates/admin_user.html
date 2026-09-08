@@ -4,6 +4,7 @@
 {% block title %}{{ u.name or u.email }} · пользователь #{{ u.id }} | Админка SpinHire{% endblock %}
 {% block robots %}<meta name="robots" content="noindex,nofollow">{% endblock %}
 {% block style %}
+  .au-section { padding-block: var(--sp-4) var(--sp-7); }
   .au-wrap { max-width: 1100px; margin: 0 auto; }
   .au-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--sp-4); margin-bottom: var(--sp-5); }
   .au-head h1 { font-size: clamp(1.4rem, 3vw, 2rem); margin: 6px 0 4px; }
@@ -20,7 +21,7 @@
   .adm td, .adm th { font-size: .88rem; }
 {% endblock %}
 {% block content %}
-<section class="section"><div class="container au-wrap">
+<section class="section au-section"><div class="container au-wrap">
   <nav class="crumbs"><a href="/admin">Админка</a> / <a href="/admin?tab=users">Пользователи</a> / #{{ u.id }}</nav>
   <div class="au-head">
     <div>

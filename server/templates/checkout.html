@@ -21,12 +21,45 @@
     </div>
 
     {% if order.status == 'pending' %}
+    {% if request.query_params.get('claimed') %}
+      <div class="flash">✓ Спасибо, мы получили уведомление. Сверим поступление и активируем услугу, обычно в течение пары часов.</div>
+    {% endif %}
     <div style="display: flex; flex-direction: column; gap: 12px;">
-      <form method="post" action="/checkout/order/{{ order.id }}/invoice">
-        <button class="btn btn-acid btn-block btn-lg" type="submit">Оплатить по счёту (инвойс) →</button>
-      </form>
+      {% if crypto.enabled %}
+      <div class="card" style="border-color: var(--acid);">
+        <b style="font-family: var(--font-display); text-transform: uppercase; font-size: .9rem;">₮ Оплата в USDT</b>
+        <p style="color: var(--ink-dim); font-size: .88rem; margin: 6px 0 12px;">К оплате <b style="color: var(--ink);">{{ crypto.amount_usdt }} USDT</b> (€{{ order.amount }} по курсу ЕЦБ {{ crypto.rate }}, включён 1% на комиссию сети). Назначение перевода не нужно, мы сверяем по сумме и времени; если сеть позволяет memo, укажите <code>{{ crypto.reference }}</code>.</p>
+        {% if not crypto.chosen %}
+        <form method="post" action="/checkout/order/{{ order.id }}/crypto" style="display: flex; gap: 8px; flex-wrap: wrap;">
+          {% for net in crypto.wallets %}<button class="btn {% if loop.first %}btn-acid{% else %}btn-ghost{% endif %}" name="network" value="{{ net }}" type="submit">USDT {{ net }}</button>{% endfor %}
+        </form>
+        {% else %}
+        <div style="font-size: .85rem; color: var(--ink-faint); margin-bottom: 4px;">Сеть {{ crypto.chosen }} · адрес кошелька</div>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <code id="wallet-addr" style="font-size: .95rem; word-break: break-all; padding: 8px 10px; border: 1px solid var(--line); flex: 1; min-width: 240px;">{{ crypto.wallets[crypto.chosen] }}</code>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="navigator.clipboard.writeText(document.getElementById('wallet-addr').textContent).then(() => { this.textContent = 'Скопировано' })">Копировать</button>
+        </div>
+        <form method="post" action="/checkout/order/{{ order.id }}/claim" style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+          <input class="input" name="tx" placeholder="Хэш транзакции (по желанию)" style="flex: 1; min-width: 220px;">
+          <button class="btn btn-acid" type="submit">Я перевёл →</button>
+        </form>
+        <div style="margin-top: 8px; font-size: .8rem;"><a href="/checkout/order/{{ order.id }}/invoice.pdf" style="color: var(--acid);">Скачать счёт PDF</a> · <form method="post" action="/checkout/order/{{ order.id }}/crypto" style="display: inline;"><button class="btn btn-ghost btn-sm" name="network" value="{{ 'ERC20' if crypto.chosen == 'TRC20' and 'ERC20' in crypto.wallets else 'TRC20' }}" type="submit" style="padding: 2px 8px;">другая сеть</button></form></div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div class="card">
+        <b style="font-family: var(--font-display); text-transform: uppercase; font-size: .9rem;">Банковский перевод по счёту</b>
+        <p style="color: var(--ink-dim); font-size: .88rem; margin: 6px 0 12px;">{% if legal.iban %}Счёт с реквизитами в PDF, оплата на IBAN, назначение <code>SH-{{ order.id }}</code>.{% else %}Пришлём счёт с реквизитами на почту в течение рабочего дня.{% endif %}</p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          {% if legal.iban %}<a class="btn btn-acid" href="/checkout/order/{{ order.id }}/invoice.pdf">Скачать счёт PDF →</a>{% endif %}
+          <form method="post" action="/checkout/order/{{ order.id }}/invoice"><button class="btn {% if legal.iban %}btn-ghost{% else %}btn-acid{% endif %}" type="submit">{% if legal.iban %}Отправить счёт на почту{% else %}Запросить счёт (инвойс) →{% endif %}</button></form>
+          {% if legal.iban %}<form method="post" action="/checkout/order/{{ order.id }}/claim"><button class="btn btn-ghost" type="submit">Я оплатил по счёту</button></form>{% endif %}
+        </div>
+      </div>
+
       <button class="btn btn-ghost btn-block" disabled style="opacity: 0.6;">Оплата картой — скоро</button>
-      <p style="color: var(--ink-faint); font-size: 0.8rem; text-align: center;">iGaming — high-risk сфера: оплату картой подключаем через специализированный PSP. Пока — счёт на юрлицо/крипта. После оплаты услуга активируется вручную (обычно за пару часов).</p>
+      <p style="color: var(--ink-faint); font-size: 0.8rem; text-align: center;">iGaming — high-risk сфера: оплату картой подключаем через специализированного провайдера. Пока принимаем USDT и банковские переводы.</p>
     </div>
     {% elif order.status == 'paid' %}
       <div class="flash">✓ Оплачено. Услуга активна. Спасибо!</div>

@@ -199,14 +199,29 @@
       <div class="stat-card" {% if orders_pending %}style="border-color: var(--pink);"{% endif %}><div class="n">{{ orders_pending }}</div><div class="l">Ждут оплаты</div></div>
       <div class="stat-card"><div class="n">{{ orders|length }}</div><div class="l">Всего заказов</div></div>
     </div>
+
+    <div class="source-head"><div><span class="kicker" style="color:var(--pink)">Воронка оплат · {{ funnel.days }} дней</span><h2>Тарифы → заказ → оплата</h2></div><p class="source-note">Заходы людей на /post-job (боты не считаются), созданные заказы, выбранный способ, сообщения «я оплатил» и фактические оплаты. За всё время: {{ funnel_all.started }} заказов, {{ funnel_all.paid }} оплачено, €{{ funnel_all.revenue }}.</p></div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="n">{{ funnel.pricing }}</div><div class="l">Открыли тарифы</div></div>
+      <div class="stat-card"><div class="n">{{ funnel.started }}</div><div class="l">Создали заказ · {{ funnel.c_start }}%</div></div>
+      <div class="stat-card"><div class="n">{{ funnel.method }}</div><div class="l">Выбрали способ оплаты</div></div>
+      <div class="stat-card"><div class="n">{{ funnel.claimed }}</div><div class="l">Сообщили «я оплатил»</div></div>
+      <div class="stat-card" {% if funnel.paid %}style="border-color:var(--acid)"{% endif %}><div class="n">{{ funnel.paid }}</div><div class="l">Оплатили · {{ funnel.c_paid }}% заказов · {{ funnel.c_total }}% от тарифов</div></div>
+      <div class="stat-card"><div class="n">€{{ funnel.revenue }}</div><div class="l">Выручка за период</div></div>
+    </div>
+    {% if funnel.by_plan %}
+    <div class="table-wrap" style="margin-bottom: var(--sp-5);"><table class="adm"><tr><th>Тариф</th><th>Заказов</th><th>Оплачено</th><th>Выручка</th></tr>
+      {% for name, row in funnel.by_plan %}<tr><td>{{ name }}</td><td>{{ row.orders }}</td><td>{{ row.paid }}</td><td>€{{ row.revenue }}</td></tr>{% endfor %}
+    </table></div>
+    {% endif %}
     <div class="table-wrap"><table class="adm">
       <tr><th>#</th><th>Тариф</th><th>Клиент</th><th>Сумма</th><th>Метод</th><th>Статус</th><th>Когда</th><th>Действия</th></tr>
       {% for o in orders %}
       <tr>
         <td>{{ o.id }}</td>
         <td>{{ o.plan_name }}</td>
-        <td>{{ o.user.company_name or o.user.email if o.user else '—' }}</td>
-        <td>€{{ o.amount }}</td>
+        <td>{% if o.user %}<a href="/admin/user/{{ o.user.id }}" style="color: inherit;">{{ o.user.company_name or o.user.email }}</a>{% else %}—{% endif %}</td>
+        <td>€{{ o.amount }} <a href="/checkout/order/{{ o.id }}/invoice.pdf" title="Счёт PDF" style="color: var(--ink-faint); font-size: .75rem;">PDF</a></td>
         <td style="font-size: 0.8rem;">{{ o.method }}</td>
         <td><span class="status {% if o.status == 'paid' %}approved{% elif o.status == 'cancelled' %}rejected{% else %}pending{% endif %}">{{ o.status }}</span></td>
         <td style="font-size: 0.8rem;">{{ o.created_at.strftime('%d.%m %H:%M') }}</td>

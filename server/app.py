@@ -2413,6 +2413,143 @@ def api_events(db: Session = Depends(db_session)):
 
 # ---------- billing / оплата ----------
 
+# ---------- оплата: реквизиты, USDT, PDF-счёт ----------
+# Юрлицо и кошельки задаются окружением (systemd drop-in), в репозитории их нет.
+_rate_cache = {"at": 0.0, "value": None}
+
+
+def eur_usd_rate() -> float:
+    """Курс EUR→USD для пересчёта в USDT: ЕЦБ через frankfurter.app, кэш на сутки, запасной 1.08."""
+    now = time.time()
+    if _rate_cache["value"] and now - _rate_cache["at"] < 86400:
+        return _rate_cache["value"]
+    try:
+        import urllib.request
+        with urllib.request.urlopen("https://api.frankfurter.app/latest?from=EUR&to=USD", timeout=6) as resp:
+            _rate_cache.update(at=now, value=float(json.load(resp)["rates"]["USD"]))
+    except Exception:
+        _rate_cache.update(at=now, value=float(os.environ.get("SPINHIRE_EURUSD", "1.08")))
+    return _rate_cache["value"]
+
+
+def legal_details() -> dict:
+    return {
+        "name": os.environ.get("SPINHIRE_LEGAL_NAME", ""),
+        "address": os.environ.get("SPINHIRE_LEGAL_ADDRESS", ""),
+        "reg": os.environ.get("SPINHIRE_LEGAL_REG", ""),
+        "vat": os.environ.get("SPINHIRE_LEGAL_VAT", ""),
+        "bank": os.environ.get("SPINHIRE_LEGAL_BANK", ""),
+        "iban": os.environ.get("SPINHIRE_LEGAL_IBAN", ""),
+        "bic": os.environ.get("SPINHIRE_LEGAL_BIC", ""),
+        "email": os.environ.get("SPINHIRE_LEGAL_EMAIL", "hello@spinhire.io"),
+    }
+
+
+def crypto_payment_details(order) -> dict:
+    """Кошельки USDT по сетям + сумма в USDT с запасом 1% на комиссии и курс."""
+    wallets = {net: os.environ.get(f"SPINHIRE_USDT_{net}", "").strip()
+               for net in ("TRC20", "ERC20", "BEP20")}
+    wallets = {k: v for k, v in wallets.items() if v}
+    rate = eur_usd_rate()
+    amount_usdt = round(order.amount * rate * 1.01 + 0.5)  # целые USDT, округление вверх
+    chosen = order.method.split(":", 1)[1] if (order.method or "").startswith("crypto:") else ""
+    return {"enabled": bool(wallets), "wallets": wallets, "rate": round(rate, 4),
+            "amount_usdt": amount_usdt, "reference": f"SH-{order.id}", "chosen": chosen}
+
+
+def notify_admins(db: Session, kind: str, title: str, body: str, link: str = "") -> None:
+    for admin in db.query(User).filter(User.role == "admin").all():
+        add_notification(db, admin.id, kind, title, body, link)
+
+
+def build_invoice_pdf(order, legal: dict, crypto: dict) -> bytes:
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    font = "Helvetica"
+    for candidate in ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                      "/Library/Fonts/Arial Unicode.ttf", "/System/Library/Fonts/Supplemental/Arial.ttf"):
+        if os.path.exists(candidate):
+            try:
+                pdfmetrics.registerFont(TTFont("Body", candidate))
+                font = "Body"
+                break
+            except Exception:
+                continue
+    buf = BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    w, h = A4
+    y = h - 25 * mm
+    c.setFont(font, 20)
+    c.drawString(20 * mm, y, f"Invoice / Счёт № SH-{order.id}")
+    c.setFont(font, 10)
+    y -= 8 * mm
+    issued = order.created_at.date() if order.created_at else date.today()
+    due = issued + timedelta(days=7)
+    c.drawString(20 * mm, y, f"Date: {issued.isoformat()}    Due: {due.isoformat()}    Status: {order.status}")
+    y -= 14 * mm
+    c.setFont(font, 11)
+    c.drawString(20 * mm, y, "From / Поставщик:")
+    c.setFont(font, 10)
+    for line in [legal.get("name") or "SpinHire", legal.get("address"), 
+                 f"Reg. No {legal['reg']}" if legal.get("reg") else "",
+                 f"VAT {legal['vat']}" if legal.get("vat") else "", legal.get("email")]:
+        if line:
+            y -= 5.5 * mm
+            c.drawString(22 * mm, y, line)
+    y -= 12 * mm
+    c.setFont(font, 11)
+    c.drawString(20 * mm, y, "Bill to / Плательщик:")
+    c.setFont(font, 10)
+    customer = order.user
+    for line in [(customer.company_name if customer else "") or (customer.name if customer else ""),
+                 customer.email if customer else "", customer.company_location if customer else ""]:
+        if line:
+            y -= 5.5 * mm
+            c.drawString(22 * mm, y, line)
+    y -= 14 * mm
+    c.setFont(font, 11)
+    c.drawString(20 * mm, y, "Description / Услуга")
+    c.drawRightString(w - 20 * mm, y, "Amount / Сумма")
+    c.line(20 * mm, y - 2 * mm, w - 20 * mm, y - 2 * mm)
+    y -= 9 * mm
+    c.setFont(font, 10)
+    desc = PLANS[order.plan][2] if order.plan in PLANS else ""
+    c.drawString(20 * mm, y, f"{order.plan_name} — {desc}"[:95])
+    c.drawRightString(w - 20 * mm, y, f"EUR {order.amount:.2f}")
+    y -= 7 * mm
+    c.drawString(20 * mm, y, "VAT: reverse charge / не облагается" if not legal.get("vat") else "VAT included where applicable")
+    y -= 9 * mm
+    c.setFont(font, 13)
+    c.drawRightString(w - 20 * mm, y, f"Total: EUR {order.amount:.2f}")
+    y -= 16 * mm
+    c.setFont(font, 11)
+    c.drawString(20 * mm, y, "Payment / Оплата:")
+    c.setFont(font, 10)
+    if legal.get("iban"):
+        for line in [f"Bank: {legal.get('bank', '')}", f"IBAN: {legal['iban']}", f"BIC/SWIFT: {legal.get('bic', '')}",
+                     f"Reference / Назначение: SH-{order.id}"]:
+            y -= 5.5 * mm
+            c.drawString(22 * mm, y, line)
+    if crypto.get("enabled"):
+        y -= 8 * mm
+        c.drawString(22 * mm, y, f"USDT: {crypto['amount_usdt']} USDT (EUR/USD {crypto['rate']}, incl. 1% network buffer)")
+        for net, addr in crypto["wallets"].items():
+            y -= 5.5 * mm
+            c.drawString(22 * mm, y, f"{net}: {addr}")
+        y -= 5.5 * mm
+        c.drawString(22 * mm, y, f"Memo / Reference: {crypto['reference']}")
+    y -= 14 * mm
+    c.setFont(font, 8)
+    c.drawString(20 * mm, y, "Service is activated after the payment is received. Questions: " + (legal.get("email") or "hello@spinhire.io"))
+    c.showPage()
+    c.save()
+    return buf.getvalue()
+
+
 @app.post("/checkout/{plan}")
 def checkout_create(plan: str, request: Request, job_id: int = Form(None),
                     db: Session = Depends(db_session)):
@@ -2432,6 +2569,8 @@ def checkout_create(plan: str, request: Request, job_id: int = Form(None),
     o = Order(user_id=user.id, plan=plan, plan_name=name, amount=amount,
               job_id=job_id, status="pending")
     db.add(o)
+    db.flush()
+    track(db, "checkout_started", user.id, "order", o.id, plan=plan, amount=amount)
     db.commit()
     return RedirectResponse(f"/checkout/order/{o.id}", status_code=303)
 
@@ -2442,7 +2581,11 @@ def checkout_view(order_id: int, request: Request, db: Session = Depends(db_sess
     o = db.get(Order, order_id)
     if not user or not o or (o.user_id != user.id and user.role != "admin"):
         raise HTTPException(403)
-    return render(request, db, "checkout.html", order=o, plans=PLANS)
+    if user.id == o.user_id:
+        track(db, "checkout_view", user.id, "order", o.id)
+        db.commit()
+    return render(request, db, "checkout.html", order=o, plans=PLANS,
+                  crypto=crypto_payment_details(o), legal=legal_details())
 
 
 @app.post("/checkout/order/{order_id}/invoice")
@@ -2452,8 +2595,54 @@ def checkout_invoice(order_id: int, request: Request, db: Session = Depends(db_s
     if not user or not o or o.user_id != user.id:
         raise HTTPException(403)
     o.method = "invoice"
+    track(db, "invoice_requested", user.id, "order", o.id)
+    notify_admins(db, "order", f"Заказ #{o.id}: запрошен счёт",
+                  f"{o.plan_name} · €{o.amount} · {user.company_name or user.email}", f"/admin?tab=orders")
     db.commit()
     return RedirectResponse(f"/checkout/order/{order_id}?sent=1", status_code=303)
+
+
+@app.post("/checkout/order/{order_id}/crypto")
+def checkout_crypto(order_id: int, request: Request, network: str = Form("TRC20"),
+                    db: Session = Depends(db_session)):
+    """Клиент выбрал оплату в USDT: запоминаем сеть и показываем реквизиты."""
+    user = get_user(request, db)
+    o = db.get(Order, order_id)
+    if not user or not o or o.user_id != user.id:
+        raise HTTPException(403)
+    o.method = f"crypto:{network if network in ('TRC20', 'ERC20', 'BEP20') else 'TRC20'}"
+    track(db, "crypto_selected", user.id, "order", o.id, network=network)
+    db.commit()
+    return RedirectResponse(f"/checkout/order/{order_id}?crypto=1", status_code=303)
+
+
+@app.post("/checkout/order/{order_id}/claim")
+def checkout_claim(order_id: int, request: Request, tx: str = Form(""),
+                   db: Session = Depends(db_session)):
+    """«Я оплатил»: клиент сообщает о переводе, админ сверяет и нажимает «Оплачен»."""
+    user = get_user(request, db)
+    o = db.get(Order, order_id)
+    if not user or not o or o.user_id != user.id:
+        raise HTTPException(403)
+    track(db, "payment_claimed", user.id, "order", o.id, method=o.method, tx=tx.strip()[:120])
+    notify_admins(db, "order", f"Заказ #{o.id}: клиент сообщил об оплате",
+                  f"{o.plan_name} · €{o.amount} · {o.method} · {user.company_name or user.email}"
+                  + (f" · tx {tx.strip()[:60]}" if tx.strip() else ""), "/admin?tab=orders")
+    db.commit()
+    return RedirectResponse(f"/checkout/order/{order_id}?claimed=1", status_code=303)
+
+
+@app.get("/checkout/order/{order_id}/invoice.pdf")
+def checkout_invoice_pdf(order_id: int, request: Request, db: Session = Depends(db_session)):
+    """Счёт в PDF: реквизиты из окружения SPINHIRE_LEGAL_*, суммы в EUR, USDT-строка при криптооплате."""
+    from fastapi.responses import Response
+    user = get_user(request, db)
+    o = db.get(Order, order_id)
+    if not user or not o or (o.user_id != user.id and user.role != "admin"):
+        raise HTTPException(403)
+    pdf = build_invoice_pdf(o, legal_details(), crypto_payment_details(o))
+    return Response(pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="spinhire-invoice-{o.id}.pdf"'})
 
 
 @app.get("/job/{job_id}", response_class=HTMLResponse)
@@ -4098,6 +4287,9 @@ def post_job_page(request: Request, db: Session = Depends(db_session)):
     # сама форма размещения живёт в кабинете (/employer#post)
     user = get_user(request, db)
     live_jobs = db.query(Job).filter(Job.status == "approved").count()
+    if not is_bot(request.headers.get("user-agent", "")):
+        track(db, "pricing_view", user.id if user else None, "page", None)
+        db.commit()
     return render(request, db, "post_job.html",
                   need_login=not user or user.role == "talent",
                   live_jobs=f"{live_jobs:,}".replace(",", " "))
@@ -4179,6 +4371,37 @@ def admin_crawl(request: Request, db: Session = Depends(db_session)):
         except Exception:
             pass
     return RedirectResponse(f"/admin?tab=sources&crawl={msg}", status_code=303)
+
+
+def payments_funnel(db: Session, days: int = 30) -> dict:
+    """Воронка оплат: тарифы → заказ → выбор способа → «я оплатил» → оплачено."""
+    since = datetime.utcnow() - timedelta(days=days)
+    def count(name, distinct_users=False):
+        q = db.query(AnalyticsEvent).filter(AnalyticsEvent.name == name, AnalyticsEvent.created_at >= since)
+        if distinct_users:
+            return q.filter(AnalyticsEvent.user_id.isnot(None)).distinct(AnalyticsEvent.user_id).count()
+        return q.count()
+    orders = db.query(Order).filter(Order.created_at >= since)
+    pricing = count("pricing_view")
+    started = orders.count()
+    method_chosen = orders.filter(Order.method != "").filter(Order.method != "invoice").count() + count("invoice_requested")
+    claimed = count("payment_claimed")
+    paid_q = orders.filter(Order.status == "paid")
+    paid = paid_q.count()
+    revenue = db.query(func.sum(Order.amount)).filter(Order.status == "paid", Order.created_at >= since).scalar() or 0
+    by_plan = {}
+    for o in orders.all():
+        slot = by_plan.setdefault(o.plan_name, {"orders": 0, "paid": 0, "revenue": 0})
+        slot["orders"] += 1
+        if o.status == "paid":
+            slot["paid"] += 1
+            slot["revenue"] += o.amount
+    def pct(a, b):
+        return round(a * 100 / b, 1) if b else 0
+    return {"days": days, "pricing": pricing, "started": started, "method": method_chosen,
+            "claimed": claimed, "paid": paid, "revenue": revenue,
+            "c_start": pct(started, pricing), "c_paid": pct(paid, started), "c_total": pct(paid, pricing),
+            "by_plan": sorted(by_plan.items(), key=lambda kv: -kv[1]["revenue"])}
 
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -4334,6 +4557,8 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         ctx["orders"] = db.query(Order).order_by(Order.created_at.desc()).all()
         ctx["orders_pending"] = db.query(Order).filter(Order.status == "pending").count()
         ctx["revenue"] = db.query(func.sum(Order.amount)).filter(Order.status == "paid").scalar() or 0
+        ctx["funnel"] = payments_funnel(db, days=30)
+        ctx["funnel_all"] = payments_funnel(db, days=3650)
     else:
         ctx["pending"] = db.query(Job).filter(Job.status == "pending") \
             .order_by(Job.created_at.desc()).limit(10).all()
@@ -4444,6 +4669,8 @@ def admin_order_action(order_id: int, action: str, request: Request, db: Session
         if action == "paid":
             already_paid = o.status == "paid"
             o.status = "paid"
+            if not already_paid:
+                track(db, "order_paid", o.user_id, "order", o.id, plan=o.plan, amount=o.amount, method=o.method)
             # применяем плюшку: featured-план поднимает вакансию
             if o.plan == "featured" and o.job_id:
                 job = db.get(Job, o.job_id)
