@@ -1643,8 +1643,14 @@ async def language_layer(request: Request, call_next):
         token, live = live_count
         text = re.sub(r"(<title>[^<]*)" + re.escape(token) + r"([^<]*</title>)",
                       lambda m: m.group(1) + live + m.group(2), text, count=1)
-    marker = (f'<meta name="sh-lang" content="{lang}" data-mode="{"path" if prefix_lang else "host"}">'
-              + _hreflang_block(inner_path, lang))
+    if inner_path.startswith(("/job/", "/company/")):
+        # текст вакансии — контент работодателя на одном языке: 11 «переводов» были
+        # дублями и съедали бюджет сканирования (5 тысяч «обнаружена, не проиндексирована»)
+        marker = (f'<meta name="sh-lang" content="{lang}" data-mode="{"path" if prefix_lang else "host"}">'
+                  f'<link rel="canonical" href="https://spinhire.io{inner_path}">')
+    else:
+        marker = (f'<meta name="sh-lang" content="{lang}" data-mode="{"path" if prefix_lang else "host"}">'
+                  + _hreflang_block(inner_path, lang))
     # свой canonical у страницы теперь лишний — язык задаёт его сам
     text = re.sub(r'<link rel="canonical"[^>]*>', "", text, count=1)
     text = text.replace("</head>", marker + "</head>", 1)
@@ -1919,6 +1925,17 @@ JOB_LANGUAGES = (
 )
 
 
+_locations_cache = {"at": 0.0, "value": []}
+
+
+def job_locations_cached(db: Session) -> list:
+    now = time.time()
+    if now - _locations_cache["at"] > 600 or not _locations_cache["value"]:
+        rows = db.query(Job.location).filter(Job.status == "approved", Job.location != "").distinct().all()
+        _locations_cache.update(at=now, value=sorted({r[0] for r in rows if r[0]}))
+    return _locations_cache["value"]
+
+
 @app.get("/jobs", response_class=HTMLResponse)
 def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
               loc: str = "", lang: str = "", salary_only: int = 0, page: int = 1,
@@ -1932,6 +1949,11 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
         qs = qs.filter(Job.category == cat)
     if loc:
         qs = qs.filter(Job.location == loc)
+    if not lang:
+        # описания (мегабайты текста) нужны только фильтру по языку; карточки берут
+        # их лениво лишь для 100 вакансий страницы — так /jobs отдаётся за 100 мс, а не за секунду
+        from sqlalchemy.orm import defer as _defer
+        qs = qs.options(_defer(Job.description))
     jobs = qs.order_by(Job.featured.desc(), Job.created_at.desc()).all()
     if q:
         # регистронезависимо, включая кириллицу (SQLite LIKE не сворачивает регистр не-ASCII)
@@ -1948,8 +1970,8 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
     if lang:
         jobs = [j for j in jobs if lang in {code for code, _ in j.language_list}]
 
-    # список локаций для выпадающего фильтра (страна/город)
-    locations = sorted({j.location for j in base.all() if j.location})
+    # список локаций для выпадающего фильтра (страна/город) — кэш на 10 минут
+    locations = job_locations_cached(db)
 
     # пагинация по 100 на страницу
     found = len(jobs)
@@ -2653,7 +2675,9 @@ def job_detail(job_id: str, request: Request, db: Session = Depends(db_session))
     viewer = get_user(request, db)
     # Админ и владелец видят вакансию в любом статусе — иначе из очереди модерации нечего открывать
     privileged = viewer and (viewer.role == "admin" or viewer.id == job.owner_id if job else False)
-    if not job or (job.status not in ("approved", "archived") and not privileged):
+    if not job:
+        raise HTTPException(410)  # вакансия удалена — Google убирает 410 из индекса быстрее, чем 404
+    if job.status not in ("approved", "archived") and not privileged:
         raise HTTPException(404)
     if not is_bot(request.headers.get("user-agent", "")):
         # просмотры ботов не считаем: 260 тысяч GET /job в неделю — почти все
@@ -2668,7 +2692,7 @@ def job_detail(job_id: str, request: Request, db: Session = Depends(db_session))
                .order_by(Job.featured.desc(), Job.created_at.desc()).limit(3).all())
     return render(request, db, "job.html", job=job, applied=applied,
                   applies=len(job.applications), similar=similar,
-                  is_closed=job.status == "archived")
+                  is_closed=job.status == "archived", loc_schema=job_location_schema(job))
 
 
 @app.post("/job/{job_id}/apply")
@@ -5428,6 +5452,53 @@ def category_ru(name: str) -> str:
     return value
 
 
+COUNTRY_ISO = {
+    "Мальта": "MT", "Кипр": "CY", "Польша": "PL", "Украина": "UA", "Великобритания": "GB",
+    "Гибралтар": "GI", "Румыния": "RO", "Болгария": "BG", "Греция": "GR", "Испания": "ES",
+    "Португалия": "PT", "Германия": "DE", "Бразилия": "BR", "США": "US", "Канада": "CA",
+    "Грузия": "GE", "Армения": "AM", "Сербия": "RS", "Филиппины": "PH", "Индия": "IN", "ЮАР": "ZA",
+    "ОАЭ": "AE", "Швеция": "SE", "Латвия": "LV", "Эстония": "EE", "Литва": "LT", "Нидерланды": "NL",
+    "Ирландия": "IE", "Италия": "IT", "Мексика": "MX", "Колумбия": "CO", "Перу": "PE", "Чили": "CL",
+    "Аргентина": "AR", "Турция": "TR", "Австралия": "AU", "Китай": "CN", "Япония": "JP", "Казахстан": "KZ",
+}
+
+
+def job_location_schema(job) -> dict:
+    """jobLocation / applicantLocationRequirements для JobPosting.
+
+    Google требует jobLocation всегда, а для TELECOMMUTE — applicantLocationRequirements
+    (страна или регион, откуда можно откликаться). Страну даём ISO-кодом.
+    """
+    country_ru = country_of(job.location)
+    iso = COUNTRY_ISO.get(country_ru, "")
+    remote = (job.fmt or "") in ("удалёнка", "удалёнка ЕС")
+    country_names = {country_ru.lower(), COUNTRY_EN.get(country_ru, "").lower()}
+    city = ""
+    for part in (job.location or "").split(","):
+        part = part.strip()
+        if part and part.lower() not in country_names and part.lower() not in (
+                "remote", "удалёнка", "удаленка", "worldwide", "anywhere", "eu", "europe", "европа"):
+            city = part
+            break
+    address = {"@type": "PostalAddress"}
+    if city and country_ru not in ("Удалёнка", "Не указана"):
+        address["addressLocality"] = city
+    if iso:
+        address["addressCountry"] = iso
+    elif country_ru not in ("Удалёнка", "Не указана"):
+        address["addressCountry"] = COUNTRY_EN.get(country_ru, country_ru)
+    if len(address) == 1:
+        # ни города, ни страны: Google принимает страну работодателя как локацию офиса
+        address["addressCountry"] = "MT" if remote else "EU"
+    out = {"jobLocation": {"@type": "Place", "address": address}}
+    if remote:
+        out["jobLocationType"] = "TELECOMMUTE"
+        out["applicantLocationRequirements"] = (
+            {"@type": "Country", "name": COUNTRY_EN.get(country_ru, country_ru)} if iso
+            else [{"@type": "Country", "name": n} for n in ("Malta", "Cyprus", "Poland", "Ukraine", "Georgia", "Armenia", "Serbia", "Bulgaria", "Romania", "Spain", "Portugal", "Germany")])
+    return out
+
+
 def loc_name(name: str, lang: str = "ru") -> str:
     """Страна / формат / направление на языке страницы (для .md и llms.txt)."""
     if lang == "ru":
@@ -5838,11 +5909,12 @@ async def http_exc(request: Request, exc: StarletteHTTPException):
     # API-клиенты всегда получают JSON, а не брендированную HTML-страницу
     if request.url.path.startswith("/api/"):
         return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
-    if exc.status_code in (404, 403, 401, 500):
+    if exc.status_code in (404, 410, 403, 401, 500):
         with SessionLocal() as db:
-            titles = {404: "Стол не найден", 403: "Только для своих",
+            titles = {404: "Стол не найден", 410: "Вакансия снята", 403: "Только для своих",
                       401: "Нужен вход", 500: "Заведение прилегло"}
             subs = {404: "Такой страницы нет или вакансию уже закрыли.",
+                    410: "Работодатель закрыл эту вакансию, и мы её удалили. Похожие — в поиске.",
                     403: "У вас нет доступа к этому разделу.",
                     401: "Войдите, чтобы продолжить.",
                     500: "Что-то сломалось на нашей стороне. Уже чиним."}

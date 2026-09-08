@@ -32,17 +32,21 @@ def clean(v, joiner=", "):
 def main():
     updates = json.load(open(sys.argv[1], encoding="utf-8"))
     dry = "--dry" in sys.argv
+    force = "--force" in sys.argv   # переписать и уже опубликованные профили (замена черновой версии)
     c = sqlite3.connect(DB, timeout=60)
     c.row_factory = sqlite3.Row
     now = datetime.utcnow().isoformat(sep=" ")
     published, held = [], []
     for rid, u in updates.items():
         row = c.execute("select * from resumes where id=?", (rid,)).fetchone()
-        if not row or row["status"] != "pending":
+        if not row or (row["status"] != "pending" and not (force and row["status"] == "approved")):
             continue
+        was_approved = row["status"] == "approved"
         title, about, skills = clean(u.get("title") or ""), clean(u.get("about") or ""), clean(u.get("skills") or "")
         ok = bool(title) and len(about) >= 200 and bool(skills)
         if not ok:
+            if was_approved:
+                continue   # уже опубликованное не снимаем из-за сомнений новой версии
             note = u.get("reason") or "Загрузите читаемый PDF или заполните должность, навыки и «о себе» вручную."
             held.append((rid, note))
             if not dry:
@@ -73,6 +77,8 @@ def main():
         c.execute(f"update resumes set {sets}, status='approved', published=1, moderation_note='', "
                   f"submitted_at=coalesce(submitted_at, ?), updated_at=? where id=?",
                   (*values.values(), now, now, rid))
+        if was_approved:
+            continue   # уведомление уже уходило при первой публикации
         c.execute("insert into notifications (user_id, kind, title, body, link, read_at, created_at) "
                   "values (?, 'resume', 'CV опубликован', "
                   "'Мы структурировали ваше CV в анонимный профиль и опубликовали его в базе работодателей. "

@@ -3,15 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="/js/analytics.js?v=20260821c"></script>
+<script defer src="/js/analytics.js?v=20260821c"></script>
 <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-0W5XWDYPZ3"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-0W5XWDYPZ3');
-</script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-0W5XWDYPZ3');(function(){var d=false;function l(){if(d)return;d=true;var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-0W5XWDYPZ3';document.head.appendChild(s);}window.addEventListener('load',function(){(window.requestIdleCallback||function(f){setTimeout(f,2500)})(l);});['pointerdown','keydown','scroll','touchstart'].forEach(function(e){window.addEventListener(e,l,{once:true,passive:true});});})();</script>
 <title>Работа в iGaming: вакансии в казино и беттинге | SpinHire</title>
 <link rel="icon" href="/favicon.svg?v=3" type="image/svg+xml">
 <link rel="icon" href="/img/favicons/favicon-32.png?v=3" sizes="32x32" type="image/png">
@@ -58,7 +52,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap"></noscript>
 <script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <link rel="stylesheet" href="css/style.css?v=20260821c">
 <style>
@@ -254,7 +248,7 @@
   /* слот-промо «Однорукий бандит» на главной */
   .slot-promo { display: grid; grid-template-columns: 1.05fr 1fr; gap: var(--sp-6); align-items: center;
     border: 1px solid var(--line); border-radius: 20px; padding: clamp(20px, 4vw, 44px);
-    background: linear-gradient(oklch(0.14 0.01 300 / 0.55), oklch(0.09 0.006 285 / 0.9)), url('img/asset-slot-cabinet.jpg') right center / cover no-repeat, var(--island);
+    background: linear-gradient(oklch(0.14 0.01 300 / 0.55), oklch(0.09 0.006 285 / 0.9)), url('img/asset-slot-cabinet.webp') right center / cover no-repeat, var(--island);
     overflow: hidden; }
   .slot-promo h2 { font-size: clamp(1.6rem, 3vw, 2.4rem); margin: 8px 0 12px; }
   .slot-promo p { color: var(--ink-dim); max-width: 46ch; margin-bottom: var(--sp-5); }
@@ -611,9 +605,9 @@
           <div class="hp-machine">
             <div class="hp-jackpot"><span>Джекпот · 9 одинаковых</span><b>30 000 SC</b></div>
             <div class="hp-reels" id="hpReels" role="button" tabindex="0" aria-label="Крутить игровой автомат">
-              <div class="hp-cell"><img src="img/sym-seven.jpg" alt="Семёрка"></div><div class="hp-cell"><img src="img/sym-cherry.jpg" alt="Вишня"></div><div class="hp-cell"><img src="img/sym-bell.jpg" alt="Колокол"></div>
-              <div class="hp-cell"><img src="img/sym-crown.jpg" alt="Корона"></div><div class="hp-cell"><img src="img/sym-diamond.jpg" alt="Бриллиант"></div><div class="hp-cell"><img src="img/sym-star.jpg" alt="Звезда"></div>
-              <div class="hp-cell"><img src="img/sym-bar.jpg" alt="BAR"></div><div class="hp-cell"><img src="img/sym-horseshoe.jpg" alt="Подкова"></div><div class="hp-cell"><img src="img/sym-seven.jpg" alt="Семёрка"></div>
+              <div class="hp-cell"><img src="img/sym-seven.webp" alt="Семёрка"></div><div class="hp-cell"><img src="img/sym-cherry.webp" alt="Вишня"></div><div class="hp-cell"><img src="img/sym-bell.webp" alt="Колокол"></div>
+              <div class="hp-cell"><img src="img/sym-crown.webp" alt="Корона"></div><div class="hp-cell"><img src="img/sym-diamond.webp" alt="Бриллиант"></div><div class="hp-cell"><img src="img/sym-star.webp" alt="Звезда"></div>
+              <div class="hp-cell"><img src="img/sym-bar.webp" alt="BAR"></div><div class="hp-cell"><img src="img/sym-horseshoe.webp" alt="Подкова"></div><div class="hp-cell"><img src="img/sym-seven.webp" alt="Семёрка"></div>
             </div>
           </div>
           <button class="hp-lever" id="hpLever" type="button" aria-label="Дёрнуть рычаг и запустить автомат"></button>
@@ -667,12 +661,12 @@
     <div class="container">
       <div class="section-head"><div><span class="kicker">Индустрия в цифрах</span><h2>iGaming — это большие деньги</h2></div></div>
       <div class="facts-grid">
-        <div class="fact"><img class="fact-ico" src="img/asset-chips.jpg" alt="" loading="lazy" width="56" height="56"><div><b>$100B+</b><span>объём онлайн-гемблинга к 2027 году</span></div></div>
-        <div class="fact"><img class="fact-ico" src="img/sym-diamond.jpg" alt="" loading="lazy" width="56" height="56"><div><b>×2–3</b><span>зарплаты выше обычного IT и маркетинга</span></div></div>
-        <div class="fact"><img class="fact-ico" src="img/asset-cards.jpg" alt="" loading="lazy" width="56" height="56"><div><b>Мальта · Кипр · Тбилиси</b><span>главные хабы релокации с визой</span></div></div>
-        <div class="fact"><img class="fact-ico" src="img/asset-dice.jpg" alt="" loading="lazy" width="56" height="56"><div><b>40%+</b><span>вакансий — удалёнка или гибрид</span></div></div>
-        <div class="fact"><img class="fact-ico" src="img/sym-seven.jpg" alt="" loading="lazy" width="56" height="56"><div><b>₿ USDT</b><span>всё больше компаний платят в крипте</span></div></div>
-        <div class="fact"><img class="fact-ico" src="img/sym-star.jpg" alt="" loading="lazy" width="56" height="56"><div><b>Английский B2</b><span>достаточно для старта в большинстве ролей</span></div></div>
+        <div class="fact"><img class="fact-ico" src="img/asset-chips.webp" alt="" loading="lazy" width="56" height="56"><div><b>$100B+</b><span>объём онлайн-гемблинга к 2027 году</span></div></div>
+        <div class="fact"><img class="fact-ico" src="img/sym-diamond.webp" alt="" loading="lazy" width="56" height="56"><div><b>×2–3</b><span>зарплаты выше обычного IT и маркетинга</span></div></div>
+        <div class="fact"><img class="fact-ico" src="img/asset-cards.webp" alt="" loading="lazy" width="56" height="56"><div><b>Мальта · Кипр · Тбилиси</b><span>главные хабы релокации с визой</span></div></div>
+        <div class="fact"><img class="fact-ico" src="img/asset-dice.webp" alt="" loading="lazy" width="56" height="56"><div><b>40%+</b><span>вакансий — удалёнка или гибрид</span></div></div>
+        <div class="fact"><img class="fact-ico" src="img/sym-seven.webp" alt="" loading="lazy" width="56" height="56"><div><b>₿ USDT</b><span>всё больше компаний платят в крипте</span></div></div>
+        <div class="fact"><img class="fact-ico" src="img/sym-star.webp" alt="" loading="lazy" width="56" height="56"><div><b>Английский B2</b><span>достаточно для старта в большинстве ролей</span></div></div>
       </div>
     </div>
   </section>
@@ -728,14 +722,14 @@
         <a class="link-more" href="/jobs.html#salaries">Полный гид по зарплатам →</a>
       </div>
       <div class="salary-strip">
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-crown.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">VIP-менеджер</span><span class="range">€3–5K</span><br><span class="geo">Кипр · Мальта</span></div>
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-star.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">Аффилейт-менеджер</span><span class="range">€2.5–4.5K</span><br><span class="geo">Удалёнка · ЕС</span></div>
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-bell.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">AML / Комплаенс</span><span class="range">€4–6K</span><br><span class="geo">Мальта · Гибралтар</span></div>
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-seven.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">Разработчик слотов</span><span class="range">€4–7K</span><br><span class="geo">Удалёнка · Варшава</span></div>
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-horseshoe.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">Трейдер спортбука</span><span class="range">€2.5–3.5K</span><br><span class="geo">Лимассол</span></div>
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-cherry.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">Медиабайер</span><span class="range">€2.5–5K</span><br><span class="geo">Удалёнка · + %</span></div>
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-diamond.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">Продакт-менеджер</span><span class="range">€4.5–7K</span><br><span class="geo">Мальта · Кипр</span></div>
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-bar.jpg" alt="" loading="lazy" width="40" height="40"><span class="role">Head of Casino</span><span class="range">€8–15K</span><br><span class="geo">Мальта · Кюрасао</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-crown.webp" alt="" loading="lazy" width="40" height="40"><span class="role">VIP-менеджер</span><span class="range">€3–5K</span><br><span class="geo">Кипр · Мальта</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-star.webp" alt="" loading="lazy" width="40" height="40"><span class="role">Аффилейт-менеджер</span><span class="range">€2.5–4.5K</span><br><span class="geo">Удалёнка · ЕС</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-bell.webp" alt="" loading="lazy" width="40" height="40"><span class="role">AML / Комплаенс</span><span class="range">€4–6K</span><br><span class="geo">Мальта · Гибралтар</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-seven.webp" alt="" loading="lazy" width="40" height="40"><span class="role">Разработчик слотов</span><span class="range">€4–7K</span><br><span class="geo">Удалёнка · Варшава</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-horseshoe.webp" alt="" loading="lazy" width="40" height="40"><span class="role">Трейдер спортбука</span><span class="range">€2.5–3.5K</span><br><span class="geo">Лимассол</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-cherry.webp" alt="" loading="lazy" width="40" height="40"><span class="role">Медиабайер</span><span class="range">€2.5–5K</span><br><span class="geo">Удалёнка · + %</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-diamond.webp" alt="" loading="lazy" width="40" height="40"><span class="role">Продакт-менеджер</span><span class="range">€4.5–7K</span><br><span class="geo">Мальта · Кипр</span></div>
+        <div class="salary-tile"><img class="salary-ico" src="img/sym-bar.webp" alt="" loading="lazy" width="40" height="40"><span class="role">Head of Casino</span><span class="range">€8–15K</span><br><span class="geo">Мальта · Кюрасао</span></div>
       </div>
     </div>
   </section>
