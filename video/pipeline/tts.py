@@ -27,15 +27,55 @@ def client():
     return _client
 
 
+# Термины, которые русскоязычный диктор произносит по-русски — английскому голосу их не отдаём.
+TERMS = {
+    "igaming": "айгейминг", "gambling": "гэмблинг", "betting": "беттинг", "crm": "ЦРМ", "hr": "эйчар", "it": "айти",
+    "qa": "кью-эй", "seo": "сео", "ppc": "пи-пи-си", "kpi": "кипиай", "vip": "вип", "aml": "эй-эм-эл", "kyc": "кей-вай-си",
+    "b2b": "би-ту-би", "b2c": "би-ту-си", "ceo": "сео-директор", "cto": "си-ти-о", "coo": "си-о-о", "cmo": "си-эм-о",
+    "junior": "джуниор", "middle": "мидл", "senior": "сеньор", "lead": "лид", "head": "хед", "team lead": "тимлид",
+    "remote": "ремоут", "office": "офис", "excel": "эксель", "google sheets": "гугл-таблицы", "google": "гугл",
+    "telegram": "телеграм", "whatsapp": "вотсап", "linkedin": "линкедин", "youtube": "ютуб", "instagram": "инстаграм",
+    "tiktok": "тикток", "facebook": "фейсбук", "slack": "слак", "jira": "джира", "sql": "эс-кью-эль", "api": "апи",
+    "ggr": "джи-джи-ар", "ngr": "эн-джи-ар", "rtp": "ар-ти-пи", "ltv": "эл-ти-ви", "roi": "рои", "cpa": "си-пи-эй",
+    "revshare": "ревшара", "affiliate": "аффилейт", "affiliates": "аффилейты", "retention": "ретеншн", "support": "саппорт",
+    "spinhire.io": "спинхайр точка ай-оу", "spinhire": "спинхайр", "malta": "Мальта", "cyprus": "Кипр",
+    "sre": "эс-ар-и", "b1": "би-один", "b2": "би-два", "c1": "си-один", "c2": "си-два", "a2": "а-два", "devops": "девопс", "product owner": "продакт-оунер", "product manager": "продакт-менеджер",
+    "live casino": "лайв-казино", "casino": "казино", "slots": "слоты", "sportsbook": "спортсбук", "fintech": "финтех",
+    "responsible gaming": "ответственная игра", "optimove": "оптимув", "zendesk": "зендеск", "intercom": "интерком",
+}
+_TERM_RE = re.compile(r"(?<![A-Za-z])(" + "|".join(sorted((re.escape(k) for k in TERMS), key=len, reverse=True)) + r")(?![A-Za-z])", re.I)
+
+
+def russify_run(run: str) -> str | None:
+    """Латинский кусок → русское произношение, если это термин целиком или каждое слово в словаре."""
+    key = run.lower().strip(" .")
+    if key in TERMS:
+        return TERMS[key]
+    words = key.split()
+    if len(words) == 1 and key.rstrip(".") in TERMS:
+        return TERMS[key.rstrip(".")]
+    if all(w in TERMS for w in words):
+        return " ".join(TERMS[w] for w in words)
+    return None
+
+
 def split_langs(text: str) -> list[tuple[str, str]]:
+    """Русский диктор читает всё, кроме латинских названий (компании, должности). Известные термины
+    (iGaming, CRM, senior…) произносит по-русски. Знаки препинания клеятся к предыдущему куску,
+    иначе голос читает «вопросительный знак»."""
     segs = []
     for part in LATIN.split(text):
         part = part.strip()
         if not part:
             continue
         lang = "en-US" if LATIN.fullmatch(part) else "ru-RU"
-        if segs and segs[-1][0] == lang:
-            segs[-1] = (lang, segs[-1][1] + " " + part)
+        if lang == "en-US":
+            ru = russify_run(part)
+            if ru is not None:
+                lang, part = "ru-RU", ru
+        joiner = " " if re.match(r"[A-Za-zА-Яа-яЁё0-9]", part) else ""
+        if segs and (segs[-1][0] == lang or not re.search(r"[A-Za-zА-Яа-яЁё0-9]", part)):
+            segs[-1] = (segs[-1][0], segs[-1][1] + joiner + part)
         else:
             segs.append((lang, part))
     return segs

@@ -32,6 +32,43 @@ def short_item(text: str, limit: int = 64) -> str:
 
 
 US = {"сша", "us", "usa", "united states"}
+N_JOBS = 5
+EMPLOYMENT = {"FULL_TIME": "полная занятость", "PART_TIME": "частичная", "CONTRACTOR": "контракт", "INTERN": "стажировка"}
+GRADES = [("junior", "Junior"), ("middle", "Middle"), ("senior", "Senior"), ("lead", "Lead")]
+
+
+def grade_bars(sal: dict, region: str = "mt_cy") -> list[dict]:
+    bars = [{"label": lbl, "lo": sal[region][g][0], "hi": sal[region][g][1]} for g, lbl in GRADES if g in sal[region]]
+    mx = max(b["hi"] for b in bars)
+    for b in bars:
+        b["text"] = f"${b['lo']:,}–{b['hi']:,}".replace(",", " ")
+        b["pct"] = round(b["hi"] / mx, 3)
+    return bars
+
+
+def top_locations(queries: list[str], family: str, n: int = 3) -> tuple[list[dict], str]:
+    """Где чаще всего ищут эту роль — по живым вакансиям сайта. Если по самой роли вакансий мало,
+    берём всё направление (family): там сотни строк и статистика честная."""
+    from collections import Counter
+    jobs, scope = [], ""
+    for q in queries:
+        jobs = api_jobs(pages=2, q=q)
+        if len(jobs) >= 8:
+            scope = "по этой роли"
+            break
+    if len(jobs) < 8:
+        jobs = api_jobs(pages=6, category=family)
+        scope = f"направление «{family.lower()}»"
+    cnt = Counter()
+    for j in jobs:
+        key = "Удалёнка" if "удал" in (j.get("format") or "").lower() else (j.get("country") or "").strip()
+        if len(key) >= 4 and key.lower() not in US and not key.isascii():
+            cnt[key] += 1
+        elif key == "Удалёнка":
+            cnt[key] += 1
+    top = cnt.most_common(n)
+    mx = top[0][1] if top else 1
+    return [{"label": k, "text": f"{v} вак.", "pct": round(v / mx, 3), "n": v} for k, v in top], scope
 
 
 def us_office(j: dict) -> bool:
@@ -41,7 +78,12 @@ def us_office(j: dict) -> bool:
 
 def clean_title(t: str) -> str:
     t = re.sub(r"\s*\([^)]*\)", "", t)                    # (React.js + Python)
-    t = re.split(r"\s+[-–—|/]\s+", t)[0]                   # хвост после « - », « / », « | »
+    # двуязычные названия «Informācijas … Inženieris/Information System» — берём английскую (ASCII) часть
+    parts = [x.strip() for x in re.split(r"\s*[|/]\s*", t) if x.strip()]
+    ascii_parts = [x for x in parts if x.isascii()]
+    if ascii_parts and len(parts) > 1:
+        t = max(ascii_parts, key=len)
+    t = re.split(r"\s+[-–—]\s+", t)[0]                    # хвост после « - »
     t = re.sub(r"\b(on-?site|remote|hybrid)\b.*$", "", t, flags=re.I)  # «On-site Bucharest»
     t = t.strip(" ,·")
     if t.isupper():
@@ -68,10 +110,10 @@ def build_hot_jobs(seed: str, args) -> dict:
         if age > 2 or usd_equiv(hi, j["salary_currency"]) < 4000 or us_office(j):
             continue
         cands.append((usd_equiv(hi, j["salary_currency"]), lo, hi, j))
-    if len(cands) < 3:  # тихий день — расширяем окно до недели
-        for j in jobs:
+    if len(cands) < N_JOBS:  # тихий день — берём свежие за неделю и порог ниже
+        for j in api_jobs(pages=8):
             lo, hi = monthly(j)
-            if hi and usd_equiv(hi, j["salary_currency"]) >= 4000 and not us_office(j) and j not in [c[3] for c in cands]:
+            if hi and usd_equiv(hi, j["salary_currency"]) >= 3000 and not us_office(j) and j not in [c[3] for c in cands]:
                 cands.append((usd_equiv(hi, j["salary_currency"]), lo, hi, j))
     cands.sort(key=lambda c: -c[0])
     picked, companies = [], set()
@@ -80,26 +122,30 @@ def build_hot_jobs(seed: str, args) -> dict:
             continue
         companies.add(c[3]["company"])
         picked.append(c)
-        if len(picked) == 3:
+        if len(picked) == N_JOBS:
             break
-    top = picked[0][0]
-    scenes = [{"id": "hook", "type": "hook", "kicker": "Вакансии дня", "title": "3 вакансии дня",
+    n = len(picked)
+    NUM = {3: "Три горячие вакансии", 4: "Четыре горячие вакансии", 5: "Пять горячих вакансий"}
+    scenes = [{"id": "hook", "type": "hook", "kicker": "Вакансии дня", "title": f"{n} вакансий дня" if n != 4 else "4 вакансии дня",
                "sub": f"с зарплатой {fmt_range(None, picked[0][2], picked[0][3]['salary_currency'])} в месяц"}]
-    phrases = [{"id": "hook", "scene": "hook", "text": f"Три горячие вакансии дня в iGaming. Максимум — {say_money(picked[0][2], picked[0][3]['salary_currency'])} в месяц."}]
-    words = ["Первая", "Вторая", "Третья"]
+    phrases = [{"id": "hook", "scene": "hook", "text": f"{NUM.get(n, 'Горячие вакансии')} дня в iGaming. Максимум — {say_money(picked[0][2], picked[0][3]['salary_currency'])} в месяц."}]
+    words = ["Первая", "Вторая", "Третья", "Четвёртая", "Пятая"]
     for i, (_, lo, hi, j) in enumerate(picked):
         where = ("удалёнка" if "удал" in (j["format"] or "").lower() else j["country"])
-        scenes.append({"id": f"job{i}", "type": "job", "n": i + 1, "total": 3, "title": clean_title(j["title"]), "company": j["company"],
+        note = " · ".join(x for x in [", ".join((j.get("languages") or [])[:2]), EMPLOYMENT.get(j.get("employment_type") or "", "")] if x)
+        scenes.append({"id": f"job{i}", "type": "job", "n": i + 1, "total": n, "title": clean_title(j["title"]), "company": j["company"],
                        "where": where.capitalize(), "salary": fmt_range(lo, hi, j["salary_currency"]), "tag": j["category"] or "iGaming",
-                       "url": j["url"]})
+                       "note": note, "url": j["url"]})
         sal_say = f"от {say_money(lo, j['salary_currency'])} до {say_money(hi, j['salary_currency'])}" if lo and lo != hi else f"до {say_money(hi, j['salary_currency'])}"
         phrases.append({"id": f"job{i}", "scene": f"job{i}", "text": f"{words[i]}. {clean_title(j['title'])} в {j['company']}, {where}."})
         phrases.append({"id": f"job{i}s", "scene": f"job{i}", "text": f"Платят {sal_say} в месяц."})
     scenes.append({"id": "cta", "type": "cta", "line": "Все вакансии с зарплатами", "url": "spinhire.io/jobs"})
-    phrases.append({"id": "cta", "scene": "cta", "text": "Ссылки на все три — в описании. Ещё шесть тысяч вакансий на spinhire.io."})
+    phrases.append({"id": "cta", "scene": "cta", "text": "Ссылки на все — в описании. Ещё шесть тысяч вакансий на spinhire.io."})
     links = "\n".join(f"{i + 1}. {j['title']} — {j['company']}: {j['url']}" for i, (_, _, _, j) in enumerate(picked))
-    title = f"3 вакансии дня в iGaming: {fmt_range(None, picked[0][2], picked[0][3]['salary_currency'])} в месяц #Shorts"
-    desc = (f"Три самые высокооплачиваемые вакансии за сегодня в гемблинге.\n\n{links}\n\n"
+    day = dt.date.today()
+    MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
+    title = f"Вакансии iGaming с зарплатой {fmt_range(None, picked[0][2], picked[0][3]['salary_currency'])}: топ-{n} за {day.day} {MONTHS[day.month - 1]} | работа в гемблинге"
+    desc = (f"Самые высокооплачиваемые вакансии за сегодня в гемблинге.\n\n{links}\n\n"
             f"Все вакансии с зарплатами → {SITE}/jobs\nTelegram с горячими вакансиями → {TG}\n\n{HASHTAGS}")
     return {"format": "hot_jobs", "playlist": "jobs", "mood": "dramatic", "bg": "hero-v.jpg", "scenes": scenes, "phrases": phrases,
             "title": title[:100], "description": desc, "tags": ["igaming", "вакансии", "гемблинг", "работа", "зарплата", "spinhire"]}
@@ -123,6 +169,7 @@ def build_salary(seed: str, args) -> dict:
     scenes = [
         {"id": "hook", "type": "hook", "kicker": "Зарплаты", "title": f"Сколько платят {dative}?", "sub": "middle · в месяц · после налогов зависит от страны"},
         {"id": "bars", "type": "bars", "title": r["title"], "sub": "Мидл, $ в месяц", "bars": bars},
+        {"id": "grades", "type": "bars", "title": "По грейдам", "sub": "Мальта и Кипр, $ в месяц", "bars": grade_bars(sal)},
         {"id": "big", "type": "big", "kicker": "Мальта и Кипр", "number": f"до ${lead:,}".replace(",", " "), "label": f"тимлид · сеньор до ${sen:,}".replace(",", " ")},
         {"id": "cta", "type": "cta", "line": "Вилки по 35 профессиям", "url": "spinhire.io/professions"},
     ]
@@ -131,10 +178,14 @@ def build_salary(seed: str, args) -> dict:
         {"id": "b1", "scene": "bars", "text": f"На Мальте и Кипре мидл получает от {say_money(bars[0]['lo'], 'USD')} до {say_money(bars[0]['hi'], 'USD')} в месяц."},
         {"id": "b2", "scene": "bars", "text": f"В Польше, Румынии и Балтии — от {say_money(bars[1]['lo'], 'USD')} до {say_money(bars[1]['hi'], 'USD')}."},
         {"id": "b3", "scene": "bars", "text": f"На удалёнке — от {say_money(bars[2]['lo'], 'USD')} до {say_money(bars[2]['hi'], 'USD')}."},
-        {"id": "big", "scene": "big", "text": f"Сеньор на Мальте — до {say_money(sen, 'USD')}, тимлид — до {say_money(lead, 'USD')}."},
+        {"id": "g1", "scene": "grades", "text": f"Джуниор стартует с {say_money(sal['mt_cy']['junior'][0], 'USD')}."},
+        {"id": "g2", "scene": "grades", "text": f"Мидл — до {say_money(sal['mt_cy']['middle'][1], 'USD')}."},
+        {"id": "g3", "scene": "grades", "text": f"Сеньор — до {say_money(sen, 'USD')}."},
+        {"id": "g4", "scene": "grades", "text": f"Тимлид — до {say_money(lead, 'USD')}."},
+        {"id": "big", "scene": "big", "text": f"Итого потолок на Мальте — {say_money(lead, 'USD')} в месяц. Плюс бонусы: {(lambda b: b[:1].lower() + b[1:])(first_sentence(r.get('bonus', '') or 'зависят от компании'))}"},
         {"id": "cta", "scene": "cta", "text": "Вилки по тридцати пяти профессиям — на spinhire.io, ссылка в описании."},
     ]
-    title = f"Сколько платят {dative} в iGaming? Зарплаты 2026 #Shorts"
+    title = f"Зарплата {r['title'].lower()} в iGaming 2026: Мальта, Кипр, Европа, удалёнка | сколько платят {dative}"
     desc = (f"Зарплата {r['title']} в iGaming по регионам (middle, $ в месяц):\n"
             + "\n".join(f"• {b['label']}: {b['text']}" for b in bars)
             + f"\n• Senior (Мальта/Кипр): до ${sen:,}\n• Lead: до ${lead:,}\n\n"
@@ -149,27 +200,42 @@ def build_profession(seed: str, args) -> dict:
     items = [short_item(x) for x in r["responsibilities"][:3]]
     lo, hi = r["salary"]["mt_cy"]["middle"]
     entry = first_sentence(r["entry"])
+    skills = [short_item(x, 58) for x in r["hard_skills"][:3]]
+    sal = r["salary"]
+    locs, loc_scope = top_locations([r["title_en"]] + [a for a in r.get("aliases", []) if a.isascii()], r["family"])
     scenes = [
-        {"id": "hook", "type": "hook", "kicker": "Профессия за 30 секунд", "title": r["title"], "sub": r["title_en"]},
+        {"id": "hook", "type": "hook", "kicker": "Профессия за минуту", "title": r["title"], "sub": r["title_en"]},
         {"id": "lead", "type": "quote", "text": first_sentence(r["lead"])},
         {"id": "do", "type": "bullets", "title": "Что делает", "items": items},
-        {"id": "big", "type": "big", "kicker": "Мальта и Кипр · middle", "number": f"${lo:,}–{hi:,}".replace(",", " "), "label": "в месяц"},
+        {"id": "grades", "type": "bars", "title": "Сколько платят", "sub": "Мальта и Кипр, $ в месяц", "bars": grade_bars(sal)},
+        {"id": "skills", "type": "bullets", "title": "Что нужно уметь", "items": skills},
+        *([{"id": "locs", "type": "bars", "title": "Где ищут", "sub": loc_scope, "bars": locs}] if locs else []),
         {"id": "entry", "type": "quote", "kicker": "Как войти", "text": entry},
         {"id": "cta", "type": "cta", "line": "Полный разбор профессии", "url": f"spinhire.io/professions/{r['slug']}"},
     ]
+    loc_say = ", ".join(f"{l['label']} — {l['n']}" for l in locs)
     phrases = [
-        {"id": "hook", "scene": "hook", "text": f"{r['title']} за тридцать секунд."},
+        {"id": "hook", "scene": "hook", "text": f"{r['title']} в iGaming за минуту: что делает, сколько получает и как войти."},
         {"id": "lead", "scene": "lead", "text": first_sentence(r["lead"])},
-        {"id": "do0", "scene": "do", "text": "Что делает: " + items[0].rstrip("…") + "."},
+        {"id": "do0", "scene": "do", "text": "Что делает. " + items[0].rstrip("…") + "."},
         {"id": "do1", "scene": "do", "text": items[1].rstrip("…") + "."},
         {"id": "do2", "scene": "do", "text": items[2].rstrip("…") + "."},
-        {"id": "big", "scene": "big", "text": f"Мидл на Мальте и Кипре получает от {say_money(lo, 'USD')} до {say_money(hi, 'USD')} в месяц."},
-        {"id": "entry", "scene": "entry", "text": entry},
+        {"id": "g1", "scene": "grades", "text": f"Зарплаты на Мальте и Кипре. Джуниор — от {say_money(sal['mt_cy']['junior'][0], 'USD')}."},
+        {"id": "g2", "scene": "grades", "text": f"Мидл — от {say_money(lo, 'USD')} до {say_money(hi, 'USD')}."},
+        {"id": "g3", "scene": "grades", "text": f"Сеньор — до {say_money(sal['mt_cy']['senior'][1], 'USD')}."},
+        {"id": "g4", "scene": "grades", "text": f"Тимлид — до {say_money(sal['mt_cy']['lead'][1], 'USD')} в месяц."},
+        {"id": "s0", "scene": "skills", "text": "Что нужно уметь. " + skills[0].rstrip("…") + "."},
+        {"id": "s1", "scene": "skills", "text": skills[1].rstrip("…") + "."},
+        {"id": "s2", "scene": "skills", "text": skills[2].rstrip("…") + "."},
+        *([{"id": "locs", "scene": "locs", "text": f"Где ищут прямо сейчас, {loc_scope}: {loc_say} вакансий."}] if locs else []),
+        {"id": "entry", "scene": "entry", "text": "Как войти. " + entry},
         {"id": "cta", "scene": "cta", "text": "Полный разбор профессии, навыки и вакансии — на spinhire.io, ссылка в описании."},
     ]
-    title = f"{r['title']} в iGaming: что делает и сколько получает #Shorts"
+    title = f"Кто такой {r['title'].lower()} в iGaming: обязанности, зарплата, как стать | профессии гемблинга"
     desc = (f"{r['lead']}\n\nЧто делает:\n" + "\n".join(f"• {x}" for x in r["responsibilities"][:5])
-            + f"\n\nЗарплата middle (Мальта/Кипр): ${lo:,}–{hi:,} в месяц\n\n"
+            + f"\n\nЗарплата (Мальта/Кипр, $ в месяц):\n" + "\n".join(f"• {b['label']}: {b['text']}" for b in grade_bars(sal))
+            + "\n\nЧто нужно уметь:\n" + "\n".join(f"• {x}" for x in r["hard_skills"][:5])
+            + ("\n\nГде ищут: " + ", ".join(f"{l['label']} ({l['n']})" for l in locs) if locs else "") + "\n\n"
             f"Полный разбор профессии → {SITE}/professions/{r['slug']}\nВакансии → {SITE}/jobs?q={r['title_en'].replace(' ', '+')}\n"
             f"Telegram → {TG}\n\n{HASHTAGS} #профессии").replace(",", " ")
     return {"format": "profession", "playlist": "profession", "mood": "bright", "bg": "hero-v2.jpg", "scenes": scenes, "phrases": phrases,

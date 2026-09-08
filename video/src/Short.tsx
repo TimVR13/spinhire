@@ -10,6 +10,8 @@ export const FPS = 30;
 const C = { bg: "#0a120e", bg2: "#0f1a14", ink: "#f2f7f4", dim: "#9fb3a8", acid: "#12e08e", pink: "#ff3fa4", gold: "#d4a94a", line: "rgba(18,224,142,.22)" };
 
 type Scene = { id: string; type: string; start: number; end: number; [k: string]: any };
+/* размер шрифта, чтобы строка влезла в ширину (Unbounded ≈ 0.68em на символ) */
+const fit = (text: string, maxW: number, maxSize: number, k = 0.68) => Math.max(40, Math.min(maxSize, Math.floor(maxW / (Math.max(1, text.length) * k))));
 type Caption = { text: string; start: number; end: number };
 export type ShortProps = { id: string; format: string; bg: string; music: string; voice: string; duration: number; scenes: Scene[]; captions: Caption[] };
 
@@ -80,7 +82,8 @@ const JobCard: React.FC<{ sc: Scene }> = ({ sc }) => {
         </div>
         <div style={{ marginTop: 30, fontFamily: display, fontWeight: 800, fontSize: sc.title.length > 34 ? 56 : 70, lineHeight: 1.05, color: C.ink, letterSpacing: -1 }}>{sc.title}</div>
         <div style={{ marginTop: 24, fontFamily: body, fontWeight: 600, fontSize: 38, color: C.dim }}>{sc.company} <span style={{ color: "rgba(255,255,255,.35)" }}>·</span> {sc.where}</div>
-        <div style={{ marginTop: 48, transform: `scale(${0.7 + 0.3 * s2})`, transformOrigin: "left center", opacity: s2, fontFamily: display, fontWeight: 800, fontSize: sc.salary.length > 13 ? 72 : 96, color: C.acid, letterSpacing: -2, whiteSpace: "nowrap" }}>{sc.salary}<span style={{ fontFamily: body, fontWeight: 600, fontSize: 34, color: C.dim, marginLeft: 18, letterSpacing: 0 }}>/ мес</span></div>
+        {sc.note ? <div style={{ marginTop: 14, fontFamily: body, fontWeight: 600, fontSize: 30, color: "rgba(255,255,255,.5)" }}>{sc.note}</div> : null}
+        <div style={{ marginTop: 44, transform: `scale(${0.7 + 0.3 * s2})`, transformOrigin: "left center", opacity: s2, fontFamily: display, fontWeight: 800, fontSize: fit(sc.salary + " /мес", 880, 96), color: C.acid, letterSpacing: -2, whiteSpace: "nowrap" }}>{sc.salary}<span style={{ fontFamily: body, fontWeight: 600, fontSize: 34, color: C.dim, marginLeft: 18, letterSpacing: 0 }}>/ мес</span></div>
       </div>
     </AbsoluteFill>
   );
@@ -96,9 +99,9 @@ const Bars: React.FC<{ sc: Scene; captions: Caption[] }> = ({ sc, captions }) =>
       <Top />
       <div style={{ position: "absolute", left: 72, right: 72, top: 300, opacity: s, transform: `translateY(${(1 - s) * 40}px)` }}>
         <Kicker>{sc.sub}</Kicker>
-        <div style={{ marginTop: 26, fontFamily: display, fontWeight: 800, fontSize: 84, lineHeight: 1.02, color: C.ink, letterSpacing: -1 }}>{sc.title}</div>
+        <div style={{ marginTop: 26, fontFamily: display, fontWeight: 800, fontSize: sc.title.length > 22 ? 64 : 84, lineHeight: 1.02, color: C.ink, letterSpacing: -1 }}>{sc.title}</div>
       </div>
-      <div style={{ position: "absolute", left: 72, right: 72, top: 640, display: "flex", flexDirection: "column", gap: 44 }}>
+      <div style={{ position: "absolute", left: 72, right: 72, top: 640, display: "flex", flexDirection: "column", gap: sc.bars.length > 3 ? 30 : 44 }}>
         {sc.bars.map((b: any, i: number) => {
           const at = phr[i] ? Math.round((phr[i].start - sc.start) * fps) : i * 20;
           const g = spring({ frame: local - at, fps, config: { damping: 16, stiffness: 90 } });
@@ -106,7 +109,7 @@ const Bars: React.FC<{ sc: Scene; captions: Caption[] }> = ({ sc, captions }) =>
             <div key={i} style={{ opacity: Math.min(1, g * 3) }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 24, marginBottom: 14 }}>
                 <div style={{ fontFamily: body, fontWeight: 600, fontSize: 34, lineHeight: 1.15, color: C.dim, flex: 1 }}>{b.label}</div>
-                <div style={{ fontFamily: display, fontWeight: 800, fontSize: 52, color: C.acid, letterSpacing: -1, whiteSpace: "nowrap" }}>{b.text}</div>
+                <div style={{ fontFamily: display, fontWeight: 800, fontSize: fit(b.text, 560, 52), color: C.acid, letterSpacing: -1, whiteSpace: "nowrap" }}>{b.text}</div>
               </div>
               <div style={{ height: 34, borderRadius: 17, background: "rgba(255,255,255,.08)", overflow: "hidden" }}>
                 <div style={{ width: `${b.pct * 100 * g}%`, height: "100%", borderRadius: 17, background: `linear-gradient(90deg, ${C.acid}, ${C.acid}99)`, boxShadow: `0 0 30px ${C.acid}66` }} />
@@ -127,7 +130,7 @@ const Big: React.FC<{ sc: Scene; bg: string }> = ({ sc, bg }) => {
       <Top />
       <div style={{ position: "absolute", left: 72, right: 72, top: 760, opacity: s, transform: `translateY(${(1 - s) * 50}px)` }}>
         <Kicker color={C.gold}>{sc.kicker}</Kicker>
-        <div style={{ marginTop: 30, transform: `scale(${0.8 + 0.2 * s2})`, transformOrigin: "left center", fontFamily: display, fontWeight: 800, fontSize: sc.number.length > 12 ? 108 : 140, lineHeight: 1, color: C.acid, letterSpacing: -3, textShadow: `0 0 60px ${C.acid}55`, whiteSpace: "nowrap" }}>{sc.number}</div>
+        <div style={{ marginTop: 30, transform: `scale(${0.8 + 0.2 * s2})`, transformOrigin: "left center", fontFamily: display, fontWeight: 800, fontSize: fit(sc.number, 936, 140), lineHeight: 1, color: C.acid, letterSpacing: -3, textShadow: `0 0 60px ${C.acid}55`, whiteSpace: "nowrap" }}>{sc.number}</div>
         <div style={{ marginTop: 24, fontFamily: body, fontWeight: 600, fontSize: 40, color: C.dim }}>{sc.label}</div>
       </div>
     </AbsoluteFill>
