@@ -70,7 +70,7 @@ AVATAR_MAX_BYTES = 3 * 1024 * 1024
 SIGNUP_COIN_BONUS = 20
 # Промо запуска для работодателей: первые размещения бесплатно. Начисляется один раз
 # на аккаунт (маркер в promo_code), списывается как обычные кредиты размещений.
-PROMO_FREE_JOBS = 5
+PROMO_FREE_JOBS = 3
 PROMO_FREE_CODE = "LAUNCH5"
 
 
