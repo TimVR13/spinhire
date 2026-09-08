@@ -38,11 +38,43 @@ GREENHOUSE_BOARDS = {
     "kaizengaming": "Kaizen Gaming (Betano)",
     "geniussports": "Genius Sports",
     "gr8tech": "GR8 Tech",
+    # проверено 08.09.2026 (tasks/new-crawler-sources-2026-09.md)
+    "super": "Superbet Group",
+    "fanduel": "FanDuel",
+    "sportygroup": "Sporty Group (SportyBet)",
+    "penninteractive": "Penn Interactive (theScore / ESPN Bet)",
+    "easygo": "Stake.com (Easygo)",
+    "prizepicks": "PrizePicks",
+    "rushstreetinteractive": "Rush Street Interactive (BetRivers)",
+    "optimove": "Optimove",
+    "soft2bet": "Soft2Bet",
+    "kambi": "Kambi",
+    "elagames": "Ela Games",
+    "truelayer": "TrueLayer",
 }
 
 # Публичные ATS API. Добавление новой компании — одна строка конфигурации.
-LEVER_SITES = {}
-SMARTRECRUITERS_COMPANIES = {"Evolution": "Evolution"}
+LEVER_SITES = {
+    "winamax": "Winamax",
+    "oddin": "Oddin.gg",
+    "betr": "Betr",
+    "unlimit": "Unlimit",
+}
+SMARTRECRUITERS_COMPANIES = {
+    "Evolution": "Evolution",
+    "Entain": "Entain",          # ~290 позиций, розницу (букмекерские пункты UK) отсекаем по названию
+    "tipico": "Tipico",
+    "Playtech": "Playtech",
+    "Bet3651": "bet365",
+    "sportradar": "Sportradar",
+    "slotegrator": "Slotegrator",
+    "smartico": "Smartico.ai",
+    "atlasiac": "Atlas-IAC",
+}
+# Розничные роли букмекерских пунктов (Entain/Ladbrokes/Coral, bet365 shops) — не iGaming-вакансии
+RETAIL_TITLE_RE = re.compile(
+    r"retail|\bshop\b|cashier|\bstore\b|customer service assistant|deputy manager|"
+    r"shop manager|betting shop|counter|area manager|territory", re.I)
 
 # Только источники, которые явно разрешают повторное использование уже анонимных
 # профилей. Пусто по умолчанию: персональные резюме не скрейпим.
@@ -64,6 +96,39 @@ PARTNER_FEEDS = {
 HH_TOKEN = os.environ.get("HH_APP_TOKEN", "").strip()
 
 SOURCE_REGISTRY = [
+    {"key": "greenhouse:super", "name": "Superbet Group", "type": "Greenhouse API", "status": "подключён", "note": "~180 вакансий RO/PL/BR (добавлен 08.09.2026)"},
+    {"key": "greenhouse:fanduel", "name": "FanDuel", "type": "Greenhouse API", "status": "подключён", "note": "~90 вакансий, США (добавлен 08.09.2026)"},
+    {"key": "greenhouse:sportygroup", "name": "Sporty Group", "type": "Greenhouse API", "status": "подключён", "note": "~40 вакансий (добавлен 08.09.2026)"},
+    {"key": "greenhouse:penninteractive", "name": "Penn Interactive", "type": "Greenhouse API", "status": "подключён", "note": "~40 вакансий, theScore / ESPN Bet (добавлен 08.09.2026)"},
+    {"key": "greenhouse:easygo", "name": "Stake.com (Easygo)", "type": "Greenhouse API", "status": "подключён", "note": "~30 вакансий, Мельбурн/удалёнка (добавлен 08.09.2026)"},
+    {"key": "greenhouse:prizepicks", "name": "PrizePicks", "type": "Greenhouse API", "status": "подключён", "note": "~30 вакансий, США (добавлен 08.09.2026)"},
+    {"key": "greenhouse:rushstreetinteractive", "name": "Rush Street Interactive", "type": "Greenhouse API", "status": "подключён", "note": "~20 вакансий (добавлен 08.09.2026)"},
+    {"key": "greenhouse:optimove", "name": "Optimove", "type": "Greenhouse API", "status": "подключён", "note": "B2B CRM для iGaming (добавлен 08.09.2026)"},
+    {"key": "greenhouse:soft2bet", "name": "Soft2Bet", "type": "Greenhouse API", "status": "подключён", "note": "операторская платформа (добавлен 08.09.2026)"},
+    {"key": "greenhouse:kambi", "name": "Kambi", "type": "Greenhouse API", "status": "подключён", "note": "спортсбук-провайдер (добавлен 08.09.2026)"},
+    {"key": "greenhouse:elagames", "name": "Ela Games", "type": "Greenhouse API", "status": "подключён", "note": "студия слотов (добавлен 08.09.2026)"},
+    {"key": "greenhouse:truelayer", "name": "TrueLayer", "type": "Greenhouse API", "status": "подключён", "note": "платежи (добавлен 08.09.2026)"},
+    {"key": "lever:winamax", "name": "Winamax", "type": "Lever Postings API", "status": "подключён", "note": "~20 вакансий, Париж (добавлен 08.09.2026)"},
+    {"key": "lever:oddin", "name": "Oddin.gg", "type": "Lever Postings API", "status": "подключён", "note": "esports odds, Прага (добавлен 08.09.2026)"},
+    {"key": "lever:betr", "name": "Betr", "type": "Lever Postings API", "status": "подключён", "note": "США (добавлен 08.09.2026)"},
+    {"key": "lever:unlimit", "name": "Unlimit", "type": "Lever Postings API", "status": "подключён", "note": "платежи, фильтр релевантности (добавлен 08.09.2026)"},
+    {"key": "smartrecruiters:Entain", "name": "Entain", "type": "SmartRecruiters API", "status": "подключён", "note": "~290 позиций, розница UK отсекается по названию (добавлен 08.09.2026)"},
+    {"key": "smartrecruiters:tipico", "name": "Tipico", "type": "SmartRecruiters API", "status": "подключён", "note": "~160 вакансий, DE/MT (добавлен 08.09.2026)"},
+    {"key": "smartrecruiters:Playtech", "name": "Playtech", "type": "SmartRecruiters API", "status": "подключён", "note": "~120 вакансий (добавлен 08.09.2026)"},
+    {"key": "smartrecruiters:Bet3651", "name": "bet365", "type": "SmartRecruiters API", "status": "подключён", "note": "~120 вакансий, id Bet3651 (добавлен 08.09.2026)"},
+    {"key": "smartrecruiters:sportradar", "name": "Sportradar", "type": "SmartRecruiters API", "status": "подключён", "note": "~80 вакансий (добавлен 08.09.2026)"},
+    {"key": "smartrecruiters:slotegrator", "name": "Slotegrator", "type": "SmartRecruiters API", "status": "подключён", "note": "платформа (добавлен 08.09.2026)"},
+    {"key": "smartrecruiters:smartico", "name": "Smartico.ai", "type": "SmartRecruiters API", "status": "подключён", "note": "CRM/геймификация (добавлен 08.09.2026)"},
+    {"key": "smartrecruiters:atlasiac", "name": "Atlas-IAC", "type": "SmartRecruiters API", "status": "подключён", "note": "платформа (добавлен 08.09.2026)"},
+    {"key": "bamboohr:digitainsoftware", "name": "Digitain", "type": "BambooHR", "status": "подключён", "note": "~80 вакансий, Ереван (добавлен 08.09.2026)"},
+    {"key": "bamboohr:videoslots", "name": "Videoslots Group", "type": "BambooHR", "status": "подключён", "note": "Мальта (добавлен 08.09.2026)"},
+    {"key": "bamboohr:gamingtec", "name": "Gamingtec", "type": "BambooHR", "status": "подключён", "note": "платформа (добавлен 08.09.2026)"},
+    {"key": "bamboohr:catenamedia", "name": "Catena Media", "type": "BambooHR", "status": "подключён", "note": "аффилейт-медиа (добавлен 08.09.2026)"},
+    {"key": "bamboohr:mediastream", "name": "Global Bet", "type": "BambooHR", "status": "подключён", "note": "Мостар (добавлен 08.09.2026)"},
+    {"key": "bamboohr:derivco", "name": "Derivco", "type": "BambooHR", "status": "подключён", "note": "Games Global, ЮАР (добавлен 08.09.2026)"},
+    {"key": "bamboohr:continent8", "name": "Continent 8", "type": "BambooHR", "status": "подключён", "note": "хостинг для iGaming (добавлен 08.09.2026)"},
+    {"key": "bamboohr:xace", "name": "Xace", "type": "BambooHR", "status": "подключён", "note": "платежи (добавлен 08.09.2026)"},
+    {"key": "bamboohr:duelbits", "name": "Duelbits", "type": "BambooHR", "status": "подключён", "note": "крипто-казино (добавлен 08.09.2026)"},
     {"key": "rabota.ua", "name": "robota.ua", "type": "Открытый JSON API",
      "status": "подключён", "note": "Поиск по iGaming-словарю и брендам (FAVBET, Cosmolot, VBET…), "
                                     "полные описания и вилки в гривнах через api.rabota.ua"},
@@ -147,7 +212,7 @@ RESUME_SOURCE_REGISTRY = [
 
 UA = "SpinHireBot/1.0 (+https://spinhire.io; job aggregation)"
 TIMEOUT = 25
-MAX_PER_BOARD = 100          # крупные борды (SOFTSWISS сейчас 52) забираем целиком
+MAX_PER_BOARD = 300          # крупные борды (Superbet 178, Tipico 159, Playtech 117) забираем целиком
 DESC_LIMIT = 20000           # полное описание без обрезания обычных вакансий
 SOFTSWISS_API = "https://careers.softswiss.com/wp-json/wp/v2/vacancy?per_page=100"
 CASINO_SEEDS_PATH = Path(__file__).resolve().parent.parent / "data" / "casino-operators.json"
@@ -700,11 +765,21 @@ def crawl_lever(site, company):
 
 def crawl_smartrecruiters(company_id, company):
     """Вакансии из публичного SmartRecruiters API."""
-    data = json.loads(_fetch(f"https://api.smartrecruiters.com/v1/companies/{company_id}/postings?limit={MAX_PER_BOARD}"))
+    content, offset = [], 0
+    while len(content) < MAX_PER_BOARD:
+        page = json.loads(_fetch(f"https://api.smartrecruiters.com/v1/companies/{company_id}/postings"
+                                 f"?limit=100&offset={offset}"))
+        chunk = page.get("content") or []
+        content += chunk
+        if len(chunk) < 100:
+            break
+        offset += 100
     out = []
-    for j in (data.get("content") or [])[:MAX_PER_BOARD]:
+    for j in content[:MAX_PER_BOARD]:
         title = (j.get("name") or "").strip()
         if not title:
+            continue
+        if company_id in ("Entain", "Bet3651") and RETAIL_TITLE_RE.search(title):
             continue
         loc_data = j.get("location") or {}
         loc = ", ".join(filter(None, [loc_data.get("city"), loc_data.get("country")]))
@@ -744,6 +819,15 @@ BAMBOO_ACCOUNTS = {
     "altenar": "Altenar",
     "kalambagames": "Kalamba Games",
     "hacksawoperations": "Hacksaw Gaming",
+    "digitainsoftware": "Digitain",
+    "videoslots": "Videoslots Group",
+    "gamingtec": "Gamingtec",
+    "catenamedia": "Catena Media",
+    "mediastream": "Global Bet",
+    "derivco": "Derivco (Games Global)",
+    "continent8": "Continent 8 Technologies",
+    "xace": "Xace",
+    "duelbits": "Duelbits",
 }
 
 
