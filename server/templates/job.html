@@ -4,7 +4,7 @@
 {% block desc %}{{ job.title }} в {{ job.company_name }}: {{ job.salary }}, {{ job.location }}, {{ job.fmt }}. iGaming-вакансия на SpinHire.{% endblock %}
 {% block robots %}<link rel="canonical" href="https://spinhire.io/job/{{ job.id }}">
 <link rel="alternate" type="text/markdown" href="https://spinhire.io/job/{{ job.id }}.md" title="Текстовая версия для языковых моделей">
-{% if is_closed %}<meta name="robots" content="noindex,follow">{% endif %}
+{# закрытая вакансия остаётся в индексе 60 дней без разметки JobPosting: страница честно говорит «закрыта» и ведёт к похожим; дальше сервер отдаёт 410 #}
 <meta property="og:type" content="article">
 <meta property="og:title" content="{{ job.title }} — {{ job.company_name }}">
 <meta property="og:description" content="{{ job.preview_description }}">

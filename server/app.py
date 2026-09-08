@@ -68,6 +68,19 @@ AVATAR_UPLOAD_DIR = os.environ.get("AVATAR_UPLOAD_DIR", os.path.join(ROOT, "data
 COMPANY_LOGO_DIR = os.environ.get("COMPANY_LOGO_DIR", os.path.join(ROOT, "data", "company-logos"))
 AVATAR_MAX_BYTES = 3 * 1024 * 1024
 SIGNUP_COIN_BONUS = 20
+# Промо запуска для работодателей: первые размещения бесплатно. Начисляется один раз
+# на аккаунт (маркер в promo_code), списывается как обычные кредиты размещений.
+PROMO_FREE_JOBS = 5
+PROMO_FREE_CODE = "LAUNCH5"
+
+
+def grant_launch_promo(user) -> bool:
+    """Начислить бесплатные размещения работодателю, если ещё не начисляли."""
+    if user.role != "employer" or (user.promo_code or "") == PROMO_FREE_CODE:
+        return False
+    user.job_credits = (user.job_credits or 0) + PROMO_FREE_JOBS
+    user.promo_code = PROMO_FREE_CODE
+    return True
 # Подтверждение почты включается автоматически, когда настроен Resend.
 REQUIRE_VERIFY = bool(RESEND_API_KEY)
 
@@ -2682,6 +2695,20 @@ def checkout_invoice_pdf(order_id: int, request: Request, db: Session = Depends(
                     headers={"Content-Disposition": f'inline; filename="spinhire-invoice-{o.id}.pdf"'})
 
 
+ARCHIVED_JOB_TTL_DAYS = 60
+
+
+def job_closed_days(job) -> int:
+    """Сколько дней вакансия закрыта (по closed_at, иначе по validThrough)."""
+    for raw in (job.closed_at, job.valid_through):
+        if raw and re.match(r"^\d{4}-\d{2}-\d{2}", raw):
+            try:
+                return (datetime.utcnow().date() - date.fromisoformat(raw[:10])).days
+            except ValueError:
+                continue
+    return 0
+
+
 @app.get("/job/{job_id}", response_class=HTMLResponse)
 def job_detail(job_id: str, request: Request, db: Session = Depends(db_session)):
     if not job_id.isdigit():
@@ -2694,6 +2721,11 @@ def job_detail(job_id: str, request: Request, db: Session = Depends(db_session))
         raise HTTPException(410)  # вакансия удалена — Google убирает 410 из индекса быстрее, чем 404
     if job.status not in ("approved", "archived") and not privileged:
         raise HTTPException(404)
+    if job.status == "archived" and not privileged and job_closed_days(job) > ARCHIVED_JOB_TTL_DAYS:
+        # По правилам Google закрытая вакансия должна либо потерять разметку JobPosting
+        # (делаем сразу), либо отдавать 404/410. Держим страницу 60 дней с пометкой
+        # «закрыта» и похожими вакансиями, затем 410.
+        raise HTTPException(410)
     if not is_bot(request.headers.get("user-agent", "")):
         # просмотры ботов не считаем: 260 тысяч GET /job в неделю — почти все
         # краулеры, а каждая запись счётчика била в «database is locked»
@@ -2887,6 +2919,7 @@ def register(request: Request, email: str = Form(...), password: str = Form(...)
              coins=SIGNUP_COIN_BONUS, signup_source=_signup_source(request),
              lang=request_lang(request),
              referred_by=_referrer_id_from_cookie(request, db))
+    grant_launch_promo(u)
     db.add(u)
     db.commit()
     # подтверждение почты: только если Resend настроен
@@ -4196,6 +4229,7 @@ def team_invite_accept(token: str, request: Request, db: Session = Depends(db_se
     if not existing_membership:
         db.add(CompanyMember(account_id=invite.account_id, user_id=user.id, role=invite.role))
     user.role = "employer"
+    grant_launch_promo(user)
     invite.status = "accepted"
     db.commit()
     return RedirectResponse("/employer?invite_accepted=1#team", status_code=303)
@@ -4331,6 +4365,7 @@ def post_job_page(request: Request, db: Session = Depends(db_session)):
         db.commit()
     return render(request, db, "post_job.html",
                   need_login=not user or user.role == "talent",
+                  promo_free_jobs=PROMO_FREE_JOBS,
                   live_jobs=f"{live_jobs:,}".replace(",", " "))
 
 
@@ -4817,6 +4852,8 @@ def admin_user(user_id: int, action: str, request: Request, db: Session = Depend
         db.delete(u)
     elif action in ("talent", "employer", "admin"):
         u.role = action
+        if action == "employer":
+            grant_launch_promo(u)
     db.commit()
     return RedirectResponse(f"/admin/user/{user_id}" if back_to_card else "/admin?tab=users", status_code=303)
 
