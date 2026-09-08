@@ -1766,6 +1766,9 @@ def request_lang(request: Request) -> str:
 def render(request, db, name, **ctx):
     ctx.setdefault("user", get_user(request, db))
     ctx.setdefault("lang", request_lang(request))
+    u = ctx["user"]
+    if u and (u.role == "admin" or session_admin_uid(request)):
+        ctx.setdefault("view_as", u.role if u.role in VIEW_AS_ROLES else "admin")
     return templates.TemplateResponse(request, name, ctx)
 
 
@@ -1794,11 +1797,61 @@ def login_next(next: str = Form("/")):
     return RedirectResponse(f"/login?next={safe_next(next, '/')}", status_code=303)
 
 
-def set_session(resp, user: User):
-    resp.set_cookie("sh_session", signer.dumps({"uid": user.id}),
+def set_session(resp, user: User, admin_uid: int | None = None):
+    payload = {"uid": user.id}
+    if admin_uid:
+        payload["admin_uid"] = admin_uid   # админ смотрит сайт под тестовым аккаунтом, сюда вернётся
+    resp.set_cookie("sh_session", signer.dumps(payload),
                     httponly=True, secure=ENVIRONMENT == "production",
                     max_age=30 * 24 * 3600, samesite="lax")
     return resp
+
+
+def session_admin_uid(request: Request) -> int | None:
+    """id настоящего админа, если сейчас он ходит по сайту под тестовым соискателем/работодателем."""
+    raw = request.cookies.get("sh_session")
+    if not raw:
+        return None
+    try:
+        return signer.loads(raw).get("admin_uid")
+    except BadSignature:
+        return None
+
+
+VIEW_AS_ROLES = {"talent": ("Соискатель", "Тестовый соискатель (админ)"),
+                 "employer": ("Работодатель", "Тестовый работодатель (админ)")}
+
+
+def view_as_account(db: Session, admin: User, role: str) -> User:
+    """Личный тестовый аккаунт админа для роли: создаётся один раз, живёт как обычный пользователь."""
+    local, _, domain = admin.email.partition("@")
+    email = f"{local}+view-{role}@{domain}"
+    shadow = db.query(User).filter_by(email=email).first()
+    if not shadow:
+        shadow = User(email=email, password_hash=hash_pw(secrets.token_urlsafe(24)), name=VIEW_AS_ROLES[role][1],
+                      role=role, company_name="SpinHire Test Co" if role == "employer" else "", incognito=True)
+        db.add(shadow)
+        db.flush()
+        if role == "employer":
+            grant_launch_promo(shadow)
+        db.commit()
+    return shadow
+
+
+@app.post("/admin/view-as/{role}")
+def admin_view_as(role: str, request: Request, db: Session = Depends(db_session)):
+    """Переключатель в шапке: админ ↔ тестовый соискатель ↔ тестовый работодатель."""
+    current = get_user(request, db)
+    admin_uid = session_admin_uid(request)
+    admin = db.get(User, admin_uid) if admin_uid else current
+    if not admin or admin.role != "admin":
+        raise HTTPException(403)
+    if role == "admin":
+        return set_session(RedirectResponse("/admin", status_code=303), admin)
+    if role not in VIEW_AS_ROLES:
+        raise HTTPException(404)
+    shadow = view_as_account(db, admin, role)
+    return set_session(RedirectResponse(dest_for(shadow), status_code=303), shadow, admin_uid=admin.id)
 
 
 def safe_next(url: str, default: str = "/profile") -> str:
