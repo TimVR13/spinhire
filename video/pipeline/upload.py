@@ -56,6 +56,28 @@ def log(entry: dict):
     rows = json.load(open(LOG)) if LOG.exists() else []
     rows.append(entry)
     LOG.write_text(json.dumps(rows, ensure_ascii=False, indent=1))
+    sync_registry(entry)
+
+
+def sync_registry(entry: dict):
+    """Строка в реестр публикаций сайта (/admin/publications). Без ключа — молча пропускаем:
+    прод всё равно подтянет data/youtube-posts.json из репо."""
+    import os
+    import urllib.request
+    key = os.environ.get("SPINHIRE_PUBLISH_KEY")
+    if not key:
+        return
+    body = {"external_id": f"yt:{entry['video_id']}", "platform": "youtube", "lang": "ru", "kind": "short",
+            "title": entry["title"], "url": entry["url"], "status": "scheduled" if entry.get("publish_at") else "created",
+            "scheduled_at": entry.get("publish_at"), "meta": {"format": entry["format"], "playlist": entry.get("playlist"),
+                                                              "slug": entry.get("slug"), "featured": entry.get("featured", [])},
+            "origin": os.environ.get("SPINHIRE_ORIGIN", "pipeline")}
+    req = urllib.request.Request("https://spinhire.io/api/publications/upsert", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json", "X-Publish-Key": key})
+    try:
+        urllib.request.urlopen(req, timeout=15)
+    except Exception as e:
+        print("реестр недоступен:", e)
 
 
 if __name__ == "__main__":

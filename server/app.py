@@ -6407,6 +6407,8 @@ app.include_router(crm.router)
 # ---------- автопостинг вакансий в Telegram-каналы ----------
 from server import tgpost  # noqa: E402
 app.include_router(tgpost.router)
+from server import publications  # noqa: E402  (реестр публикаций; после tgpost — использует его модели)
+app.include_router(publications.router)
 tgpost.start_scheduler()  # молчит, пока не заданы SPINHIRE_TG_BOT_TOKEN и каналы
 
 # ---------- программные кластеры вакансий: страна × направление × язык ----------

@@ -263,14 +263,27 @@ def build_hot(job, lang: str) -> str:
     return "\n".join(lines)
 
 
+HOT_EUR_MAX = float(os.environ.get("SPINHIRE_TG_HOT_EUR_MAX", "40000"))
+
+
+def _us_office(job) -> bool:
+    loc = f"{job.location or ''}".lower()
+    fmt = f"{getattr(job, 'fmt', '') or ''}".lower()
+    return any(x in loc for x in ("united states", "usa", ", us", "сша", "new york", "las vegas", "new jersey")) and "удал" not in fmt and "remote" not in fmt
+
+
 def pick_hot(db: Session, lang: str):
     """Самая дорогая непощенная вакансия за последние двое суток от порога HOT_EUR."""
     posted = {r.job_id for r in db.query(TgHotPost.job_id).filter(TgHotPost.channel == lang)}
     since = datetime.utcnow() - timedelta(hours=48)
     rows = (db.query(Job).filter(Job.status == "approved", Job.created_at >= since).all())
-    rows = [j for j in rows if j.id not in posted and salary_eur(j) >= HOT_EUR]
+    # верхняя планка: > €40 000/мес — почти всегда ошибка парсера («€1 815 293 в год» у game presenter)
+    rows = [j for j in rows if j.id not in posted and HOT_EUR <= salary_eur(j) <= HOT_EUR_MAX]
     if lang == "en":
         rows = [j for j in rows if is_english(j)]
+    else:
+        # русскоязычной аудитории офис в США без визы не нужен
+        rows = [j for j in rows if not _us_office(j)]
     rows.sort(key=salary_eur, reverse=True)
     return rows[0] if rows else None
 

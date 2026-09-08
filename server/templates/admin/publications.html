@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block bodyclass %}workspace{% endblock %}
+{% block title %}Публикации — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block style %}
+  .adm-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-block: var(--sp-4) var(--sp-5); }
+  .adm-tabs a { text-decoration: none; border: 1px solid var(--line); border-radius: 10px; padding: 8px 16px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-dim); background: var(--surface); }
+  .adm-tabs a.on { background: var(--acid); color: var(--on-acid); border-color: var(--acid); }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 12px; margin-bottom: var(--sp-6); }
+  .stat-card { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 14px 18px; display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 84px; }
+  .stat-card .n { font-family: var(--font-display); font-weight: 900; font-size: 1.55rem; color: var(--ink); line-height: 1.1; }
+  .stat-card .l { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-faint); font-weight: 700; }
+  .pub-matrix td, .pub-matrix th { text-align: center; }
+  .pub-matrix td:first-child, .pub-matrix th:first-child { text-align: left; }
+  .pub-matrix a { color: inherit; text-decoration: none; display: block; }
+  .pub-matrix a:hover { color: var(--acid); }
+  .st { display: inline-block; font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-dim); }
+  .st.published { color: var(--acid); border-color: color-mix(in oklch, var(--acid) 40%, transparent); }
+  .st.scheduled { color: var(--yellow); border-color: color-mix(in oklch, var(--yellow) 40%, transparent); }
+  .st.error { color: var(--pink); border-color: color-mix(in oklch, var(--pink) 40%, transparent); }
+  .st.planned, .st.created { color: var(--ink-faint); }
+  .pl { font-weight: 700; }
+  .pl.youtube { color: #ff4e45; } .pl.telegram { color: #2aa7e8; } .pl.reddit { color: #ff6a1f; } .pl.linkedin { color: #4c9be8; }
+  .adm-filters { display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+  .adm-filters__row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0; }
+  .plan-form { display:grid; grid-template-columns: 140px 90px 130px 1fr 190px auto; gap:8px; align-items:center; margin: 12px 0 24px; }
+  @media (max-width: 900px) { .plan-form { grid-template-columns: 1fr 1fr; } }
+  .muted { color: var(--ink-faint); font-size: .8rem; }
+  h2.sec { font-size: 1.1rem; margin: var(--sp-6) 0 12px; }
+{% endblock %}
+{% block content %}
+  <nav class="crumbs"><a href="/">Главная</a> / <a href="/admin">Админка</a> / Публикации</nav>
+  <span class="kicker" style="color: var(--yellow);">Пит-босс</span>
+  <h1 style="font-size: clamp(1.5rem, 3vw, 2.2rem); margin-top: 8px;">Публикации</h1>
+  <nav class="adm-tabs">
+    <a href="/admin">Дашборд</a>
+    <a href="/admin/publications" class="on">📣 Публикации</a>
+    <a href="/admin/crm">🤝 CRM</a>
+    <a href="/admin?tab=analytics">📈 Аналитика и SEO</a>
+  </nav>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="n">{{ stats.week }}</div><div class="l">Вышло за 7 дней</div></div>
+    <div class="stat-card"><div class="n" style="color: var(--yellow);">{{ stats.scheduled }}</div><div class="l">Запланировано</div></div>
+    <div class="stat-card"><div class="n">{{ stats.planned }}</div><div class="l">В плане</div></div>
+    <div class="stat-card"><div class="n" {% if stats.errors %}style="color: var(--pink);"{% endif %}>{{ stats.errors }}</div><div class="l">Ошибок</div></div>
+  </div>
+
+  <div class="table-wrap"><table class="adm pub-matrix">
+    <tr><th>Площадка</th>{% for code, label in statuses %}<th>{{ label }}</th>{% endfor %}</tr>
+    {% for code, label in platforms %}
+    <tr>
+      <td><a class="pl {{ code }}" href="/admin/publications?platform={{ code }}">{{ label }}</a></td>
+      {% for scode, slabel in statuses %}
+      <td><a href="/admin/publications?platform={{ code }}&status={{ scode }}">{{ matrix.get(code, {}).get(scode, 0) or '·' }}</a></td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table></div>
+
+  <h2 class="sec">Ближайшее</h2>
+  <div class="table-wrap"><table class="adm">
+    <tr><th>Когда</th><th>Площадка</th><th>Тип</th><th>Заголовок</th><th>Статус</th></tr>
+    {% for p in upcoming %}
+    <tr>
+      <td style="white-space:nowrap;">{{ p.scheduled_at.strftime('%d.%m %H:%M') ~ ' UTC' if p.scheduled_at else '—' }}</td>
+      <td><span class="pl {{ p.platform }}">{{ platform_labels[p.platform] }}</span> <span class="muted">{{ p.lang }}</span></td>
+      <td>{{ kinds.get(p.kind, p.kind) }}</td>
+      <td>{% if p.url %}<a href="{{ p.url }}" target="_blank" rel="noopener" style="color:inherit;">{{ p.title or p.external_id }}</a>{% else %}{{ p.title or p.external_id }}{% endif %}</td>
+      <td><span class="st {{ p.status }}">{{ status_labels[p.status] }}</span></td>
+    </tr>
+    {% else %}<tr><td colspan="5" class="muted">Ничего не запланировано.</td></tr>{% endfor %}
+  </table></div>
+
+  <h2 class="sec">Добавить в план</h2>
+  <form method="post" action="/admin/publications/plan" class="plan-form">
+    <select class="select" name="platform">{% for code, label in platforms %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select>
+    <select class="select" name="lang"><option value="ru">RU</option><option value="en">EN</option></select>
+    <select class="select" name="kind">{% for code, label in kinds.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select>
+    <input class="input" name="title" placeholder="Тема / заголовок" required>
+    <input class="input" name="scheduled_at" type="datetime-local">
+    <button class="btn btn-acid" type="submit">В план</button>
+  </form>
+
+  <h2 class="sec">Все публикации</h2>
+  <div class="adm-filters">
+    <div class="adm-filters__row">
+      <a class="tag {% if not f_platform %}tag-acid{% endif %}" href="/admin/publications{% if f_status %}?status={{ f_status }}{% endif %}">Все площадки</a>
+      {% for code, label in platforms %}<a class="tag {% if f_platform == code %}tag-acid{% endif %}" href="/admin/publications?platform={{ code }}{% if f_status %}&status={{ f_status }}{% endif %}">{{ label }}</a>{% endfor %}
+    </div>
+    <div class="adm-filters__row">
+      <a class="tag {% if not f_status %}tag-acid{% endif %}" href="/admin/publications{% if f_platform %}?platform={{ f_platform }}{% endif %}">Все статусы</a>
+      {% for code, label in statuses %}<a class="tag {% if f_status == code %}tag-acid{% endif %}" href="/admin/publications?status={{ code }}{% if f_platform %}&platform={{ f_platform }}{% endif %}">{{ label }}</a>{% endfor %}
+      <span style="margin-left:auto;"></span>
+      <a class="tag {% if f_lang == 'ru' %}tag-acid{% endif %}" href="/admin/publications?lang=ru">RU</a>
+      <a class="tag {% if f_lang == 'en' %}tag-acid{% endif %}" href="/admin/publications?lang=en">EN</a>
+    </div>
+  </div>
+  <div class="table-wrap"><table class="adm">
+    <tr><th>Дата</th><th>Площадка</th><th>Тип</th><th>Заголовок</th><th>Статус</th><th>Источник</th><th></th></tr>
+    {% for p in rows %}
+    <tr>
+      <td style="white-space:nowrap;">{{ (p.published_at or p.scheduled_at or p.created_at).strftime('%d.%m.%y %H:%M') }}</td>
+      <td><span class="pl {{ p.platform }}">{{ platform_labels.get(p.platform, p.platform) }}</span> <span class="muted">{{ p.lang }}</span></td>
+      <td>{{ kinds.get(p.kind, p.kind) }}</td>
+      <td>{% if p.url %}<a href="{{ p.url }}" target="_blank" rel="noopener" style="color:inherit;">{{ p.title or p.external_id }}</a>{% else %}{{ p.title or p.external_id }}{% endif %}
+          {% if p.error %}<div class="muted" style="color: var(--pink);">{{ p.error[:160] }}</div>{% endif %}</td>
+      <td><span class="st {{ p.status }}">{{ status_labels.get(p.status, p.status) }}</span></td>
+      <td class="muted">{{ p.origin }}</td>
+      <td style="white-space:nowrap;">
+        {% if p.status in ('planned', 'created', 'scheduled') %}
+        <form method="post" action="/admin/publications/{{ p.id }}/status" style="display:inline;"><input type="hidden" name="status" value="published"><button class="btn btn-ghost">вышло</button></form>
+        <form method="post" action="/admin/publications/{{ p.id }}/status" style="display:inline;"><input type="hidden" name="status" value="cancelled"><button class="btn btn-ghost" style="color: var(--pink);">снять</button></form>
+        {% elif p.status == 'error' %}
+        <form method="post" action="/admin/publications/{{ p.id }}/status" style="display:inline;"><input type="hidden" name="status" value="planned"><button class="btn btn-ghost">повторить</button></form>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}<tr><td colspan="7" class="muted">Пусто.</td></tr>{% endfor %}
+  </table></div>
+{% endblock %}
