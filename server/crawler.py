@@ -80,6 +80,14 @@ SOURCE_REGISTRY = [
     {"key": "jobsinmalta", "name": "jobsinmalta.com", "type": "Sitemap + JSON-LD",
      "status": "подключён", "note": "Категория gambling целиком + iGaming-роли из других категорий "
                                     "по слагу; полные описания из JobPosting-разметки карточек"},
+    {"key": "affjobs", "name": "AffJobs (Affpal)", "type": "RSS + JSON-LD",
+     "status": "подключён", "note": "Борд агентства Affpal по affiliate/iGaming-маркетингу: RSS Smart Job Board "
+                                    "(~30 живых вакансий), вилки в USD/мес из JobPosting-разметки; браузерные "
+                                    "UA получают 403, наш бот — 200. Клиенты анонимны, работодатель — Affpal"},
+    {"key": "bettingjobs", "name": "BettingJobs.com", "type": "Jobs-sitemap + JSON-LD",
+     "status": "подключён", "note": "~110 вакансий агентства из jobs-sitemap плагина Applyflow, полные описания "
+                                    "из JobPosting-разметки карточек. Клиенты анонимны (работодатель — BettingJobs), "
+                                    "вилки не публикуются. robots.txt закрывает /jobview — обходим бережно"},
     {"key": "work.ua", "name": "work.ua", "type": "HTML + страницы поиска",
      "status": "подключён", "note": "Страницы поиска по iGaming-словарю, описание из карточки; "
                                     "смысловой фильтр отсекает боулинги и случайные «ставки»"},
@@ -157,10 +165,10 @@ def _fetch(url):
         return r.read().decode("utf-8", "replace")
 
 
-def _fetch_html(url):
+def _fetch_html(url, user_agent=None):
     req = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                      "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        "User-Agent": user_agent or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                                    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml"})
     with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
         return r.read().decode("utf-8", "replace")
@@ -1237,6 +1245,8 @@ def collect(with_metadata=False):
     fetch_source("arbeitnow", crawl_arbeitnow)
     fetch_source("dev.bg", crawl_devbg)
     fetch_source("jobsinmalta", crawl_jobsinmalta)
+    fetch_source("affjobs", crawl_affjobs)
+    fetch_source("bettingjobs", crawl_bettingjobs)
     fetch_source("casino-discovery", crawl_casino_seed_registry)
     return (items, complete_sources, health) if with_metadata else items
 
@@ -1636,6 +1646,201 @@ def crawl_jobsinmalta(max_details: int = 80):
         })
         out.append(item)
         time.sleep(0.25)
+    return out
+
+
+# ---------- общие помощники для JSON-LD-карточек ----------
+_COUNTRY_RU = {
+    "united kingdom": "Великобритания", "uk": "Великобритания", "england": "Великобритания",
+    "malta": "Мальта", "cyprus": "Кипр", "gibraltar": "Гибралтар", "isle of man": "Остров Мэн",
+    "spain": "Испания", "portugal": "Португалия", "germany": "Германия", "poland": "Польша",
+    "bulgaria": "Болгария", "romania": "Румыния", "serbia": "Сербия", "ukraine": "Украина",
+    "georgia": "Грузия", "armenia": "Армения", "estonia": "Эстония", "latvia": "Латвия",
+    "lithuania": "Литва", "netherlands": "Нидерланды", "ireland": "Ирландия", "italy": "Италия",
+    "greece": "Греция", "sweden": "Швеция", "denmark": "Дания", "france": "Франция",
+    "belgium": "Бельгия", "austria": "Австрия", "switzerland": "Швейцария", "hungary": "Венгрия",
+    "czech republic": "Чехия", "croatia": "Хорватия", "montenegro": "Черногория",
+    "moldova": "Молдова", "turkey": "Турция", "israel": "Израиль", "kazakhstan": "Казахстан",
+    "uzbekistan": "Узбекистан", "united arab emirates": "ОАЭ", "uae": "ОАЭ",
+    "united states": "США", "usa": "США", "canada": "Канада", "mexico": "Мексика",
+    "brazil": "Бразилия", "colombia": "Колумбия", "peru": "Перу", "argentina": "Аргентина",
+    "chile": "Чили", "australia": "Австралия", "south africa": "ЮАР", "nigeria": "Нигерия",
+    "kenya": "Кения", "philippines": "Филиппины", "india": "Индия", "thailand": "Таиланд",
+    "singapore": "Сингапур", "hong kong": "Гонконг", "vietnam": "Вьетнам",
+    "sri lanka": "Шри-Ланка", "malaysia": "Малайзия", "indonesia": "Индонезия",
+    "egypt": "Египет", "morocco": "Марокко", "ghana": "Гана", "tanzania": "Танзания",
+    "uganda": "Уганда", "north macedonia": "Северная Македония", "bosnia and herzegovina": "Босния",
+    "slovakia": "Словакия", "slovenia": "Словения", "norway": "Норвегия", "finland": "Финляндия",
+    "curacao": "Кюрасао", "curaçao": "Кюрасао", "costa rica": "Коста-Рика", "panama": "Панама",
+}
+_CURRENCY_SIGN = {"USD": "$", "EUR": "€", "GBP": "£"}
+
+
+def _country_ru(name: str) -> str:
+    name = (name or "").strip()
+    return _COUNTRY_RU.get(name.lower(), name)
+
+
+def _jsonld_posting(page: str):
+    """Первый JobPosting из JSON-LD-блоков страницы (или None)."""
+    for block in re.findall(r'<script type="application/ld\+json"[^>]*>(.*?)</script>', page, re.S):
+        try:
+            data = json.loads(block)
+        except Exception:
+            continue
+        for cand in (data if isinstance(data, list) else [data]):
+            if not isinstance(cand, dict):
+                continue
+            types = cand.get("@type")
+            if "JobPosting" in (types if isinstance(types, list) else [types]):
+                return cand
+    return None
+
+
+def _jsonld_salary(posting) -> str:
+    """Вилка из baseSalary: «$1 800–2 900 / мес»; нули и пустоты → «по запросу»."""
+    base = posting.get("baseSalary") or {}
+    if not isinstance(base, dict):
+        return "по запросу"
+    value = base.get("value") or {}
+    if not isinstance(value, dict):
+        return "по запросу"
+    try:
+        lo = int(float(value.get("minValue") or 0))
+        hi = int(float(value.get("maxValue") or 0))
+    except (TypeError, ValueError):
+        return "по запросу"
+    if not lo and not hi:
+        return "по запросу"
+    sign = _CURRENCY_SIGN.get(str(base.get("currency") or "").upper(), "")
+    unit = {"MONTH": " / мес", "YEAR": " / год", "HOUR": " / час"}.get(
+        str(value.get("unitText") or "").upper(), "")
+    fmt = lambda n: f"{n:,}".replace(",", " ")
+    if lo and hi and lo != hi:
+        return f"{sign}{fmt(lo)}–{fmt(hi)}{unit}"
+    return f"{sign}{fmt(lo or hi)}{unit}"
+
+
+# ---------- AffJobs: борд Affpal по affiliate/iGaming-маркетингу ----------
+# Сайт отдаёт 403 любому браузерному User-Agent, а обычным клиентам (и нашему
+# SpinHireBot) — 200. RSS от Smart Job Board содержит все активные вакансии
+# (~30), карточки несут JobPosting JSON-LD с вилкой в USD/мес. Работодатель —
+# почти всегда сама Affpal (агентство), клиент в тексте анонимен. Тематика шире
+# iGaming (adult, dating, e-commerce) — прогоняем через смысловой фильтр.
+AFFJOBS_RSS = "https://affjobs.com/feeds/rss.xml"
+
+
+def crawl_affjobs(max_details: int = 60):
+    try:
+        rss = _fetch_html(AFFJOBS_RSS, user_agent=UA)
+    except Exception:
+        return []
+    links = re.findall(r"<link>(https://affjobs\.com/job/(\d+)/[^<]+)</link>", rss)
+    out = []
+    for url, ext_id in links[:max_details]:
+        try:
+            page = _fetch_html(url, user_agent=UA)
+        except Exception:
+            continue
+        posting = _jsonld_posting(page)
+        if not posting:
+            continue
+        org = posting.get("hiringOrganization") or {}
+        item = {"title": _clean_text(posting.get("title") or ""),
+                "company_name": _clean_text((org.get("name") if isinstance(org, dict) else "")
+                                            or "Affpal"),
+                "description": _clean_html(posting.get("description") or "")}
+        # заголовки вида «Head of Acquisition (iGaming)» — маркер в названии
+        # весомее, чем два упоминания в тексте
+        if not item["title"] or not (_UA_IGAMING_RE.search(item["title"])
+                                     or _eu_item_relevant(item)):
+            continue
+        remote = "TELECOMMUTE" in str(posting.get("jobLocationType") or "").upper()
+        loc = posting.get("jobLocation")
+        loc = loc[0] if isinstance(loc, list) and loc else loc
+        city = country = ""
+        if isinstance(loc, dict):
+            addr = loc.get("address") or {}
+            if isinstance(addr, dict):
+                city = _clean_text(addr.get("addressLocality") or "")
+                country = _country_ru(addr.get("addressCountry") or "")
+        location = ", ".join(x for x in (city, country) if x) or ("Удалённо" if remote else "")
+        item.update({
+            "location": location,
+            "fmt": "удалёнка" if remote else "офис",
+            "salary": _jsonld_salary(posting),
+            "tags": ", ".join(str(x) for x in (posting.get("occupationalCategory") or [])
+                              if isinstance(x, str))[:120],
+            "posted_at": str(posting.get("datePosted") or "")[:10],
+            "deadline": str(posting.get("validThrough") or "")[:10],
+            "source": "affjobs", "ext_id": ext_id, "source_url": url,
+        })
+        out.append(item)
+        time.sleep(0.2)
+    return out
+
+
+# ---------- BettingJobs: агентство, ~110 iGaming-вакансий ----------
+# Листинг рендерится клиентом (Applyflow), зато плагин отдаёт jobs-sitemap со
+# всеми живыми /jobview/-страницами, а карточки несут JobPosting JSON-LD.
+# Клиенты агентства анонимны («BettingJobs is working with a UK-licensed
+# operator…»), поэтому работодатель — само агентство. Вилка почти всегда 0/0.
+# ВНИМАНИЕ: robots.txt сайта запрещает /jobview всем ботам, хотя sitemap эти
+# URL публикует; сбор идёт бережно (одна страница в 0.3 с).
+BETTINGJOBS_SITEMAP = ("https://www.bettingjobs.com/wp-content/plugins/"
+                       "applyflow-cms-extension/jobs-sitemap.php")
+
+
+def crawl_bettingjobs(max_details: int = 150):
+    try:
+        sitemap = _fetch_html(BETTINGJOBS_SITEMAP)
+    except Exception:
+        return []
+    urls = re.findall(r"<loc>(https://www\.bettingjobs\.com/jobview/[^<]+)</loc>", sitemap)
+    out = []
+    for url in urls[:max_details]:
+        try:
+            page = _fetch_html(url)
+        except Exception:
+            continue
+        posting = _jsonld_posting(page)
+        if not posting:
+            continue
+        title = _clean_text(posting.get("title") or "")
+        if not title:
+            continue
+        loc = posting.get("jobLocation")
+        loc = loc[0] if isinstance(loc, list) and loc else loc
+        city = country = ""
+        if isinstance(loc, dict):
+            addr = loc.get("address") or {}
+            if isinstance(addr, dict):
+                city = _clean_text(addr.get("streetAddress") or addr.get("addressLocality")
+                                   or addr.get("addressRegion") or "")
+                country = _country_ru(addr.get("addressCountry") or "")
+        remote = (city.lower() == "remote" or country.lower() == "remote"
+                  or "TELECOMMUTE" in str(posting.get("jobLocationType") or "").upper())
+        if remote:
+            location = "Удалённо"
+        elif city and country and city.lower() != country.lower():
+            location = f"{city}, {country}"
+        else:
+            location = country or city
+        ident = posting.get("identifier") or {}
+        ext_id = str(ident.get("value") if isinstance(ident, dict) else "") or \
+            url.rstrip("/").rsplit("/", 1)[-1]
+        out.append({
+            "title": title,
+            "company_name": "BettingJobs",
+            "description": _clean_html(posting.get("description") or ""),
+            "location": location,
+            "fmt": "удалёнка" if remote else "офис",
+            "salary": _jsonld_salary(posting), "tags": "",
+            "posted_at": str(posting.get("datePosted") or "")[:10],
+            "deadline": str(posting.get("validThrough") or "")[:10],
+            "source": "bettingjobs", "ext_id": ext_id, "source_url": url,
+        })
+        time.sleep(0.3)
     return out
 
 
