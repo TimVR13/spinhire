@@ -12,3 +12,6 @@ data/avatars/
 data/company-logos/
 video/node_modules
 video/out
+
+# музыка для Shorts: 126 МБ, лежит локально, в репо только манифест tracks.json
+video/public/audio/tracks/
