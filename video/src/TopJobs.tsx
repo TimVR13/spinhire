@@ -7,7 +7,7 @@ const display = loadDisplay("normal", { weights: ["700", "800"], subsets: ["lati
 const body = loadBody("normal", { weights: ["400", "600", "700"], subsets: ["latin", "cyrillic"] }).fontFamily;
 
 export const FPS = 30;
-const HOOK = 78, CARD = 120, CTA = 84;
+const HOOK = 150, CARD = 120, CTA = 120;
 export const DURATION = HOOK + CARD * 5 + CTA; // 450 = 15 s
 
 const C = { bg: "#0a120e", bg2: "#0f1a14", ink: "#f2f7f4", dim: "#9fb3a8", acid: "#12e08e", pink: "#ff3fa4", line: "rgba(18,224,142,.22)" };
@@ -15,21 +15,14 @@ const C = { bg: "#0a120e", bg2: "#0f1a14", ink: "#f2f7f4", dim: "#9fb3a8", acid:
 type Job = { title: string; company: string; where: string; salary: string; tag: string };
 type Props = { week: string; cta: string; total: string; promo: string; promo2: string; jobs: Job[] };
 
-const Grain: React.FC = () => {
-  const f = useCurrentFrame();
-  const z = 1.08 + 0.06 * Math.sin(f / 140);
-  return (
-    <AbsoluteFill style={{ background: C.bg }}>
-      <Img src={staticFile("hero.jpg")} style={{ position: "absolute", width: "100%", height: "100%", objectFit: "cover", objectPosition: "72% 50%", transform: `scale(${z})`, opacity: 0.42, filter: "saturate(1.05) blur(1px)" }} />
-      <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(10,18,14,.35) 0%, rgba(10,18,14,.78) 45%, rgba(10,18,14,.94) 100%)" }} />
-    </AbsoluteFill>
-  );
-};
+const Grain: React.FC = () => (
+  <AbsoluteFill style={{ background: `radial-gradient(900px 700px at 80% 12%, rgba(212,169,74,.16), transparent 60%), radial-gradient(1000px 800px at 10% 100%, rgba(18,224,142,.12), transparent 60%), ${C.bg}` }} />
+);
 
-const HeroArt: React.FC<{ height: number; zoom?: number }> = ({ height, zoom = 1 }) => (
+const HeroArt: React.FC<{ height: number; zoom?: number; src?: string }> = ({ height, zoom = 1, src = "hero-v.jpg" }) => (
   <div style={{ position: "absolute", top: 0, left: 0, right: 0, height, overflow: "hidden" }}>
-    <Img src={staticFile("hero.jpg")} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "74% 50%", transform: `scale(${zoom})` }} />
-    <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, rgba(10,18,14,0) 55%, ${C.bg} 100%)` }} />
+    <Img src={staticFile(src)} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 0%", transform: `scale(${zoom})`, transformOrigin: "50% 20%" }} />
+    <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, rgba(10,18,14,0) 50%, ${C.bg} 96%)` }} />
   </div>
 );
 
@@ -56,16 +49,16 @@ const Logo: React.FC<{ size?: number }> = ({ size = 64 }) => (
 const Hook: React.FC<{ week: string }> = ({ week }) => {
   const f = useCurrentFrame(); const { fps } = useVideoConfig();
   const s = spring({ frame: f, fps, config: { damping: 14, stiffness: 120 } });
-  const s2 = spring({ frame: f - 8, fps, config: { damping: 16 } });
-  const strike = interpolate(f, [22, 40], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const s3 = spring({ frame: f - 34, fps, config: { damping: 16 } });
-  const out = interpolate(f, [HOOK - 10, HOOK], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const zoom = interpolate(f, [0, HOOK], [1.0, 1.08]);
+  const s2 = spring({ frame: f - 20, fps, config: { damping: 18, stiffness: 90 } });
+  const strike = interpolate(f, [55, 80], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const s3 = spring({ frame: f - 85, fps, config: { damping: 18, stiffness: 90 } });
+  const out = interpolate(f, [HOOK - 14, HOOK], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const zoom = interpolate(f, [0, HOOK], [1.0, 1.1]);
   return (
     <AbsoluteFill style={{ opacity: out }}>
-      <HeroArt height={1020} zoom={zoom} />
+      <HeroArt height={1100} zoom={zoom} src="hero-v.jpg" />
       <div style={{ position: "absolute", top: 96, left: 72, transform: `scale(${0.9 + 0.1 * s})`, transformOrigin: "left top", opacity: s }}><Logo size={56} /></div>
-      <div style={{ position: "absolute", left: 72, right: 72, top: 900, transform: `translateY(${(1 - s2) * 60}px)`, opacity: s2 }}>
+      <div style={{ position: "absolute", left: 72, right: 72, top: 940, transform: `translateY(${(1 - s2) * 60}px)`, opacity: s2 }}>
         <div style={{ display: "inline-block", fontFamily: body, fontWeight: 700, fontSize: 26, letterSpacing: 4, textTransform: "uppercase", color: C.acid, border: `2px solid ${C.acid}66`, borderRadius: 999, padding: "10px 22px", marginBottom: 34 }}>● Джоб‑борд iGaming‑индустрии</div>
         <Slogan size={100} progress={strike} />
       </div>
@@ -104,13 +97,13 @@ const Card: React.FC<{ job: Job; n: number }> = ({ job, n }) => {
 
 const Cta: React.FC<{ cta: string; total: string; promo: string; promo2: string }> = ({ cta, total }) => {
   const f = useCurrentFrame(); const { fps } = useVideoConfig();
-  const s = spring({ frame: f, fps, config: { damping: 14 } });
-  const s2 = spring({ frame: f - 12, fps, config: { damping: 14 } });
-  const pulse = 1 + 0.03 * Math.sin(f / 4);
-  const zoom = interpolate(f, [0, CTA], [1.04, 1.12]);
+  const s = spring({ frame: f, fps, config: { damping: 16, stiffness: 90 } });
+  const s2 = spring({ frame: f - 25, fps, config: { damping: 16, stiffness: 90 } });
+  const pulse = 1 + 0.025 * Math.sin(f / 5);
+  const zoom = interpolate(f, [0, CTA], [1.04, 1.14]);
   return (
     <AbsoluteFill>
-      <HeroArt height={980} zoom={zoom} />
+      <HeroArt height={1000} zoom={zoom} src="cta-v.jpg" />
       <div style={{ position: "absolute", top: 96, left: 72, opacity: s }}><Logo size={56} /></div>
       <div style={{ position: "absolute", left: 72, right: 72, top: 860, opacity: s, transform: `translateY(${(1 - s) * 50}px)` }}>
         <Slogan size={90} progress={1} />
@@ -127,7 +120,7 @@ const Cta: React.FC<{ cta: string; total: string; promo: string; promo2: string 
 
 export const TopJobs: React.FC<Props> = ({ week, cta, total, promo, promo2, jobs }) => {
   const f = useCurrentFrame();
-  const musicVol = interpolate(f, [0, 20, DURATION - 40, DURATION], [0, 0.45, 0.45, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const musicVol = interpolate(f, [0, 30, DURATION - 60, DURATION], [0, 0.42, 0.42, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
     <AbsoluteFill style={{ fontFamily: body, color: C.ink }}>
       <Grain />
