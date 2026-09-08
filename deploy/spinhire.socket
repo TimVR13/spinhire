@@ -1,0 +1,13 @@
+# Сокет держит порт 8100 всегда: во время рестарта uvicorn запросы ждут в очереди ядра
+# вместо 502 от прокси. Установка: bash /opt/spinhire/deploy/install-socket.sh
+[Unit]
+Description=SpinHire listening socket (zero-downtime restarts)
+
+[Socket]
+ListenStream=0.0.0.0:8100
+Backlog=1024
+NoDelay=true
+ReusePort=true
+
+[Install]
+WantedBy=sockets.target
