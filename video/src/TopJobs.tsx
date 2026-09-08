@@ -7,13 +7,13 @@ const display = loadDisplay("normal", { weights: ["700", "800"], subsets: ["lati
 const body = loadBody("normal", { weights: ["400", "600", "700"], subsets: ["latin", "cyrillic"] }).fontFamily;
 
 export const FPS = 30;
-const HOOK = 60, CARD = 66, CTA = 60;
+const HOOK = 50, CARD = 64, CTA = 80;
 export const DURATION = HOOK + CARD * 5 + CTA; // 450 = 15 s
 
 const C = { bg: "#0a120e", bg2: "#0f1a14", ink: "#f2f7f4", dim: "#9fb3a8", acid: "#12e08e", pink: "#ff3fa4", line: "rgba(18,224,142,.22)" };
 
 type Job = { title: string; company: string; where: string; salary: string; tag: string };
-type Props = { week: string; cta: string; total: string; jobs: Job[] };
+type Props = { week: string; cta: string; total: string; promo: string; promo2: string; jobs: Job[] };
 
 const Grain: React.FC = () => (
   <AbsoluteFill style={{ background: `radial-gradient(1200px 900px at 20% 0%, rgba(18,224,142,.14), transparent 60%), radial-gradient(900px 700px at 100% 100%, rgba(255,63,164,.10), transparent 55%), ${C.bg}` }} />
@@ -40,6 +40,7 @@ const Hook: React.FC<{ week: string }> = ({ week }) => {
         Топ‑5<br /><span style={{ color: C.acid }}>вакансий</span><br />недели
       </div>
       <div style={{ marginTop: 44, fontFamily: body, fontWeight: 600, fontSize: 40, color: C.dim, letterSpacing: 4, textTransform: "uppercase", opacity: s2 }}>iGaming · {week}</div>
+      <div style={{ marginTop: 18, fontFamily: body, fontSize: 34, color: "rgba(255,255,255,.5)", opacity: s2 }}>по данным spinhire.io, вакансии с указанной зарплатой</div>
     </AbsoluteFill>
   );
 };
@@ -69,7 +70,7 @@ const Card: React.FC<{ job: Job; n: number }> = ({ job, n }) => {
   );
 };
 
-const Cta: React.FC<{ cta: string; total: string }> = ({ cta, total }) => {
+const Cta: React.FC<{ cta: string; total: string; promo: string; promo2: string }> = ({ cta, total, promo, promo2 }) => {
   const f = useCurrentFrame(); const { fps } = useVideoConfig();
   const s = spring({ frame: f, fps, config: { damping: 14 } });
   const pulse = 1 + 0.03 * Math.sin(f / 4);
@@ -79,11 +80,15 @@ const Cta: React.FC<{ cta: string; total: string }> = ({ cta, total }) => {
       <div style={{ marginTop: 60, fontFamily: body, fontWeight: 600, fontSize: 44, color: C.dim, opacity: s }}>{total} с зарплатами</div>
       <div style={{ marginTop: 40, transform: `scale(${pulse * s})`, fontFamily: display, fontWeight: 800, fontSize: 84, color: "#06130c", background: C.acid, padding: "28px 56px", borderRadius: 999, boxShadow: `0 0 80px ${C.acid}77` }}>{cta}</div>
       <div style={{ marginTop: 40, fontFamily: body, fontSize: 36, color: C.dim, opacity: s }}>Все вакансии — с вилкой. Отклик в один клик.</div>
+      <div style={{ marginTop: 70, opacity: s, border: `2px solid ${C.pink}88`, borderRadius: 28, padding: "28px 40px", textAlign: "center", background: "rgba(255,63,164,.08)" }}>
+        <div style={{ fontFamily: display, fontWeight: 800, fontSize: 40, color: C.ink }}>{promo}</div>
+        <div style={{ marginTop: 10, fontFamily: body, fontWeight: 600, fontSize: 30, color: C.pink, letterSpacing: 2, textTransform: "uppercase" }}>{promo2}</div>
+      </div>
     </AbsoluteFill>
   );
 };
 
-export const TopJobs: React.FC<Props> = ({ week, cta, total, jobs }) => {
+export const TopJobs: React.FC<Props> = ({ week, cta, total, promo, promo2, jobs }) => {
   const f = useCurrentFrame();
   const musicVol = interpolate(f, [0, 20, DURATION - 40, DURATION], [0, 0.45, 0.45, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
@@ -97,7 +102,7 @@ export const TopJobs: React.FC<Props> = ({ week, cta, total, jobs }) => {
           <Audio src={staticFile("audio/pop.wav")} volume={0.35} />
         </Sequence>
       ))}
-      <Sequence from={HOOK + CARD * 5} durationInFrames={CTA} premountFor={10}><Cta cta={cta} total={total} /></Sequence>
+      <Sequence from={HOOK + CARD * 5} durationInFrames={CTA} premountFor={10}><Cta cta={cta} total={total} promo={promo} promo2={promo2} /></Sequence>
     </AbsoluteFill>
   );
 };

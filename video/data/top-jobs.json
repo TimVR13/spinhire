@@ -1,8 +1,44 @@
-{ "week": "8 сентября 2026", "cta": "spinhire.io/jobs", "total": "7 500+ живых вакансий",
+{
+  "week": "1–8 сентября 2026",
+  "cta": "spinhire.io/jobs",
+  "total": "7 500+ живых вакансий",
   "jobs": [
-    {"title": "Systems Engineer (SRE)", "company": "Evolution", "where": "Рига · офис", "salary": "€4 750–7 670", "tag": "Live Casino"},
-    {"title": "Senior Go Engineer", "company": "Adaptiq", "where": "Remote", "salary": "$6 000–7 500", "tag": "Разработка"},
-    {"title": "Affiliate Manager", "company": "Royal Flush Affiliates", "where": "Remote", "salary": "до $6 500", "tag": "Аффилейты"},
-    {"title": "SEO Specialist · iGaming", "company": "SEOJET", "where": "Remote", "salary": "до $6 000", "tag": "Маркетинг"},
-    {"title": "Marketing Manager", "company": "Coolbet", "where": "Таллин · офис", "salary": "€3 000–3 500", "tag": "Беттинг"}
-  ] }
+    {
+      "title": "Systems Engineer (SRE)",
+      "company": "Evolution",
+      "where": "Рига · офис",
+      "salary": "€4 750–7 670",
+      "tag": "Live Casino"
+    },
+    {
+      "title": "Senior Go Engineer",
+      "company": "Adaptiq",
+      "where": "Remote",
+      "salary": "$6 000–7 500",
+      "tag": "Разработка"
+    },
+    {
+      "title": "Affiliate Manager",
+      "company": "Royal Flush Affiliates",
+      "where": "Remote",
+      "salary": "до $6 500",
+      "tag": "Аффилейты"
+    },
+    {
+      "title": "SEO Specialist · iGaming",
+      "company": "SEOJET",
+      "where": "Remote",
+      "salary": "до $6 000",
+      "tag": "Маркетинг"
+    },
+    {
+      "title": "Marketing Manager",
+      "company": "Coolbet",
+      "where": "Таллин · офис",
+      "salary": "€3 000–3 500",
+      "tag": "Беттинг"
+    }
+  ],
+  "promo": "Работодателям: первые 3 вакансии бесплатно",
+  "promo2": "цена запуска действует до 30 сентября"
+}
