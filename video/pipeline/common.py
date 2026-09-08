@@ -98,5 +98,14 @@ def say_money(n: int, cur: str) -> str:
     return f"{n:,}".replace(",", " ") + " " + word
 
 
+def say_range(lo, hi, cur: str) -> str:
+    """Для озвучки: «от 5 000 до 6 500 долларов» — валюта один раз, в конце."""
+    word = {"USD": "долларов", "EUR": "евро", "GBP": "фунтов"}.get(cur, cur)
+    n = lambda v: f"{v:,}".replace(",", " ")
+    if lo and hi and lo != hi:
+        return f"от {n(lo)} до {n(hi)} {word}"
+    return f"до {n(hi or lo)} {word}"
+
+
 def slugify(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")

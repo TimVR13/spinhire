@@ -7,7 +7,14 @@
   "playlist": "jobs",
   "title": "Вакансии iGaming с зарплатой до €8 300: топ-5 за 9 сентября | работа в гемблинге",
   "publish_at": "2026-09-09T07:00:00Z",
-  "uploaded_at": "2026-09-08T22:34:49Z"
+  "uploaded_at": "2026-09-08T22:34:49Z",
+  "featured": [
+   "https://spinhire.io/job/8925",
+   "https://spinhire.io/job/8820",
+   "https://spinhire.io/job/9471",
+   "https://spinhire.io/job/9472",
+   "https://spinhire.io/job/9648"
+  ]
  },
  {
   "id": "2026-09-09-day",
@@ -28,5 +35,27 @@
   "title": "Кто такой бонус-менеджер в iGaming: обязанности, зарплата, как стать | профессии гемблинга",
   "publish_at": "2026-09-09T17:00:00Z",
   "uploaded_at": "2026-09-08T22:35:01Z"
+ },
+ {
+  "id": "2026-09-10-day",
+  "video_id": "ET3kRzyCBGE",
+  "url": "https://youtube.com/shorts/ET3kRzyCBGE",
+  "format": "market_stat",
+  "playlist": "jobs",
+  "title": "Рынок iGaming сегодня: 6 158 вакансий, +1 444 за неделю | статистика найма в гемблинге",
+  "publish_at": "2026-09-10T12:00:00Z",
+  "slug": null,
+  "uploaded_at": "2026-09-08T22:45:38Z"
+ },
+ {
+  "id": "2026-09-10-evening",
+  "video_id": "3NOnpvra-yM",
+  "url": "https://youtube.com/shorts/3NOnpvra-yM",
+  "format": "profession",
+  "playlist": "profession",
+  "title": "Кто такой менеджер операций казино в iGaming: обязанности, зарплата, как стать | профессии гемблинга",
+  "publish_at": "2026-09-10T17:00:00Z",
+  "slug": "casino-operations-manager",
+  "uploaded_at": "2026-09-08T22:48:26Z"
  }
 ]

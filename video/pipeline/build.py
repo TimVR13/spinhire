@@ -12,8 +12,8 @@ import json
 import re
 from pathlib import Path
 
-from common import (OUT, RENDERS, SITE, TG, api_jobs, fmt_range, monthly, pick_track, professions, role,
-                    say_money)
+from common import (DATA, OUT, RENDERS, SITE, TG, api_jobs, fmt_range, monthly, pick_track, professions, role,
+                    say_money, say_range)
 from tts import voice_track
 
 HASHTAGS = "#igaming #вакансии #гемблинг #работа #карьера #shorts"
@@ -98,13 +98,27 @@ def usd_equiv(hi: int | None, cur: str) -> int:
 
 # ---------- форматы ----------
 
+def featured_recently(days: int = 7) -> set[str]:
+    """URL вакансий, уже показанных в роликах за последние дни (из data/youtube-posts.json)."""
+    p = DATA / "youtube-posts.json"
+    if not p.exists():
+        return set()
+    since = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days)).isoformat()
+    urls = set()
+    for r in json.load(open(p, encoding="utf-8")):
+        if r.get("uploaded_at", "") >= since:
+            urls.update(r.get("featured") or [])
+    return urls
+
+
 def build_hot_jobs(seed: str, args) -> dict:
-    today = dt.date.today()
+    today = dt.date.fromisoformat(args.date) if args.date else dt.date.today()
     jobs = api_jobs(pages=4)
+    seen = featured_recently()
     cands = []
     for j in jobs:
         lo, hi = monthly(j)
-        if not hi:
+        if not hi or j["url"] in seen:
             continue
         age = (today - dt.date.fromisoformat(j["posted_at"])).days
         if age > 2 or usd_equiv(hi, j["salary_currency"]) < 4000 or us_office(j):
@@ -113,7 +127,7 @@ def build_hot_jobs(seed: str, args) -> dict:
     if len(cands) < N_JOBS:  # тихий день — берём свежие за неделю и порог ниже
         for j in api_jobs(pages=8):
             lo, hi = monthly(j)
-            if hi and usd_equiv(hi, j["salary_currency"]) >= 3000 and not us_office(j) and j not in [c[3] for c in cands]:
+            if hi and usd_equiv(hi, j["salary_currency"]) >= 3000 and not us_office(j) and j["url"] not in seen and j not in [c[3] for c in cands]:
                 cands.append((usd_equiv(hi, j["salary_currency"]), lo, hi, j))
     cands.sort(key=lambda c: -c[0])
     picked, companies = [], set()
@@ -136,19 +150,20 @@ def build_hot_jobs(seed: str, args) -> dict:
         scenes.append({"id": f"job{i}", "type": "job", "n": i + 1, "total": n, "title": clean_title(j["title"]), "company": j["company"],
                        "where": where.capitalize(), "salary": fmt_range(lo, hi, j["salary_currency"]), "tag": j["category"] or "iGaming",
                        "note": note, "url": j["url"]})
-        sal_say = f"от {say_money(lo, j['salary_currency'])} до {say_money(hi, j['salary_currency'])}" if lo and lo != hi else f"до {say_money(hi, j['salary_currency'])}"
+        sal_say = say_range(lo, hi, j["salary_currency"])
         phrases.append({"id": f"job{i}", "scene": f"job{i}", "text": f"{words[i]}. {clean_title(j['title'])} в {j['company']}, {where}."})
         phrases.append({"id": f"job{i}s", "scene": f"job{i}", "text": f"Платят {sal_say} в месяц."})
     scenes.append({"id": "cta", "type": "cta", "line": "Все вакансии с зарплатами", "url": "spinhire.io/jobs"})
     phrases.append({"id": "cta", "scene": "cta", "text": "Ссылки на все — в описании. Ещё шесть тысяч вакансий на spinhire.io."})
     links = "\n".join(f"{i + 1}. {j['title']} — {j['company']}: {j['url']}" for i, (_, _, _, j) in enumerate(picked))
-    day = dt.date.today()
+    day = today
     MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
     title = f"Вакансии iGaming с зарплатой {fmt_range(None, picked[0][2], picked[0][3]['salary_currency'])}: топ-{n} за {day.day} {MONTHS[day.month - 1]} | работа в гемблинге"
     desc = (f"Самые высокооплачиваемые вакансии за сегодня в гемблинге.\n\n{links}\n\n"
             f"Все вакансии с зарплатами → {SITE}/jobs\nTelegram с горячими вакансиями → {TG}\n\n{HASHTAGS}")
     return {"format": "hot_jobs", "playlist": "jobs", "mood": "dramatic", "bg": "hero-v.jpg", "scenes": scenes, "phrases": phrases,
-            "title": title[:100], "description": desc, "tags": ["igaming", "вакансии", "гемблинг", "работа", "зарплата", "spinhire"]}
+            "title": title[:100], "description": desc, "tags": ["igaming", "вакансии", "гемблинг", "работа", "зарплата", "spinhire"],
+            "featured": [j["url"] for (_, _, _, j) in picked]}
 
 
 def build_salary(seed: str, args) -> dict:
@@ -168,16 +183,16 @@ def build_salary(seed: str, args) -> dict:
     lead = sal["mt_cy"]["lead"][1]
     scenes = [
         {"id": "hook", "type": "hook", "kicker": "Зарплаты", "title": f"Сколько платят {dative}?", "sub": "middle · в месяц · после налогов зависит от страны"},
-        {"id": "bars", "type": "bars", "title": r["title"], "sub": "Мидл, $ в месяц", "bars": bars},
-        {"id": "grades", "type": "bars", "title": "По грейдам", "sub": "Мальта и Кипр, $ в месяц", "bars": grade_bars(sal)},
-        {"id": "big", "type": "big", "kicker": "Мальта и Кипр", "number": f"до ${lead:,}".replace(",", " "), "label": f"тимлид · сеньор до ${sen:,}".replace(",", " ")},
+        {"id": "bars", "type": "bars", "title": r["title"], "sub": "Мидл по регионам, $ в месяц", "bars": bars},
+        {"id": "grades", "type": "bars", "title": r["title"], "sub": "По грейдам · Мальта и Кипр, $ в месяц", "bars": grade_bars(sal)},
+        {"id": "big", "type": "big", "kicker": f"{r['title']} · Мальта и Кипр", "number": f"до ${lead:,}".replace(",", " "), "label": f"тимлид · сеньор до ${sen:,}".replace(",", " ")},
         {"id": "cta", "type": "cta", "line": "Вилки по 35 профессиям", "url": "spinhire.io/professions"},
     ]
     phrases = [
         {"id": "hook", "scene": "hook", "text": f"Сколько платят {dative} в iGaming?"},
-        {"id": "b1", "scene": "bars", "text": f"На Мальте и Кипре мидл получает от {say_money(bars[0]['lo'], 'USD')} до {say_money(bars[0]['hi'], 'USD')} в месяц."},
-        {"id": "b2", "scene": "bars", "text": f"В Польше, Румынии и Балтии — от {say_money(bars[1]['lo'], 'USD')} до {say_money(bars[1]['hi'], 'USD')}."},
-        {"id": "b3", "scene": "bars", "text": f"На удалёнке — от {say_money(bars[2]['lo'], 'USD')} до {say_money(bars[2]['hi'], 'USD')}."},
+        {"id": "b1", "scene": "bars", "text": f"На Мальте и Кипре мидл получает {say_range(bars[0]['lo'], bars[0]['hi'], 'USD')} в месяц."},
+        {"id": "b2", "scene": "bars", "text": f"В Польше, Румынии и Балтии — {say_range(bars[1]['lo'], bars[1]['hi'], 'USD')}."},
+        {"id": "b3", "scene": "bars", "text": f"На удалёнке — {say_range(bars[2]['lo'], bars[2]['hi'], 'USD')}."},
         {"id": "g1", "scene": "grades", "text": f"Джуниор стартует с {say_money(sal['mt_cy']['junior'][0], 'USD')}."},
         {"id": "g2", "scene": "grades", "text": f"Мидл — до {say_money(sal['mt_cy']['middle'][1], 'USD')}."},
         {"id": "g3", "scene": "grades", "text": f"Сеньор — до {say_money(sen, 'USD')}."},
@@ -207,7 +222,7 @@ def build_profession(seed: str, args) -> dict:
         {"id": "hook", "type": "hook", "kicker": "Профессия за минуту", "title": r["title"], "sub": r["title_en"]},
         {"id": "lead", "type": "quote", "text": first_sentence(r["lead"])},
         {"id": "do", "type": "bullets", "title": "Что делает", "items": items},
-        {"id": "grades", "type": "bars", "title": "Сколько платят", "sub": "Мальта и Кипр, $ в месяц", "bars": grade_bars(sal)},
+        {"id": "grades", "type": "bars", "title": r["title"], "sub": "Зарплата по грейдам · Мальта и Кипр, $ в месяц", "bars": grade_bars(sal)},
         {"id": "skills", "type": "bullets", "title": "Что нужно уметь", "items": skills},
         *([{"id": "locs", "type": "bars", "title": "Где ищут", "sub": loc_scope, "bars": locs}] if locs else []),
         {"id": "entry", "type": "quote", "kicker": "Как войти", "text": entry},
@@ -221,7 +236,7 @@ def build_profession(seed: str, args) -> dict:
         {"id": "do1", "scene": "do", "text": items[1].rstrip("…") + "."},
         {"id": "do2", "scene": "do", "text": items[2].rstrip("…") + "."},
         {"id": "g1", "scene": "grades", "text": f"Зарплаты на Мальте и Кипре. Джуниор — от {say_money(sal['mt_cy']['junior'][0], 'USD')}."},
-        {"id": "g2", "scene": "grades", "text": f"Мидл — от {say_money(lo, 'USD')} до {say_money(hi, 'USD')}."},
+        {"id": "g2", "scene": "grades", "text": f"Мидл — {say_range(lo, hi, 'USD')}."},
         {"id": "g3", "scene": "grades", "text": f"Сеньор — до {say_money(sal['mt_cy']['senior'][1], 'USD')}."},
         {"id": "g4", "scene": "grades", "text": f"Тимлид — до {say_money(sal['mt_cy']['lead'][1], 'USD')} в месяц."},
         {"id": "s0", "scene": "skills", "text": "Что нужно уметь. " + skills[0].rstrip("…") + "."},
@@ -264,7 +279,7 @@ def build_market_stat(seed: str, args) -> dict:
          for i, d in enumerate(dirs)] + [
         {"id": "cta", "scene": "cta", "text": "Полная статистика и все вакансии — на spinhire.io, ссылка в описании."},
     ]
-    day = dt.date.today()
+    day = dt.date.fromisoformat(args.date) if args.date else dt.date.today()
     title = f"Рынок iGaming сегодня: {fmt_n(live)} вакансий, +{fmt_n(new)} за неделю | статистика найма в гемблинге"
     desc = (f"Живая статистика рынка труда iGaming на {day.isoformat()}:\n• открыто вакансий: {fmt_n(live)}\n• новых за неделю: {fmt_n(new)}\n"
             f"• компаний нанимают: {fmt_n(comp)}\n\nПо направлениям:\n" + "\n".join(f"• {d['name']}: {fmt_n(d['jobs'])}" for d in dirs)
@@ -321,6 +336,7 @@ def assemble(spec: dict, vid: str) -> dict:
     (work / "props.json").write_text(json.dumps(props, ensure_ascii=False, indent=1))
     OUT.mkdir(exist_ok=True)
     meta = {k: spec[k] for k in ("format", "playlist", "title", "description", "tags")}
+    meta["featured"] = spec.get("featured", [])
     meta.update({"id": vid, "duration": props["duration"], "music": props["music"], "props": str(work / "props.json")})
     (OUT / f"{vid}.meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))
     return props
@@ -333,6 +349,7 @@ if __name__ == "__main__":
     ap.add_argument("--slug", default="")
     ap.add_argument("--dative", default="", help="профессия в дательном падеже для заголовка «сколько платят …»")
     ap.add_argument("--script", default="", help="JSON с правками агента (фразы/сцены/заголовок)")
+    ap.add_argument("--date", default="", help="дата слота YYYY-MM-DD (по умолчанию сегодня)")
     ap.add_argument("--spec-only", action="store_true", help="только собрать spec в stdout, без озвучки")
     a = ap.parse_args()
     spec = BUILDERS[a.format](a.id, a)

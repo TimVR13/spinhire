@@ -130,7 +130,7 @@ const Big: React.FC<{ sc: Scene; bg: string }> = ({ sc, bg }) => {
       <Top />
       <div style={{ position: "absolute", left: 72, right: 72, top: 760, opacity: s, transform: `translateY(${(1 - s) * 50}px)` }}>
         <Kicker color={C.gold}>{sc.kicker}</Kicker>
-        <div style={{ marginTop: 30, transform: `scale(${0.8 + 0.2 * s2})`, transformOrigin: "left center", fontFamily: display, fontWeight: 800, fontSize: fit(sc.number, 936, 140), lineHeight: 1, color: C.acid, letterSpacing: -3, textShadow: `0 0 60px ${C.acid}55`, whiteSpace: "nowrap" }}>{sc.number}</div>
+        <div style={{ marginTop: 30, transform: `scale(${0.8 + 0.2 * s2})`, transformOrigin: "left center", fontFamily: display, fontWeight: 800, fontSize: fit(sc.number, 900, 124), lineHeight: 1, color: C.acid, letterSpacing: -3, textShadow: `0 0 60px ${C.acid}55`, whiteSpace: "nowrap" }}>{sc.number}</div>
         <div style={{ marginTop: 24, fontFamily: body, fontWeight: 600, fontSize: 40, color: C.dim }}>{sc.label}</div>
       </div>
     </AbsoluteFill>

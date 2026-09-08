@@ -40,7 +40,7 @@ def main():
         p["slug"] = a.slug
     print("план:", json.dumps(p, ensure_ascii=False), flush=True)
 
-    cmd = [sys.executable, "pipeline/build.py", p["format"], p["id"]]
+    cmd = [sys.executable, "pipeline/build.py", p["format"], p["id"], "--date", a.date]
     if p.get("slug"):
         cmd += ["--slug", p["slug"]]
     if p.get("dative"):

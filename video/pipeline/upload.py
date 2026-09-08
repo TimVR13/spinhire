@@ -69,7 +69,7 @@ if __name__ == "__main__":
     meta = json.load(open(OUT / f"{video.stem}.meta.json", encoding="utf-8"))
     vid = upload(video, meta, a.publish_at or None, a.privacy)
     entry = {"id": video.stem, "video_id": vid, "url": f"https://youtube.com/shorts/{vid}", "format": meta["format"],
-             "playlist": meta.get("playlist"), "title": meta["title"], "publish_at": a.publish_at or None, "slug": a.slug or None,
+             "playlist": meta.get("playlist"), "title": meta["title"], "publish_at": a.publish_at or None, "slug": a.slug or None, "featured": meta.get("featured", []),
              "uploaded_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")}
     log(entry)
     print(json.dumps(entry, ensure_ascii=False))
