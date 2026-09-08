@@ -178,6 +178,7 @@ class User(Base):
     job_access_until = Column(String, default="")  # ISO-дата безлимитного размещения
     promo_code = Column(String, default="")        # активированный промокод (один на аккаунт)
     signup_source = Column(Text, default="")        # first-touch: referrer + utm из cookie sh_src
+    lang = Column(String, default="")               # язык сайта при регистрации — на нём шлём письма
     referral_code = Column(String, default="")      # личный код «пригласи друга»
     referred_by = Column(Integer, default=None)     # id пригласившего
     referral_credited = Column(Boolean, default=False)  # бонус за этого юзера уже начислен
@@ -927,6 +928,8 @@ def migrate(db: Session):
         db.execute(text("ALTER TABLE users ADD COLUMN job_access_until VARCHAR DEFAULT ''"))
     if "signup_source" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN signup_source TEXT DEFAULT ''"))
+    if "lang" not in ucols:
+        db.execute(text("ALTER TABLE users ADD COLUMN lang VARCHAR DEFAULT ''"))
     if "referral_code" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN referral_code VARCHAR DEFAULT ''"))
     if "referred_by" not in ucols:
@@ -1846,17 +1849,23 @@ def issue_otp(user: User, db: Session) -> str:
     return code
 
 
-def send_otp(user: User, code: str) -> bool:
+def user_lang(user, request: Request = None) -> str:
+    """Язык писем: язык сайта при регистрации; у старых юзеров его нет — берём язык
+    текущего запроса; без запроса — английский (русским незнакомого не пугаем)."""
+    return (getattr(user, "lang", "") or (request_lang(request) if request else "") or "en")
+
+
+def send_otp(user: User, code: str, lang: str = "") -> bool:
+    lang = lang or user_lang(user)
     html = (
         '<div style="font-family:Arial,Helvetica,sans-serif;color:#111">'
-        '<p>Здравствуйте!</p>'
-        '<p>Ваш код подтверждения регистрации на <b>SpinHire</b>:</p>'
+        f'<p>{mail_t(lang, "otp_hello")}</p>'
+        f'<p>{mail_t(lang, "otp_body")}</p>'
         f'<p style="font-size:32px;font-weight:700;letter-spacing:6px">{code}</p>'
-        f'<p style="color:#666">Код действует {_OTP_TTL_MIN} минут. '
-        'Если вы не регистрировались на SpinHire — просто проигнорируйте это письмо.</p>'
+        f'<p style="color:#666">{mail_t(lang, "otp_ttl", n=_OTP_TTL_MIN)}</p>'
         '</div>'
     )
-    return resend_send(user.email, f"Ваш код подтверждения SpinHire: {code}", html)
+    return resend_send(user.email, mail_t(lang, "otp_subject", code=code), html)
 
 
 # ---------- redirects from static pages ----------
@@ -2575,6 +2584,10 @@ def _client_ip(request: Request) -> str:
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, next: str = "/", db: Session = Depends(db_session)):
+    current = get_user(request, db)
+    if current:
+        return RedirectResponse(safe_next(next, dest_for(current)) if next != "/" else dest_for(current),
+                                status_code=303)
     return render(request, db, "login.html", next=next, error="")
 
 
@@ -2589,6 +2602,8 @@ def login(request: Request, email: str = Form(...), password: str = Form(...),
         return render(request, db, "login.html", next=next, error="Неверная почта или пароль")
     # почта не подтверждена (и Resend настроен) — отправляем код и ведём на /verify
     if REQUIRE_VERIFY and not u.verified:
+        if not u.lang:
+            u.lang = request_lang(request)
         code = issue_otp(u, db)
         send_otp(u, code)
         _otp_last_send[u.email] = time.time()
@@ -2600,6 +2615,11 @@ def login(request: Request, email: str = Form(...), password: str = Form(...),
 @app.get("/register", response_class=HTMLResponse)
 def register_page(request: Request, role: str = "talent", next: str = "",
                   email: str = "", db: Session = Depends(db_session)):
+    # уже вошедшему форма не нужна: после входа через Google сюда вело старое
+    # редирект-звено и человек видел пустую регистрацию поверх своей сессии
+    current = get_user(request, db)
+    if current:
+        return RedirectResponse(safe_next(next, dest_for(current)), status_code=303)
     role = role if role in ("talent", "employer") else "talent"
     return render(request, db, "register.html", role=role, error="",
                   next=safe_next(next, "") if next else "", email=email.strip().lower())
@@ -2624,6 +2644,7 @@ def register(request: Request, email: str = Form(...), password: str = Form(...)
     u = User(email=email.strip().lower(), password_hash=hash_pw(password),
              name=name.strip(), role=role, company_name=company_name.strip(),
              coins=SIGNUP_COIN_BONUS, signup_source=_signup_source(request),
+             lang=request_lang(request),
              referred_by=_referrer_id_from_cookie(request, db))
     db.add(u)
     db.commit()
@@ -2794,6 +2815,7 @@ def auth_google_callback(request: Request, code: str = "", state: str = "",
             u = User(email=email, password_hash=hash_pw(secrets.token_urlsafe(24)),
                      name=name, role=requested_role or "talent", verified=1,
                      coins=SIGNUP_COIN_BONUS, signup_source=_signup_source(request),
+                     lang=request_lang(request),
                      referred_by=_referrer_id_from_cookie(request, db))
             db.add(u)
             db.commit()
@@ -3810,12 +3832,13 @@ def app_status(app_id: int, request: Request, status: str = Form(...),
         track(db, "application_status", user.id, "application", a.id, status=status)
         db.commit()
         if status in ("invited", "offer", "hired"):
-            safe_label = html.escape(labels[status])
+            tl = user_lang(a.user)
+            label = mail_t(tl, f"status_{status}")
             safe_company = html.escape(a.job.company_name or "")
             safe_title = html.escape(a.job.title or "")
-            resend_send(a.user.email, f"SpinHire — {labels[status]}",
-                        f"<p><b>{safe_label}</b></p><p>{safe_company}: {safe_title}</p>"
-                        f'<p><a href="{BASE_URL or "https://spinhire.io"}/profile">Открыть кабинет</a></p>')
+            resend_send(a.user.email, f"SpinHire — {label}",
+                        f"<p><b>{html.escape(label)}</b></p><p>{safe_company}: {safe_title}</p>"
+                        f'<p><a href="{BASE_URL or "https://spinhire.io"}/profile">{mail_t(tl, "open_cabinet")}</a></p>')
     return RedirectResponse("/employer", status_code=303)
 
 
@@ -3868,6 +3891,15 @@ def application_plan(app_id: int, request: Request, assigned_to: int = Form(0),
     return RedirectResponse(f"/employer/application/{app_id}?saved=1", status_code=303)
 
 
+def _invite_mail(lang: str, account, accept_url: str):
+    """(subject, html) письма-приглашения в команду на языке приглашающего."""
+    name = account.company_name or "SpinHire"
+    body = (f'<p>{mail_t(lang, "invite_body", company=html.escape(account.company_name or account.email))}</p>'
+            f'<p><a href="{html.escape(accept_url)}">{mail_t(lang, "invite_accept")}</a></p>'
+            f'<p>{mail_t(lang, "invite_ttl")}</p>')
+    return mail_t(lang, "invite_subject", company=name), body
+
+
 @app.post("/employer/team/invite")
 def team_invite(request: Request, email: str = Form(...), role: str = Form("recruiter"),
                 db: Session = Depends(db_session)):
@@ -3889,9 +3921,7 @@ def team_invite(request: Request, email: str = Form(...), role: str = Form("recr
     db.add(invite)
     db.commit()
     accept_url = f"{BASE_URL or 'https://spinhire.io'}/employer/invite/{token}/accept"
-    resend_send(target_email, f"Приглашение в команду {account.company_name or 'SpinHire'}",
-                f"<p>Вас пригласили в кабинет компании <b>{html.escape(account.company_name or account.email)}</b>.</p>"
-                f'<p><a href="{html.escape(accept_url)}">Принять приглашение</a></p><p>Ссылка действует 7 дней.</p>')
+    resend_send(target_email, *_invite_mail(user_lang(user, request), account, accept_url))
     return RedirectResponse("/employer?invite_sent=1#team", status_code=303)
 
 
@@ -3968,9 +3998,7 @@ def team_invite_resend(invite_id: int, request: Request, db: Session = Depends(d
     invite.expires_at = (datetime.utcnow() + timedelta(days=7)).isoformat()
     db.commit()
     accept_url = f"{BASE_URL or 'https://spinhire.io'}/employer/invite/{token}/accept"
-    sent = resend_send(invite.email, f"Приглашение в команду {account.company_name or 'SpinHire'}",
-                       f"<p>Вас пригласили в кабинет компании <b>{html.escape(account.company_name or account.email)}</b>.</p>"
-                       f'<p><a href="{html.escape(accept_url)}">Принять приглашение</a></p><p>Ссылка действует 7 дней.</p>')
+    sent = resend_send(invite.email, *_invite_mail(user_lang(user, request), account, accept_url))
     flag = "invite_resent=1" if sent else "invite_error=mail"
     return RedirectResponse(f"/employer?{flag}#team", status_code=303)
 
@@ -4597,7 +4625,7 @@ async def resumes_quick(request: Request, email: str = Form(...),
     parsed = parse_cv_pdf(payload)
     user = User(email=email, password_hash=hash_pw(secrets.token_urlsafe(18)),
                 name=parsed["name"], role="talent", coins=SIGNUP_COIN_BONUS,
-                signup_source=_signup_source(request),
+                signup_source=_signup_source(request), lang=request_lang(request),
                 referred_by=_referrer_id_from_cookie(request, db))
     db.add(user)
     db.flush()
