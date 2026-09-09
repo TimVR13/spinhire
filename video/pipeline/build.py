@@ -31,6 +31,13 @@ def short_item(text: str, limit: int = 64) -> str:
     return head
 
 
+MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
+
+
+def ru_date(d: "dt.date") -> str:
+    return f"{d.day} {MONTHS[d.month - 1]} {d.year}"
+
+
 US = {"сша", "us", "usa", "united states"}
 N_JOBS = 5
 EMPLOYMENT = {"FULL_TIME": "полная занятость", "PART_TIME": "частичная", "CONTRACTOR": "контракт", "INTERN": "стажировка"}
@@ -148,7 +155,7 @@ def build_hot_jobs(seed: str, args) -> dict:
             break
     n = len(picked)
     NUM = {3: "Три горячие вакансии", 4: "Четыре горячие вакансии", 5: "Пять горячих вакансий"}
-    scenes = [{"id": "hook", "type": "hook", "kicker": "Вакансии дня", "title": f"{n} вакансий дня" if n != 4 else "4 вакансии дня",
+    scenes = [{"id": "hook", "type": "hook", "kicker": "Вакансии дня", "date": ru_date(today), "title": f"{n} вакансий дня" if n != 4 else "4 вакансии дня",
                "sub": f"с зарплатой {fmt_range(None, picked[0][2], picked[0][3]['salary_currency'])} в месяц"}]
     phrases = [{"id": "hook", "scene": "hook", "text": f"{NUM.get(n, 'Горячие вакансии')} дня в iGaming. Максимум — {say_money(picked[0][2], picked[0][3]['salary_currency'])} в месяц."}]
     words = ["Первая", "Вторая", "Третья", "Четвёртая", "Пятая"]
@@ -165,7 +172,6 @@ def build_hot_jobs(seed: str, args) -> dict:
     phrases.append({"id": "cta", "scene": "cta", "text": "Ссылки на все — в описании. Ещё шесть тысяч вакансий на spinhire.io."})
     links = "\n".join(f"{i + 1}. {j['title']} — {j['company']}: {j['url']}" for i, (_, _, _, j) in enumerate(picked))
     day = today
-    MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
     title = f"Вакансии iGaming с зарплатой {fmt_range(None, picked[0][2], picked[0][3]['salary_currency'])}: топ-{n} за {day.day} {MONTHS[day.month - 1]} | работа в гемблинге"
     desc = (f"Самые высокооплачиваемые вакансии за сегодня в гемблинге.\n\n{links}\n\n"
             f"Все вакансии с зарплатами → {SITE}/jobs\nTelegram с горячими вакансиями → {TG}\n\n{HASHTAGS}")
