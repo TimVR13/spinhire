@@ -12,6 +12,7 @@
   • Telegram — таблицы tg_channel_posts / tg_digest_posts (sync_telegram)
   • YouTube  — data/youtube-posts.json из репо (sync_youtube; коммитится конвейером) и POST /api/publications/upsert
   • Reddit/LinkedIn — POST /api/publications/upsert из скриптов (ключ SPINHIRE_PUBLISH_KEY)
+  • Блог — ARTICLE_FILES + JSON-LD статей (вышедшие) и data/blog-queue.json (план) (sync_blog)
 Страница: /admin/publications.
 """
 import json
@@ -23,7 +24,9 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy import Column, DateTime, Integer, String, Text
 from sqlalchemy.orm import Session
 
-from server.app import ROOT, Base, db_session, need_admin, render
+import re
+
+from server.app import ARTICLE_FILES, ROOT, Base, db_session, need_admin, render
 from server.tgpost import TgDigestPost, TgHotPost
 
 router = APIRouter()
@@ -145,8 +148,68 @@ def sync_youtube(db: Session) -> int:
     return n
 
 
+_LD_ARTICLE_RE = re.compile(r'<script[^>]*type="application/ld\+json"[^>]*>(.*?)</script>', re.S)
+
+
+def _article_meta(path: str) -> dict:
+    """headline и datePublished из Article-разметки статьи; fallback — <title>."""
+    try:
+        html = open(path, encoding="utf-8").read()
+    except OSError:
+        return {}
+    for block in _LD_ARTICLE_RE.findall(html):
+        try:
+            data = json.loads(block)
+        except ValueError:
+            continue
+        if data.get("@type") in ("Article", "BlogPosting", "NewsArticle"):
+            return {"title": data.get("headline", ""), "date": data.get("datePublished", ""),
+                    "modified": data.get("dateModified", "")}
+    m = re.search(r"<title>([^<]+)</title>", html)
+    return {"title": " ".join(m.group(1).split()) if m else "", "date": ""}
+
+
+def sync_blog(db: Session) -> int:
+    """Статьи блога: очередь тем даёт план, файлы из ARTICLE_FILES — вышедшие."""
+    n = 0
+    rows = {r.external_id: r for r in db.query(Publication).filter(Publication.platform == "blog")}
+    queue = os.path.join(ROOT, "data", "blog-queue.json")
+    if os.path.exists(queue):
+        try:
+            topics = json.load(open(queue, encoding="utf-8")).get("topics", [])
+        except ValueError:
+            topics = []
+        for t in topics:
+            slug = t.get("slug")
+            if not slug or t.get("status") != "queued" or slug in ARTICLE_FILES:
+                continue
+            ext = f"blog:{slug}"
+            row = rows.get(ext)
+            if row and row.status != "planned":
+                continue
+            rows[ext] = upsert(db, ext, platform="blog", lang="ru", kind="article", status="planned",
+                               title=t.get("title", ""), url=f"https://spinhire.io/blog/{slug}",
+                               meta={"slug": slug, "keywords": t.get("keywords", [])})
+            n += 1
+    for slug, filename in ARTICLE_FILES.items():
+        ext = f"blog:{slug}"
+        row = rows.get(ext)
+        if row and row.status == "published":
+            continue
+        info = _article_meta(os.path.join(ROOT, filename))
+        row = upsert(db, ext, platform="blog", lang="ru", kind="article", title=info.get("title") or slug,
+                     url=f"https://spinhire.io/blog/{slug}", published_at=info.get("date") or None,
+                     meta={"slug": slug, "file": filename})
+        if row.status not in ("cancelled", "error"):
+            row.status = "published"
+            if not row.published_at:
+                row.published_at = datetime.utcnow()
+        n += 1
+    return n
+
+
 def sync_all(db: Session) -> dict:
-    out = {"telegram": sync_telegram(db), "youtube": sync_youtube(db)}
+    out = {"telegram": sync_telegram(db), "youtube": sync_youtube(db), "blog": sync_blog(db)}
     db.commit()
     return out
 

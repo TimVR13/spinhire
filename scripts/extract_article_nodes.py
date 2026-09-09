@@ -35,6 +35,28 @@ def nodes_of(path: str):
             continue
         seen.add(text)
         out.append(text)
+    # JSON-LD: headline, description, FAQPage, крошки — языковой слой переводит
+    # их по тем же ключам, без словаря они уезжают на языковые версии по-русски
+    def ld_strings(node):
+        if isinstance(node, dict):
+            for k, v in node.items():
+                if k not in ("inLanguage", "@type", "@context"):
+                    yield from ld_strings(v)
+        elif isinstance(node, list):
+            for v in node:
+                yield from ld_strings(v)
+        elif isinstance(node, str):
+            yield node
+    for block in re.findall(r'<script[^>]*type="application/ld\+json"[^>]*>(.*?)</script>', html, re.S):
+        try:
+            data = json.loads(block)
+        except ValueError:
+            continue
+        for raw in ld_strings(data):
+            text = " ".join(raw.split())
+            if re.search(r"[А-Яа-я]", text) and text not in seen:
+                seen.add(text)
+                out.append(text)
     # атрибуты, которые видит пользователь и поисковик
     for attr in re.findall(r'(?:content|alt|title|placeholder)="([^"]{15,300})"', html):
         text = " ".join(attr.split())

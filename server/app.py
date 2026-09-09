@@ -1534,6 +1534,10 @@ _HTML_ATTR_RE = re.compile(r'((?:placeholder|aria-label|title|content|alt)=")([^
 _SKIP_BLOCK_RE = re.compile(r"(<script\b.*?</script>|<style\b.*?</style>|<textarea\b.*?</textarea>)",
                             re.S | re.I)
 _CYR_RE = re.compile(r"[А-Яа-яЁёІіЇїЄєҐґ]")
+_LDJSON_RE = re.compile(r'(<script\b[^>]*type="application/ld\+json"[^>]*>)(.*?)(</script>)', re.S | re.I)
+_META_DESC_RE = re.compile(r'<meta name="description" content="([^"]+)"')
+# поля JSON-LD с адресом текущей страницы: на языковой версии они ведут на неё же
+_LD_URL_KEYS = ("mainEntityOfPage", "item", "url", "@id")
 
 
 def host_lang(host: str) -> str:
@@ -1553,8 +1557,12 @@ def host_lang(host: str) -> str:
     return BASE_LANG
 
 
-def translate_html(html_text: str, lang: str) -> str:
-    """Перевести готовый HTML: точные узлы по словарю, служебные слова подстрочно."""
+def translate_html(html_text: str, lang: str, prefix_urls: bool = False) -> str:
+    """Перевести готовый HTML: точные узлы по словарю, служебные слова подстрочно.
+
+    prefix_urls — страница отдаётся из языковой поддиректории (/de/…): адреса
+    страницы внутри JSON-LD получают тот же префикс, что и ссылки.
+    """
     full = _I18N_SERVER.get(lang, {})
     vocab = _SERVER_VOCAB.get(lang, {})
     vocab_re = _VOCAB_RE.get(lang)
@@ -1569,9 +1577,49 @@ def translate_html(html_text: str, lang: str) -> str:
             return vocab_re.sub(lambda m: vocab[m.group(0)], raw)
         return raw
 
+    # description в Article-разметке обычно не совпадает с meta description
+    # дословно; если для неё нет перевода — берём переведённую meta (она в словаре)
+    desc = _META_DESC_RE.search(html_text)
+    desc_key = " ".join(desc.group(1).split()) if desc else ""
+    desc_fallback = full.get(desc_key, "")
+
+    def translate_ld(node, key=""):
+        """Строки внутри JSON-LD: точный словарь, иначе подстрочник, как у видимого текста."""
+        if isinstance(node, dict):
+            return {k: translate_ld(v, k) for k, v in node.items()}
+        if isinstance(node, list):
+            return [translate_ld(v, key) for v in node]
+        if not isinstance(node, str):
+            return node
+        if key == "inLanguage":
+            return lang
+        if key in _LD_URL_KEYS and prefix_urls and node.startswith("https://spinhire.io/"):
+            path_part = node[len("https://spinhire.io"):]
+            if not _NO_PREFIX_RE.match(path_part) and not _LANG_PREFIX_RE.match(path_part):
+                return f"https://spinhire.io/{lang}{path_part}"
+            return node
+        if not _CYR_RE.search(node):
+            return node
+        if key == "description" and desc_fallback and " ".join(node.split()) not in full:
+            return desc_fallback
+        return translate_text(node)
+
+    def translate_ldjson(m):
+        try:
+            data = json.loads(m.group(2))
+        except ValueError:
+            return m.group(0)
+        body = json.dumps(translate_ld(data), ensure_ascii=False, indent=2)
+        return m.group(1) + "\n" + body + "\n" + m.group(3)
+
     out = []
     for part in _SKIP_BLOCK_RE.split(html_text):
         low = part[:9].lower()
+        if low.startswith("<script") and "ld+json" in part[:120]:
+            # структурированные данные: headline, FAQPage, хлебные крошки
+            # раньше уезжали на языковые версии по-русски
+            out.append(_LDJSON_RE.sub(translate_ldjson, part, count=1))
+            continue
         if low.startswith(("<script", "<style", "<textarea")):
             out.append(part)
             continue
@@ -1650,7 +1698,7 @@ async def language_layer(request: Request, call_next):
     text = body.decode("utf-8", "replace")
     inner_path = request.scope.get("path", path)
     if lang != "ru":
-        text = translate_html(text, lang)
+        text = translate_html(text, lang, prefix_urls=bool(prefix_lang))
         text = text.replace('<html lang="ru">', f'<html lang="{lang}">', 1)
         if prefix_lang:
             text = _prefix_links(text, lang)
