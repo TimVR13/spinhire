@@ -3753,6 +3753,15 @@ def resume_search_delete(search_id: int, request: Request, db: Session = Depends
     return RedirectResponse("/resumes", status_code=303)
 
 
+@app.get("/resume/CV-{code}", response_class=HTMLResponse)
+def resume_by_code(code: str, db: Session = Depends(db_session)):
+    """Публичный код вида CV-000005 виден в списке — по нему тоже открываем карточку (иначе 422 от int-пути)."""
+    # public_code — свойство, а не колонка: код = CV-<id с нулями>
+    if not code.isdigit() or not db.get(Resume, int(code)):
+        raise HTTPException(404)
+    return RedirectResponse(f"/resume/{int(code)}", status_code=301)
+
+
 @app.get("/resume/{resume_id}", response_class=HTMLResponse)
 def resume_detail(resume_id: int, request: Request, db: Session = Depends(db_session)):
     row = db.get(Resume, resume_id)

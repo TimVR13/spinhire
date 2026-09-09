@@ -526,7 +526,8 @@ main > .section:nth-of-type(even) {
   .header-actions a[href^="/login"], .header-actions [data-auth] { display: none; }
   .site-header .container { min-width: 0; }
   .header-actions { min-width: 0; flex-shrink: 1; }
-  .header-actions .btn { flex: 0 1 auto; min-width: 0; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+  /* block + nowrap — иначе у inline-flex кнопки текст режется с обеих сторон вместо многоточия */
+  .header-actions .btn { display: block; flex: 0 1 auto; min-width: 0; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 22px; min-height: 0; padding-block: 9px; }
   .nav-burger { flex: 0 0 auto; }  /* бургер не выталкивается за экран кнопками */
   .main-nav {
     display: none;
@@ -562,6 +563,8 @@ main > .section:nth-of-type(even) {
   .header-actions .btn { padding: 9px 11px; font-size: 0.72rem; min-height: 40px; }
   .header-actions .btn-pink { display: none; }  /* дублируется пунктом в бургер-меню */
   .header-actions a[href="/logout"] { display: none; }  /* «Выйти» на мобиле — в бургер-меню */
+  /* вошедшему на узком экране «Добавить CV» в шапке не нужен (есть в бургер-меню) — иначе профиль и бургер не помещаются */
+  .header-actions:has(a[href="/profile"], a[href="/admin"], a[href="/employer"]) a[href*="profile#cv"] { display: none; }
   .site-header .container { height: 68px; gap: var(--sp-3); }
   .main-nav { top: 68px; }
   .logo { font-size: 1.2rem; gap: 8px; }
