@@ -2,11 +2,13 @@
 
 пресс-кит с живыми цифрами и английский открытый API без кириллицы в значениях.
 """
+import re
 import unittest
+from html import unescape
 
 from fastapi.testclient import TestClient
 
-from server.app import Base, Job, SessionLocal, app, engine, migrate
+from server.app import Base, Job, SessionLocal, app, engine, migrate, translate_generated
 
 client = TestClient(app)
 
@@ -96,6 +98,23 @@ class LaunchKitTests(unittest.TestCase):
         self.assertEqual(payload["lang"], "en")
         self.assertEqual(self._job(payload)["country"], "Cyprus")
 
+    def test_featured_jobs_api_is_localized(self):
+        # карточки «Вакансии дня» рисует JS, языковой слой их не видит
+        ru = client.get("/api/featured-jobs").json()
+        de = client.get("/api/featured-jobs?lang=de").json()
+        self.assertTrue(ru and de)
+        self.assertIn("офис", [row["fmt"] for row in ru])
+        self.assertIn("Büro", [row["fmt"] for row in de])
+        self.assertTrue(any("Monat" in (row["salary"] or "") for row in de))
+        self.assertFalse(any("Мальта" in (row["location"] or "") for row in de))
+
+    def test_client_dictionary_is_served_for_every_language(self):
+        for lang in ("de", "pl", "es", "fr", "it", "pt", "ro", "el", "bg", "uk", "en"):
+            payload = client.get(f"/js/i18n-{lang}.js").json()
+            self.assertGreater(len(payload), 100, lang)
+            self.assertIn("Вакансии", payload, lang)
+        self.assertEqual(client.get("/js/i18n-xx.js").status_code, 404)
+
     def test_market_stats_translate_directions_for_english(self):
         ru = client.get("/api/market-stats").json()
         en = client.get("/api/market-stats?lang=en").json()
@@ -103,6 +122,46 @@ class LaunchKitTests(unittest.TestCase):
         self.assertIn("Операции казино", [row["name"] for row in ru["directions"]])
         self.assertIn("Casino operations", [row["name"] for row in en["directions"]])
 
+
+
+class LanguageCleanlinessTests(unittest.TestCase):
+    """Ни одной русской строки на языковых версиях страниц без данных источников.
+
+    Берём страницы, которые целиком собираются из наших текстов (тарифы и
+    пресс-кит): вакансии и компании приходят от работодателей и могут быть
+    на любом языке, а вот интерфейс обязан быть переведён полностью.
+    """
+
+    LANGS = ("en", "de", "pl", "es", "fr", "it", "pt", "ro", "el")
+    PAGES = ("/post-job", "/press.html")
+    # переключатель языков специально остаётся на языке оригинала
+    ALLOWED = {"Русский", "Українська", "Български"}
+    CYRILLIC = re.compile(r"[А-Яа-яЁё]")
+
+    def _text_nodes(self, path):
+        body = client.get(path).text
+        body = re.sub(r"<script.*?</script>", "", body, flags=re.S)
+        body = re.sub(r"<style.*?</style>", "", body, flags=re.S)
+        return [unescape(" ".join(node.split())) for node in re.findall(r">([^<>]+)<", body)]
+
+    def test_interface_pages_have_no_russian_left(self):
+        for lang in self.LANGS:
+            for page in self.PAGES:
+                left = [text for text in self._text_nodes(f"/{lang}{page}")
+                        if text and text not in self.ALLOWED and self.CYRILLIC.search(text)]
+                self.assertEqual(left, [], f"/{lang}{page}: {left[:5]}")
+
+    def test_generated_strings_are_localized(self):
+        cases = {
+            "en": ("17 jobs", "from €2 000/month"),
+            "de": ("17 Stellen", "ab €2 000/Monat"),
+            "pl": ("2 oferty", "od €2 000/mies."),
+            "uk": ("5 вакансій", "від €2 000/міс"),
+        }
+        for lang, (count, salary) in cases.items():
+            self.assertEqual(translate_generated("17 вакансий" if "17" in count else
+                                                 ("2 вакансии" if "2 " in count else "5 вакансий"), lang), count)
+            self.assertEqual(translate_generated("от €2 000 в месяц", lang), salary)
 
 if __name__ == "__main__":
     unittest.main()

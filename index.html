@@ -921,7 +921,8 @@
   const box = document.getElementById('featured-jobs');
   if (!box) return;
   const colors = ['var(--pink)', 'var(--acid)', 'var(--yellow)', 'var(--violet)', 'var(--surface-2)', 'var(--acid)'];
-  fetch('/api/featured-jobs').then(r => r.ok ? r.json() : []).then(jobs => {
+  const shLang = (document.querySelector('meta[name="sh-lang"]') || {}).content || 'ru';
+  fetch('/api/featured-jobs?lang=' + shLang).then(r => r.ok ? r.json() : []).then(jobs => {
     if (!jobs.length) { box.innerHTML = '<p style="color: var(--ink-faint); padding: 16px;">Смотрите <a href="/jobs" style="color: var(--acid);">все вакансии →</a></p>'; return; }
     box.innerHTML = jobs.slice(0, 5).map((j, i) => `
       <a class="job-card" href="/job/${j.id}">

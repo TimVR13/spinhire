@@ -1531,12 +1531,54 @@ _SERVER_VOCAB = {
     },
 }
 
+# Города и страны из данных источников и календаря событий: словари их не ловят,
+# а подстрочник оставлял «Лиссабон, Portugal». Порядок значений — как в LANG_ORDER.
+LANG_ORDER = ("en", "de", "pl", "fr", "es", "pt", "it", "el", "ro", "bg", "uk")
+PLACE_NAMES = {
+    "Лиссабон": ("Lisbon", "Lissabon", "Lizbona", "Lisbonne", "Lisboa", "Lisboa", "Lisbona", "Λισαβόνα", "Lisabona", "Лисабон", "Лісабон"),
+    "Лас-Вегас": ("Las Vegas", "Las Vegas", "Las Vegas", "Las Vegas", "Las Vegas", "Las Vegas", "Las Vegas", "Λας Βέγκας", "Las Vegas", "Лас Вегас", "Лас-Вегас"),
+    "Кейптаун": ("Cape Town", "Kapstadt", "Kapsztad", "Le Cap", "Ciudad del Cabo", "Cidade do Cabo", "Città del Capo", "Κέιπ Τάουν", "Cape Town", "Кейптаун", "Кейптаун"),
+    "Рим": ("Rome", "Rom", "Rzym", "Rome", "Roma", "Roma", "Roma", "Ρώμη", "Roma", "Рим", "Рим"),
+    "Бангкок": ("Bangkok", "Bangkok", "Bangkok", "Bangkok", "Bangkok", "Banguecoque", "Bangkok", "Μπανγκόκ", "Bangkok", "Банкок", "Бангкок"),
+    "Барселона": ("Barcelona", "Barcelona", "Barcelona", "Barcelone", "Barcelona", "Barcelona", "Barcellona", "Βαρκελώνη", "Barcelona", "Барселона", "Барселона"),
+    "Манила": ("Manila", "Manila", "Manila", "Manille", "Manila", "Manila", "Manila", "Μανίλα", "Manila", "Манила", "Маніла"),
+    "Прага": ("Prague", "Prag", "Praga", "Prague", "Praga", "Praga", "Praga", "Πράγα", "Praga", "Прага", "Прага"),
+    "Дубай": ("Dubai", "Dubai", "Dubaj", "Dubaï", "Dubái", "Dubai", "Dubai", "Ντουμπάι", "Dubai", "Дубай", "Дубай"),
+    "Сан-Паулу": ("São Paulo", "São Paulo", "São Paulo", "São Paulo", "São Paulo", "São Paulo", "San Paolo", "Σάο Πάολο", "São Paulo", "Сао Пауло", "Сан-Паулу"),
+    "Валлетта": ("Valletta", "Valletta", "Valletta", "La Valette", "La Valeta", "Valeta", "La Valletta", "Βαλέτα", "Valletta", "Валета", "Валлетта"),
+    "Тбилиси": ("Tbilisi", "Tiflis", "Tbilisi", "Tbilissi", "Tiflis", "Tbilisi", "Tbilisi", "Τιφλίδα", "Tbilisi", "Тбилиси", "Тбілісі"),
+    "Батуми": ("Batumi", "Batumi", "Batumi", "Batoumi", "Batumi", "Batumi", "Batumi", "Μπατούμι", "Batumi", "Батуми", "Батумі"),
+    "Лимассол": ("Limassol", "Limassol", "Limassol", "Limassol", "Limasol", "Limassol", "Limassol", "Λεμεσός", "Limassol", "Лимасол", "Лімасол"),
+    "Никосия": ("Nicosia", "Nikosia", "Nikozja", "Nicosie", "Nicosia", "Nicósia", "Nicosia", "Λευκωσία", "Nicosia", "Никозия", "Нікосія"),
+    "Варшава": ("Warsaw", "Warschau", "Warszawa", "Varsovie", "Varsovia", "Varsóvia", "Varsavia", "Βαρσοβία", "Varșovia", "Варшава", "Варшава"),
+    "Ереван": ("Yerevan", "Eriwan", "Erywań", "Erevan", "Ereván", "Erevan", "Erevan", "Ερεβάν", "Erevan", "Ереван", "Єреван"),
+    "Киев": ("Kyiv", "Kyjiw", "Kijów", "Kyiv", "Kiev", "Kiev", "Kiev", "Κίεβο", "Kiev", "Киев", "Київ"),
+    "Лондон": ("London", "London", "Londyn", "Londres", "Londres", "Londres", "Londra", "Λονδίνο", "Londra", "Лондон", "Лондон"),
+    "Москва": ("Moscow", "Moskau", "Moskwa", "Moscou", "Moscú", "Moscovo", "Mosca", "Μόσχα", "Moscova", "Москва", "Москва"),
+    "Санкт-Петербург": ("St Petersburg", "Sankt Petersburg", "Petersburg", "Saint-Pétersbourg", "San Petersburgo", "São Petersburgo", "San Pietroburgo", "Αγία Πετρούπολη", "Sankt Petersburg", "Санкт Петербург", "Санкт-Петербург"),
+    "ЮАР": ("South Africa", "Südafrika", "RPA", "Afrique du Sud", "Sudáfrica", "África do Sul", "Sudafrica", "Νότια Αφρική", "Africa de Sud", "ЮАР", "ПАР"),
+    "Таиланд": ("Thailand", "Thailand", "Tajlandia", "Thaïlande", "Tailandia", "Tailândia", "Thailandia", "Ταϊλάνδη", "Thailanda", "Тайланд", "Таїланд"),
+    "ОАЭ": ("UAE", "VAE", "ZEA", "EAU", "EAU", "EAU", "EAU", "ΗΑΕ", "EAU", "ОАЕ", "ОАЕ"),
+    "Мальта": ("Malta", "Malta", "Malta", "Malte", "Malta", "Malta", "Malta", "Μάλτα", "Malta", "Малта", "Мальта"),
+    "Кипр": ("Cyprus", "Zypern", "Cypr", "Chypre", "Chipre", "Chipre", "Cipro", "Κύπρος", "Cipru", "Кипър", "Кіпр"),
+    "Португалия": ("Portugal", "Portugal", "Portugalia", "Portugal", "Portugal", "Portugal", "Portogallo", "Πορτογαλία", "Portugalia", "Португалия", "Португалія"),
+    "Испания": ("Spain", "Spanien", "Hiszpania", "Espagne", "España", "Espanha", "Spagna", "Ισπανία", "Spania", "Испания", "Іспанія"),
+    "Италия": ("Italy", "Italien", "Włochy", "Italie", "Italia", "Itália", "Italia", "Ιταλία", "Italia", "Италия", "Італія"),
+    "Чехия": ("Czechia", "Tschechien", "Czechy", "Tchéquie", "Chequia", "Chéquia", "Cechia", "Τσεχία", "Cehia", "Чехия", "Чехія"),
+    "Бразилия": ("Brazil", "Brasilien", "Brazylia", "Brésil", "Brasil", "Brasil", "Brasile", "Βραζιλία", "Brazilia", "Бразилия", "Бразилія"),
+    "Филиппины": ("Philippines", "Philippinen", "Filipiny", "Philippines", "Filipinas", "Filipinas", "Filippine", "Φιλιππίνες", "Filipine", "Филипини", "Філіппіни"),
+}
+
 _I18N_SERVER, _VOCAB_RE = {}, {}
+# то же самое без переводов статей: клиентскому переводчику они не нужны,
+# а весят втрое больше самого интерфейса
+_I18N_CLIENT = {}
 # полные машинные словари прежних языков (en/uk) — большие JSON рядом с фронтом
 for _code in ("en", "uk"):
     try:
         with open(os.path.join(ROOT, "js", f"i18n-{_code}.js"), encoding="utf-8") as _fh:
             _I18N_SERVER[_code] = json.load(_fh)
+            _I18N_CLIENT[_code] = dict(_I18N_SERVER[_code])
     except Exception:
         _I18N_SERVER[_code] = {}
 # ключевые словари европейских языков: server/i18n/<code>.json
@@ -1553,8 +1595,23 @@ if os.path.isdir(_I18N_DIR):
         except Exception:
             continue
         _I18N_SERVER.setdefault(_code, {}).update(_data)
+        if ".articles" not in _file:
+            _I18N_CLIENT.setdefault(_code, {}).update(_data)
         # эти же строки работают подстрочно внутри карточек и динамики
         _SERVER_VOCAB.setdefault(_code, {}).update(_data)
+# города и страны — в подстрочник каждого языка (в точный словарь их класть нельзя:
+# они приходят внутри длинных строк вроде «Лиссабон, Португалия»)
+for _place, _values in PLACE_NAMES.items():
+    for _code, _value in zip(LANG_ORDER, _values):
+        _SERVER_VOCAB.setdefault(_code, {}).setdefault(_place, _value)
+
+# В разметке амперсанд экранирован, а ключи в словарях записаны обычным текстом:
+# «Владелец P&L…» в HTML выглядит как «P&amp;L» и мимо словаря проходил как есть.
+for _dict in list(_I18N_SERVER.values()) + list(_SERVER_VOCAB.values()):
+    for _key, _value in list(_dict.items()):
+        if "&" in _key:
+            _dict.setdefault(_key.replace("&", "&amp;"), _value)
+
 for _code in set(_SERVER_VOCAB) | set(_I18N_SERVER):
     _keys = sorted(_SERVER_VOCAB.get(_code, {}), key=len, reverse=True)
     # границы по кириллице: иначе короткие ключи («в», «и») подменялись внутри слов —
@@ -1590,6 +1647,189 @@ def host_lang(host: str) -> str:
     return BASE_LANG
 
 
+# ---------- генерируемые строки: счётчики, вилки, даты ----------
+# Словарь ловит только точные фразы, а «17 вакансий», «от €2 000 в месяц» и
+# «9 сентября 2026» собираются из данных: вариантов бесконечно много, и на
+# любом языке, кроме русского, они оставались кириллицей. Разбираем их шаблоном.
+
+PLURAL_WORDS = {
+    "en": {"job": ("job", "jobs"), "company": ("company", "companies")},
+    "de": {"job": ("Stelle", "Stellen"), "company": ("Unternehmen", "Unternehmen")},
+    "pl": {"job": ("oferta", "ofert"), "company": ("firma", "firm")},
+    "fr": {"job": ("offre", "offres"), "company": ("entreprise", "entreprises")},
+    "es": {"job": ("vacante", "vacantes"), "company": ("empresa", "empresas")},
+    "pt": {"job": ("vaga", "vagas"), "company": ("empresa", "empresas")},
+    "it": {"job": ("offerta", "offerte"), "company": ("azienda", "aziende")},
+    "el": {"job": ("θέση", "θέσεις"), "company": ("εταιρεία", "εταιρείες")},
+    "ro": {"job": ("job", "joburi"), "company": ("companie", "companii")},
+    "bg": {"job": ("обява", "обяви"), "company": ("компания", "компании")},
+    "uk": {"job": ("вакансія", "вакансій"), "company": ("компанія", "компаній")},
+}
+
+SALARY_WORDS = {
+    "en": {"от": "from", "до": "up to", "в месяц": "/month", "в год": "/year",
+           "в час": "/hour", "по запросу": "on request", "/ мес": "/mo"},
+    "de": {"от": "ab", "до": "bis", "в месяц": "/Monat", "в год": "/Jahr",
+           "в час": "/Stunde", "по запросу": "auf Anfrage", "/ мес": "/Mon."},
+    "pl": {"от": "od", "до": "do", "в месяц": "/mies.", "в год": "/rok",
+           "в час": "/godz.", "по запросу": "na życzenie", "/ мес": "/mies."},
+    "fr": {"от": "à partir de", "до": "jusqu'à", "в месяц": "/mois", "в год": "/an",
+           "в час": "/heure", "по запросу": "sur demande", "/ мес": "/mois"},
+    "es": {"от": "desde", "до": "hasta", "в месяц": "/mes", "в год": "/año",
+           "в час": "/hora", "по запросу": "a consultar", "/ мес": "/mes"},
+    "pt": {"от": "a partir de", "до": "até", "в месяц": "/mês", "в год": "/ano",
+           "в час": "/hora", "по запросу": "sob consulta", "/ мес": "/mês"},
+    "it": {"от": "da", "до": "fino a", "в месяц": "/mese", "в год": "/anno",
+           "в час": "/ora", "по запросу": "su richiesta", "/ мес": "/mese"},
+    "el": {"от": "από", "до": "έως", "в месяц": "/μήνα", "в год": "/έτος",
+           "в час": "/ώρα", "по запросу": "κατόπιν αιτήματος", "/ мес": "/μήνα"},
+    "ro": {"от": "de la", "до": "până la", "в месяц": "/lună", "в год": "/an",
+           "в час": "/oră", "по запросу": "la cerere", "/ мес": "/lună"},
+    "bg": {"от": "от", "до": "до", "в месяц": "/месец", "в год": "/година",
+           "в час": "/час", "по запросу": "по запитване", "/ мес": "/месец"},
+    "uk": {"от": "від", "до": "до", "в месяц": "/міс", "в год": "/рік",
+           "в час": "/год", "по запросу": "за запитом", "/ мес": "/міс"},
+}
+
+MONTH_NAMES = {
+    "en": ["January", "February", "March", "April", "May", "June", "July",
+           "August", "September", "October", "November", "December"],
+    "de": ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
+           "August", "September", "Oktober", "November", "Dezember"],
+    "pl": ["styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec", "lipiec",
+           "sierpień", "wrzesień", "październik", "listopad", "grudzień"],
+    "fr": ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+           "août", "septembre", "octobre", "novembre", "décembre"],
+    "es": ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+           "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
+    "pt": ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
+           "agosto", "setembro", "outubro", "novembro", "dezembro"],
+    "it": ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio",
+           "agosto", "settembre", "ottobre", "novembre", "dicembre"],
+    "el": ["Ιανουαρίου", "Φεβρουαρίου", "Μαρτίου", "Απριλίου", "Μαΐου", "Ιουνίου",
+           "Ιουλίου", "Αυγούστου", "Σεπτεμβρίου", "Οκτωβρίου", "Νοεμβρίου", "Δεκεμβρίου"],
+    "ro": ["ianuarie", "februarie", "martie", "aprilie", "mai", "iunie", "iulie",
+           "august", "septembrie", "octombrie", "noiembrie", "decembrie"],
+    "bg": ["януари", "февруари", "март", "април", "май", "юни", "юли",
+           "август", "септември", "октомври", "ноември", "декември"],
+    "uk": ["січня", "лютого", "березня", "квітня", "травня", "червня", "липня",
+           "серпня", "вересня", "жовтня", "листопада", "грудня"],
+}
+
+MONTHS_NOM = {  # именительный падеж — заголовки архива рынка «Сентябрь 2026»
+    "el": ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος",
+           "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"],
+    "uk": ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень",
+           "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"],
+}
+
+LOGO_WORD = {"en": "Logo", "de": "Logo", "pl": "Logo", "fr": "Logo", "es": "Logo",
+             "pt": "Logótipo", "it": "Logo", "el": "Λογότυπο", "ro": "Logo",
+             "bg": "Лого", "uk": "Логотип"}
+
+# польский и украинский различают форму для 2–4: «2 ofert» вместо «2 oferty» режет глаз
+PLURAL_FEW = {
+    "pl": {"job": "oferty", "company": "firmy"},
+    "uk": {"job": "вакансії", "company": "компанії"},
+}
+
+_RU_MONTHS_GEN = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля",
+                  "августа", "сентября", "октября", "ноября", "декабря"]
+_RU_MONTHS_NOM = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль",
+                  "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
+
+MONTHS_SHORT = {
+    "en": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    "de": ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"],
+    "pl": ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"],
+    "fr": ["janv", "févr", "mars", "avr", "mai", "juin", "juil", "août", "sept", "oct", "nov", "déc"],
+    "es": ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"],
+    "pt": ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"],
+    "it": ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"],
+    "el": ["Ιαν", "Φεβ", "Μαρ", "Απρ", "Μαΐ", "Ιουν", "Ιουλ", "Αυγ", "Σεπ", "Οκτ", "Νοε", "Δεκ"],
+    "ro": ["ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sep", "oct", "noi", "dec"],
+    "bg": ["яну", "фев", "мар", "апр", "май", "юни", "юли", "авг", "сеп", "окт", "ное", "дек"],
+    "uk": ["січ", "лют", "бер", "кві", "тра", "чер", "лип", "сер", "вер", "жов", "лис", "гру"],
+}
+
+MINUTES_WORD = {"en": "min", "de": "Min.", "pl": "min", "fr": "min", "es": "min", "pt": "min",
+                "it": "min", "el": "λεπτά", "ro": "min", "bg": "мин", "uk": "хв"}
+
+_RU_MONTHS_SHORT = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
+_SHORT_DATE_RE = re.compile(r"(?<![А-Яа-яЁё])(" + "|".join(_RU_MONTHS_SHORT) + r")(?![А-Яа-яЁё])", re.I)
+_MONTH_ONLY_RE = re.compile(r"^(" + "|".join(_RU_MONTHS_NOM) + r")$")
+_MINUTES_RE = re.compile(r"(\d+)\s+мин(?:\.|ут[аы]?)?\b")
+
+_NUMBER_RE = re.compile(r"\d[\d\s\u00a0]*\d|\d")
+_COUNT_RE = re.compile(r"^(\d[\d\s ]*)\s+(вакансия|вакансии|вакансий|компания|компании|компаний)$")
+_DATE_RE = re.compile(r"\b(\d{1,2})\s+(" + "|".join(_RU_MONTHS_GEN) + r")\s+(\d{4})")
+_MONTH_YEAR_RE = re.compile(r"^(" + "|".join(_RU_MONTHS_NOM) + r")\s+(\d{4})$")
+_LOGO_RE = re.compile(r"^Логотип\s+(.+)$")
+_SALARY_HINT = re.compile(r"[€$£\d]|по запросу")
+
+
+def translate_generated(raw: str, lang: str) -> str:
+    """Перевести строку, собранную из данных: счётчик, вилку, дату, alt логотипа."""
+    words = SALARY_WORDS.get(lang)
+    if not words:
+        return raw
+    text = raw.strip()
+
+    count = _COUNT_RE.match(text)
+    if count:
+        number, noun = count.group(1).strip(), count.group(2)
+        kind = "company" if noun.startswith("компан") else "job"
+        one, many = PLURAL_WORDS[lang][kind]
+        digits = re.sub(r"[\s\u00a0]", "", number)
+        value = int(digits) if digits.isdigit() else 0
+        few = PLURAL_FEW.get(lang, {}).get(kind)
+        if value % 10 == 1 and value % 100 != 11:
+            word = one
+        elif few and 2 <= value % 10 <= 4 and not 12 <= value % 100 <= 14:
+            word = few
+        else:
+            word = many
+        return f"{number} {word}"
+
+    month_year = _MONTH_YEAR_RE.match(text)
+    if month_year:
+        index = _RU_MONTHS_NOM.index(month_year.group(1))
+        names = MONTHS_NOM.get(lang) or MONTH_NAMES[lang]
+        name = names[index]
+        return f"{name[0].upper() + name[1:]} {month_year.group(2)}"
+
+    logo = _LOGO_RE.match(text)
+    if logo:
+        return f"{LOGO_WORD[lang]} {logo.group(1)}"
+
+    month_only = _MONTH_ONLY_RE.match(text)
+    if month_only:
+        index = _RU_MONTHS_NOM.index(month_only.group(1))
+        names = MONTHS_NOM.get(lang) or MONTH_NAMES[lang]
+        return names[index][0].upper() + names[index][1:]
+
+    out = text
+    if _MINUTES_RE.search(out):
+        out = _MINUTES_RE.sub(lambda m: f"{m.group(1)} {MINUTES_WORD[lang]}", out)
+    if _SHORT_DATE_RE.search(out) and MONTHS_SHORT.get(lang):
+        out = _SHORT_DATE_RE.sub(
+            lambda m: MONTHS_SHORT[lang][_RU_MONTHS_SHORT.index(m.group(1).lower())]
+            if m.group(1)[0].islower() else MONTHS_SHORT[lang][_RU_MONTHS_SHORT.index(m.group(1).lower())].upper(),
+            out)
+    if _DATE_RE.search(out):
+        out = _DATE_RE.sub(lambda m: human_date(
+            date(int(m.group(3)), _RU_MONTHS_GEN.index(m.group(2)) + 1, int(m.group(1))), lang), out)
+    if _SALARY_HINT.search(out):
+        for russian, local in sorted(words.items(), key=lambda kv: -len(kv[0])):
+            if russian in ("от", "до"):
+                out = re.sub(r"(?<![А-Яа-яЁё])" + russian + r"(?![А-Яа-яЁё])", local, out)
+            elif local.startswith("/"):
+                out = out.replace(" " + russian, local).replace(russian, local)
+            else:
+                out = out.replace(russian, local)
+    return out if out != text else raw
+
+
 def translate_html(html_text: str, lang: str, prefix_urls: bool = False) -> str:
     """Перевести готовый HTML: точные узлы по словарю, служебные слова подстрочно.
 
@@ -1602,11 +1842,29 @@ def translate_html(html_text: str, lang: str, prefix_urls: bool = False) -> str:
 
     def translate_text(raw: str) -> str:
         key = " ".join(raw.split())
+        if key not in full and _NUMBER_RE.search(key):
+            # заголовки и описания со счётчиками («… — 6103 живых вакансий») меняются
+            # каждый обход: в словаре они лежат с # вместо числа
+            masked = _NUMBER_RE.sub("#", key)
+            template = full.get(masked)
+            if template:
+                numbers = iter(_NUMBER_RE.findall(key))
+                return re.sub(r"#", lambda _: next(numbers, "#"), template)
         if key in full:
             lead = raw[:len(raw) - len(raw.lstrip())]
             trail = raw[len(raw.rstrip()):]
             return lead + full[key] + trail
-        if vocab_re and _CYR_RE.search(raw):
+        if not _CYR_RE.search(raw):
+            return raw
+        # строки, собранные из данных, словарь покрыть не может — их разбирает шаблон
+        generated = translate_generated(key, lang)
+        if generated != key:
+            lead = raw[:len(raw) - len(raw.lstrip())]
+            trail = raw[len(raw.rstrip()):]
+            if vocab_re and _CYR_RE.search(generated):
+                generated = vocab_re.sub(lambda m: vocab[m.group(0)], generated)
+            return lead + generated + trail
+        if vocab_re:
             return vocab_re.sub(lambda m: vocab[m.group(0)], raw)
         return raw
 
@@ -1679,6 +1937,14 @@ def _prefix_links(text: str, lang: str) -> str:
     return _HREF_RE.sub(repl, text)
 
 
+LANG_SWITCH_LABEL = {
+    "ru": "Язык сайта", "en": "Site language", "de": "Sprache der Website",
+    "pl": "Język strony", "fr": "Langue du site", "es": "Idioma del sitio",
+    "pt": "Idioma do site", "it": "Lingua del sito", "el": "Γλώσσα του ιστότοπου",
+    "ro": "Limba site-ului", "bg": "Език на сайта", "uk": "Мова сайту",
+}
+
+
 def _lang_links(path: str, current: str) -> str:
     """Видимые ссылки на переводы: их обходит поисковик и видит человек без JS."""
     items = [("ru", "Русский")] + list(PATH_LANGS.items())
@@ -1689,7 +1955,8 @@ def _lang_links(path: str, current: str) -> str:
             links.append(f'<b lang="{code}">{label}</b>')
         else:
             links.append(f'<a lang="{code}" hreflang="{code}" href="{href}">{label}</a>')
-    return ('<nav class="lang-links" aria-label="Язык сайта">'
+    label = LANG_SWITCH_LABEL.get(current, "Site language")
+    return (f'<nav class="lang-links" aria-label="{label}">'
             + "".join(links) + "</nav>")
 
 
@@ -2184,17 +2451,38 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
 
 
 @app.get("/api/featured-jobs")
-def api_featured(db: Session = Depends(db_session)):
-    """Реальные вакансии для блока «Вакансии дня» на главной (внутренние ссылки /job/{id})."""
+def api_featured(request: Request, db: Session = Depends(db_session), lang: str = ""):
+    """Реальные вакансии для блока «Вакансии дня» на главной (внутренние ссылки /job/{id}).
+
+    Карточки рисует JS, поэтому языковой слой их уже не увидит: локаль берём
+    из ?lang= — иначе на /de/ в карточках оставались «офис» и «Мальта».
+    """
     from fastapi.responses import JSONResponse
     jobs = (db.query(Job).filter(Job.status == "approved")
             .order_by(Job.featured.desc(), Job.created_at.desc()).limit(30).all())
     # приоритет — с зарплатой, потом свежие; берём 5
     jobs.sort(key=lambda j: (not j.has_salary,))
+    out_lang = (lang or "ru").strip().lower()
+    if out_lang not in PATH_LANGS:
+        out_lang = "ru"
+    local = (lambda value: value) if out_lang == "ru" else (
+        lambda value: translate_generated(value, out_lang) if value else value)
+    words = SERVER_VOCAB_FOR(out_lang)
+    pattern = _VOCAB_RE.get(out_lang)
+
+    def term(value):
+        if out_lang == "ru" or not value:
+            return value
+        if value in words:
+            return words[value]
+        # «Valletta, Мальта» — страну внутри строки ловит подстрочник
+        if pattern and _CYR_RE.search(value):
+            return pattern.sub(lambda m: words[m.group(0)], value)
+        return local(value)
     out = [{"id": j.id, "title": j.title, "company": j.company_name,
-            "location": j.location or "—", "fmt": j.fmt,
-            "salary": j.salary if j.has_salary else "по запросу",
-            "cat": j.category, "initials": j.initials,
+            "location": term(j.location) or "—", "fmt": term(j.fmt),
+            "salary": local(j.salary) if j.has_salary else term("по запросу"),
+            "cat": term(j.category), "initials": j.initials,
             "logo_url": j.logo_url} for j in jobs[:5]]
     return JSONResponse(out)
 
@@ -6075,9 +6363,10 @@ EN_MONTHS = ("January", "February", "March", "April", "May", "June", "July",
 
 def human_date(value: date, lang: str = "ru") -> str:
     """«19 августа 2026» / «19 August 2026» — для текста страницы; в разметку идёт ISO."""
-    if lang != "ru":
-        return f"{value.day} {EN_MONTHS[value.month - 1]} {value.year}"
-    return f"{value.day} {RU_MONTHS[value.month - 1]} {value.year}"
+    if lang == "ru":
+        return f"{value.day} {RU_MONTHS[value.month - 1]} {value.year}"
+    months = MONTH_NAMES.get(lang) or EN_MONTHS
+    return f"{value.day} {months[value.month - 1]} {value.year}"
 
 
 COUNTRY_EN = {
@@ -6167,6 +6456,11 @@ def loc_name(name: str, lang: str = "ru") -> str:
     if lang == "ru" or not name:
         return name
     return COUNTRY_EN.get(name) or _SERVER_VOCAB.get("en", {}).get(name) or name
+
+
+def SERVER_VOCAB_FOR(lang: str) -> dict:
+    """Словарь коротких терминов языка: формат, страна, направление."""
+    return _SERVER_VOCAB.get(lang, {})
 
 
 def api_lang(request: Request, explicit: str = "") -> str:
@@ -6681,6 +6975,20 @@ except ImportError as _mcp_exc:  # пакет mcp не установлен — 
     print(f"[mcp] сервер не поднят: {_mcp_exc}")
 
 # ---------- static site (последним — перекрывается роутами выше) ----------
+@app.get("/js/i18n-{lang}.js", include_in_schema=False)
+def client_dictionary(lang: str):
+    """Словарь для клиентского переводчика (js/app.js).
+
+    Раньше рядом с фронтом лежали только i18n-en.js и i18n-uk.js: на немецкой
+    или греческой версии fetch отдавал 404, и всё, что рисует JS — шапка,
+    карточки вакансий, фильтры — оставалось русским.
+    """
+    data = _I18N_CLIENT.get(lang)
+    if not data:
+        raise HTTPException(status_code=404)
+    return JSONResponse(data, headers={"Cache-Control": "public, max-age=3600"})
+
+
 app.mount("/", StaticFiles(directory=ROOT, html=True), name="site")
 
 # Сжатие — ПОСЛЕДНИМ add_middleware: так gzip становится внешним слоем и жмёт
