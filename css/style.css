@@ -710,13 +710,13 @@ main > .section:nth-of-type(even) {
 @media (max-width: 1100px) {
   :root[data-theme="light"] .main-nav { background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: var(--shadow-lift); }
 }
-/* герой на главной — тёмный шоукейс-остров с 3D-картинкой: текст светлый */
-:root[data-theme="light"] .hero { color: oklch(0.96 0.005 285); }
-:root[data-theme="light"] .hero h1 { color: oklch(0.97 0.005 285); }
-:root[data-theme="light"] .hero h1 em { color: oklch(0.72 0.24 350); }
-:root[data-theme="light"] .hero .lead { color: oklch(0.82 0.006 285); }
-:root[data-theme="light"] .hero .stat-block { background: oklch(0.15 0.008 285 / 0.72); }
+/* герой главной в светлой теме: текст на холсте, тёмным остаётся только блок статистики с 3D-картинкой (раскладка — в index.html) */
+:root[data-theme="light"] .hero { background: none; color: var(--ink); }
+:root[data-theme="light"] .hero h1 em { color: var(--pink); }
+:root[data-theme="light"] .hero .stat-block { background: oklch(0.15 0.008 285 / 0.72); border-color: oklch(1 0 0 / 0.08); }
 :root[data-theme="light"] .hero .stat-block .num { color: oklch(0.80 0.19 162); }
+:root[data-theme="light"] .hero .stat-block:nth-child(2) .num { color: oklch(0.72 0.24 350); }
+:root[data-theme="light"] .hero .stat-block .lbl { color: oklch(0.80 0.006 285); }
 :root[data-theme="light"] .desc-block { color: var(--ink); }
 /* cta-баннер — светлый розовый, тёмный текст */
 :root[data-theme="light"] .cta-banner { background: oklch(0.97 0.03 352); border-color: transparent; box-shadow: var(--shadow-pink); }

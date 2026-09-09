@@ -54,7 +54,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap"></noscript>
 <script>(function(){try{var t=localStorage.getItem('themeV2');if(t==='dark')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
-<link rel="stylesheet" href="css/style.css?v=20260909d">
+<link rel="stylesheet" href="css/style.css?v=20260909e">
 <style>
 
   .hero {
@@ -122,6 +122,24 @@
   .stat-block:nth-child(2) .num { color: var(--pink); }
   .stat-block .lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: var(--ink-dim); }
   .stat-block .lbl br { display: none; }
+
+  /* светлая тема: герой на холсте, тёмным островом остаётся только блок статистики с 3D-картинкой */
+  :root[data-theme="light"] .hero { padding-block: var(--sp-7) var(--sp-8); border-bottom: 1px solid var(--line); }
+  :root[data-theme="light"] .hero__grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: clamp(24px, 4vw, 56px); align-items: center; }
+  :root[data-theme="light"] .hero__grid > div:first-child { min-height: 0; max-width: 640px; }
+  :root[data-theme="light"] .hero-stats { display: flex; margin-top: 0; flex-direction: column; flex-wrap: nowrap; justify-content: flex-end; align-items: stretch; gap: 10px; padding: 22px; border-radius: var(--radius); aspect-ratio: 4 / 3;
+    background: linear-gradient(180deg, oklch(0.11 0.006 285 / 0.05), oklch(0.11 0.006 285 / 0.78)), url('img/hero-neon.webp') center / cover no-repeat, var(--island); box-shadow: var(--shadow-lift); }
+  :root[data-theme="light"] .hero-stats .stat-block { min-width: 0; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 16px; }
+  :root[data-theme="light"] .hero-stats .stat-block .num { font-size: 1.7rem; }
+  :root[data-theme="light"] .search-bar { background: var(--surface); border-color: var(--line-strong); border-radius: 12px; overflow: hidden; }
+  :root[data-theme="light"] .search-bar > * + * { border-left: 1px solid var(--line); }
+  :root[data-theme="light"] .location-menu { background: var(--surface); box-shadow: var(--shadow-lift); border-color: var(--line); }
+  @media (max-width: 900px) {
+    :root[data-theme="light"] .hero { background: none; }
+    :root[data-theme="light"] .hero__grid { grid-template-columns: 1fr; }
+    :root[data-theme="light"] .hero-stats { display: flex; flex-wrap: nowrap; aspect-ratio: auto; min-height: 230px; margin-top: var(--sp-5); }
+    :root[data-theme="light"] .hero-stats .stat-block { grid-column: auto; flex: none; }
+  }
 
   .cat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--sp-3); }
   .cat-card {
