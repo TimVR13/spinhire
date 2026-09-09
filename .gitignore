@@ -14,7 +14,7 @@ video/node_modules
 video/out
 
 # музыка для Shorts: 126 МБ, лежит локально, в репо только манифест tracks.json
-video/public/audio/tracks/
+video/public/audio/tracks-full/
 video/public/renders/
 video/out/*.mp4
 video/out/frames/

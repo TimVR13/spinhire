@@ -11,6 +11,14 @@ $SUDO apt-get install -y -qq libasound2t64 >/dev/null 2>&1 || $SUDO apt-get inst
 pip3 install -q -U --ignore-installed --break-system-packages cryptography >/dev/null 2>&1 || true
 pip3 install -q google-cloud-texttospeech google-api-python-client google-auth-oauthlib google-auth-httplib2 pillow 2>/dev/null \
   || pip3 install -q --break-system-packages google-cloud-texttospeech google-api-python-client google-auth-oauthlib google-auth-httplib2 pillow || true
+# Chromium в рендере ходит через egress-прокси с подменой TLS: добавляем CA прокси в NSS-базу, иначе шрифты с gstatic не грузятся
+$SUDO apt-get install -y -qq libnss3-tools >/dev/null 2>&1 || true
+if command -v certutil >/dev/null 2>&1; then
+  mkdir -p "$HOME/.pki/nssdb" && certutil -d "sql:$HOME/.pki/nssdb" -N --empty-password >/dev/null 2>&1 || true
+  for f in /usr/local/share/ca-certificates/*.crt "${NODE_EXTRA_CA_CERTS:-}"; do
+    [ -f "$f" ] && certutil -d "sql:$HOME/.pki/nssdb" -A -t "C,," -n "$(basename "$f")" -i "$f" >/dev/null 2>&1 || true
+  done
+fi
 VIDEO="$(find "$HOME" /workspace /repo /src -maxdepth 4 -type f -name package.json -path '*/video/package.json' 2>/dev/null | head -1)"
 if [ -n "$VIDEO" ]; then
   cd "$(dirname "$VIDEO")" && (npm ci --silent || npm install --silent) && (npx --yes remotion browser ensure >/dev/null 2>&1 || true)
