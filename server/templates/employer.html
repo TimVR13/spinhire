@@ -58,7 +58,7 @@
   .cab-pane.active { display:block; }
   .wallet-row { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:var(--sp-3); margin-bottom:var(--sp-4); }
   .wallet-card { border:2px solid var(--line); background:var(--surface); border-radius:var(--radius); padding:var(--sp-4) var(--sp-5); }
-  .wallet-vals { display:flex; gap:26px; align-items:baseline; flex-wrap:wrap; margin-top:10px; }
+  .wallet-vals { display:flex; gap:18px 22px; align-items:baseline; flex-wrap:wrap; margin-top:10px; }
   .wallet-vals a { text-decoration:none; color:inherit; }
   .wallet-vals b { font-family:var(--font-display); font-size:1.5rem; color:var(--acid); margin-right:6px; }
   .wallet-vals span { color:var(--ink-faint); font-size:.78rem; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
@@ -99,7 +99,6 @@
   <nav class="cab-tabs" id="cabTabs" aria-label="Разделы кабинета">
     <a href="#overview" data-pane="overview">Обзор</a>
     <a href="#jobs" data-pane="jobs">Вакансии<b>{{ stats.active_jobs }}</b></a>
-    {% if team_role != 'viewer' %}<a href="#post" data-pane="post">+ Новая вакансия</a>{% endif %}
     <a href="#ats" data-pane="ats">Кандидаты<b>{{ ats_apps|length }}</b>{% if stats.new_applications %}<b class="tab-new">+{{ stats.new_applications }}</b>{% endif %}</a>
     <a href="#talents" data-pane="talents">База резюме<b>{{ account.cv_credits or 0 }}</b></a>
     <a href="#finance" data-pane="finance">Финансы{% if orders_pending %}<b class="tab-new">{{ orders_pending }}</b>{% endif %}</a>
@@ -116,7 +115,6 @@
         <a href="#finance" data-goto="finance"><b>{{ account.job_credits or 0 }}</b><span>размещений</span></a>
         <a href="#finance" data-goto="finance"><b>{{ account.cv_credits or 0 }}</b><span>контактов</span></a>
         {% if account.promo_code %}<span class="wallet-promo">промокод {{ account.promo_code }} активен</span>{% endif %}
-        {% if team_role == 'owner' %}<a href="#finance" class="btn btn-acid btn-sm btn-topup" data-goto="finance" style="margin-left:auto;">💳 Пополнить</a>{% endif %}
       </div>
     </div>
     <div class="wallet-card wallet-card--support">
@@ -424,7 +422,7 @@
   (function () {
     const tabs = [...document.querySelectorAll('#cabTabs a')];
     const panes = [...document.querySelectorAll('.cab-pane')];
-    const KNOWN = tabs.map(t => t.dataset.pane);
+    const KNOWN = panes.map(p => p.dataset.pane);  // панели без вкладки (форма вакансии) тоже открываются
     function show(name) {
       if (!KNOWN.includes(name)) name = 'overview';
       tabs.forEach(t => t.classList.toggle('active', t.dataset.pane === name));
