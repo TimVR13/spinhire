@@ -41,8 +41,8 @@ def pw():
 
 def login():
     with pw()() as p:
-        b = p.chromium.launch(headless=False)
-        ctx = b.new_context(user_agent=UA, viewport={"width": 1280, "height": 900})
+        b = _launch(p, headless=False)
+        ctx = b.new_context(user_agent=UA, viewport={"width": 1280, "height": 900}, locale="en-US")
         page = ctx.new_page()
         page.goto("https://www.reddit.com/login/", wait_until="domcontentloaded")
         print("Залогиньтесь в окне браузера, затем нажмите Enter здесь.")
@@ -57,9 +57,17 @@ def login():
 def _context(p, headless=True):
     if not STATE.exists():
         sys.exit(f"нет сессии {STATE} — сначала --login")
-    b = p.chromium.launch(headless=headless)
-    ctx = b.new_context(storage_state=json.loads(STATE.read_text()), user_agent=UA, viewport={"width": 1280, "height": 900})
+    b = _launch(p, headless=headless)
+    ctx = b.new_context(storage_state=json.loads(STATE.read_text()), user_agent=UA, viewport={"width": 1280, "height": 900}, locale="en-US")
     return b, ctx
+
+
+def _launch(p, headless: bool):
+    """Настоящий Google Chrome (channel=chrome), профиль отдельный: капч меньше, чем у голого Chromium."""
+    try:
+        return p.chromium.launch(channel="chrome", headless=headless)
+    except Exception:
+        return p.chromium.launch(headless=headless)
 
 
 def whoami(page) -> str | None:
