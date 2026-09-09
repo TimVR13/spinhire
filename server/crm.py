@@ -26,6 +26,7 @@ router = APIRouter()
 STAGES = [
     ("new", "Новая"),
     ("contact", "Контакт найден"),
+    ("to_notify", "Проинформировать"),   # пришёл отклик на вакансию компании — надо сообщить
     ("outreach", "В работе"),
     ("replied", "Ответила"),
     ("talks", "Переговоры"),
@@ -457,18 +458,23 @@ def ensure_company(db: Session, name: str) -> "CrmCompany | None":
 
 
 def note_application(db: Session, job, user, application) -> None:
-    """Вызывается из job_apply для вакансий без владельца. Не коммитит."""
+    """Каждый отклик заводит компанию в CRM и ставит её в очередь «Проинформировать». Не коммитит."""
     company = ensure_company(db, job.company_name)
     if not company:
         return
     company.updated_at = datetime.utcnow()
     log_event(db, company.id, "application",
               f"Отклик на «{job.title}» (вакансия #{job.id}) от кандидата #{user.id}")
+    # пока компании не сообщили — она висит на этапе «Проинформировать»;
+    # письмо или отметка «сообщили вручную» уводит её в «В работе» (crm_lead_notify)
+    # у вакансии с владельцем работодатель видит отклик в своём кабинете — сообщать нечего
+    if job.owner_id is None and company.stage in ("new", "contact"):
+        set_stage(db, company, "to_notify", "")
 
 
 def _lead_rows(db: Session):
     """Компании с откликами на их агрегированные вакансии, свежие сверху."""
-    from server.app import Application, Resume, User, is_c_level
+    from server.app import Application, Resume, User, is_c_level, resume_card
     rows = (db.query(Application, Job, User)
             .join(Job, Job.id == Application.job_id)
             .join(User, User.id == Application.user_id)
@@ -495,7 +501,7 @@ def _lead_rows(db: Session):
         resume = resumes.get(user.id)
         public = bool(resume and resume.published and resume.status == "approved")
         item = {"application": application, "job": job, "user": user, "resume": resume,
-                "public": public,
+                "public": public, "card": resume_card(resume, user.name or "") if resume else {},
                 "clevel": is_c_level(job.title) or is_c_level(resume.title if resume else "")}
         g["items"].append(item)
         if not g["notified"] or application.created_at > g["notified"].happened_at:
@@ -505,8 +511,9 @@ def _lead_rows(db: Session):
 
 
 def build_lead_letter(g: dict) -> tuple[str, str, str]:
-    """(subject, text, html) — письмо компании об откликах. По-английски: компании международные."""
-    from server.app import CLEVEL_UNLOCK_COST
+    """(subject, text, html) — письмо компании об откликах: анонимные карточки кандидатов
+    и вопрос, прислать ли полное резюме. По-английски: компании международные."""
+    from server.app import CLEVEL_UNLOCK_COST, resume_card
     company = g["company"]
     items = g["items"]
     titles = sorted({it["job"].title for it in items})
@@ -514,39 +521,53 @@ def build_lead_letter(g: dict) -> tuple[str, str, str]:
     subject = (f"{n} candidate{'s' if n > 1 else ''} applied to your job "
                f"“{titles[0]}” on SpinHire" if len(titles) == 1 else
                f"{n} candidates applied to your {len(titles)} jobs on SpinHire")
-    lines = []
+    text_blocks, html_blocks = [], []
     for it in items[:8]:
-        r = it["resume"]
-        who = (r.title if r and r.title else "Candidate")
-        meta = " · ".join(x for x in [
-            f"{r.experience_years} yrs" if r and r.experience_years else "",
-            (r.location if r else "") or "", (r.desired_format if r else "") or ""] if x)
-        link = f"https://spinhire.io/resume/{r.id}" if it["public"] else ""
-        lines.append((it["job"].title, who, meta, link))
-    text_items = "\n".join(
-        f"• {who}{' — ' + meta if meta else ''} → applied to “{jt}”" + (f"\n  {link}" if link else "\n  (profile is being moderated, we will forward your reply)")
-        for jt, who, meta, link in lines)
-    html_items = "".join(
-        f"<li><b>{who}</b>{' — ' + meta if meta else ''} → applied to “{jt}”"
-        + (f'<br><a href="{link}">{link}</a>' if link else "<br><i>profile is being moderated, we will forward your reply</i>") + "</li>"
-        for jt, who, meta, link in lines)
+        card = resume_card(it["resume"], (it["user"].name or "")) if it["resume"] else {}
+        who = card.get("title") or "Candidate"
+        code = card.get("code") or ""
+        facts = " · ".join(card.get("facts") or [])
+        skills = ", ".join(card.get("skills") or [])
+        about = card.get("about") or ""
+        link = f"https://spinhire.io/resume/{card['id']}" if card.get("public") else ""
+        text_blocks.append("\n".join(x for x in [
+            f"▸ {who}{f' ({code})' if code else ''} → applied to “{it['job'].title}”",
+            f"  {facts}" if facts else "",
+            f"  Skills: {skills}" if skills else "",
+            f"  {about}" if about else "",
+            f"  Anonymous profile: {link}" if link else "  Full profile available on request.",
+        ] if x))
+        html_blocks.append(
+            f'<li style="margin-bottom:14px;"><b>{who}</b>{f" <span style=\'color:#888\'>({code})</span>" if code else ""}'
+            f' → applied to “{it["job"].title}”'
+            + (f'<br><span style="color:#555;">{facts}</span>' if facts else "")
+            + (f'<br><span style="color:#555;">Skills: {skills}</span>' if skills else "")
+            + (f'<br>{about}' if about else "")
+            + (f'<br><a href="{link}">{link}</a>' if link else '<br><i>Full profile available on request.</i>')
+            + "</li>")
+    text_items = "\n\n".join(text_blocks)
+    html_items = "".join(html_blocks)
     more = f"\n…and {n - 8} more." if n > 8 else ""
     text = f"""Hello {company.name} team,
 
-Candidates on SpinHire — an iGaming job board with 6 000+ live jobs — applied to your posting{'s' if len(titles) > 1 else ''}:
+Candidates on SpinHire — an iGaming job board with 6 000+ live jobs — applied to your posting{'s' if len(titles) > 1 else ''}.
+Below is what they look like without personal data:
 
 {text_items}{more}
 
-Open a candidate's contacts (name, email, Telegram) in one click: €5 per contact, €4.5 in a pack of 10. C-level contacts cost {CLEVEL_UNLOCK_COST} credits.
+Want the full CV of anyone above — work history, education and contacts? Just reply to this email and tell us who, we will send it over.
+Or open contacts yourself (name, email, Telegram): €5 per contact, €4.5 in a pack of 10. C-level contacts cost {CLEVEL_UNLOCK_COST} credits.
 Pricing: https://spinhire.io/post-job#pricing
 
 Post your own jobs on SpinHire — the first 3 are free: https://spinhire.io/post-job
 
 — SpinHire team, https://spinhire.io"""
     html = f"""<p>Hello {company.name} team,</p>
-<p>Candidates on <a href="https://spinhire.io">SpinHire</a> — an iGaming job board with 6 000+ live jobs — applied to your posting{'s' if len(titles) > 1 else ''}:</p>
+<p>Candidates on <a href="https://spinhire.io">SpinHire</a> — an iGaming job board with 6 000+ live jobs — applied to your posting{'s' if len(titles) > 1 else ''}.
+Below is what they look like without personal data:</p>
 <ul>{html_items}</ul>{('<p>…and %d more.</p>' % (n - 8)) if n > 8 else ''}
-<p>Open a candidate's contacts (name, email, Telegram) in one click: <b>€5 per contact</b>, €4.5 in a pack of 10. C-level contacts cost {CLEVEL_UNLOCK_COST} credits.<br>
+<p><b>Want the full CV of anyone above</b> — work history, education and contacts? Just reply to this email and tell us who, we will send it over.<br>
+Or open contacts yourself (name, email, Telegram): <b>€5 per contact</b>, €4.5 in a pack of 10. C-level contacts cost {CLEVEL_UNLOCK_COST} credits.
 <a href="https://spinhire.io/post-job#pricing">Pricing</a></p>
 <p>Post your own jobs on SpinHire — the first 3 are free: <a href="https://spinhire.io/post-job">spinhire.io/post-job</a></p>
 <p>— SpinHire team</p>"""
@@ -588,7 +609,7 @@ def crm_lead_notify(cid: int, request: Request, channel: str = Form("email"),
                     subject=f"Отклик: {subject}", body=text, status=status))
     if contact:
         contact.last_touch_at = datetime.utcnow()
-    if company.stage in ("new", "contact"):
+    if company.stage in ("new", "contact", "to_notify"):
         set_stage(db, company, "outreach")
     log_event(db, company.id, "touch",
               f"Сообщили об откликах ({CHANNEL_LABELS.get(channel, channel)}): {status}")

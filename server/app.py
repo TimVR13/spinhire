@@ -482,6 +482,16 @@ class Resume(Base):
     def skill_list(self):
         return [s.strip() for s in self.skills.split(",") if s.strip()][:8]
 
+    @property
+    def is_empty(self):
+        """Нечего публиковать: ни заголовка, ни текста, ни навыков, ни файла."""
+        title = (self.title or "").strip()
+        return (title in ("", "Без названия", "Резюме на обработке")
+                and len((self.about or "").strip()) < 40
+                and not (self.skills or "").strip()
+                and not (self.employment_history or "").strip()
+                and not (self.cv_file_path or "").strip())
+
 
 class ResumeUnlock(Base):
     __tablename__ = "resume_unlocks"
@@ -885,6 +895,57 @@ def unlock_cost(resume) -> int:
     return CLEVEL_UNLOCK_COST if is_c_level(getattr(resume, "title", "")) else 1
 
 
+def resume_is_ready(cv) -> bool:
+    """Резюме годится для отклика: есть должность и хоть какая-то суть о человеке."""
+    if not cv:
+        return False
+    title = (cv.title or "").strip()
+    if not title or title in ("Без названия", "Резюме на обработке"):
+        return False
+    substance = (len((cv.about or "").strip()) >= 80 or len((cv.skills or "").strip()) >= 10
+                 or len((cv.employment_history or "").strip()) >= 40)
+    return substance
+
+
+# в анонимной карточке не должно остаться ни имени, ни способа связаться напрямую
+_CONTACT_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+|\+?\d[\d ()-]{7,}\d"
+                         r"|(?:https?://|www\.)\S+|\b(?:t\.me|telegram|skype|linkedin|whatsapp)\b\S*",
+                         re.I)
+
+
+def strip_contacts(text: str, owner_name: str = "") -> str:
+    """Убрать из текста почты, телефоны, ссылки, мессенджеры и имя владельца."""
+    out = _CONTACT_RE.sub("—", text or "")
+    for part in (owner_name or "").split():
+        if len(part) > 2:
+            out = re.sub(rf"(?<![\w]){re.escape(part)}(?![\w])", "—", out, flags=re.I)
+    return re.sub(r"\s{2,}", " ", out).strip()
+
+
+def resume_card(cv, owner_name: str = "") -> dict:
+    """Анонимная карточка кандидата для работодателя: без имени, почты, телефона и ссылок."""
+    if not cv:
+        return {}
+    skills = [s.strip() for s in (cv.skills or "").split(",") if s.strip()][:8]
+    about = strip_contacts(cv.about or "", owner_name)
+    if len(about) > 600:
+        about = about[:600].rsplit(" ", 1)[0] + "…"
+    facts = [x for x in (
+        f"{cv.experience_years} yrs experience" if cv.experience_years else "",
+        (cv.location or "").strip(),
+        (cv.desired_format or "").strip(),
+        (cv.languages or "").strip(),
+        (cv.salary_expect or "").strip(),
+    ) if x]
+    return {
+        "id": cv.id, "code": cv.public_code, "title": (cv.title or "").strip(),
+        "facts": facts, "skills": skills, "about": about,
+        "history": strip_contacts(cv.employment_history or "", owner_name)[:400],
+        "education": strip_contacts(cv.education or "", owner_name)[:200],
+        "public": cv.status == "approved" and bool(cv.published),
+    }
+
+
 _CAT_RULES = [
     ("Топ-менеджмент", ("head of", "vp of", "chief", "c-level", "cto", "ceo", "cfo", "coo",
                         "country manager", "managing director", "director of", "директор", "руковод")),
@@ -1052,6 +1113,13 @@ def migrate(db: Session):
         "CREATE INDEX IF NOT EXISTS idx_jobs_source ON jobs(source)",
         "CREATE INDEX IF NOT EXISTS idx_apps_user_created ON applications(user_id, created_at)",
         "CREATE INDEX IF NOT EXISTS idx_events_name_entity ON analytics_events(name, entity_type, entity_id)",
+        # шапка админки на каждой вкладке считает job_view за период — без даты в
+        # индексе это скан всех событий просмотра (сотни тысяч строк на проде)
+        "CREATE INDEX IF NOT EXISTS idx_events_name_created ON analytics_events(name, created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_events_created ON analytics_events(created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_apps_job ON applications(job_id)",
+        "CREATE INDEX IF NOT EXISTS idx_users_role_created ON users(role, created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_resumes_status_updated ON resumes(status, updated_at)",
     ):
         db.execute(text(_idx))
     # верификация почты: verified DEFAULT 1 — существующие пользователи остаются рабочими
@@ -3102,6 +3170,11 @@ def job_apply(job_id: int, request: Request, cover: str = Form(""),
     job = db.get(Job, job_id)
     if not job or job.status != "approved":
         raise HTTPException(404)
+    # Без заполненного резюме отклика нет: работодателю мы отправляем анонимную
+    # карточку кандидата, а собирать её не из чего (решение владельца 09.09.2026).
+    cv = db.query(Resume).filter_by(user_id=user.id).first()
+    if not cv or not resume_is_ready(cv):
+        return RedirectResponse(f"/job/{job_id}?nocv=1", status_code=303)
     # Отклик принимаем и на агрегированные вакансии — как лид: мы передаём его
     # работодателю и используем как аргумент подключить компанию к SpinHire.
     if not db.query(Application).filter_by(job_id=job_id, user_id=user.id).first():
@@ -3126,11 +3199,11 @@ def job_apply(job_id: int, request: Request, cover: str = Form(""),
         db.add(ApplicationEvent(application_id=application.id, actor_id=user.id,
                                 kind="created", body="Кандидат отправил отклик"))
         track(db, "application_created", user.id, "job", job_id)
-        if job.owner_id is None:
-            # чужая (агрегированная) вакансия: отклик — повод связаться с компанией,
-            # таблица «кому сообщить» — /admin/crm/leads
-            from server import crm
-            crm.note_application(db, job, user, application)
+        # каждый отклик попадает в CRM карточкой компании; у агрегированных вакансий
+        # компания ещё не знает о кандидате — она встаёт на этап «Проинформировать»
+        # (таблица «кому сообщить» — /admin/crm/leads)
+        from server import crm
+        crm.note_application(db, job, user, application)
         db.commit()
         return RedirectResponse(f"/job/{job_id}?ok=1{extra}", status_code=303)
     return RedirectResponse(f"/job/{job_id}?ok=1", status_code=303)
@@ -5045,16 +5118,28 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
     if tab == "jobs":
         q = (request.query_params.get("q") or "").strip().lower()
         st = request.query_params.get("st") or ""
-        if request.query_params.get("sort") == "views":
-            jobs = db.query(Job).order_by(Job.views.desc(), Job.created_at.desc()).all()
-        else:
-            jobs = db.query(Job).order_by((Job.status == "pending").desc(),
-                                          Job.created_at.desc()).all()
+        # фильтр и лимит уезжают в SQL: раньше вкладка поднимала в память все
+        # тысячи вакансий с описаниями и резала до 200 уже в питоне — отсюда
+        # многосекундное переключение вкладок в админке.
+        jobs_q = db.query(Job).options(defer(Job.description))
         if st:
-            jobs = [j for j in jobs if j.status == st]
+            jobs_q = jobs_q.filter(Job.status == st)
         if q:
-            jobs = [j for j in jobs if q in f"{j.title} {j.company_name} {j.source}".lower()]
-        ctx["jobs"] = jobs[:200]
+            like = f"%{q}%"
+            jobs_q = jobs_q.filter(or_(func.lower(Job.title).like(like),
+                                       func.lower(Job.company_name).like(like),
+                                       func.lower(Job.source).like(like)))
+        if request.query_params.get("sort") == "views":
+            jobs_q = jobs_q.order_by(Job.views.desc(), Job.created_at.desc())
+        else:
+            jobs_q = jobs_q.order_by((Job.status == "pending").desc(), Job.created_at.desc())
+        ctx["jobs"] = jobs_q.limit(200).all()
+        # счётчик откликов одним GROUP BY вместо 200 отдельных запросов из шаблона
+        job_ids = [j.id for j in ctx["jobs"]]
+        ctx["job_apps"] = dict(
+            db.query(Application.job_id, func.count(Application.id))
+              .filter(Application.job_id.in_(job_ids))
+              .group_by(Application.job_id).all()) if job_ids else {}
         ctx["q"], ctx["st"] = q, st
     elif tab == "users":
         role = request.query_params.get("role") or ""
@@ -5067,7 +5152,11 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         ctx["role"] = role
         ctx.update(pr)
     elif tab == "apps":
-        ctx["apps"] = db.query(Application).order_by(Application.created_at.desc()).all()
+        from sqlalchemy.orm import joinedload
+        ctx["apps"] = (db.query(Application)
+                       .options(joinedload(Application.user),
+                                joinedload(Application.job).defer(Job.description))
+                       .order_by(Application.created_at.desc()).limit(300).all())
     elif tab == "resumes":
         st = request.query_params.get("st") or ""
         resumes_q = db.query(Resume)
@@ -5088,8 +5177,10 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
     elif tab == "sources":
         from server import crawler
         from collections import Counter
-        counts = Counter(j.source or "внутренние/ручные"
-                         for j in db.query(Job).filter(Job.status == "approved").all())
+        counts = Counter({(src or "внутренние/ручные"): n for src, n in
+                          db.query(Job.source, func.count(Job.id))
+                            .filter(Job.status == "approved")
+                            .group_by(Job.source).all()})
         ctx["sources"] = crawler.SOURCE_REGISTRY
         ctx["source_counts"] = dict(counts)
         ctx["resume_sources"] = crawler.RESUME_SOURCE_REGISTRY

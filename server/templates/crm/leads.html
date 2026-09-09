@@ -55,9 +55,13 @@
       <td style="white-space: nowrap; color: var(--ink-faint);">{{ it.application.created_at.strftime('%d.%m %H:%M') }}</td>
       <td><a href="/job/{{ it.job.id }}" target="_blank" style="color: var(--ink);">{{ it.job.title }}</a>{% if it.clevel %}<span class="cl">C-level</span>{% endif %}</td>
       <td>
-        {% if it.public %}<a href="/resume/{{ it.resume.id }}" target="_blank" style="color: var(--acid);">{{ it.resume.title or 'Кандидат' }}</a>
-          <span style="color: var(--ink-faint);">· {{ it.resume.experience_years or 0 }} лет · {{ it.resume.location or '—' }}</span>
-        {% else %}<span style="color: var(--ink-dim);">{{ it.user.name or ('кандидат #' ~ it.user.id) }}</span> <span style="color: var(--ink-faint);">· CV не опубликовано</span>{% endif %}
+        {% if it.card %}
+          {% if it.public %}<a href="/resume/{{ it.resume.id }}" target="_blank" style="color: var(--acid);">{{ it.card.title }}</a>
+          {% else %}<b style="color: var(--ink);">{{ it.card.title }}</b> <span style="color: var(--ink-faint);">· CV не опубликовано</span>{% endif %}
+          <span style="color: var(--ink-faint);">· {{ it.card.code }}</span>
+          {% if it.card.facts %}<div style="color: var(--ink-faint); font-size: .8rem;">{{ it.card.facts|join(' · ') }}</div>{% endif %}
+          {% if it.card.skills %}<div style="color: var(--ink-dim); font-size: .8rem;">{{ it.card.skills|join(', ') }}</div>{% endif %}
+        {% else %}<span style="color: var(--ink-dim);">кандидат #{{ it.user.id }}</span> <span style="color: var(--ink-faint);">· без резюме (старый отклик)</span>{% endif %}
         {% if it.application.cover %}<div style="color: var(--ink-faint); font-size: .8rem; margin-top: 2px;">«{{ it.application.cover[:140] }}»</div>{% endif %}
       </td>
     </tr>
@@ -74,10 +78,12 @@
     </form>
   </div>
   <details>
-    <summary>Текст письма</summary>
-    <pre>Тема: {{ g.subject }}
+    <summary>Текст письма — анонимные карточки кандидатов, можно скопировать в Telegram или LinkedIn</summary>
+    <pre id="lead-{{ g.company.id }}">Тема: {{ g.subject }}
 
 {{ g.text }}</pre>
+    <button class="btn btn-ghost btn-sm" type="button"
+            onclick="navigator.clipboard.writeText(document.getElementById('lead-{{ g.company.id }}').innerText).then(()=>{this.textContent='Скопировано ✓'})">Скопировать</button>
   </details>
 </section>
 {% endfor %}

@@ -77,6 +77,7 @@
   {% if request.query_params.get('ok') %}<div class="flash">✓ Отклик отправлен — работодатель увидит его в кабинете.{% if request.query_params.get('extra') %} Дневной лимит был исчерпан — списано {{ request.query_params.get('extra') }} SC.{% endif %}</div>{% endif %}
   {% if request.query_params.get('limit') %}<div class="flash">Лимит откликов на сегодня исчерпан ({{ 10 }}/сутки). Дополнительный отклик стоит 10 SC — загляните за ежедневным фриспином в профиль или вернитесь завтра.</div>{% endif %}
   {% if request.query_params.get('fast') %}<div class="flash">Слишком быстро — выдержите паузу ~20 секунд между откликами и попробуйте снова.</div>{% endif %}
+  {% if request.query_params.get('nocv') %}<div class="flash">Чтобы откликнуться, заполните резюме: должность и пара абзацев о себе. Работодателю мы отправляем анонимную карточку — без имени и контактов, собирать её пока не из чего. <a href="/profile#cv" style="color:inherit;text-decoration:underline;">Заполнить резюме →</a></div>{% endif %}
 
   <div class="job-layout">
     <div>

@@ -2,6 +2,8 @@
 
   GET  /api/moderation/resumes/todo   → [{id, title, …, cv_text}]   заголовок X-Publish-Key
   POST /api/moderation/resumes/apply  {"<id>": {...}}  → {published, held}
+  GET  /api/moderation/jobs/todo      → [{id, title, description, …}]  вакансии в очереди
+  POST /api/moderation/jobs/apply     {"<id>": {"action": "approve|reject|skip", …}}
 Правила и формат объекта — как у плановой задачи spinhire-cv-moderation (scripts/apply_resume_updates.py).
 """
 import os
@@ -15,7 +17,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import Session
 
-from server.app import CV_UPLOAD_DIR, DB_PATH, ROOT, Resume, db_session
+from server.app import CV_UPLOAD_DIR, DB_PATH, ROOT, Job, Resume, db_session
 
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 from apply_resume_updates import apply_updates  # noqa: E402
@@ -85,3 +87,74 @@ async def resumes_apply(request: Request, x_publish_key: str = Header(default=""
                 r.moderation_note = ""
         db.commit()
     return JSONResponse({"published": published, "held": held, "at": datetime.utcnow().isoformat()})
+
+
+# ---------- вакансии: ежечасная проверка и публикация ----------
+JOB_FIELDS = ("title", "company_name", "category", "location", "fmt", "salary",
+              "tags", "description", "source", "source_url", "posted_at", "status")
+EDITABLE = ("title", "company_name", "category", "location", "fmt", "salary", "tags", "description")
+
+
+@router.get("/api/moderation/jobs/todo")
+def jobs_todo(request: Request, x_publish_key: str = Header(default=""),
+              db: Session = Depends(db_session)):
+    """Очередь: всё, что ждёт решения (pending). limit по умолчанию 60."""
+    _auth(x_publish_key)
+    try:
+        limit = max(1, min(200, int(request.query_params.get("limit", "60"))))
+    except ValueError:
+        limit = 60
+    rows = (db.query(Job).filter(Job.status == "pending")
+            .order_by(Job.created_at.desc()).limit(limit).all())
+    out = []
+    for j in rows:
+        item = {k: getattr(j, k) for k in JOB_FIELDS}
+        item["id"] = j.id
+        item["owner_id"] = j.owner_id            # есть владелец → вакансию разместил работодатель
+        item["created_at"] = j.created_at.isoformat() if j.created_at else ""
+        item["description"] = (item["description"] or "")[:MAX_TEXT]
+        out.append(item)
+    return JSONResponse({"total_pending": db.query(Job).filter(Job.status == "pending").count(),
+                         "jobs": out})
+
+
+@router.post("/api/moderation/jobs/apply")
+async def jobs_apply(request: Request, x_publish_key: str = Header(default=""),
+                     db: Session = Depends(db_session)):
+    """{"<id>": {"action": "approve|reject|skip", "reason": "…", "fields": {"title": …}}}"""
+    _auth(x_publish_key)
+    updates = await request.json()
+    if not isinstance(updates, dict):
+        raise HTTPException(400, "ожидается {\"<id>\": {...}}")
+    approved, rejected, edited, skipped, missing = [], [], [], [], []
+    for raw_id, payload in updates.items():
+        try:
+            job = db.get(Job, int(raw_id))
+        except (TypeError, ValueError):
+            job = None
+        if not job:
+            missing.append(raw_id)
+            continue
+        payload = payload if isinstance(payload, dict) else {"action": str(payload)}
+        fields = payload.get("fields") or {}
+        changed = [k for k, v in fields.items()
+                   if k in EDITABLE and isinstance(v, str) and v.strip() and getattr(job, k) != v.strip()]
+        for k in changed:
+            setattr(job, k, fields[k].strip())
+        if changed:
+            edited.append({"id": job.id, "fields": changed})
+        action = (payload.get("action") or "skip").lower()
+        if action == "approve":
+            job.status = "approved"
+            approved.append(job.id)
+        elif action == "reject":
+            job.status = "rejected"
+            job.closed_at = datetime.utcnow().date().isoformat()
+            rejected.append({"id": job.id, "reason": payload.get("reason", "")})
+        else:
+            skipped.append(job.id)
+    db.commit()
+    return JSONResponse({"approved": approved, "rejected": rejected, "edited": edited,
+                         "skipped": skipped, "missing": missing,
+                         "left_pending": db.query(Job).filter(Job.status == "pending").count(),
+                         "at": datetime.utcnow().isoformat()})
