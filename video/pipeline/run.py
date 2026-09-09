@@ -14,8 +14,31 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import OUT, RENDERS, VIDEO_DIR  # noqa: E402
+from common import OUT, RENDERS, ROOT, VIDEO_DIR  # noqa: E402
 from planner import plan  # noqa: E402
+
+
+def done_ids() -> set[str]:
+    p = ROOT / "data" / "youtube-posts.json"
+    return {r["id"] for r in json.load(open(p))} if p.exists() else set()
+
+
+def already_done(date: str, slot: str) -> bool:
+    return f"{date}-{slot}" in done_ids()
+
+
+def next_free_slot(min_lead_minutes: int = 40):
+    """Ближайший слот, до публикации которого ещё ≥ 40 минут и которого нет в логе."""
+    from planner import SLOT_UTC
+    now = dt.datetime.now(dt.timezone.utc)
+    done = done_ids()
+    for d in range(0, 3):
+        day = (now + dt.timedelta(days=d)).date()
+        for slot, t in SLOT_UTC.items():
+            pub = dt.datetime.combine(day, dt.time.fromisoformat(t), tzinfo=dt.timezone.utc)
+            if pub - now >= dt.timedelta(minutes=min_lead_minutes) and f"{day}-{slot}" not in done:
+                return slot, day.isoformat()
+    return None, None
 
 
 def sh(cmd: list[str], **kw):
@@ -25,20 +48,30 @@ def sh(cmd: list[str], **kw):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--slot", required=True, choices=["morning", "day", "evening"])
+    ap.add_argument("--slot", default="auto", choices=["auto", "morning", "day", "evening"],
+                    help="auto — ближайший свободный слот в ближайшие 48 часов (для облачной routine)")
     ap.add_argument("--date", default=dt.date.today().isoformat())
     ap.add_argument("--format", default="", help="переопределить формат из планировщика")
     ap.add_argument("--slug", default="")
     ap.add_argument("--script", default="", help="JSON с фразами/сценами от агента поверх автосборки")
     ap.add_argument("--dry", action="store_true", help="собрать и отрендерить, но не загружать")
+    ap.add_argument("--plan-only", action="store_true", help="только выбрать слот и напечатать план")
     a = ap.parse_args()
 
+    if a.slot == "auto":
+        a.slot, a.date = next_free_slot()
+        if not a.slot:
+            print("все слоты на 48 часов уже заняты — нечего делать"); return
+    if already_done(a.date, a.slot):
+        print(f"слот {a.date}-{a.slot} уже в data/youtube-posts.json — пропускаю"); return
     p = plan(a.slot, dt.date.fromisoformat(a.date))
     if a.format:
         p["format"] = a.format
     if a.slug:
         p["slug"] = a.slug
     print("план:", json.dumps(p, ensure_ascii=False), flush=True)
+    if a.plan_only:
+        return
 
     cmd = [sys.executable, "pipeline/build.py", p["format"], p["id"], "--date", a.date]
     if p.get("slug"):
