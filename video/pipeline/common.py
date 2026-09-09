@@ -21,6 +21,10 @@ def env_or_file(env_name: str, filename: str) -> Path:
     val = os.environ.get(env_name)
     path = SECRETS / filename
     if val and not path.exists():
+        val = val.strip()
+        if not val.startswith("{"):  # base64 — так значение гарантированно однострочное в форме окружения
+            import base64
+            val = base64.b64decode(val).decode()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(val)
         os.chmod(path, 0o600)
