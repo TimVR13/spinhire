@@ -5592,6 +5592,7 @@ ARTICLE_FILES = {
     "support-team-lead-career": "post-support-team-lead-career.html",
     "seo-specialist-gambling": "post-seo-specialist-gambling.html",
     "rabota-v-armenii-igaming": "post-rabota-v-armenii-igaming.html",
+    "aml-officer-career": "post-aml-officer-career.html",
 }
 
 
