@@ -1,1 +1,2 @@
 2026-09-10 morning: spinhire.io недоступен — egress proxy отклоняет CONNECT spinhire.io:443 (403, connect_rejected), spec не собрать
+2026-09-10 morning: YouTube uploadLimitExceeded — канал исчерпал дневной лимит загрузок; ролик отрендерен, но не залит (в облаке также нет video/public/audio/tracks/, музыка заменена тишиной)
