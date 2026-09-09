@@ -12,6 +12,10 @@
   .au-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: var(--sp-4); }
   .au-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: var(--sp-4); }
   .au-card h2 { font-family: var(--font-display); font-size: .95rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: var(--sp-3); }
+  /* разделы резюме тонули в тексте: акцентный цвет, линия слева и воздух сверху */
+  .au-sub { font-family: var(--font-display); font-size: .8rem; text-transform: uppercase; letter-spacing: .1em;
+            color: var(--acid); margin: var(--sp-5) 0 8px; padding-left: 10px; border-left: 3px solid var(--acid); }
+  .au-sub + .au-text { margin-left: 13px; }
   .au-kv { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; font-size: .9rem; }
   .au-kv dt { color: var(--ink-faint); }
   .au-kv dd { color: var(--ink); word-break: break-word; }
@@ -82,9 +86,9 @@
           {% if resume.status == 'approved' %}<form method="post" action="/admin/resume/{{ resume.id }}/pause?back={{ u.id }}"><button class="btn btn-ghost btn-sm">Снять с публикации</button></form>{% endif %}
           <form method="post" action="/admin/resume/{{ resume.id }}/reject?back={{ u.id }}" style="display: flex; gap: 6px;"><input class="input" name="moderation_note" placeholder="Причина возврата"><button class="btn btn-ghost btn-sm">Вернуть на доработку</button></form>
         </div>
-        {% if resume.about %}<h3 style="font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; margin: var(--sp-4) 0 6px; color: var(--ink-faint);">О себе</h3><div class="au-text">{{ resume.about }}</div>{% endif %}
-        {% if resume.employment_history %}<h3 style="font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; margin: var(--sp-4) 0 6px; color: var(--ink-faint);">Опыт</h3><div class="au-text">{{ resume.employment_history }}</div>{% endif %}
-        {% if resume.education %}<h3 style="font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; margin: var(--sp-4) 0 6px; color: var(--ink-faint);">Образование</h3><div class="au-text">{{ resume.education }}</div>{% endif %}
+        {% if resume.about %}<h3 class="au-sub">О себе</h3><div class="au-text">{{ resume.about }}</div>{% endif %}
+        {% if resume.employment_history %}<h3 class="au-sub">Опыт</h3><div class="au-text">{{ resume.employment_history }}</div>{% endif %}
+        {% if resume.education %}<h3 class="au-sub">Образование</h3><div class="au-text">{{ resume.education }}</div>{% endif %}
       {% else %}
         <p style="color: var(--ink-dim);">Резюме не создано.</p>
       {% endif %}

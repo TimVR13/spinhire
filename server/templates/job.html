@@ -46,6 +46,18 @@
   .side-card dt { color: var(--ink-faint); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.1em; font-weight: 700; padding-top: 2px; }
   .side-card dd { color: var(--ink); font-weight: 600; }
   .apply-card { position: sticky; top: 92px; border-color: var(--acid); }
+  /* насколько кандидат подходит вакансии — видно до отклика, чтобы не слали веером */
+  .match { display: flex; gap: 14px; align-items: flex-start; border: 2px solid var(--line);
+           padding: 12px 14px; border-radius: 12px; background: var(--surface); }
+  .match__num { font-family: var(--font-display); font-size: 1.9rem; font-weight: 800; line-height: 1; }
+  .match__body { font-size: .86rem; color: var(--ink-dim); min-width: 0; }
+  .match__row { margin-top: 4px; }
+  .match__row--plus { color: var(--acid); }
+  .match__row--minus { color: var(--ink-faint); }
+  .match__hint { margin-top: 8px; color: var(--ink-faint); }
+  .match--good { border-color: var(--acid); } .match--good .match__num { color: var(--acid); }
+  .match--mid  { border-color: var(--yellow); } .match--mid .match__num { color: var(--yellow); }
+  .match--low  { border-color: var(--line-strong); } .match--low .match__num { color: var(--ink-faint); }
   .apply-card .btn { width: 100%; }
   .apply-card p { color: var(--ink-dim); font-size: 0.82rem; margin-top: 10px; }
   .copy-link { display: flex; width: 100%; align-items: center; gap: 10px; padding: 10px 12px;
@@ -107,6 +119,17 @@
           {% elif applied %}
             <span class="status invited" style="align-self: flex-start;">✓ Вы уже откликнулись{% if job.source_url %} — мы передадим отклик работодателю{% endif %}</span>
           {% elif user and user.role == 'talent' %}
+            {% if match %}
+            <div class="match match--{{ match.tone }}">
+              <div class="match__num">{{ match.percent }}%</div>
+              <div class="match__body">
+                <b>{{ match.label }}</b> — так ваше резюме ложится на эту вакансию
+                {% for p in match.plus %}<div class="match__row match__row--plus">+ {{ p }}</div>{% endfor %}
+                {% for m in match.minus %}<div class="match__row match__row--minus">− {{ m }}</div>{% endfor %}
+                {% if match.percent < 45 %}<div class="match__hint">Откликаться можно, но шансы невысокие — посмотрите <a href="/jobs?fit=1">вакансии, которые подходят вам лучше</a>.</div>{% endif %}
+              </div>
+            </div>
+            {% endif %}
             <form id="apply" method="post" action="/job/{{ job.id }}/apply" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
               <input class="input" name="cover" placeholder="Пара слов о себе (необязательно)" aria-label="Сопроводительное" style="flex: 1 1 260px;">
               <button class="btn btn-acid btn-lg" type="submit">Откликнуться через SpinHire →</button>
@@ -159,6 +182,7 @@
         {% if applied %}
           <span class="status invited">✓ Отклик отправлен</span>
         {% elif user and user.role == 'talent' %}
+          {% if match %}<p style="margin:0 0 10px;color:var(--ink);"><b style="font-size:1.2rem;">{{ match.percent }}%</b> — {{ match.label }}</p>{% endif %}
           <a class="btn btn-acid" href="#apply">Откликнуться →</a>
           <p>Добавьте пару слов и отправьте отклик через SpinHire.</p>
         {% elif not user %}

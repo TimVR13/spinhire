@@ -895,6 +895,110 @@ def unlock_cost(resume) -> int:
     return CLEVEL_UNLOCK_COST if is_c_level(getattr(resume, "title", "")) else 1
 
 
+# ---------- насколько кандидат подходит вакансии ----------
+# Кандидаты откликаются веером на всё подряд, работодатель тонет в нерелевантном.
+# Показываем процент совпадения прямо в карточке вакансии, чтобы человек видел,
+# куда его резюме действительно попадает (решение владельца 09.09.2026).
+_LEVELS = ((("intern", "стажёр", "trainee"), 0), (("junior", "джуниор", "младший"), 1),
+           (("middle", "мидл"), 3), (("senior", "сеньор", "старший"), 5),
+           (("lead", "тимлид", "team lead"), 6), (("head", "руководител"), 7),
+           (("director", "директор", "chief", "vp", "c-level"), 9))
+_STOP_WORDS = {"the", "and", "for", "with", "manager", "specialist", "senior", "junior",
+               "middle", "lead", "head", "remote", "team", "менеджер", "специалист"}
+
+
+def _words(text: str) -> set:
+    return {w for w in re.findall(r"[a-zа-я0-9+#.]{3,}", (text or "").lower()) if w not in _STOP_WORDS}
+
+
+def _level_of(text: str) -> int:
+    t = (text or "").lower()
+    for names, years in reversed(_LEVELS):
+        if any(n in t for n in names):
+            return years
+    return -1
+
+
+def match_score(cv, job, light: bool = False) -> dict:
+    """{percent, label, plus[], minus[]} — насколько резюме подходит вакансии.
+
+    Считаем прозрачно и без ИИ: навыки, роль, уровень, домен, формат, язык.
+    light=True — без описания вакансии: в списке оно отложено (defer) и его
+    подгрузка превратилась бы в сотню лишних запросов.
+    """
+    if not cv or not job:
+        return {}
+    job_text = f"{job.title} {job.tags} {'' if light else job.description}".lower()
+    cv_text = f"{cv.title} {cv.skills} {cv.about} {cv.employment_history}".lower()
+    plus, minus, score = [], [], 0
+
+    skills = [s.strip() for s in (cv.skills or "").split(",") if s.strip()][:12]
+    hits = [s for s in skills if s.lower() in job_text]
+    if skills:
+        score += round(35 * min(1.0, len(hits) / min(4, len(skills))))
+        if hits:
+            plus.append("навыки: " + ", ".join(hits[:4]))
+        else:
+            minus.append("ни один навык из резюме не встречается в вакансии")
+    else:
+        score += 10
+
+    common = _words(cv.title) & _words(job.title)
+    if common:
+        score += 25
+        plus.append("роль совпадает: " + ", ".join(sorted(common)[:3]))
+    elif _words(job.title) & _words(cv_text):
+        score += 12
+        plus.append("похожий опыт в резюме")
+    else:
+        minus.append(f"должность «{job.title}» далека от «{cv.title}»")
+
+    need = _level_of(job.title)
+    have = cv.experience_years or 0
+    if need < 0:
+        score += 10
+    elif have >= need:
+        score += 15
+        if need >= 5:
+            plus.append(f"опыта хватает: {have} лет при требуемых ~{need}")
+    else:
+        score += max(0, 15 - (need - have) * 4)
+        minus.append(f"вакансия уровня ~{need} лет, в резюме {have}")
+
+    from server.crawler import IGAMING_SIGNAL_RE
+    igaming_job = bool(IGAMING_SIGNAL_RE.search(job_text))
+    igaming_cv = bool(IGAMING_SIGNAL_RE.search(cv_text))
+    if igaming_job and igaming_cv:
+        score += 10
+        plus.append("есть опыт в iGaming")
+    elif igaming_job and not igaming_cv:
+        minus.append("нет опыта в iGaming, а вакансия про него")
+    else:
+        score += 5
+
+    fmt_job, fmt_cv = (job.fmt or "").lower(), (cv.desired_format or "").lower()
+    if not fmt_cv or not fmt_job or fmt_cv[:4] == fmt_job[:4]:
+        score += 8
+    elif "удал" in fmt_cv and "удал" not in fmt_job:
+        minus.append(f"вы хотите удалёнку, здесь {job.fmt}")
+    else:
+        score += 4
+
+    cv_langs = {l.strip().lower()[:3] for l in (cv.languages or "").split(",") if l.strip()}
+    job_langs = set() if light else {code[:3] for code, _label in getattr(job, "language_list", []) or []}
+    if not job_langs or not cv_langs or (cv_langs & job_langs):
+        score += 7
+    else:
+        score += 2
+        minus.append("язык вакансии не заявлен в резюме")
+
+    percent = max(5, min(99, score))
+    label = ("высокий шанс" if percent >= 70 else
+             "средний шанс" if percent >= 45 else "низкий шанс")
+    return {"percent": percent, "label": label, "plus": plus[:3], "minus": minus[:3],
+            "tone": "good" if percent >= 70 else "mid" if percent >= 45 else "low"}
+
+
 def resume_is_ready(cv) -> bool:
     """Резюме годится для отклика: есть должность и хоть какая-то суть о человеке."""
     if not cv:
@@ -2145,9 +2249,16 @@ def job_locations_cached(db: Session) -> list:
 
 @app.get("/jobs", response_class=HTMLResponse)
 def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
-              loc: str = "", lang: str = "", salary_only: int = 0, page: int = 1,
+              loc: str = "", lang: str = "", salary_only: int = 0, fit: int = 0, page: int = 1,
               db: Session = Depends(db_session)):
     base = db.query(Job).filter(Job.status == "approved")
+    # соискателю с заполненным резюме считаем процент совпадения (fit=1 — сортировка по нему)
+    viewer_cv = None
+    viewer_user = get_user(request, db)
+    if viewer_user and viewer_user.role == "talent":
+        candidate_cv = db.query(Resume).filter_by(user_id=viewer_user.id).first()
+        viewer_cv = candidate_cv if resume_is_ready(candidate_cv) else None
+    fit = 1 if (fit and viewer_cv) else 0
     qs = base
     fmt = normalize_fmt(fmt)
     if fmt:
@@ -2162,6 +2273,25 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
         from sqlalchemy.orm import defer as _defer
         qs = qs.options(_defer(Job.description))
     ordered = qs.order_by(Job.featured.desc(), Job.created_at.desc())
+    if fit:
+        # считаем по свежим 800 — на всех 7 тысячах это заметная задержка, а хвост
+        # всё равно не попадёт в верх выдачи
+        pool = qs.order_by(Job.created_at.desc()).limit(800).all()
+        scored = sorted(((match_score(viewer_cv, j, light=True), j) for j in pool),
+                        key=lambda pair: -pair[0]["percent"])
+        jobs = [j for _m, j in scored]
+        found = len(jobs)
+        total_pages = max(1, (found + JOBS_PER_PAGE - 1) // JOBS_PER_PAGE)
+        page = max(1, min(page, total_pages))
+        page_jobs = jobs[(page - 1) * JOBS_PER_PAGE: page * JOBS_PER_PAGE]
+        from urllib.parse import urlencode
+        active = {k: v for k, v in (("fmt", fmt), ("cat", cat), ("loc", loc), ("fit", 1)) if v}
+        return render(request, db, "jobs.html", jobs=page_jobs, q=q, fmt=fmt, cat=cat,
+                      loc=loc, lang=lang, salary_only=salary_only, formats=FORMATS, categories=CATEGORIES,
+                      job_languages=JOB_LANGUAGES, locations=job_locations_cached(db), page=page,
+                      total_pages=total_pages, found=found, qs_base=urlencode(active), fit=fit,
+                      matches={j.id: m for m, j in scored}, has_cv=bool(viewer_cv),
+                      total=base.count())
     python_filters = bool(q or salary_only or lang)
     if not python_filters:
         # обычный листинг и SQL-фильтры: страница берётся из базы, а не из 6 тысяч объектов
@@ -2175,6 +2305,8 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
                       loc=loc, lang=lang, salary_only=salary_only, formats=FORMATS, categories=CATEGORIES,
                       job_languages=JOB_LANGUAGES, locations=job_locations_cached(db), page=page,
                       total_pages=total_pages, found=found, qs_base=urlencode(active),
+                      matches={j.id: match_score(viewer_cv, j, light=True) for j in page_jobs} if viewer_cv else {},
+                      has_cv=bool(viewer_cv), fit=fit,
                       total=base.count())
     jobs = ordered.all()
     if q:
@@ -2211,6 +2343,8 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
                   job_languages=JOB_LANGUAGES,
                   locations=locations, page=page, total_pages=total_pages, found=found,
                   qs_base=qs_base,
+                  matches={j.id: match_score(viewer_cv, j, light=True) for j in page_jobs} if viewer_cv else {},
+                  has_cv=bool(viewer_cv), fit=fit,
                   total=base.count())
 
 
@@ -3153,8 +3287,14 @@ def job_detail(job_id: str, request: Request, db: Session = Depends(db_session))
     similar = (db.query(Job).filter(Job.status == "approved", Job.id != job.id,
                                     Job.category == job.category)
                .order_by(Job.featured.desc(), Job.created_at.desc()).limit(3).all())
+    # соискателю показываем, насколько его резюме подходит этой вакансии
+    match = {}
+    if user and user.role == "talent":
+        cv = db.query(Resume).filter_by(user_id=user.id).first()
+        if resume_is_ready(cv):
+            match = match_score(cv, job)
     return render(request, db, "job.html", job=job, applied=applied,
-                  applies=len(job.applications), similar=similar,
+                  applies=len(job.applications), similar=similar, match=match,
                   is_closed=job.status == "archived", loc_schema=job_location_schema(job))
 
 
