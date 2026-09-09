@@ -1,10 +1,6 @@
 import React from "react";
 import { AbsoluteFill, Audio, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import { loadFont as loadDisplay } from "@remotion/google-fonts/Unbounded";
-import { loadFont as loadBody } from "@remotion/google-fonts/GolosText";
-
-const display = loadDisplay("normal", { weights: ["700", "800"], subsets: ["latin", "cyrillic"] }).fontFamily;
-const body = loadBody("normal", { weights: ["400", "600", "700"], subsets: ["latin", "cyrillic"] }).fontFamily;
+import { body, display } from "./fonts";
 
 export const FPS = 30;
 const C = { bg: "#0a120e", bg2: "#0f1a14", ink: "#f2f7f4", dim: "#9fb3a8", acid: "#12e08e", pink: "#ff3fa4", gold: "#d4a94a", line: "rgba(18,224,142,.22)" };

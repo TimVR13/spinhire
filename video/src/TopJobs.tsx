@@ -1,10 +1,6 @@
 import React from "react";
 import { AbsoluteFill, Audio, Img, Sequence, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import { loadFont as loadDisplay } from "@remotion/google-fonts/Unbounded";
-import { loadFont as loadBody } from "@remotion/google-fonts/GolosText";
-
-const display = loadDisplay("normal", { weights: ["700", "800"], subsets: ["latin", "cyrillic"] }).fontFamily;
-const body = loadBody("normal", { weights: ["400", "600", "700"], subsets: ["latin", "cyrillic"] }).fontFamily;
+import { body, display } from "./fonts";
 
 export const FPS = 30;
 const HOOK = 150, CARD = 120, CTA = 120;

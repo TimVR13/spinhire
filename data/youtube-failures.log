@@ -1,2 +1,3 @@
 2026-09-10 morning: spinhire.io недоступен — egress proxy отклоняет CONNECT spinhire.io:443 (403, connect_rejected), spec не собрать
 2026-09-10 morning: YouTube uploadLimitExceeded — канал исчерпал дневной лимит загрузок; ролик отрендерен, но не залит (в облаке также нет video/public/audio/tracks/, музыка заменена тишиной)
+2026-09-10 morning: YouTube uploadLimitExceeded — дневной лимит загрузок канала исчерпан; ролик отрендерен (video/out/2026-09-10-morning.mp4), но не залит. Отдельно починен рендер: шрифты Unbounded/Golos Text теперь локальные (video/public/fonts), gstatic из браузера рендера недоступен (ERR_CERT_AUTHORITY_INVALID)
