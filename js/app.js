@@ -523,13 +523,13 @@ if (window.matchMedia('(pointer: fine)').matches &&
   });
 }
 
-// Переключатель светлой/тёмной темы (на всех страницах).
+// Переключатель светлой/тёмной темы (на всех страницах). С 09.09.2026 светлая — по умолчанию.
 // В кабинетах (body.workspace) — своя настройка: светлая по умолчанию,
 // тёмную человек включает сам, выбор хранится отдельно (wsTheme).
 (function () {
   const isWorkspace = document.body && document.body.classList.contains('workspace');
   const saved = localStorage.getItem('theme');
-  if (!isWorkspace && saved) document.documentElement.setAttribute('data-theme', saved);
+  if (!isWorkspace) { if (saved === 'dark') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', 'light'); }
   function apply(t) {
     if (isWorkspace) {
       if (t === 'dark') document.documentElement.setAttribute('data-ws-theme', 'dark');
@@ -557,7 +557,7 @@ if (window.matchMedia('(pointer: fine)').matches &&
       document.body.appendChild(btn);
     }
     apply(isWorkspace ? (localStorage.getItem('wsTheme') || 'light')
-                      : (localStorage.getItem('theme') || 'dark'));
+                      : (localStorage.getItem('theme') || 'light'));
     btn.addEventListener('click', () => {
       if (isWorkspace) {
         const cur = document.documentElement.getAttribute('data-ws-theme') === 'dark' ? 'dark' : 'light';

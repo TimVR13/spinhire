@@ -9,215 +9,176 @@
 <meta property="og:url" content="https://spinhire.io/post-job">
 <meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">{% endblock %}
 {% block content %}
-  <nav class="crumbs" style="text-align: center;"><a href="/">Главная</a> / Работодателям</nav>
   <style>
-    .pj-hero { display:grid; grid-template-columns: minmax(0,1.1fr) minmax(0,.9fr); gap: clamp(24px,4vw,56px); align-items:center; margin: 4px 0 var(--sp-6); }
-    .pj-hero h1 { font-size: clamp(1.9rem, 3.6vw, 3rem); line-height:1.04; margin: 8px 0 14px; }
-    .pj-hero p { color: var(--ink-dim); max-width: 52ch; line-height:1.6; }
-    .pj-hero__art { position:relative; border-radius: var(--radius); overflow:hidden; border:1px solid var(--line); aspect-ratio: 4/3; background: var(--bg-deep); }
-    .pj-hero__art img { width:100%; height:100%; object-fit:cover; display:block; }
-    .pj-hero__art::after { content:''; position:absolute; inset:0; background: linear-gradient(180deg, transparent 60%, oklch(0.1 0.02 160 / .7)); pointer-events:none; }
-    .pj-hero__stats { display:flex; gap: 18px; flex-wrap:wrap; margin-top: 18px; }
-    .pj-hero__stats b { display:block; font-family: var(--font-display); font-size: 1.4rem; color: var(--acid); }
-    .pj-hero__stats span { font-size: .78rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; }
-    .tariff { position:relative; --tone: var(--acid); }
-    .tariff.pinkc { --tone: var(--pink); }
-    /* Шапка тарифа: слева название и цена, справа иконка-бейдж 64px, по высоте
-       равная блоку «название + цена». Иконка привязана к правому краю, а не висит
-       в левом верхнем углу над пустым полем. */
-    .tariff-head { display:grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px; align-items:center; margin-bottom: 4px; }
-    .tariff-head__t > b { display:block; line-height:1.2; }
-    .tariff-head .salary { margin: 2px 0 0; }
-    /* Иконки — без «наклейки»: круглая мягкая маска прячет квадрат JPG,
-       mix-blend-mode: screen растворяет его тёмный фон в поверхности карточки,
-       а свечение берёт цвет акцента карточки (--tone: изумруд / розовый). */
-    .tariff-ico, .perk-ico { position:relative; flex:none; }
-    .tariff-ico { width:64px; height:64px; margin:0; }
-    .perk-ico { width:52px; height:52px; }
-    .tariff-ico::before, .perk-ico::before { content:""; position:absolute; inset:-34%; border-radius:50%; pointer-events:none;
-      background: radial-gradient(circle, color-mix(in oklch, var(--tone, var(--acid)) 26%, transparent) 0%, color-mix(in oklch, var(--tone, var(--acid)) 7%, transparent) 42%, transparent 70%); }
-    .tariff-ico img, .perk-ico img { position:relative; width:100%; height:100%; object-fit:cover; display:block; border-radius:50%;
-      mix-blend-mode: screen; transform: scale(1.16);
-      -webkit-mask-image: radial-gradient(circle closest-side, #000 76%, transparent 100%);
-              mask-image: radial-gradient(circle closest-side, #000 76%, transparent 100%); }
-    /* светлая тема: screen высветлил бы сам объект — оставляем тёмный «медальон» с чёткой кромкой */
-    :root[data-theme="light"] .tariff-ico img, :root[data-theme="light"] .perk-ico img { mix-blend-mode: normal; transform: scale(1.02);
-      -webkit-mask-image: radial-gradient(circle closest-side, #000 95%, transparent 100%);
-              mask-image: radial-gradient(circle closest-side, #000 95%, transparent 100%); }
-    :root[data-theme="light"] .tariff-ico::before, :root[data-theme="light"] .perk-ico::before { opacity:.55; }
-    .perk { display:grid; grid-template-columns: 52px 1fr; gap: 14px; align-items:start; }
-    @media (max-width: 860px) { .pj-hero { grid-template-columns: 1fr; } .pj-hero__art { order:-1; aspect-ratio: 16/9; } .tariff-ico { width: 56px; height: 56px; } }
-    @media (max-width: 760px) { .perk { grid-template-columns: 36px 1fr; align-items:center; gap:10px; } .perk-ico { width:36px; height:36px; } }
-    .promo-launch { margin: 12px 0 16px; padding: 12px 16px; border: 2px solid var(--acid); background: color-mix(in oklch, var(--acid) 12%, transparent); font-size: 1rem; line-height: 1.5; max-width: 62ch; }
-    .promo-launch b { color: var(--acid); }
+    /* Страница «Работодателям»: герой → 3+3 тарифа → что входит → 4 шага → FAQ → CTA.
+       Пакеты 3/10 и «1 открытие» спрятаны под раскрывающейся строкой, чтобы не плодить карточки. */
+    .pj-hero { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 24px 40px; align-items: end; padding: 4px 0 28px; border-bottom: 1px solid var(--line); margin-bottom: var(--sp-6); }
+    .pj-hero h1 { font-size: clamp(1.9rem, 3.4vw, 2.8rem); line-height: 1.04; margin: 8px 0 12px; }
+    .pj-hero p { color: var(--ink-dim); max-width: 56ch; line-height: 1.6; font-size: 1.02rem; }
+    .pj-hero p b { color: var(--ink); }
+    .pj-hero__cta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+    .pj-hero__stats { display: flex; gap: 26px; flex-wrap: wrap; }
+    .pj-hero__stats b { display: block; font-family: var(--font-display); font-size: 1.5rem; color: var(--acid); line-height: 1; font-variant-numeric: tabular-nums; }
+    .pj-hero__stats span { font-size: .72rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; }
+    @media (max-width: 860px) { .pj-hero { grid-template-columns: 1fr; align-items: start; } }
+
+    .pj-title { font-family: var(--font-display); font-size: 1.05rem; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 4px; }
+    .pj-sub { color: var(--ink-dim); font-size: .9rem; margin-bottom: var(--sp-4); max-width: 74ch; }
+
+    .tariff-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); }
+    .tariff { display: flex; flex-direction: column; position: relative; --tone: var(--acid); }
+    .tariff.hot { border-color: var(--acid); box-shadow: var(--shadow-acid); }
+    .tariff.pinkc { --tone: var(--pink); border-color: var(--pink); }
+    .tariff-head { display: grid; grid-template-columns: minmax(0,1fr) 44px; gap: 12px; align-items: start; }
+    .tariff-head b { display: block; font-family: var(--font-display); font-size: .95rem; line-height: 1.2; }
+    .tariff .salary { font-size: 1.9rem; margin: 6px 0 2px; display: block; }
+    .tariff.pinkc .salary { color: var(--pink); }
+    .tariff .was { display: block; color: var(--ink-faint); font-size: .8rem; }
+    .tariff .was s { color: var(--ink-faint); }
+    .tariff-ico { width: 44px; height: 44px; border-radius: 12px; background: color-mix(in oklch, var(--tone) 12%, transparent); color: var(--tone); display: grid; place-items: center; }
+    .tariff-ico svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .tariff ul { list-style: none; margin: 12px 0 18px; display: flex; flex-direction: column; gap: 6px; font-size: .85rem; color: var(--ink-dim); flex: 1; }
+    .tariff li { padding-left: 14px; position: relative; }
+    .tariff li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--tone); }
+    .tariff form { margin-top: auto; }
+    .tariff .flag { position: absolute; top: -10px; right: 16px; font-size: .6rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; background: var(--tone); color: var(--on-acid); }
+    .tariff.pinkc .flag { color: var(--on-pink); }
+    @media (max-width: 900px) { .tariff-grid { grid-template-columns: 1fr; max-width: 480px; margin-inline: auto; } }
+
+    .more-plans { margin: 12px 0 var(--sp-7); font-size: .9rem; color: var(--ink-dim); }
+    .more-plans summary { cursor: pointer; list-style: none; display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .more-plans summary::-webkit-details-marker { display: none; }
+    .more-plans summary b { color: var(--acid); font-weight: 700; }
+    .more-plans summary b::after { content: " →"; }
+    .more-plans[open] summary b::after { content: " ↑"; }
+    .more-plans .tariff-grid { margin-top: var(--sp-4); grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 820px; }
+    @media (max-width: 700px) { .more-plans .tariff-grid { grid-template-columns: 1fr; } }
+
+    .incl { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px; padding: 18px 22px; margin-bottom: var(--sp-7); }
+    .incl div { display: flex; flex-direction: column; gap: 8px; font-size: .8rem; font-weight: 600; line-height: 1.3; }
+    .incl .tariff-ico { width: 34px; height: 34px; border-radius: 9px; }
+    .incl .tariff-ico svg { width: 18px; height: 18px; }
+    @media (max-width: 900px) { .incl { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+    @media (max-width: 600px) { .incl { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+    .steps { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: var(--sp-7); font-size: .9rem; }
+    .step { display: flex; align-items: center; gap: 8px; }
+    .step i { width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--bg); font: 800 .7rem/22px var(--font-display); text-align: center; font-style: normal; flex: none; }
+    .step-ar { color: var(--ink-faint); padding: 0 4px; }
+
+    .faq { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: var(--sp-7); }
+    .faq details { padding: 0 18px; }
+    .faq summary { cursor: pointer; list-style: none; font-weight: 600; font-size: .92rem; padding: 14px 0; display: flex; justify-content: space-between; gap: 10px; }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary::after { content: "+"; color: var(--acid); font-weight: 800; flex: none; }
+    .faq details[open] summary::after { content: "–"; }
+    .faq details p { margin: 0 0 14px; color: var(--ink-dim); font-size: .86rem; line-height: 1.55; }
+    @media (max-width: 700px) { .faq { grid-template-columns: 1fr; } }
+
+    .pj-cta { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 20px; align-items: center; border-color: var(--pink); }
+    .pj-cta b { font-family: var(--font-display); font-size: 1.3rem; text-transform: uppercase; display: block; margin-bottom: 4px; line-height: 1.15; }
+    .pj-cta p { color: var(--ink-dim); font-size: .9rem; }
+    .pj-cta__act { display: flex; gap: 10px; flex-wrap: wrap; }
+    @media (max-width: 700px) { .pj-cta { grid-template-columns: 1fr; } }
   </style>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="pj-one" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 10h8M8 14h5"/></symbol>
+    <symbol id="pj-bolt" viewBox="0 0 24 24"><path d="M13 2 5 13h6l-1 9 8-11h-6z"/></symbol>
+    <symbol id="pj-inf" viewBox="0 0 24 24"><path d="M8.5 8.5C4 8.5 4 15.5 8.5 15.5c3.5 0 4-7 7-7 4.5 0 4.5 7 0 7-3 0-3.5-7-7-7z"/></symbol>
+    <symbol id="pj-pack" viewBox="0 0 24 24"><rect x="3" y="7" width="12" height="12" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2"/></symbol>
+    <symbol id="pj-key" viewBox="0 0 24 24"><circle cx="8" cy="14" r="4.5"/><path d="M11.5 11.5 20 3m-3 3 2.5 2.5M14.5 8.5 17 11"/></symbol>
+    <symbol id="pj-stack" viewBox="0 0 24 24"><rect x="4" y="9" width="13" height="11" rx="1.5"/><path d="M8 6.5h12v10M8 13h5M8 16h3"/></symbol>
+    <symbol id="pj-coins" viewBox="0 0 24 24"><ellipse cx="12" cy="6.5" rx="7" ry="2.8"/><path d="M5 6.5v5c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8v-5M5 11.5v5c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8v-5"/></symbol>
+    <symbol id="pj-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></symbol>
+    <symbol id="pj-ats" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 13h3M8 16h6"/></symbol>
+    <symbol id="pj-g" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="pj-geo" viewBox="0 0 24 24"><path d="M12 21s6-5.5 6-11a6 6 0 0 0-12 0c0 5.5 6 11 6 11z"/><circle cx="12" cy="10" r="2.2"/></symbol>
+    <symbol id="pj-co" viewBox="0 0 24 24"><path d="M4 21V5l8-3v19M12 9l8 3v9M4 21h16"/></symbol>
+    <symbol id="pj-st" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+    <symbol id="pj-mod" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="pj-sal" viewBox="0 0 24 24"><path d="M4 12h16M12 4v16"/><circle cx="12" cy="12" r="9"/></symbol>
+    <symbol id="pj-tg" viewBox="0 0 24 24"><path d="M21 4 3 11l6 2 2 6 3-4 5 3z"/></symbol>
+  </svg>
+
   <section class="pj-hero">
     <div>
-      <span class="kicker pink">Промо запуска</span>
+      <span class="kicker pink">Работодателям</span>
       <h1>Разместить вакансию в iGaming</h1>
-      <div class="promo-launch"><b>Первые {{ promo_free_jobs }} вакансии — бесплатно.</b> Дальше от €49.</div>
-      <p>Кандидаты из казино, беттинга и геймдева. Вакансия попадает в поиск, Google Jobs и Telegram.</p>
-      <div class="pj-hero__stats">
-        <div><b>{{ live_jobs|default('1 900+') }}</b><span>живых вакансий</span></div>
-        <div><b>до 2 ч</b><span>модерация</span></div>
-        <div><b>{{ promo_free_jobs }}</b><span>вакансии бесплатно</span></div>
+      <p><b>Первые {{ promo_free_jobs }} вакансии бесплатно</b>, дальше от €49. Кандидаты из казино, беттинга и геймдева. Вакансия попадает в поиск, Google Jobs и Telegram.</p>
+      <div class="pj-hero__cta">
+        {% if need_login %}<a href="/register?role=employer" class="btn btn-acid">Разместить бесплатно</a>{% else %}<a href="/employer#post" class="btn btn-acid">Разместить бесплатно</a>{% endif %}
+        <a href="#pricing" class="btn btn-ghost">Тарифы</a>
       </div>
     </div>
-    <div class="pj-hero__art"><img src="/img/pricing/hero.jpg" alt="Дилер сдаёт карту-вакансию на зелёном сукне" width="800" height="600"></div>
+    <div class="pj-hero__stats">
+      <div><b>{{ live_jobs|default('1 900+') }}</b><span>живых вакансий</span></div>
+      <div><b>до 2 ч</b><span>модерация</span></div>
+      <div><b>{{ promo_free_jobs }}</b><span>вакансии бесплатно</span></div>
+    </div>
   </section>
 
-  <!-- ТАРИФЫ -->
-
-  <section id="pricing" style="margin-bottom: var(--sp-7);">
-    <span class="kicker">Цена запуска · действует до 30 сентября 2026</span>
-    <p style="color: var(--ink-dim); max-width: 74ch; margin: 10px 0 var(--sp-4); font-size: 0.95rem;">Чем больше нанимаете, тем дешевле размещение.</p>
-    <style>
-      /* Первый ряд — три разовых тарифа, второй — два пакетных на всю ширину,
-         чтобы края рядов совпадали и ничего не выглядело съехавшим. */
-      .tariff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: var(--sp-3); margin-top: var(--sp-4); }
-      .tariff-grid.row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .tariff-grid.row-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      @media (max-width: 900px) { .tariff-grid.row-3, .tariff-grid.row-2 { grid-template-columns: 1fr; max-width: 480px; margin-inline: auto; } }
-      .tariff { display: flex; flex-direction: column; }
-      .tariff .salary { font-size: 1.7rem; margin: 6px 0 2px; }
-      .tariff .was { display: block; color: var(--ink-faint); font-size: 0.82rem; margin-bottom: 6px; }
-      .tariff .was s { color: var(--ink-faint); }
-      .tariff .was b { color: var(--ink); font-weight: 700; }
-      .tariff .unit { display: inline-flex; width: fit-content; margin: 8px auto 0; padding: 4px 8px; border: 1px solid var(--emerald, var(--acid)); color: var(--emerald, var(--acid)); font-size: 0.72rem; font-weight: 800; text-transform: uppercase; }
-      .tariff .per { color: var(--ink-dim); font-size: 0.9rem; line-height: 1.45; min-height: 2.6em; }
-      .tariff ul { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 0.83rem; color: var(--ink-dim); margin: 12px 0 14px; flex: 1; }
-      .tariff li::before { content: "▸ "; color: var(--acid); font-weight: 800; }
-      .tariff.pinkc li::before { color: var(--pink); }
-      .tariff form { margin-top: auto; }
-      .tariff-group-title { font-family: var(--font-display); font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.04em; margin: var(--sp-6) 0 4px; }
-      .tariff-group-sub { color: var(--ink-dim); font-size: 0.9rem; max-width: 74ch; }
-      .perk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: var(--sp-3); margin-top: var(--sp-4); }
-      .perk { border: 1px solid var(--line); padding: var(--sp-4); }
-      .perk b { font-family: var(--font-display); font-size: 0.95rem; display: block; margin-bottom: 6px; }
-      .perk p { color: var(--ink-dim); font-size: 0.86rem; line-height: 1.55; }
-      .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--sp-3); margin-top: var(--sp-4); }
-      .step { border-left: 2px solid var(--acid); padding: 4px 0 4px 14px; }
-      .step span { font-family: var(--font-display); font-size: 0.75rem; color: var(--acid); letter-spacing: 0.1em; }
-      .step b { display: block; margin: 4px 0 6px; font-size: 0.95rem; }
-      .step p { color: var(--ink-dim); font-size: 0.85rem; line-height: 1.5; }
-      .qa { margin-top: var(--sp-4); }
-      .qa-item { border-bottom: 1px solid var(--line); padding: 14px 0; }
-      .qa-item b { display: block; margin-bottom: 6px; font-size: 0.95rem; }
-      .qa-item p { color: var(--ink-dim); font-size: 0.88rem; line-height: 1.6; }
-      @media (max-width: 760px) {
-        /* на телефоне — только суть: преимущества и шаги как список, ответы по тапу */
-        .perk-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
-        .perk { padding: 10px 14px; }
-        .perk p { display: none; }
-        .perk b { display: block; font-size: 0.92rem; margin: 0; }
-        .steps { gap: 8px; }
-        .step p { display: none; }
-        .step b { margin-bottom: 0; }
-        .qa-item p { display: none; }
-        .qa-item { cursor: pointer; padding-block: 10px; }
-        .qa-item b::after { content: " ⌄"; color: var(--acid); }
-        .qa-item.open p { display: block; }
-        .qa-item.open b::after { content: " ⌃"; }
-      }
-    </style>
-    <script>document.addEventListener('click',e=>{const q=e.target.closest('.qa-item');if(q&&matchMedia('(max-width:760px)').matches)q.classList.toggle('open');});</script>
-
-    <h2 class="tariff-group-title" style="margin-top: 0;">Разместить вакансию</h2>
-    <p class="tariff-group-sub">Пакеты не сгорают: публикуйте в течение года.</p>
-    <div class="tariff-grid row-3">
-      <div class="card tariff"><div class="tariff-head"><div class="tariff-head__t"><b style="font-family: var(--font-display);">Одна вакансия</b><div class="salary">€49</div></div><div class="tariff-ico"><img src="/img/pricing/t-single.jpg" alt="" loading="lazy" width="64" height="64"></div></div>
-        <span class="was">Было <s>€99</s> — сейчас <b>€49</b></span>
-        <span class="per">Размещение вакансии на 30 дней</span>
+  <section id="pricing">
+    <h2 class="pj-title">Размещение вакансий</h2>
+    <p class="pj-sub">Пакеты не сгорают: публикуйте в течение года.</p>
+    <div class="tariff-grid">
+      <div class="card tariff"><div class="tariff-head"><div><b>Одна вакансия</b><span class="salary">€49</span><span class="was">Было <s>€99</s></span></div><div class="tariff-ico"><svg><use href="#pj-one"/></svg></div></div>
         <ul>
-          <li>Вакансия показывается в поиске и категориях</li>
-          <li>Все отклики доступны в кабинете работодателя</li>
-          <li>Одно поднятие вакансии в начало списка</li>
-          <li>Проверка и публикация — обычно до 2 часов</li>
+          <li>30 дней в поиске и категориях</li>
+          <li>Все отклики в кабинете работодателя</li>
+          <li>Одно поднятие в начало списка</li>
         </ul>
         <form method="post" action="/checkout/single"><button class="btn btn-ghost btn-sm btn-block" type="submit">Разместить за €49</button></form></div>
 
-      <div class="card tariff" style="border-color: var(--acid);"><div class="tariff-head"><div class="tariff-head__t"><b style="font-family: var(--font-display);">Продвижение ⚡</b><div class="salary">€99</div></div><div class="tariff-ico"><img src="/img/pricing/t-promo.jpg" alt="" loading="lazy" width="64" height="64"></div></div>
-        <span class="was">Было <s>€199</s> — сейчас <b>€99</b></span>
-        <span class="per">Продвижение вакансии на 60 дней</span>
+      <div class="card tariff hot"><span class="flag">Выбирают чаще</span><div class="tariff-head"><div><b>Продвижение ⚡</b><span class="salary">€99</span><span class="was">Было <s>€199</s></span></div><div class="tariff-ico"><svg><use href="#pj-bolt"/></svg></div></div>
         <ul>
-          <li>Всё, что входит в разовое размещение</li>
-          <li>Вакансия закреплена вверху поиска и на главной</li>
-          <li>Отдельная публикация в Telegram-канале</li>
-          <li>Четыре автоматических поднятия за 60 дней</li>
+          <li>Закреплена вверху поиска и на главной 60 дней</li>
+          <li>Отдельный пост в Telegram-канале</li>
+          <li>Четыре автоматических поднятия</li>
         </ul>
         <form method="post" action="/checkout/featured"><button class="btn btn-acid btn-sm btn-block" type="submit">Продвинуть за €99</button></form></div>
 
-      <div class="card tariff"><div class="tariff-head"><div class="tariff-head__t"><b style="font-family: var(--font-display);">Безлимит на месяц</b><div class="salary">€599</div></div><div class="tariff-ico"><img src="/img/pricing/t-unlimited.jpg" alt="" loading="lazy" width="64" height="64"></div></div>
-        <span class="was">Выгоднее пакета на 10, если публикуете от 15 вакансий в месяц</span>
-        <span class="per">Сколько угодно вакансий 30 дней подряд</span>
+      <div class="card tariff"><div class="tariff-head"><div><b>Безлимит на месяц</b><span class="salary">€599</span><span class="was">Выгоднее пакета от 15 вакансий в месяц</span></div><div class="tariff-ico"><svg><use href="#pj-inf"/></svg></div></div>
         <ul>
-          <li>Для активного набора смен и саппорта</li>
+          <li>Сколько угодно вакансий 30 дней подряд</li>
           <li>Все вакансии сразу с брендом компании</li>
           <li>Приоритетная модерация в течение часа</li>
         </ul>
         <form method="post" action="/checkout/unlim30"><button class="btn btn-ghost btn-sm btn-block" type="submit">Открыть безлимит</button></form></div>
     </div>
 
-    <div class="tariff-grid row-2" style="margin-top: var(--sp-3);">
-      <div class="card tariff"><div class="tariff-head"><div class="tariff-head__t"><b style="font-family: var(--font-display);">Пакет 3 вакансии</b><div class="salary">€138</div></div><div class="tariff-ico"><img src="/img/pricing/t-pack3.jpg" alt="" loading="lazy" width="64" height="64"></div></div>
-        <span class="was">Поштучно вышло бы <s>€147</s> — в пакете <b>€138</b></span>
-        <span class="per">Три размещения по 30 дней каждое</span>
-        <span class="unit">€46 за вакансию</span>
-        <ul>
-          <li>Размещения не сгорают — год на использование</li>
-          <li>Можно публиковать по одной, когда откроется роль</li>
-          <li>Логотип и описание компании в карточках</li>
-        </ul>
-        <form method="post" action="/checkout/pack3"><button class="btn btn-ghost btn-sm btn-block" type="submit">Взять 3 за €138</button></form></div>
+    <details class="more-plans">
+      <summary>Нужно 3–10 вакансий? <b>Пакеты от €42 за вакансию</b></summary>
+      <div class="tariff-grid">
+        <div class="card tariff"><div class="tariff-head"><div><b>Пакет 3 вакансии</b><span class="salary">€138</span><span class="was">Поштучно <s>€147</s> · €46 за вакансию</span></div><div class="tariff-ico"><svg><use href="#pj-pack"/></svg></div></div>
+          <ul>
+            <li>Три размещения по 30 дней, год на использование</li>
+            <li>Публикуйте по одной, когда откроется роль</li>
+            <li>Логотип и описание компании в карточках</li>
+          </ul>
+          <form method="post" action="/checkout/pack3"><button class="btn btn-ghost btn-sm btn-block" type="submit">Взять 3 за €138</button></form></div>
+        <div class="card tariff"><div class="tariff-head"><div><b>Пакет 10 вакансий</b><span class="salary">€420</span><span class="was">Поштучно <s>€490</s> · €42 за вакансию</span></div><div class="tariff-ico"><svg><use href="#pj-pack"/></svg></div></div>
+          <ul>
+            <li>Всё из пакета на 3 вакансии</li>
+            <li>Два продвижения ⚡ в подарок</li>
+            <li>Страница компании со всеми открытыми ролями</li>
+          </ul>
+          <form method="post" action="/checkout/pack10"><button class="btn btn-ghost btn-sm btn-block" type="submit">Взять 10 за €420</button></form></div>
+      </div>
+    </details>
 
-      <div class="card tariff"><div class="tariff-head"><div class="tariff-head__t"><b style="font-family: var(--font-display);">Пакет 10 вакансий</b><div class="salary">€420</div></div><div class="tariff-ico"><img src="/img/pricing/t-pack10.jpg" alt="" loading="lazy" width="64" height="64"></div></div>
-        <span class="was">Поштучно вышло бы <s>€490</s> — в пакете <b>€420</b></span>
-        <span class="per">Десять размещений по 30 дней каждое</span>
-        <span class="unit">€42 за вакансию</span>
-        <ul>
-          <li>Всё из пакета на 3 вакансии</li>
-          <li>Два продвижения ⚡ в подарок</li>
-          <li>Страница компании со всеми открытыми ролями</li>
-        </ul>
-        <form method="post" action="/checkout/pack10"><button class="btn btn-ghost btn-sm btn-block" type="submit">Взять 10 за €420</button></form></div>
-    </div>
-
-    <h2 class="tariff-group-title">Что входит в любое размещение</h2>
-    <p class="tariff-group-sub">На любом тарифе, без доплат.</p>
-    <div class="perk-grid">
-      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-ats.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Мини-ATS в кабинете</b><p>Все отклики в одном месте со статусами: новый, просмотрен, интервью, оффер, отказ. Заметки по кандидату и история переписки.</p></div></div>
-      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-google.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Индексация в Google Jobs</b><p>Каждая вакансия отдаётся с разметкой JobPosting и попадает в поиск Google по вакансиям — это дополнительный поток кандидатов помимо самого сайта.</p></div></div>
-      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-seo.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Попадание в гео- и SEO-страницы</b><p>Вакансия автоматически появляется в подборках по стране, городу, направлению и языку, а также на странице профессии в картотеке.</p></div></div>
-      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-company.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Страница компании</b><p>Логотип, описание, сайт и все открытые вакансии на одной брендированной странице — её видно и в разделе «Компании», и в поиске.</p></div></div>
-      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-stats.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Статистика по вакансии</b><p>Просмотры, отклики, конверсия из просмотра в отклик и источники переходов — видно в кабинете по каждой вакансии.</p></div></div>
-      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-moderation.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Ручная модерация</b><p>Живой человек проверяет вакансию перед публикацией и подсказывает, что поправить. Обычно занимает до двух часов в рабочее время.</p></div></div>
-      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-salary.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Обязательная зарплатная вилка</b><p>Мы не публикуем вакансии без вилки. Это правило поднимает отклик — кандидаты открывают такие вакансии заметно чаще.</p></div></div>
-      <div class="perk"><div class="perk-ico"><img src="/img/pricing/p-telegram.jpg" alt="" loading="lazy" width="52" height="52"></div><div><b>Анонс в Telegram</b><p>Вакансии с продвижением уходят отдельным постом в канал SpinHire, где сидит аудитория, которая не мониторит сайты каждый день.</p></div></div>
-    </div>
-
-    <h2 class="tariff-group-title">База резюме и подбор</h2>
-    <p class="tariff-group-sub">Профили бесплатно. Платите за открытие: имя, e-mail и Telegram кандидата.</p>
+    <h2 class="pj-title">База резюме и подбор</h2>
+    <p class="pj-sub">Профили бесплатно. Платите за открытие: имя, e-mail и Telegram кандидата.</p>
     <div class="tariff-grid">
-      <div class="card tariff"><div class="tariff-head"><div class="tariff-head__t"><b style="font-family: var(--font-display);">1 открытие</b><div class="salary">€5</div></div><div class="tariff-ico"><img src="/img/pricing/t-cv1.jpg" alt="" loading="lazy" width="64" height="64"></div></div><span class="per">Попробовать базу на одном кандидате</span>
-        <ul>
-          <li>Имя, Telegram и e-mail кандидата</li>
-          <li>Просмотр профилей и поиск по базе — бесплатно</li>
-          <li>Если кандидат не ответил за 14 дней, открытие вернётся</li>
-          <li>Открытый контакт остаётся доступен навсегда</li>
-        </ul>
-        <form method="post" action="/checkout/cv1"><button class="btn btn-ghost btn-sm btn-block" type="submit">Открыть 1 контакт за €5</button></form></div>
-
-      <div class="card tariff"><div class="tariff-head"><div class="tariff-head__t"><b style="font-family: var(--font-display);">10 открытий</b><div class="salary">€45</div></div><div class="tariff-ico"><img src="/img/pricing/t-cv10.jpg" alt="" loading="lazy" width="64" height="64"></div></div><span class="per">Закрыть одну-две позиции</span>
-        <span class="unit">€4,5 за контакт</span>
+      <div class="card tariff"><div class="tariff-head"><div><b>10 открытий</b><span class="salary">€45</span><span class="was">€4,5 за контакт</span></div><div class="tariff-ico"><svg><use href="#pj-stack"/></svg></div></div>
         <ul>
           <li>Открытия не сгорают</li>
           <li>Общий баланс на всю команду</li>
-          <li>Видно, кто уже открывал кандидата</li>
+          <li>Возврат, если кандидат не ответил за 14 дней</li>
         </ul>
         <form method="post" action="/checkout/cv10"><button class="btn btn-ghost btn-sm btn-block" type="submit">Взять 10 за €45</button></form></div>
 
-      <div class="card tariff"><div class="tariff-head"><div class="tariff-head__t"><b style="font-family: var(--font-display);">30 открытий</b><div class="salary">€120</div></div><div class="tariff-ico"><img src="/img/pricing/t-cv30.jpg" alt="" loading="lazy" width="64" height="64"></div></div><span class="per">Пакет для активного найма</span>
-        <span class="unit">€4 за контакт</span>
+      <div class="card tariff"><div class="tariff-head"><div><b>30 открытий</b><span class="salary">€120</span><span class="was">€4 за контакт</span></div><div class="tariff-ico"><svg><use href="#pj-coins"/></svg></div></div>
         <ul>
           <li>Всё из пакета на 10 открытий</li>
           <li>Выгрузка открытых контактов в CSV</li>
@@ -225,53 +186,68 @@
         </ul>
         <form method="post" action="/checkout/cv30"><button class="btn btn-ghost btn-sm btn-block" type="submit">Взять 30 за €120</button></form></div>
 
-      <div class="card tariff pinkc" style="border-color: var(--pink);"><div class="tariff-head"><div class="tariff-head__t"><b style="font-family: var(--font-display);">Подбор под ключ</b><div class="salary" style="color: var(--pink);">1 зарплата</div></div><div class="tariff-ico"><img src="/img/pricing/t-hunt.jpg" alt="" loading="lazy" width="64" height="64"></div></div><span class="per">Полный поиск и найм одного сотрудника</span>
+      <div class="card tariff pinkc"><span class="flag">Спец-набор</span><div class="tariff-head"><div><b>Подбор под ключ</b><span class="salary">1 зарплата</span><span class="was">Предоплата €1 000</span></div><div class="tariff-ico"><svg><use href="#pj-target"/></svg></div></div>
         <ul>
-          <li>Предоплата €1 000 для начала поиска</li>
-          <li>Поиск и проверка кандидатов по согласованному профилю</li>
-          <li>Мы проводим первые интервью и проверяем языки</li>
-          <li>Вы знакомитесь только с заинтересованными кандидатами</li>
-          <li>Бесплатная замена, если сотрудник уйдёт в первые 60 дней</li>
+          <li>Поиск и первые интервью проводим мы</li>
+          <li>Вы видите только заинтересованных кандидатов</li>
+          <li>Бесплатная замена в первые 60 дней</li>
         </ul>
-        <form method="post" action="/checkout/hunt"><button class="btn btn-pink btn-sm btn-block" type="submit">Начать подбор за €1 000</button></form></div>
+        <form method="post" action="/checkout/hunt"><button class="btn btn-pink btn-sm btn-block" type="submit">Начать подбор</button></form></div>
     </div>
 
-    <h2 class="tariff-group-title">Как это работает</h2>
+    <details class="more-plans">
+      <summary>Хотите попробовать на одном кандидате? <b>1 открытие за €5</b></summary>
+      <div class="tariff-grid">
+        <div class="card tariff"><div class="tariff-head"><div><b>1 открытие</b><span class="salary">€5</span><span class="was">Имя, Telegram и e-mail кандидата</span></div><div class="tariff-ico"><svg><use href="#pj-key"/></svg></div></div>
+          <ul>
+            <li>Просмотр профилей и поиск по базе бесплатно</li>
+            <li>Если кандидат не ответил за 14 дней, открытие вернётся</li>
+            <li>Открытый контакт остаётся доступен навсегда</li>
+          </ul>
+          <form method="post" action="/checkout/cv1"><button class="btn btn-ghost btn-sm btn-block" type="submit">Открыть 1 контакт за €5</button></form></div>
+      </div>
+    </details>
+
+    <h2 class="pj-title">Входит в любой тариф</h2>
+    <p class="pj-sub">Без доплат.</p>
+    <div class="card incl">
+      <div><div class="tariff-ico"><svg><use href="#pj-ats"/></svg></div>Мини-ATS в кабинете</div>
+      <div><div class="tariff-ico"><svg><use href="#pj-g"/></svg></div>Индексация в Google Jobs</div>
+      <div><div class="tariff-ico"><svg><use href="#pj-geo"/></svg></div>Гео- и SEO-страницы</div>
+      <div><div class="tariff-ico"><svg><use href="#pj-co"/></svg></div>Страница компании</div>
+      <div><div class="tariff-ico"><svg><use href="#pj-st"/></svg></div>Статистика по вакансии</div>
+      <div><div class="tariff-ico"><svg><use href="#pj-mod"/></svg></div>Ручная модерация</div>
+      <div><div class="tariff-ico"><svg><use href="#pj-tg"/></svg></div>Анонс в Telegram</div>
+    </div>
+
+    <h2 class="pj-title">Как это работает</h2>
     <div class="steps">
-      <div class="step"><span>01</span><b>Регистрируетесь как работодатель</b><p>Заполняете профиль компании: название, сайт, описание, логотип.</p></div>
-      <div class="step"><span>02</span><b>Выбираете тариф</b><p>Разовое размещение, пакет или безлимит. Выставляем инвойс, оплата по счёту.</p></div>
-      <div class="step"><span>03</span><b>Публикуете вакансию</b><p>Заполняете форму с вилкой и языком работы. Модерация — до двух часов.</p></div>
-      <div class="step"><span>04</span><b>Работаете с откликами</b><p>Отклики падают в кабинет, статистика по просмотрам обновляется в реальном времени.</p></div>
+      <span class="step"><i>1</i>Регистрируетесь как работодатель</span><span class="step-ar">→</span>
+      <span class="step"><i>2</i>Выбираете тариф</span><span class="step-ar">→</span>
+      <span class="step"><i>3</i>Модерация до 2 часов</span><span class="step-ar">→</span>
+      <span class="step"><i>4</i>Отклики падают в кабинет</span>
     </div>
 
-    <h2 class="tariff-group-title">Частые вопросы</h2>
-    <div class="qa">
-      <div class="qa-item"><b>Что будет с вакансией через 30 дней?</b><p>Она уходит в архив, но остаётся в кабинете — продлить можно в один клик, отклики и статистика сохраняются.</p></div>
-      <div class="qa-item"><b>Сгорают ли размещения из пакета?</b><p>Нет. Размещения из пакетов на 3 и 10 вакансий доступны в течение года — публикуйте по мере открытия ролей.</p></div>
-      <div class="qa-item"><b>Можно ли обойтись без зарплатной вилки?</b><p>Нет. Это принципиальное правило площадки, исключений не делаем.</p></div>
-      <div class="qa-item"><b>Есть ли возвраты?</b><p>Нет. Оплата за размещение и продвижение не возвращается. Контакты кандидатов — другое дело: если кандидат не ответил за 14 дней, контакт возвращается на баланс.</p></div>
-      <div class="qa-item"><b>Как оплатить?</b><p>Картой через Stripe, криптой (USDT) или по инвойсу на компанию — способ выбирается на странице заказа, счёт PDF формируется автоматически.</p></div>
-      <div class="qa-item"><b>Нужна ли лицензия?</b><p>При первом размещении мы проверяем, что компания реально работает в индустрии. Лицензию спрашиваем у операторов, у студий и подрядчиков — подтверждение деятельности.</p></div>
+    <h2 class="pj-title">Частые вопросы</h2>
+    <div class="faq">
+      <details class="card"><summary>Что будет с вакансией через 30 дней?</summary><p>Она уходит в архив, но остаётся в кабинете. Продлить можно в один клик, отклики и статистика сохраняются.</p></details>
+      <details class="card"><summary>Сгорают ли размещения из пакета?</summary><p>Нет. Размещения из пакетов на 3 и 10 вакансий доступны в течение года, публикуйте по мере открытия ролей.</p></details>
+      <details class="card"><summary>Можно ли обойтись без зарплатной вилки?</summary><p>Нет. Это принципиальное правило площадки, исключений не делаем: вакансии с вилкой открывают заметно чаще.</p></details>
+      <details class="card"><summary>Есть ли возвраты?</summary><p>За размещение и продвижение нет. Контакты кандидатов другое дело: если кандидат не ответил за 14 дней, контакт возвращается на баланс.</p></details>
+      <details class="card"><summary>Как оплатить?</summary><p>Картой через Stripe, криптой (USDT) или по инвойсу на компанию. Способ выбирается на странице заказа, счёт PDF формируется автоматически.</p></details>
+      <details class="card"><summary>Нужна ли лицензия?</summary><p>При первом размещении мы проверяем, что компания реально работает в индустрии. Лицензию спрашиваем у операторов, у студий и подрядчиков достаточно подтверждения деятельности.</p></details>
     </div>
   </section>
 
-    {% if need_login %}
-    <div class="card" style="border-color: var(--pink); max-width: 560px; margin: 0 auto;">
-      <b style="font-family: var(--font-display); text-transform: uppercase;">Нужен аккаунт работодателя</b>
-      <p style="color: var(--ink-dim); margin: 12px 0 20px;">Вакансии размещают компании. Зарегистрируйтесь как работодатель или войдите — форма размещения откроется в кабинете.</p>
-      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <a href="/register?role=employer" class="btn btn-pink">Регистрация работодателя →</a>
-        <a href="/login?next=/employer%23post" rel="nofollow" class="btn btn-ghost">Войти</a>
-      </div>
-    </div>
-    {% else %}
-    <div class="card" style="border-color: var(--pink); max-width: 560px; margin: 0 auto;">
-      <b style="font-family: var(--font-display); text-transform: uppercase;">Готовы разместить вакансию?</b>
-      <p style="color: var(--ink-dim); margin: 12px 0 20px;">Форма размещения, вакансии и отклики — в кабинете работодателя.</p>
-      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <a href="/employer#post" class="btn btn-pink">Разместить вакансию →</a>
-        <a href="/employer" class="btn btn-ghost">Открыть кабинет</a>
-      </div>
-    </div>
-    {% endif %}
+  {% if need_login %}
+  <div class="card pj-cta">
+    <div><b>Нужен аккаунт работодателя</b><p>Вакансии размещают компании. Зарегистрируйтесь как работодатель или войдите, форма размещения откроется в кабинете.</p></div>
+    <div class="pj-cta__act"><a href="/register?role=employer" class="btn btn-pink">Регистрация работодателя</a><a href="/login?next=/employer%23post" rel="nofollow" class="btn btn-ghost">Войти</a></div>
+  </div>
+  {% else %}
+  <div class="card pj-cta">
+    <div><b>Готовы разместить вакансию?</b><p>Форма размещения, вакансии и отклики в кабинете работодателя. Первые {{ promo_free_jobs }} вакансии бесплатно.</p></div>
+    <div class="pj-cta__act"><a href="/employer#post" class="btn btn-pink">Разместить вакансию</a><a href="/employer" class="btn btn-ghost">Открыть кабинет</a></div>
+  </div>
+  {% endif %}
 {% endblock %}

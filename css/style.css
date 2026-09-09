@@ -615,72 +615,117 @@ main > .section:nth-of-type(even) {
 /* ============================================================
    Светлая тема (переключатель — плавающая кнопка, app.js)
    ============================================================ */
+/* Светлая тема (по умолчанию с 09.09.2026): почти белый холст, белые карточки
+   без обводок, одна мягкая тень. Неон живёт только в заливках кнопок,
+   в тексте и ценах — глубокий изумруд, который читается на белом. */
 :root[data-theme="light"] {
-  --bg: oklch(0.965 0.014 155);
-  --bg-deep: oklch(0.915 0.020 160);
-  --surface: oklch(0.988 0.008 155);
-  --surface-2: oklch(0.942 0.018 158);
-  --line: oklch(0.84 0.025 160);
-  --line-strong: oklch(0.65 0.035 165);
-  --ink: oklch(0.23 0.025 170);
-  --ink-dim: oklch(0.39 0.028 170);
-  --ink-faint: oklch(0.49 0.026 170);
-  --acid: oklch(0.50 0.15 162);          /* акцент, читается как текст на светлом */
-  --acid-deep: oklch(0.40 0.13 164);
-  --emerald: oklch(0.49 0.14 162);
-  --pink: oklch(0.53 0.23 352);
+  --bg: oklch(0.985 0.002 170);          /* #FAFBFB — «бумага», не серый */
+  --bg-deep: oklch(0.962 0.004 170);     /* подвал, тикер, подложки */
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.955 0.004 170);   /* нейтральные теги */
+  --line: oklch(0.925 0.005 170);        /* разделители */
+  --line-strong: oklch(0.80 0.008 170);  /* обводки полей ввода */
+  --ink: oklch(0.21 0.010 170);
+  --ink-dim: oklch(0.46 0.012 170);
+  --ink-faint: oklch(0.54 0.012 170);
+  --acid: oklch(0.56 0.14 160);          /* глубокий изумруд: цены, ссылки, акценты в тексте */
+  --acid-deep: oklch(0.47 0.12 162);
+  --acid-neon: oklch(0.86 0.17 162);     /* неон — только заливка кнопок */
+  --emerald: oklch(0.56 0.14 160);
+  --pink: oklch(0.56 0.23 352);
+  --pink-neon: oklch(0.62 0.25 352);
   --violet: oklch(0.5 0.2 300);
   --yellow: oklch(0.62 0.14 80);
-  --on-acid: oklch(0.985 0.006 155);
-  --on-pink: oklch(0.985 0.006 350);
-  --shadow-dark: 0 10px 30px oklch(0.35 0.045 170 / 0.13);
-  --shadow-acid: 0 8px 24px oklch(0.52 0.15 162 / 0.18);
-  --shadow-pink: 0 8px 24px oklch(0.55 0.24 352 / 0.16);
+  --on-acid: oklch(0.99 0.003 160);
+  --on-pink: oklch(0.99 0.003 350);
+  --island: oklch(0.11 0.006 285);
+  --shadow-dark: 0 1px 2px oklch(0.2 0.01 170 / 0.04), 0 6px 20px oklch(0.2 0.01 170 / 0.07);
+  --shadow-lift: 0 12px 30px oklch(0.2 0.01 170 / 0.10);
+  --shadow-acid: 0 6px 18px oklch(0.70 0.17 162 / 0.25);
+  --shadow-pink: 0 6px 18px oklch(0.62 0.25 352 / 0.20);
+  --bezel: 0 0 0 0 transparent;
 }
-:root[data-theme="light"] body {
-  background-image:
-    radial-gradient(circle at 12% 0%, oklch(0.82 0.11 155 / 0.30), transparent 34rem),
-    radial-gradient(circle at 92% 38%, oklch(0.86 0.08 350 / 0.20), transparent 31rem),
-    linear-gradient(145deg, oklch(0.98 0.012 155), var(--bg) 55%, oklch(0.95 0.018 195));
-}
-/* кнопки: яркая заливка с тёмным текстом даже на светлой теме */
-:root[data-theme="light"] .btn-acid { background: var(--acid); color: var(--on-acid); }
-:root[data-theme="light"] .btn-pink { background: oklch(0.60 0.25 352); color: var(--on-pink); }
+:root[data-theme="light"] body { background-image: none; }
+:root[data-theme="light"] body::after { display: none; }   /* киношное зерно на белом читается как грязь */
+/* кнопки: неоновая заливка с тёмным текстом, как в тёмной теме */
+:root[data-theme="light"] .btn-acid { background: var(--acid-neon); color: oklch(0.18 0.05 162); }
+:root[data-theme="light"] .btn-acid:hover { box-shadow: 0 10px 26px oklch(0.70 0.17 162 / 0.32); }
+:root[data-theme="light"] .btn-pink { background: var(--pink-neon); color: var(--on-pink); }
+:root[data-theme="light"] .btn-ghost { border-color: var(--line-strong); color: var(--ink); background: var(--surface); }
 :root[data-theme="light"] .logo b { color: var(--acid-deep); }
-:root[data-theme="light"] .tag-acid { background: color-mix(in oklch, var(--acid) 14%, transparent); }
-:root[data-theme="light"] .tag-hot { background: oklch(0.60 0.25 352); color: var(--on-pink); }
-:root[data-theme="light"] .cat-ico { background: color-mix(in oklch, var(--acid) 14%, transparent); }
+:root[data-theme="light"] .tag { border-color: transparent; }
+:root[data-theme="light"] .tag-acid { background: color-mix(in oklch, var(--acid) 12%, white); }
+:root[data-theme="light"] .tag-pink { background: color-mix(in oklch, var(--pink) 10%, white); }
+:root[data-theme="light"] .tag-hot { background: var(--pink-neon); color: var(--on-pink); }
+:root[data-theme="light"] .cat-ico { background: color-mix(in oklch, var(--acid) 12%, white); }
+/* карточки: без обводки, одна тень; при наведении — чуть выше */
 :root[data-theme="light"] .card,
 :root[data-theme="light"] .job-card,
 :root[data-theme="light"] .cat-card,
 :root[data-theme="light"] .company-tile,
-:root[data-theme="light"] .post-card {
-  box-shadow: 0 10px 30px oklch(0.40 0.045 170 / 0.08);
+:root[data-theme="light"] .post-card,
+:root[data-theme="light"] .co-card,
+:root[data-theme="light"] .prof-card,
+:root[data-theme="light"] .event-card,
+:root[data-theme="light"] .salary-tile,
+:root[data-theme="light"] .fact,
+:root[data-theme="light"] .evc,
+:root[data-theme="light"] .mkt-card,
+:root[data-theme="light"] .mkt-kpi,
+:root[data-theme="light"] .event-hero {
+  border-color: transparent;
+  box-shadow: var(--shadow-dark);
+}
+:root[data-theme="light"] .job-card:hover,
+:root[data-theme="light"] .cat-card:hover,
+:root[data-theme="light"] .company-tile:hover,
+:root[data-theme="light"] .post-card:hover,
+:root[data-theme="light"] .co-card:hover,
+:root[data-theme="light"] .prof-card:hover,
+:root[data-theme="light"] .event-card:hover {
+  border-color: transparent;
+  box-shadow: var(--shadow-lift);
 }
 :root[data-theme="light"] .site-header {
-  background: color-mix(in oklch, var(--surface) 88%, transparent);
-  border-bottom-color: color-mix(in oklch, var(--acid) 22%, var(--line));
+  background: color-mix(in oklch, var(--surface) 92%, transparent);
+  border-bottom: 1px solid var(--line);
 }
-:root[data-theme="light"] main > .section:nth-of-type(even) {
-  background: linear-gradient(90deg, transparent, oklch(0.99 0.012 155 / .72) 18%, oklch(0.99 0.012 155 / .72) 82%, transparent);
-  border-block-color: color-mix(in oklch, var(--acid) 16%, transparent);
+:root[data-theme="light"] .main-nav a:hover { border-bottom-color: var(--acid); }
+:root[data-theme="light"] main > .section:nth-of-type(even) { background: none; border-block-color: transparent; }
+:root[data-theme="light"] .input,
+:root[data-theme="light"] .select,
+:root[data-theme="light"] textarea.input,
+:root[data-theme="light"] .custom-select__trigger,
+:root[data-theme="light"] .custom-select__search { background: var(--surface); }
+:root[data-theme="light"] .custom-select__menu { border-color: var(--line); box-shadow: var(--shadow-lift); }
+:root[data-theme="light"] .site-footer { border-top: 1px solid var(--line); }
+:root[data-theme="light"] .modal { border: 1px solid var(--line); box-shadow: var(--shadow-lift); }
+:root[data-theme="light"] .kicker::before { box-shadow: none; }
+:root[data-theme="light"] .toast { border-color: transparent; box-shadow: var(--shadow-lift); }
+:root[data-theme="light"] .consent-banner { border-color: var(--line); box-shadow: var(--shadow-lift); }
+:root[data-theme="light"] .pagination a { border-color: var(--line); }
+:root[data-theme="light"] .table-wrap { border-color: var(--line); }
+:root[data-theme="light"] .view-as { border-color: var(--line-strong); }
+:root[data-theme="light"] .view-as__label, :root[data-theme="light"] .view-as select { color: var(--ink-dim); }
+@media (max-width: 1100px) {
+  :root[data-theme="light"] .main-nav { background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: var(--shadow-lift); }
 }
-/* герой — всегда тёмный шоукейс-баннер (в нём 3D-картинка): текст светлый */
+/* герой на главной — тёмный шоукейс-остров с 3D-картинкой: текст светлый */
 :root[data-theme="light"] .hero { color: oklch(0.96 0.005 285); }
 :root[data-theme="light"] .hero h1 { color: oklch(0.97 0.005 285); }
 :root[data-theme="light"] .hero h1 em { color: oklch(0.72 0.24 350); }
 :root[data-theme="light"] .hero .lead { color: oklch(0.82 0.006 285); }
 :root[data-theme="light"] .hero .stat-block { background: oklch(0.15 0.008 285 / 0.72); }
-:root[data-theme="light"] .hero .stat-block .num { color: var(--acid); }
+:root[data-theme="light"] .hero .stat-block .num { color: oklch(0.80 0.19 162); }
 :root[data-theme="light"] .desc-block { color: var(--ink); }
 /* cta-баннер — светлый розовый, тёмный текст */
-:root[data-theme="light"] .cta-banner { background: oklch(0.96 0.035 352); border-color: oklch(0.84 0.09 352); box-shadow: var(--shadow-pink); }
+:root[data-theme="light"] .cta-banner { background: oklch(0.97 0.03 352); border-color: transparent; box-shadow: var(--shadow-pink); }
 :root[data-theme="light"] .cta-banner h2 { color: var(--ink); }
-:root[data-theme="light"] .cta-banner h2 em { color: oklch(0.5 0.22 352); }
+:root[data-theme="light"] .cta-banner h2 em { color: var(--pink); }
 :root[data-theme="light"] .cta-banner p { color: var(--ink-dim); }
 /* флеш-сообщения */
-:root[data-theme="light"] .flash { background: oklch(0.95 0.05 142); border-color: oklch(0.68 0.12 142); color: oklch(0.30 0.09 142); }
-:root[data-theme="light"] .flash.err { background: oklch(0.96 0.035 352); border-color: var(--pink); color: oklch(0.38 0.16 352); }
+:root[data-theme="light"] .flash { background: oklch(0.96 0.04 150); border-color: oklch(0.72 0.12 150); color: oklch(0.30 0.09 150); border-radius: var(--radius); }
+:root[data-theme="light"] .flash.err { background: oklch(0.97 0.03 352); border-color: var(--pink); color: oklch(0.38 0.16 352); }
 /* island-секции остаются тёмными — текст светлый */
 :root[data-theme="light"] .games-head, :root[data-theme="light"] .co-hero, :root[data-theme="light"] .company-hero { color: var(--island-ink); }
 :root[data-theme="light"] .games-head h1, :root[data-theme="light"] .co-hero h1 { color: var(--island-ink); }
