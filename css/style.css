@@ -526,7 +526,8 @@ main > .section:nth-of-type(even) {
   .header-actions a[href^="/login"], .header-actions [data-auth] { display: none; }
   .site-header .container { min-width: 0; }
   .header-actions { min-width: 0; flex-shrink: 1; }
-  .header-actions .btn { max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+  .header-actions .btn { flex: 0 1 auto; min-width: 0; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+  .nav-burger { flex: 0 0 auto; }  /* бургер не выталкивается за экран кнопками */
   .main-nav {
     display: none;
     position: absolute; top: 78px; left: 0; right: 0;
@@ -560,6 +561,7 @@ main > .section:nth-of-type(even) {
   .header-actions { gap: var(--sp-2); }
   .header-actions .btn { padding: 9px 11px; font-size: 0.72rem; min-height: 40px; }
   .header-actions .btn-pink { display: none; }  /* дублируется пунктом в бургер-меню */
+  .header-actions a[href="/logout"] { display: none; }  /* «Выйти» на мобиле — в бургер-меню */
   .site-header .container { height: 68px; gap: var(--sp-3); }
   .main-nav { top: 68px; }
   .logo { font-size: 1.2rem; gap: 8px; }

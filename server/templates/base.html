@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap"></noscript>
 <script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);if(localStorage.getItem('wsTheme')==='dark')document.documentElement.setAttribute('data-ws-theme','dark');}catch(e){}})();</script>
-<link rel="stylesheet" href="/css/style.css?v=20260909a">
+<link rel="stylesheet" href="/css/style.css?v=20260909b">
 <style>
   .flash { border: 1px solid var(--line-strong); background: oklch(0.17 0.04 130); padding: 12px 18px; margin-bottom: 20px; font-weight: 600; }
   .flash.err { border-color: var(--pink); background: oklch(0.2 0.06 350); }
@@ -41,6 +41,7 @@
   .adm .btn { padding: 5px 10px; font-size: 0.7rem; }
   .adm form { display: inline; }
   .table-wrap { overflow-x: auto; border: 2px solid var(--line); }
+  .adm td { max-width: 420px; overflow-wrap: anywhere; }  /* длинный заголовок без пробелов не растягивает таблицу */
   {% block style %}{% endblock %}
 </style>
 <style>
@@ -69,7 +70,7 @@
     </nav>
     <div class="header-actions">
       {% if user %}
-        {% if view_as %}<form class="view-as" method="post" action="/admin/view-as/{{ view_as }}" title="Смотреть сайт как"><span class="view-as__label">Как</span><select name="role" aria-label="Смотреть сайт как" onchange="this.form.action='/admin/view-as/'+this.value;this.form.submit()">{% for v, l in [('admin','Админ'),('talent','Соискатель'),('employer','Работодатель')] %}<option value="{{ v }}" {% if view_as == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></form>{% endif %}
+        {% if view_as %}<form class="view-as" method="post" action="/admin/view-as/{{ view_as }}" title="Смотреть сайт как"><span class="view-as__label">Как</span><select name="role" data-native-select aria-label="Смотреть сайт как" onchange="this.form.action='/admin/view-as/'+this.value;this.form.submit()">{% for v, l in [('admin','Админ'),('talent','Соискатель'),('employer','Работодатель')] %}<option value="{{ v }}" {% if view_as == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></form>{% endif %}
         {% if user.role == 'admin' %}<a href="/admin" class="btn btn-ghost btn-sm" style="border-color: var(--yellow); color: var(--yellow);">Админка</a>
         {% elif user.role == 'employer' %}<a href="/employer" class="btn btn-ghost btn-sm" style="border-color: var(--pink); color: var(--pink);">Кабинет</a>
         {% else %}<a href="/profile" class="btn btn-ghost btn-sm">👾 {{ user.name or 'Профиль' }}</a>{% endif %}
@@ -141,6 +142,6 @@
   </div>
 </footer>
 
-<script src="/js/app.js?v=20260909a"></script>
+<script src="/js/app.js?v=20260909b"></script>
 </body>
 </html>

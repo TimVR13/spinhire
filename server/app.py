@@ -6499,10 +6499,16 @@ async def http_exc(request: Request, exc: StarletteHTTPException):
                     403: "У вас нет доступа к этому разделу.",
                     401: "Войдите, чтобы продолжить.",
                     500: "Что-то сломалось на нашей стороне. Уже чиним."}
-            resp = templates.TemplateResponse(request, "error.html", {
-                "code": exc.status_code, "title": titles.get(exc.status_code, "Ошибка"),
-                "sub": subs.get(exc.status_code, ""), "user": None},
-                status_code=exc.status_code)
+            # через render(): в шапке остаются «Выйти» и переключатель роли — иначе админ,
+            # смотрящий сайт «как работодатель», упирался в 403 без пути назад
+            try:
+                resp = render(request, db, "error.html", code=exc.status_code,
+                              title=titles.get(exc.status_code, "Ошибка"), sub=subs.get(exc.status_code, ""))
+            except Exception:  # noqa: BLE001 — сессия битая/БД недоступна: страница ошибки всё равно нужна
+                resp = templates.TemplateResponse(request, "error.html", {
+                    "code": exc.status_code, "title": titles.get(exc.status_code, "Ошибка"),
+                    "sub": subs.get(exc.status_code, ""), "user": None})
+            resp.status_code = exc.status_code
             return resp
     from fastapi.responses import PlainTextResponse
     return PlainTextResponse(str(exc.detail), status_code=exc.status_code)

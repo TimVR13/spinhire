@@ -337,7 +337,10 @@ document.addEventListener('DOMContentLoaded', () => {
     else sharedNav.prepend(resumesLink);
   }
   const sharedActions = document.querySelector('.header-actions');
-  if (sharedActions && !sharedActions.querySelector('a[href*="profile#cv"]')) {
+  const loggedIn = !!(sharedActions && sharedActions.querySelector('a[href="/logout"]'));
+  // кнопка «Добавить CV» в шапке — гостям и кандидатам; админу и работодателю она только теснит бургер на мобиле
+  const staffHeader = !!(sharedActions && sharedActions.querySelector('a[href="/admin"], a[href="/employer"]'));
+  if (sharedActions && !staffHeader && !sharedActions.querySelector('a[href*="profile#cv"]')) {
     const cvLink = document.createElement('a');
     cvLink.href = '/profile#cv';
     cvLink.className = 'btn btn-acid btn-sm';
@@ -351,14 +354,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const burger = document.querySelector('.nav-burger');
   const nav = document.querySelector('.main-nav');
   if (burger && nav) {
-    // «Войти» живёт в бургере: в шапке на мобиле его нет
-    if (!nav.querySelector('[data-auth], a[href^="/login"]')) {
+    // «Войти» живёт в бургере: в шапке на мобиле его нет (вошедшему — «Выйти» вместо него)
+    if (!loggedIn && !nav.querySelector('[data-auth], a[href^="/login"]')) {
       const loginLink = document.createElement('a');
       loginLink.href = '/login';
       loginLink.className = 'nav-cta-mobile';
       if (document.querySelector('.modal-backdrop#auth-modal')) loginLink.setAttribute('data-auth', '');
       loginLink.textContent = 'Войти';
       nav.appendChild(loginLink);
+    }
+    if (loggedIn && !nav.querySelector('a[href="/logout"]')) {
+      const out = document.createElement('a');
+      out.href = '/logout'; out.className = 'nav-cta-mobile'; out.textContent = 'Выйти';
+      nav.appendChild(out);
     }
     burger.setAttribute('aria-expanded', 'false');
     burger.setAttribute('aria-controls', 'main-nav');
