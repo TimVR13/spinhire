@@ -16,6 +16,7 @@
 Страница: /admin/publications.
 """
 import json
+import logging
 import os
 from datetime import datetime, timedelta
 
@@ -29,6 +30,7 @@ import re
 from server.app import ARTICLE_FILES, ROOT, Base, db_session, need_admin, render
 from server.tgpost import TgDigestPost, TgHotPost
 
+log = logging.getLogger("spinhire.publications")
 router = APIRouter()
 
 PLATFORMS = [("youtube", "YouTube"), ("telegram", "Telegram"), ("reddit", "Reddit"), ("linkedin", "LinkedIn"), ("blog", "Блог")]
@@ -77,6 +79,10 @@ def _parse_ts(value) -> datetime | None:
 
 def upsert(db: Session, external_id: str, **fields) -> Publication:
     row = db.query(Publication).filter_by(external_id=external_id).first()
+    if not row:
+        # сессия без autoflush: запись, добавленную в этом же sync, запрос не видит —
+        # ищем среди pending, иначе UNIQUE(external_id) падает на commit
+        row = next((o for o in db.new if isinstance(o, Publication) and o.external_id == external_id), None)
     if not row:
         row = Publication(external_id=external_id)
         db.add(row)
@@ -209,8 +215,15 @@ def sync_blog(db: Session) -> int:
 
 
 def sync_all(db: Session) -> dict:
-    out = {"telegram": sync_telegram(db), "youtube": sync_youtube(db), "blog": sync_blog(db)}
-    db.commit()
+    out = {}
+    for name, fn in (("telegram", sync_telegram), ("youtube", sync_youtube), ("blog", sync_blog)):
+        try:
+            out[name] = fn(db)
+            db.commit()
+        except Exception as e:  # noqa: BLE001 — один сломанный источник не должен ронять страницу
+            db.rollback()
+            log.warning("publications sync %s failed: %s", name, e)
+            out[name] = -1
     return out
 
 

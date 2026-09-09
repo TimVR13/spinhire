@@ -717,3 +717,22 @@ if (window.matchMedia('(pointer: fine)').matches &&
     }, LABEL_RESET);
   });
 })();
+
+// Кнопка «Назад» в хлебных крошках всех админ-страниц (/admin/…, /admin?tab=…).
+// Возвращает в историю, если пришли с этого же сайта; иначе — на родительскую крошку.
+(function () {
+  if (!/^\/admin(\/|$)/.test(location.pathname)) return;
+  const crumbs = document.querySelector('.crumbs');
+  if (!crumbs) return;
+  const links = crumbs.querySelectorAll('a');
+  const parent = links.length ? links[links.length - 1].getAttribute('href') : '/admin';
+  const back = document.createElement('a');
+  back.className = 'crumbs__back';
+  back.href = parent;
+  back.textContent = '← Назад';
+  back.addEventListener('click', (e) => {
+    const sameSite = document.referrer && document.referrer.indexOf(location.origin) === 0;
+    if (sameSite && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+  crumbs.insertBefore(back, crumbs.firstChild);
+})();

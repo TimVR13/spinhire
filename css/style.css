@@ -225,6 +225,15 @@ h3 { font-size: 1.1rem; line-height: 1.25; }
 .footer-language select { color:var(--ink-dim); background:transparent; border:0; border-bottom:1px solid var(--line-strong); padding:3px 18px 3px 2px; font:700 .72rem/1.2 var(--font-body); cursor:pointer; }
 .footer-language select:focus-visible { outline:2px solid var(--acid); outline-offset:3px; }
 .header-actions .btn { flex: 0 0 auto; white-space: nowrap; }
+/* у админа в шапке ещё переключатель роли — даём шапке всю ширину и ужимаем зазоры, чтобы «Выйти» не уезжало за экран */
+.site-header .container:has(.view-as) { max-width: none; gap: var(--sp-4); padding-inline: var(--sp-6); }
+.site-header .container:has(.view-as) .main-nav { gap: var(--sp-4); }
+@media (max-width: 1320px) {
+  .site-header .container:has(.view-as) { padding-inline: var(--sp-5); gap: var(--sp-3); }
+  .site-header .container:has(.view-as) .main-nav { gap: var(--sp-3); }
+  .site-header .container:has(.view-as) .view-as__label { display: none; }
+  .site-header .container:has(.view-as) .header-actions .btn { padding-inline: 10px; font-size: 0.72rem; }
+}
 
 @media (max-width: 1280px) and (min-width: 1101px) {
   .site-header .container { gap: var(--sp-4); }
@@ -481,6 +490,8 @@ main > .section:nth-of-type(even) {
 .crumbs { font-size: 0.82rem; color: var(--ink-faint); margin-bottom: var(--sp-5); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
 .crumbs a { color: var(--ink-dim); text-decoration: none; }
 .crumbs a:hover { color: var(--acid); }
+.crumbs__back { display: inline-flex; align-items: center; gap: 4px; margin-right: 12px; padding: 4px 10px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--ink-dim); font-size: 0.72rem; letter-spacing: 0.06em; }
+.crumbs__back:hover { border-color: var(--acid); color: var(--acid); }
 
 /* pagination */
 .pagination { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-6); }

@@ -4879,22 +4879,89 @@ def admin_crawl(request: Request, db: Session = Depends(db_session)):
     return RedirectResponse(f"/admin?tab=sources&crawl={msg}", status_code=303)
 
 
-def payments_funnel(db: Session, days: int = 30) -> dict:
-    """Воронка оплат: тарифы → заказ → выбор способа → «я оплатил» → оплачено."""
-    since = datetime.utcnow() - timedelta(days=days)
+# Тестовые аккаунты — не считаются в воронке оплат и заказах админки
+TEST_ACCOUNT_EMAILS = {e.strip().lower() for e in os.environ.get(
+    "SPINHIRE_TEST_EMAILS", "timlookinar@gmail.com").split(",") if e.strip()}
+
+
+def test_account_ids(db: Session) -> list:
+    if not TEST_ACCOUNT_EMAILS:
+        return []
+    return [uid for (uid,) in db.query(User.id).filter(func.lower(User.email).in_(TEST_ACCOUNT_EMAILS))]
+
+
+PERIOD_LABELS = {"today": "сегодня", "yesterday": "вчера", "week": "7 дней", "month": "30 дней",
+                 "all": "за всё время", "custom": "период"}
+
+
+def parse_period(request: Request, default: str = "today") -> dict:
+    """Фильтр периода админки: all / today / yesterday / week / month / custom (from, to — YYYY-MM-DD).
+    Даты в БД — UTC, границы берём по UTC-суткам; until — включительно."""
+    period = request.query_params.get("period")
+    if period is None:
+        period = default
+    date_from = request.query_params.get("from") or ""
+    date_to = request.query_params.get("to") or ""
+    today = datetime.utcnow().date()
+    since = until = None
+    if period == "today":
+        since = today
+    elif period == "yesterday":
+        since = until = today - timedelta(days=1)
+    elif period == "week":
+        since = today - timedelta(days=6)
+    elif period == "month":
+        since = today - timedelta(days=29)
+    elif period == "custom":
+        try:
+            since = date.fromisoformat(date_from) if date_from else None
+            until = date.fromisoformat(date_to) if date_to else None
+        except ValueError:
+            since = until = None
+        if since and until and until < since:
+            since, until = until, since
+            date_from, date_to = since.isoformat(), until.isoformat()
+    else:
+        period = "all"
+    label = PERIOD_LABELS[period]
+    if period == "custom" and (date_from or date_to):
+        label = f"{date_from or '…'} — {date_to or '…'}"
+    return {"period": period, "date_from": date_from, "date_to": date_to, "today_iso": today.isoformat(),
+            "period_label": label,
+            "since_dt": datetime.combine(since, datetime.min.time()) if since else None,
+            "until_dt": datetime.combine(until + timedelta(days=1), datetime.min.time()) if until else None}
+
+
+def _in_period(q, column, since_dt, until_dt):
+    if since_dt:
+        q = q.filter(column >= since_dt)
+    if until_dt:
+        q = q.filter(column < until_dt)
+    return q
+
+
+def payments_funnel(db: Session, since_dt=None, until_dt=None, exclude_ids=()) -> dict:
+    """Воронка оплат: тарифы → заказ → выбор способа → «я оплатил» → оплачено.
+    exclude_ids — тестовые аккаунты, их заказы и события не считаем."""
+    exclude_ids = list(exclude_ids)
     def count(name, distinct_users=False):
-        q = db.query(AnalyticsEvent).filter(AnalyticsEvent.name == name, AnalyticsEvent.created_at >= since)
+        q = _in_period(db.query(AnalyticsEvent).filter(AnalyticsEvent.name == name),
+                       AnalyticsEvent.created_at, since_dt, until_dt)
+        if exclude_ids:
+            q = q.filter(or_(AnalyticsEvent.user_id.is_(None), AnalyticsEvent.user_id.notin_(exclude_ids)))
         if distinct_users:
             return q.filter(AnalyticsEvent.user_id.isnot(None)).distinct(AnalyticsEvent.user_id).count()
         return q.count()
-    orders = db.query(Order).filter(Order.created_at >= since)
+    orders = _in_period(db.query(Order), Order.created_at, since_dt, until_dt)
+    if exclude_ids:
+        orders = orders.filter(or_(Order.user_id.is_(None), Order.user_id.notin_(exclude_ids)))
     pricing = count("pricing_view")
     started = orders.count()
     method_chosen = orders.filter(Order.method != "").filter(Order.method != "invoice").count() + count("invoice_requested")
     claimed = count("payment_claimed")
     paid_q = orders.filter(Order.status == "paid")
     paid = paid_q.count()
-    revenue = db.query(func.sum(Order.amount)).filter(Order.status == "paid", Order.created_at >= since).scalar() or 0
+    revenue = sum(o.amount for o in paid_q.all())
     by_plan = {}
     for o in orders.all():
         slot = by_plan.setdefault(o.plan_name, {"orders": 0, "paid": 0, "revenue": 0})
@@ -4904,7 +4971,7 @@ def payments_funnel(db: Session, days: int = 30) -> dict:
             slot["revenue"] += o.amount
     def pct(a, b):
         return round(a * 100 / b, 1) if b else 0
-    return {"days": days, "pricing": pricing, "started": started, "method": method_chosen,
+    return {"pricing": pricing, "started": started, "method": method_chosen,
             "claimed": claimed, "paid": paid, "revenue": revenue,
             "c_start": pct(started, pricing), "c_paid": pct(paid, started), "c_total": pct(paid, pricing),
             "by_plan": sorted(by_plan.items(), key=lambda kv: -kv[1]["revenue"])}
@@ -4950,38 +5017,11 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         users_q = db.query(User)
         if role in ("employer", "talent", "admin"):
             users_q = users_q.filter(User.role == role)
-        # период регистрации: today / week / month / custom (from, to — YYYY-MM-DD);
-        # created_at хранится в UTC, границы берём по UTC-суткам
-        period = request.query_params.get("period") or ""
-        date_from = request.query_params.get("from") or ""
-        date_to = request.query_params.get("to") or ""
-        today = datetime.utcnow().date()
-        since = until = None
-        if period == "today":
-            since = today
-        elif period == "week":
-            since = today - timedelta(days=6)
-        elif period == "month":
-            since = today - timedelta(days=29)
-        elif period == "custom":
-            try:
-                since = date.fromisoformat(date_from) if date_from else None
-                until = date.fromisoformat(date_to) if date_to else None
-            except ValueError:
-                since = until = None
-            if since and until and until < since:
-                since, until = until, since
-                date_from, date_to = since.isoformat(), until.isoformat()
-        else:
-            period = ""
-        if since:
-            users_q = users_q.filter(User.created_at >= datetime.combine(since, datetime.min.time()))
-        if until:
-            users_q = users_q.filter(User.created_at < datetime.combine(until + timedelta(days=1), datetime.min.time()))
+        pr = parse_period(request)  # регистрация: по умолчанию «сегодня»
+        users_q = _in_period(users_q, User.created_at, pr["since_dt"], pr["until_dt"])
         ctx["users"] = users_q.order_by(User.created_at.desc()).all()
         ctx["role"] = role
-        ctx["period"], ctx["date_from"], ctx["date_to"] = period, date_from, date_to
-        ctx["today_iso"] = today.isoformat()
+        ctx.update(pr)
     elif tab == "apps":
         ctx["apps"] = db.query(Application).order_by(Application.created_at.desc()).all()
     elif tab == "resumes":
@@ -5090,11 +5130,20 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
     elif tab == "events":
         ctx["events"] = db.query(Event).order_by(Event.date_from).all()
     elif tab == "orders":
-        ctx["orders"] = db.query(Order).order_by(Order.created_at.desc()).all()
-        ctx["orders_pending"] = db.query(Order).filter(Order.status == "pending").count()
-        ctx["revenue"] = db.query(func.sum(Order.amount)).filter(Order.status == "paid").scalar() or 0
-        ctx["funnel"] = payments_funnel(db, days=30)
-        ctx["funnel_all"] = payments_funnel(db, days=3650)
+        pr = parse_period(request)
+        test_ids = test_account_ids(db)
+        orders_q = db.query(Order)
+        if test_ids:
+            orders_q = orders_q.filter(or_(Order.user_id.is_(None), Order.user_id.notin_(test_ids)))
+        ctx["orders_pending"] = orders_q.filter(Order.status == "pending").count()
+        ctx["revenue"] = sum(o.amount for o in orders_q.filter(Order.status == "paid").all())
+        ctx["orders_total"] = orders_q.count()
+        ctx["orders"] = _in_period(orders_q, Order.created_at, pr["since_dt"], pr["until_dt"]) \
+            .order_by(Order.created_at.desc()).all()
+        ctx["funnel"] = payments_funnel(db, pr["since_dt"], pr["until_dt"], test_ids)
+        ctx["funnel_all"] = payments_funnel(db, exclude_ids=test_ids)
+        ctx["test_emails"] = sorted(TEST_ACCOUNT_EMAILS)
+        ctx.update(pr)
     else:
         ctx["pending"] = db.query(Job).filter(Job.status == "pending") \
             .order_by(Job.created_at.desc()).limit(10).all()

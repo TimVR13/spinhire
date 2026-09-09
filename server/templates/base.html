@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap"></noscript>
 <script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);if(localStorage.getItem('wsTheme')==='dark')document.documentElement.setAttribute('data-ws-theme','dark');}catch(e){}})();</script>
-<link rel="stylesheet" href="/css/style.css?v=20260908d">
+<link rel="stylesheet" href="/css/style.css?v=20260909a">
 <style>
   .flash { border: 1px solid var(--line-strong); background: oklch(0.17 0.04 130); padding: 12px 18px; margin-bottom: 20px; font-weight: 600; }
   .flash.err { border-color: var(--pink); background: oklch(0.2 0.06 350); }
@@ -44,10 +44,11 @@
   {% block style %}{% endblock %}
 </style>
 <style>
-  .view-as { display:inline-flex; border:1px solid var(--yellow); border-radius:999px; overflow:hidden; margin-right:6px; }
-  .view-as button { background:transparent; border:0; color:var(--yellow); font:inherit; font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:6px 10px; cursor:pointer; }
-  .view-as button + button { border-left:1px solid var(--yellow); }
-  .view-as button.on { background:var(--yellow); color:#111; }
+  .view-as { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--yellow); border-radius:999px; padding:0 10px 0 12px; height:36px; margin-right:4px; white-space:nowrap; }
+  .view-as__label { color:var(--yellow); font-size:.66rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+  .view-as select { background:transparent; border:0; color:var(--yellow); font:inherit; font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; padding:4px 0; max-width:150px; }
+  .view-as select:focus-visible { outline:2px solid var(--acid); outline-offset:2px; border-radius:4px; }
+  .view-as option { color:#111; background:#fff; text-transform:none; }
   @media (max-width: 860px) { .view-as { display:none; } }
 </style>
 </head>
@@ -68,7 +69,7 @@
     </nav>
     <div class="header-actions">
       {% if user %}
-        {% if view_as %}<form class="view-as" method="post" action="/admin/view-as/admin" title="Смотреть сайт как"><button type="submit" formaction="/admin/view-as/admin" class="{% if view_as == 'admin' %}on{% endif %}">Админ</button><button type="submit" formaction="/admin/view-as/talent" class="{% if view_as == 'talent' %}on{% endif %}">Соискатель</button><button type="submit" formaction="/admin/view-as/employer" class="{% if view_as == 'employer' %}on{% endif %}">Работодатель</button></form>{% endif %}
+        {% if view_as %}<form class="view-as" method="post" action="/admin/view-as/{{ view_as }}" title="Смотреть сайт как"><span class="view-as__label">Как</span><select name="role" aria-label="Смотреть сайт как" onchange="this.form.action='/admin/view-as/'+this.value;this.form.submit()">{% for v, l in [('admin','Админ'),('talent','Соискатель'),('employer','Работодатель')] %}<option value="{{ v }}" {% if view_as == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></form>{% endif %}
         {% if user.role == 'admin' %}<a href="/admin" class="btn btn-ghost btn-sm" style="border-color: var(--yellow); color: var(--yellow);">Админка</a>
         {% elif user.role == 'employer' %}<a href="/employer" class="btn btn-ghost btn-sm" style="border-color: var(--pink); color: var(--pink);">Кабинет</a>
         {% else %}<a href="/profile" class="btn btn-ghost btn-sm">👾 {{ user.name or 'Профиль' }}</a>{% endif %}
@@ -140,6 +141,6 @@
   </div>
 </footer>
 
-<script src="/js/app.js?v=20260908b"></script>
+<script src="/js/app.js?v=20260909a"></script>
 </body>
 </html>

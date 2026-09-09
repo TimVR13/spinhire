@@ -24,6 +24,10 @@
   .subtabs button { border:0; background:transparent; padding:10px 14px; font:700 0.85rem var(--font-body); color:var(--ink-dim); border-bottom:2px solid transparent; margin-bottom:-1px; }
   .subtabs button.on { color:var(--acid-deep, var(--acid)); border-bottom-color:var(--acid); }
   .subpane[hidden] { display:none; }
+  .qtip { position:relative; display:inline-flex; width:24px; height:24px; border-radius:50%; border:1px solid var(--line-strong); color:var(--ink-faint); font-size:.8rem; font-weight:700; align-items:center; justify-content:center; cursor:help; align-self:center; justify-self:end; }
+  .qtip:hover, .qtip:focus-visible { border-color:var(--acid); color:var(--acid); outline:none; }
+  .qtip__box { display:none; position:absolute; right:0; top:30px; width:min(440px, 80vw); background:var(--surface); border:1px solid var(--line-strong); border-radius:10px; padding:12px 14px; font-size:.8rem; font-weight:400; line-height:1.45; color:var(--ink-dim); text-align:left; z-index:20; box-shadow:0 12px 30px rgba(0,0,0,.35); }
+  .qtip:hover .qtip__box, .qtip:focus-within .qtip__box { display:block; }
   .adm-filters { display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
   .adm-filters__row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0; }
   .adm-filters__custom { display:inline-flex; align-items:center; gap:6px; padding-left:8px; margin-left:4px; border-left:1px solid var(--line); }
@@ -66,9 +70,9 @@
     <div class="stat-grid">
       <a class="stat-card" href="/admin?tab=jobs&st=approved"><div class="n">{{ stats.jobs_approved }}</div><div class="l">Вакансий live&nbsp;→</div></a>
       <a class="stat-card" href="/admin?tab=jobs&st=pending" {% if stats.jobs_pending %}style="border-color: var(--pink);"{% endif %}><div class="n" {% if stats.jobs_pending %}style="color: var(--pink);"{% endif %}>{{ stats.jobs_pending }}</div><div class="l">На модерации&nbsp;→</div></a>
-      <a class="stat-card" href="/admin?tab=users"><div class="n">{{ stats.users }}</div><div class="l">Пользователей&nbsp;→</div></a>
-      <a class="stat-card" href="/admin?tab=users&role=employer"><div class="n">{{ stats.employers }}</div><div class="l">Работодателей&nbsp;→</div></a>
-      <a class="stat-card" href="/admin?tab=users&role=talent"><div class="n">{{ stats.talents }}</div><div class="l">Соискателей&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=users&period=all"><div class="n">{{ stats.users }}</div><div class="l">Пользователей&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=users&role=employer&period=all"><div class="n">{{ stats.employers }}</div><div class="l">Работодателей&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=users&role=talent&period=all"><div class="n">{{ stats.talents }}</div><div class="l">Соискателей&nbsp;→</div></a>
       <a class="stat-card" href="/admin?tab=apps"><div class="n">{{ stats.apps }}</div><div class="l">Откликов&nbsp;→</div></a>
       <a class="stat-card" href="/admin?tab=jobs&sort=views"><div class="n">{{ stats.views }}</div><div class="l">Просмотров людьми · с 3.09&nbsp;→</div></a>
       <a class="stat-card" href="/admin?tab=resumes&st=live"><div class="n">{{ stats.resumes_live }}</div><div class="l">CV опубликовано&nbsp;→</div></a>
@@ -152,28 +156,15 @@
     </table></div>
 
   {% elif tab == 'users' %}
-    {% set period_qs = (('&period=' ~ period) if period else '') ~ (('&from=' ~ date_from) if period == 'custom' and date_from else '') ~ (('&to=' ~ date_to) if period == 'custom' and date_to else '') %}
+    {% set period_qs = ('&period=' ~ (period or 'today')) ~ (('&from=' ~ date_from) if period == 'custom' and date_from else '') ~ (('&to=' ~ date_to) if period == 'custom' and date_to else '') %}
     <div class="adm-filters">
       <div class="adm-filters__row">
         {% for value, label in [('', 'Все'), ('employer', 'Работодатели'), ('talent', 'Соискатели'), ('admin', 'Админы')] %}
         <a class="tag {% if role == value %}tag-acid{% endif %}" href="/admin?tab=users{% if value %}&role={{ value }}{% endif %}{{ period_qs }}">{{ label }}</a>
         {% endfor %}
       </div>
-      <form class="adm-filters__row" method="get" action="/admin" id="users-period">
-        <input type="hidden" name="tab" value="users">
-        {% if role %}<input type="hidden" name="role" value="{{ role }}">{% endif %}
-        {% for value, label in [('', 'За всё время'), ('today', 'Сегодня'), ('week', 'Неделя'), ('month', 'Месяц')] %}
-        <a class="tag {% if period == value %}tag-acid{% endif %}" href="/admin?tab=users{% if role %}&role={{ role }}{% endif %}{% if value %}&period={{ value }}{% endif %}">{{ label }}</a>
-        {% endfor %}
-        <span class="adm-filters__custom {% if period == 'custom' %}on{% endif %}">
-          <input type="hidden" name="period" value="custom">
-          <input class="input adm-filters__date" type="date" name="from" value="{{ date_from }}" aria-label="Дата с" max="{{ today_iso }}">
-          <span class="adm-filters__dash">—</span>
-          <input class="input adm-filters__date" type="date" name="to" value="{{ date_to }}" aria-label="Дата по" max="{{ today_iso }}">
-          <button class="btn btn-ghost" type="submit">Показать</button>
-        </span>
-        <span class="adm-filters__count">{{ users|length }} {{ 'пользователь' if users|length % 10 == 1 and users|length % 100 != 11 else ('пользователя' if users|length % 10 in [2,3,4] and users|length % 100 not in [12,13,14] else 'пользователей') }}</span>
-      </form>
+      {% set n = users|length %}
+      {% with count_label = n ~ ' ' ~ ('пользователь' if n % 10 == 1 and n % 100 != 11 else ('пользователя' if n % 10 in [2,3,4] and n % 100 not in [12,13,14] else 'пользователей')) %}{% include "admin/_period.html" %}{% endwith %}
     </div>
     <div class="table-wrap"><table class="adm">
       <tr><th>Email</th><th>Имя</th><th>Роль</th><th>Компания</th><th>С нами</th><th>Действия</th></tr>
@@ -227,10 +218,17 @@
     <div class="stat-grid" style="margin-bottom: var(--sp-5);">
       <div class="stat-card"><div class="n">€{{ revenue }}</div><div class="l">Выручка (оплачено)</div></div>
       <div class="stat-card" {% if orders_pending %}style="border-color: var(--pink);"{% endif %}><div class="n">{{ orders_pending }}</div><div class="l">Ждут оплаты</div></div>
-      <div class="stat-card"><div class="n">{{ orders|length }}</div><div class="l">Всего заказов</div></div>
+      <div class="stat-card"><div class="n">{{ orders_total }}</div><div class="l">Всего заказов</div></div>
     </div>
 
-    <div class="source-head funnel-head"><div><span class="kicker" style="color:var(--pink)">Воронка оплат · {{ funnel.days }} дней</span><h2>Тарифы → заказ → оплата</h2></div><p class="source-note">Заходы людей на /post-job (боты не считаются), созданные заказы, выбранный способ, сообщения «я оплатил» и фактические оплаты. За всё время: {{ funnel_all.started }} заказов, {{ funnel_all.paid }} оплачено, €{{ funnel_all.revenue }}.</p></div>
+    <div class="adm-filters">
+      {% with count_label = orders|length ~ ' за период' %}{% include "admin/_period.html" %}{% endwith %}
+    </div>
+
+    <div class="source-head funnel-head"><div><span class="kicker" style="color:var(--pink)">Воронка оплат · {{ period_label }}</span><h2>Тарифы → заказ → оплата</h2></div>
+      <span class="qtip" tabindex="0" aria-label="Что здесь считается"><span aria-hidden="true">?</span>
+        <span class="qtip__box">Заходы людей на /post-job (боты не считаются), созданные заказы, выбранный способ, сообщения «я оплатил» и фактические оплаты.<br>За всё время: {{ funnel_all.started }} заказов, {{ funnel_all.paid }} оплачено, €{{ funnel_all.revenue }}.{% if test_emails %}<br>Тестовые аккаунты не считаются: {{ test_emails|join(', ') }}.{% endif %}</span>
+      </span></div>
     <div class="stat-grid">
       <div class="stat-card"><div class="n">{{ funnel.pricing }}</div><div class="l">Открыли тарифы</div></div>
       <div class="stat-card"><div class="n">{{ funnel.started }}</div><div class="l">Создали заказ · {{ funnel.c_start }}%</div></div>
