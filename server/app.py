@@ -5302,6 +5302,20 @@ def mark_order_paid(db: Session, o, source: str = "admin") -> bool:
     return not already_paid
 
 
+def admin_back(request: Request, default: str) -> str:
+    """После действия в админке вернуть на ту же вкладку с теми же фильтрами (период, роль),
+    а не на вкладку по умолчанию «сегодня», где обработанная строка пропадает."""
+    ref = request.headers.get("referer") or ""
+    try:
+        from urllib.parse import urlparse
+        pu = urlparse(ref)
+        if pu.path.startswith("/admin") and not pu.path.startswith("/admin/view-as"):
+            return pu.path + (f"?{pu.query}" if pu.query else "")
+    except ValueError:
+        pass
+    return default
+
+
 @app.post("/admin/order/{order_id}/{action}")
 def admin_order_action(order_id: int, action: str, request: Request, db: Session = Depends(db_session)):
     need_admin(request, db)
@@ -5312,7 +5326,7 @@ def admin_order_action(order_id: int, action: str, request: Request, db: Session
         elif action == "cancel":
             o.status = "cancelled"
         db.commit()
-    return RedirectResponse("/admin?tab=orders", status_code=303)
+    return RedirectResponse(admin_back(request, "/admin?tab=orders&period=all"), status_code=303)
 
 
 @app.post("/admin/job/{job_id}/{action}")
@@ -5392,7 +5406,7 @@ def admin_user(user_id: int, action: str, request: Request, db: Session = Depend
         if action == "employer":
             grant_launch_promo(u)
     db.commit()
-    return RedirectResponse(f"/admin/user/{user_id}" if back_to_card else "/admin?tab=users", status_code=303)
+    return RedirectResponse(f"/admin/user/{user_id}" if back_to_card else admin_back(request, "/admin?tab=users&period=all"), status_code=303)
 
 
 

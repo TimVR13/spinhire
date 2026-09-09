@@ -23,7 +23,7 @@
     </div>
     <div class="field"><label>Теги (через запятую)</label><input class="input" name="tags" value="{{ job.tags }}"></div>
     <div class="field"><label>Описание</label><textarea class="input" name="description" rows="10">{{ job.description }}</textarea></div>
-    <div style="display: flex; gap: 10px;">
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
       <button class="btn btn-acid" type="submit">Сохранить</button>
       <a class="btn btn-ghost" href="{{ '/employer' if employer_mode else '/admin?tab=jobs' }}">Отмена</a>
       <a class="btn btn-ghost" href="/job/{{ job.id }}" target="_blank">Открыть ↗</a>
