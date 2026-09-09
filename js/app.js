@@ -528,7 +528,7 @@ if (window.matchMedia('(pointer: fine)').matches &&
 // тёмную человек включает сам, выбор хранится отдельно (wsTheme).
 (function () {
   const isWorkspace = document.body && document.body.classList.contains('workspace');
-  const saved = localStorage.getItem('theme');
+  const saved = localStorage.getItem('themeV2');  // 'theme' у старых посетителей = 'dark' (прежний дефолт) — игнорируем
   if (!isWorkspace) { if (saved === 'dark') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', 'light'); }
   function apply(t) {
     if (isWorkspace) {
@@ -541,7 +541,7 @@ if (window.matchMedia('(pointer: fine)').matches &&
     }
     if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
     else document.documentElement.removeAttribute('data-theme');
-    localStorage.setItem('theme', t);
+    localStorage.setItem('themeV2', t);
     if (btn) btn.textContent = t === 'light' ? '🌙' : '☀️';
     if (btn) btn.setAttribute('aria-label', t === 'light' ? 'Тёмная тема' : 'Светлая тема');
   }
@@ -557,7 +557,7 @@ if (window.matchMedia('(pointer: fine)').matches &&
       document.body.appendChild(btn);
     }
     apply(isWorkspace ? (localStorage.getItem('wsTheme') || 'light')
-                      : (localStorage.getItem('theme') || 'light'));
+                      : (localStorage.getItem('themeV2') || 'light'));
     btn.addEventListener('click', () => {
       if (isWorkspace) {
         const cur = document.documentElement.getAttribute('data-ws-theme') === 'dark' ? 'dark' : 'light';
