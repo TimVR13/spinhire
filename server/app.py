@@ -1360,10 +1360,14 @@ def ai_dashboard(days: int = 14) -> dict:
                     bot, path = row.get("bot") or "", row.get("path") or "/"
                     if bot:
                         by_bot[bot] = by_bot.get(bot, 0) + 1
-                        by_day.setdefault(day, {})[bot] = by_day[day].get(bot, 0) + 1
-                        paths.setdefault(bot, {})[path] = paths[bot].get(path, 0) + 1
+                        # правая часть вычисляется раньше setdefault слева — поэтому явно создаём словари
+                        day_slot = by_day.setdefault(day, {})
+                        day_slot[bot] = day_slot.get(bot, 0) + 1
+                        path_slot = paths.setdefault(bot, {})
+                        path_slot[path] = path_slot.get(path, 0) + 1
                         cls = path_class(path)
-                        classes.setdefault(bot, {})[cls] = classes[bot].get(cls, 0) + 1
+                        cls_slot = classes.setdefault(bot, {})
+                        cls_slot[cls] = cls_slot.get(cls, 0) + 1
                         if bot in AI_CITATION_BOTS:
                             citations_by_day[day] = citations_by_day.get(day, 0) + 1
                         if path.endswith(".md"):
@@ -4473,11 +4477,17 @@ def employer(request: Request, stage: str = "", assigned: int = 0,
             .filter(CompanyMember.account_id == account.id).order_by(CompanyMember.created_at).all())
     invites = (db.query(CompanyInvite).filter_by(account_id=account.id, status="pending")
                .order_by(CompanyInvite.created_at.desc()).all())
+    # «Финансы»: заказы кабинета и пакеты для пополнения (featured и hunt покупаются со страницы вакансии/тарифов)
+    orders = db.query(Order).filter(Order.user_id == account.id).order_by(Order.created_at.desc()).limit(50).all()
+    topup = {"jobs": ["single", "pack3", "pack10", "unlim30"], "cv": ["cv1", "cv10", "cv30", "cvunlim"]}
     return render(request, db, "employer.html", jobs=jobs, unlocked_resumes=unlocked,
                   credit_ledger=ledger, stats=stats, company_progress=company_progress,
                   account=account, team_role=team_role, team=team, invites=invites,
                   ats_apps=ats_apps, stage=stage, assigned=assigned,
-                  job_stats=job_stats, categories=CATEGORIES, formats=FORMATS)
+                  job_stats=job_stats, categories=CATEGORIES, formats=FORMATS,
+                  orders=orders, plans=PLANS, list_price=PLAN_LIST_PRICE, topup=topup,
+                  now_iso=datetime.utcnow().date().isoformat(),
+                  orders_pending=sum(o.status == "pending" for o in orders))
 
 
 @app.post("/employer/profile")
@@ -5259,7 +5269,7 @@ def mark_order_paid(db: Session, o, source: str = "admin") -> bool:
         track(db, "order_paid", o.user_id, "order", o.id, plan=o.plan, amount=o.amount, method=o.method, source=source)
         if o.user:
             add_notification(db, o.user.id, "order", f"Заказ #{o.id} оплачен",
-                             f"{o.plan_name} активирован. Спасибо!", "/employer")
+                             f"{o.plan_name} активирован. Спасибо!", "/employer#finance")
     # применяем плюшку: featured-план поднимает вакансию
     if o.plan == "featured" and o.job_id:
         job = db.get(Job, o.job_id)

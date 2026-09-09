@@ -16,6 +16,29 @@
   .cv-plans { display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end; }
   .unlocked-row { display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 0;border-top:1px solid var(--line); }
   .ledger { color:var(--ink-faint);font-size:.8rem;margin-top:var(--sp-5); }
+  .btn-topup { box-shadow:0 0 0 3px color-mix(in oklch, var(--acid) 25%, transparent), 0 8px 22px color-mix(in oklch, var(--acid) 35%, transparent); }
+  .btn-topup:hover { box-shadow:0 0 0 4px color-mix(in oklch, var(--acid) 35%, transparent), 0 10px 26px color-mix(in oklch, var(--acid) 45%, transparent); }
+  .fin-balance { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:var(--sp-3); margin-bottom:var(--sp-6); }
+  .fin-stat { border:2px solid var(--line); background:var(--surface); border-radius:var(--radius); padding:var(--sp-4) var(--sp-5); display:flex; flex-direction:column; gap:4px; }
+  .fin-stat b { font-family:var(--font-display); font-size:1.7rem; color:var(--acid); line-height:1; }
+  .fin-stat span { color:var(--ink-faint); font-size:.74rem; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+  .fin-stat em { font-style:normal; color:var(--ink-dim); font-size:.78rem; }
+  .fin-stat--warn { border-color:var(--pink); } .fin-stat--warn b { color:var(--pink); } .fin-stat--warn a { color:var(--pink); }
+  .fin-section { margin-bottom:var(--sp-7); }
+  .fin-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:var(--sp-3); }
+  .fin-plan { position:relative; margin:0; border:2px solid var(--line); background:var(--surface); border-radius:var(--radius); padding:var(--sp-4) var(--sp-4) var(--sp-4); display:flex; flex-direction:column; gap:6px; }
+  .fin-plan--hot { border-color:var(--acid); }
+  .fin-plan__badge { position:absolute; top:-11px; left:14px; background:var(--acid); color:var(--on-acid); font-size:.66rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; padding:3px 9px; border-radius:999px; }
+  .fin-plan__name { font-size:.95rem; }
+  .fin-plan__price { font-family:var(--font-display); font-size:1.5rem; font-weight:800; }
+  .fin-plan__price s { color:var(--ink-faint); font-size:.9rem; font-weight:600; margin-left:8px; }
+  .fin-plan__desc { color:var(--ink-dim); font-size:.82rem; flex:1; margin:0 0 6px; }
+  .fin-table { width:100%; border-collapse:collapse; font-size:.88rem; }
+  .fin-table th { text-align:left; color:var(--ink-faint); font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; padding:8px 10px; border-bottom:2px solid var(--line); }
+  .fin-table td { padding:10px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  .fin-status { font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; padding:3px 9px; border-radius:999px; border:1px solid var(--line); color:var(--ink-dim); }
+  .fin-status--paid { color:var(--acid); border-color:var(--acid); }
+  .fin-status--pending { color:var(--pink); border-color:var(--pink); }
   .job-stats{margin-bottom:var(--sp-6)}
   .js-head{display:flex;justify-content:space-between;align-items:baseline;gap:var(--sp-4);flex-wrap:wrap;margin-bottom:var(--sp-3)}
   .js-head h2{font-family:var(--font-display);font-size:1.1rem;text-transform:uppercase;letter-spacing:.04em}
@@ -68,7 +91,7 @@
       {% if team_role != 'owner' %}<p style="color:var(--ink-faint);margin-top:6px;">Командный доступ · {{ 'рекрутер' if team_role=='recruiter' else 'наблюдатель' }}</p>{% endif %}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <a href="/resumes" class="btn btn-acid">Резюме · {{ account.cv_credits or 0 }} открытий</a>
+      {% if team_role == 'owner' %}<a href="#finance" class="btn btn-acid btn-topup" data-goto="finance">💳 Пополнить</a>{% endif %}
       {% if team_role != 'viewer' %}<a href="#post" class="btn btn-pink">+ Разместить вакансию</a>{% endif %}
     </div>
   </div>
@@ -79,6 +102,7 @@
     {% if team_role != 'viewer' %}<a href="#post" data-pane="post">+ Новая вакансия</a>{% endif %}
     <a href="#ats" data-pane="ats">Кандидаты<b>{{ ats_apps|length }}</b>{% if stats.new_applications %}<b class="tab-new">+{{ stats.new_applications }}</b>{% endif %}</a>
     <a href="#talents" data-pane="talents">База резюме<b>{{ account.cv_credits or 0 }}</b></a>
+    <a href="#finance" data-pane="finance">Финансы{% if orders_pending %}<b class="tab-new">{{ orders_pending }}</b>{% endif %}</a>
     <a href="#company" data-pane="company">Компания{% if company_progress < 100 %}<b>{{ company_progress }}%</b>{% endif %}</a>
     <a href="#team" data-pane="team">Команда<b>{{ team|length + 1 }}</b></a>
     <a href="#settings" data-pane="settings">Настройки</a>
@@ -89,9 +113,10 @@
     <div class="wallet-card">
       <span class="kicker">Баланс кабинета</span>
       <div class="wallet-vals">
-        <a href="#post"><b>{{ account.job_credits or 0 }}</b><span>размещений</span></a>
-        <a href="/resumes"><b>{{ account.cv_credits or 0 }}</b><span>контактов</span></a>
+        <a href="#finance" data-goto="finance"><b>{{ account.job_credits or 0 }}</b><span>размещений</span></a>
+        <a href="#finance" data-goto="finance"><b>{{ account.cv_credits or 0 }}</b><span>контактов</span></a>
         {% if account.promo_code %}<span class="wallet-promo">промокод {{ account.promo_code }} активен</span>{% endif %}
+        {% if team_role == 'owner' %}<a href="#finance" class="btn btn-acid btn-sm btn-topup" data-goto="finance" style="margin-left:auto;">💳 Пополнить</a>{% endif %}
       </div>
     </div>
     <div class="wallet-card wallet-card--support">
@@ -195,7 +220,6 @@
   </section>
   {% endif %}
 
-  {% if credit_ledger %}<details class="ledger"><summary>История доступа</summary><div style="margin-top:10px;">{% for op in credit_ledger %}<p>{{ op.created_at.strftime('%d.%m.%Y %H:%M') }} · {{ {'purchase':'покупка','unlock':'открытие контакта','unlimited':'безлимит'}.get(op.action, op.action) }} · {% if op.delta > 0 %}+{% endif %}{{ op.delta }} · баланс {{ op.balance_after }}</p>{% endfor %}</div></details>{% endif %}
 
   </div><!-- /talents -->
 
@@ -211,6 +235,70 @@
   </details>
 
   </div><!-- /team -->
+
+  <div class="cab-pane" data-pane="finance">
+  <div class="fin-balance">
+    <div class="fin-stat"><b>{{ account.job_credits or 0 }}</b><span>размещений вакансий</span>{% if account.job_access_until and account.job_access_until[:10] >= now_iso %}<em>безлимит до {{ account.job_access_until[:10] }}</em>{% endif %}</div>
+    <div class="fin-stat"><b>{{ account.cv_credits or 0 }}</b><span>открытий контактов</span>{% if account.cv_access_until and account.cv_access_until[:10] >= now_iso %}<em>безлимит до {{ account.cv_access_until[:10] }}</em>{% endif %}</div>
+    <div class="fin-stat"><b>€{{ orders|selectattr('status','equalto','paid')|map(attribute='amount')|sum }}</b><span>оплачено всего</span>{% if account.promo_code %}<em>промокод {{ account.promo_code }}</em>{% endif %}</div>
+    {% if orders_pending %}<div class="fin-stat fin-stat--warn"><b>{{ orders_pending }}</b><span>ждут оплаты</span><em><a href="#fin-orders">к заказам ↓</a></em></div>{% endif %}
+  </div>
+
+  {% if team_role == 'owner' %}
+  <section id="topup" class="fin-section">
+    <div class="section-head" style="margin-bottom:var(--sp-4);"><div><span class="kicker">Пополнить</span><h2 style="font-size:1.35rem;margin:6px 0;">Размещения вакансий</h2></div><p style="color:var(--ink-faint);font-size:.85rem;max-width:46ch;">Оплата картой, криптой или по счёту — на следующем шаге. Размещения не сгорают и списываются по одному при публикации.</p></div>
+    <div class="fin-grid">
+      {% for key in topup.jobs %}{% set name, price, desc = plans[key] %}
+      <form method="post" action="/checkout/{{ key }}" class="fin-plan {% if key == 'pack3' %}fin-plan--hot{% endif %}">
+        {% if key == 'pack3' %}<span class="fin-plan__badge">выгодно</span>{% endif %}
+        <b class="fin-plan__name">{{ name }}</b>
+        <div class="fin-plan__price">€{{ price }}{% if list_price.get(key) %}<s>€{{ list_price[key] }}</s>{% endif %}</div>
+        <p class="fin-plan__desc">{{ desc }}</p>
+        <button class="btn {% if key == 'pack3' %}btn-acid{% else %}btn-ghost{% endif %} btn-block" type="submit">Пополнить</button>
+      </form>
+      {% endfor %}
+    </div>
+    <div class="section-head" style="margin:var(--sp-6) 0 var(--sp-4);"><div><span class="kicker">Пополнить</span><h2 style="font-size:1.35rem;margin:6px 0;">Контакты из базы резюме</h2></div><p style="color:var(--ink-faint);font-size:.85rem;max-width:46ch;">Одно открытие — один кандидат с телефоном и почтой. Открытый контакт виден всей команде.</p></div>
+    <div class="fin-grid">
+      {% for key in topup.cv %}{% set name, price, desc = plans[key] %}
+      <form method="post" action="/checkout/{{ key }}" class="fin-plan {% if key == 'cv10' %}fin-plan--hot{% endif %}">
+        {% if key == 'cv10' %}<span class="fin-plan__badge">популярно</span>{% endif %}
+        <b class="fin-plan__name">{{ name }}</b>
+        <div class="fin-plan__price">€{{ price }}</div>
+        <p class="fin-plan__desc">{{ desc }}</p>
+        <button class="btn {% if key == 'cv10' %}btn-acid{% else %}btn-ghost{% endif %} btn-block" type="submit">Пополнить</button>
+      </form>
+      {% endfor %}
+    </div>
+    <p style="color:var(--ink-faint);font-size:.82rem;margin-top:var(--sp-3);">Продвижение конкретной вакансии (€99) — из списка вакансий; подбор под ключ — <a href="/post-job#pricing" style="color:var(--acid);">на странице тарифов</a>.</p>
+  </section>
+  {% else %}
+  <p class="flash" style="margin-bottom:var(--sp-6);">Пополнять баланс может только владелец кабинета.</p>
+  {% endif %}
+
+  <section id="fin-orders" class="fin-section">
+    <div class="section-head" style="margin-bottom:var(--sp-4);"><div><span class="kicker">История</span><h2 style="font-size:1.35rem;margin:6px 0;">Заказы и счета</h2></div></div>
+    {% if orders %}
+    <div class="table-wrap"><table class="fin-table">
+      <tr><th>#</th><th>Что</th><th>Сумма</th><th>Способ</th><th>Статус</th><th>Дата</th><th></th></tr>
+      {% for o in orders %}
+      <tr>
+        <td>{{ o.id }}</td>
+        <td>{{ o.plan_name }}</td>
+        <td>€{{ o.amount }}</td>
+        <td>{{ {'invoice':'по счёту','card':'картой','stripe':'картой','paykilla':'крипта'}.get(o.method, o.method|replace('crypto:', 'USDT ')) or '—' }}</td>
+        <td><span class="fin-status fin-status--{{ o.status }}">{{ {'paid':'оплачен','pending':'ждёт оплаты','cancelled':'отменён'}.get(o.status, o.status) }}</span></td>
+        <td>{{ o.created_at.strftime('%d.%m.%Y') }}</td>
+        <td style="white-space:nowrap;">{% if o.status == 'pending' %}<a class="btn btn-acid btn-sm" href="/checkout/order/{{ o.id }}">Оплатить</a> {% endif %}<a class="btn btn-ghost btn-sm" href="/checkout/order/{{ o.id }}/invoice.pdf">Счёт PDF</a></td>
+      </tr>
+      {% endfor %}
+    </table></div>
+    {% else %}
+    <p style="color:var(--ink-faint);">Заказов пока нет — первое пополнение появится здесь вместе со счётом.</p>
+    {% endif %}
+    {% if credit_ledger %}<details class="ledger"><summary>История списаний контактов</summary><div style="margin-top:10px;">{% for op in credit_ledger %}<p>{{ op.created_at.strftime('%d.%m.%Y %H:%M') }} · {{ {'purchase':'покупка','unlock':'открытие контакта','unlimited':'безлимит'}.get(op.action, op.action) }} · {% if op.delta > 0 %}+{% endif %}{{ op.delta }} · баланс {{ op.balance_after }}</p>{% endfor %}</div></details>{% endif %}
+  </section>
+  </div><!-- /finance -->
 
   <div class="cab-pane" data-pane="settings">
   <div class="card" style="max-width:720px; margin-bottom:var(--sp-4);">
@@ -350,15 +438,18 @@
       else if (params.get('job_saved') || params.get('job_archived') || params.get('job_posted')) initial = 'jobs';
       else if (params.get('job_error')) initial = 'post';
       else if (params.get('stage')) initial = 'ats';
+      else if (params.get('paid') || params.get('order')) initial = 'finance';
       else initial = 'overview';
     }
     show(initial);
     tabs.forEach(t => t.addEventListener('click', e => { e.preventDefault(); history.replaceState(null, '', '#' + t.dataset.pane); show(t.dataset.pane); }));
     window.addEventListener('hashchange', () => show(location.hash.slice(1)));
 
-    // кнопка «+ Разместить вакансию» в шапке кабинета ведёт на вкладку формы
+    // кнопки «+ Разместить вакансию» и «Пополнить» в шапке кабинета ведут на свои вкладки
     document.querySelectorAll('a[href="#post"]:not([data-pane])').forEach(a =>
       a.addEventListener('click', e => { e.preventDefault(); history.replaceState(null, '', '#post'); show('post'); }));
+    document.querySelectorAll('a[data-goto]').forEach(a =>
+      a.addEventListener('click', e => { e.preventDefault(); history.replaceState(null, '', '#' + a.dataset.goto); show(a.dataset.goto); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
 
     // тема кабинета из «Настроек»: тот же ключ wsTheme, что и у кнопки в подвале
     const pick = document.getElementById('wsThemePick');
