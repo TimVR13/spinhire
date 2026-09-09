@@ -237,6 +237,7 @@ def api_plan(request: Request, x_publish_key: str = Header(default=""), db: Sess
     """План на ближайшие 7 дней — для облачных агентов, чтобы не публиковать лишнего."""
     if not PUBLISH_KEY or x_publish_key != PUBLISH_KEY:
         raise HTTPException(403, "bad key")
+    sync_all(db)
     until = datetime.utcnow() + timedelta(days=7)
     rows = (db.query(Publication).filter(Publication.status.in_(("planned", "created", "scheduled")),
                                          (Publication.scheduled_at.is_(None)) | (Publication.scheduled_at <= until))
