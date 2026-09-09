@@ -29,11 +29,9 @@ def clean(v, joiner=", "):
     return v
 
 
-def main():
-    updates = json.load(open(sys.argv[1], encoding="utf-8"))
-    dry = "--dry" in sys.argv
-    force = "--force" in sys.argv   # переписать и уже опубликованные профили (замена черновой версии)
-    c = sqlite3.connect(DB, timeout=60)
+def apply_updates(updates: dict, db_path: str = DB, dry: bool = False, force: bool = False):
+    """Возвращает (published[(id, title)], held[(id, note)]). force — переписать и уже опубликованные."""
+    c = sqlite3.connect(db_path, timeout=60)
     c.row_factory = sqlite3.Row
     now = datetime.utcnow().isoformat(sep=" ")
     published, held = [], []
@@ -86,6 +84,15 @@ def main():
                   (row["user_id"], f"/resume/{rid}", now))
     if not dry:
         c.commit()
+    c.close()
+    return published, held
+
+
+def main():
+    updates = json.load(open(sys.argv[1], encoding="utf-8"))
+    dry = "--dry" in sys.argv
+    force = "--force" in sys.argv   # переписать и уже опубликованные профили (замена черновой версии)
+    published, held = apply_updates(updates, DB, dry, force)
     print(f"{'DRY ' if dry else ''}published {len(published)}, held {len(held)}")
     for rid, t in published:
         print("  +", rid, t)

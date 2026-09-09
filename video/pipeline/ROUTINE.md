@@ -30,3 +30,23 @@ Routine запускается в 04:30Z, 09:30Z и 14:30Z (06:30 / 11:30 / 16:3
    закоммить, запушь, заверши.
 
 Не трогай другие файлы. Не меняй расписание, плейлисты и код без необходимости. Ничего не публикуй вне YouTube.
+
+## Часть 2 (та же routine, после видео): модерация резюме
+
+Все резюме одобряются автоматически, задача агента — превратить сырое CV в качественный анонимный профиль. Без сторонних ИИ.
+
+1. Кандидаты: `curl -s -H "X-Publish-Key: $SPINHIRE_PUBLISH_KEY" https://spinhire.io/api/moderation/resumes/todo > /tmp/cv_todo.json`.
+   Пустой список → «Новых резюме нет», конец.
+2. Для КАЖДОГО резюме напиши объект (английский, анонимно): title (роль до 80 символов, iGaming-фокус если есть),
+   location («City, Country» или ""), experience_years (int), skills (8–20 через запятую), about (400–900 знаков, третье лицо,
+   без имени/контактов/ссылок, с цифрами достижений и явной пометкой опыта в iGaming/betting/casino если есть),
+   languages (с уровнями), employment_history (3–8 строк через \n «Role — Company — years: факт», новее сверху, компании
+   заменяй нейтральными описаниями), education (до 3 строк), desired_format («удалёнка» | «гибрид» | «офис»),
+   preferred_locations, relocation (bool), igaming_experience (bool), quality («publish» если есть должность, навыки и
+   достоверное about, иначе «hold»), reason (по-русски, почему hold). Сейчас 2026 год. Ничего не выдумывать: нет данных —
+   hold с причиной. Если cv_text пуст, но поля заполнены человеком — собери профиль из полей. Никаких телефонов, e-mail,
+   URL и имён. Результат: `{"<id>": {...}}` в /tmp/cv_updates.json.
+3. Применить: `curl -s -X POST -H "X-Publish-Key: $SPINHIRE_PUBLISH_KEY" -H "Content-Type: application/json"
+   --data @/tmp/cv_updates.json "https://spinhire.io/api/moderation/resumes/apply?force=1"` → {published, held}.
+4. Проверка: `curl -s -o /dev/null -w "%{http_code}" https://spinhire.io/resume/<id>` для одного опубликованного → 200.
+   Итог одной строкой: обработано / опубликовано / отложено и почему.
