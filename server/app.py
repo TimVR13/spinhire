@@ -158,6 +158,20 @@ def normalize_fmt(raw: str) -> str:
 
 
 
+# Нормализатор вилок пишет период по-русски («от €2 000 в месяц»), а англоязычному
+# читателю — от карточки в ленте до открытого API — нужен тот же текст по-английски.
+_SALARY_EN = ((" в год", "/year"), (" в час", "/hour"), (" в месяц", "/month"),
+              ("по запросу", "on request"), ("от ", "from "), ("до ", "up to "))
+
+
+def salary_en(text: str) -> str:
+    """«от €2 000 в месяц» → «from €2 000/month»."""
+    out = text or ""
+    for russian, english in _SALARY_EN:
+        out = out.replace(russian, english)
+    return out
+
+
 def script_language(text: str):
     """Определить язык текста вакансии по алфавиту: украинский → русский → английский."""
     sample = (text or "")[:4000].lower()
@@ -375,10 +389,7 @@ class Job(Base):
         lang, _ = script_language(f"{self.title} {self.description}")
         salary, fmt = self.salary or "", self.fmt or ""
         if lang == "en":
-            for russian, english in ((" в год", "/year"), (" в час", "/hour"),
-                                     (" в месяц", "/month"), ("по запросу", "on request"),
-                                     ("от ", "from ")):
-                salary = salary.replace(russian, english)
+            salary = salary_en(salary)
             fmt = {"удалёнка": "remote", "офис": "on-site",
                    "гибрид": "hybrid"}.get(fmt, fmt)
         return " · ".join(part for part in (salary, self.location, fmt) if part)
@@ -1194,14 +1205,32 @@ templates.env.filters["ru_plural"] = _ru_plural
 @app.get("/terms")
 @app.get("/game-rules")
 @app.get("/editorial")
+@app.get("/press")
 def clean_static_pages(request: Request):
-    # «Чистые» URL служебных страниц — 301 на канонические .html
-    return RedirectResponse(request.url.path + ".html", status_code=301)
+    # «Чистые» URL служебных страниц — 301 на канонические .html. Языковой
+    # префикс сохраняем: /en/press вёл на русскую страницу и терял читателя.
+    path = (request.scope.get("state") or {}).get("orig_path") or request.url.path
+    return RedirectResponse(path + ".html", status_code=301)
 
 
 def _fmt_stat(n: int, step: int) -> str:
     v = max(step, n // step * step)
     return f"{v:,}".replace(",", " ") + "+"
+
+
+@app.get("/press.html", response_class=HTMLResponse, include_in_schema=False)
+def press_kit(db: Session = Depends(db_session)):
+    # Пресс-кит цитируют каталоги и журналисты: цифры в нём должны быть живыми,
+    # а не «на момент вёрстки». Логика та же, что у hero на главной.
+    html = open(os.path.join(ROOT, "press.html"), encoding="utf-8").read()
+    try:
+        stats = market_stats_data(db)
+        for key, step in (("live_jobs", 100), ("companies", 50), ("new_this_week", 100)):
+            html = re.sub(rf'(data-press-stat="{key}">)[^<]*',
+                          rf'\g<1>{_fmt_stat(stats[key], step)}', html, count=1)
+    except Exception:
+        pass  # при сбое статистики отдаём статический фолбэк
+    return HTMLResponse(html)
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
@@ -1676,6 +1705,31 @@ def _hreflang_block(path: str, canonical_lang: str) -> str:
     return "".join(links)
 
 
+OG_LOCALES = {"en": "en_US", "de": "de_DE", "pl": "pl_PL", "fr": "fr_FR", "es": "es_ES",
+              "pt": "pt_PT", "it": "it_IT", "el": "el_GR", "ro": "ro_RO", "bg": "bg_BG",
+              "uk": "uk_UA", "ru": "ru_RU"}
+_OG_URL_RE = re.compile(r'(<meta property="og:url" content="https://spinhire\.io)(/[^"]*|)(")')
+
+
+def _localize_og(text: str, lang: str) -> str:
+    """og:locale и og:url под язык страницы.
+
+    Карточку ссылки рисует робот соцсети — без JS и без нашего переключателя.
+    С ru_RU и русским адресом в og:url английская ссылка в ленте Product Hunt,
+    LinkedIn или X выглядит чужой и уводит читателя на русскую версию.
+    """
+    text = text.replace('<meta property="og:locale" content="ru_RU">',
+                        f'<meta property="og:locale" content="{OG_LOCALES.get(lang, "en_US")}">', 1)
+
+    def repl(m):
+        path = m.group(2)
+        if _NO_PREFIX_RE.match(path) or _LANG_PREFIX_RE.match(path):
+            return m.group(0)
+        return f"{m.group(1)}/{lang}{path}{m.group(3)}"
+
+    return _OG_URL_RE.sub(repl, text, count=1)
+
+
 @app.middleware("http")
 async def language_layer(request: Request, call_next):
     """Язык из пути (/de/jobs) или из хоста (ru.spinhire.io) — и перевод ответа."""
@@ -1706,6 +1760,7 @@ async def language_layer(request: Request, call_next):
         text = text.replace('<html lang="ru">', f'<html lang="{lang}">', 1)
         if prefix_lang:
             text = _prefix_links(text, lang)
+            text = _localize_og(text, lang)
     live_count = getattr(request.state, "landing_count", None)
     if live_count:
         token, live = live_count
@@ -2241,6 +2296,7 @@ def _llms_text_ru(ctx: dict) -> str:
         "- [Профессии](https://spinhire.io/professions) — что делает каждая роль и что требуют",
         "- [Рынок труда](https://spinhire.io/market) — сколько вакансий открыто и где",
         "- [Блог](https://spinhire.io/blog) — зарплаты, релокация, карьерные разборы",
+        "- [Пресс-кит](https://spinhire.io/press.html) — цифры, готовые описания, логотипы и правила цитирования",
         "- [Работодателям](https://spinhire.io/post-job) — размещение вакансий и тарифы",
         "- [Срезы по странам, направлениям и языкам](https://spinhire.io/jobs/browse) — например, "
         "https://spinhire.io/jobs/malta, https://spinhire.io/jobs/malta/compliance-aml, "
@@ -2266,7 +2322,8 @@ def _llms_text_ru(ctx: dict) -> str:
         "CC BY 4.0 (свободно со ссылкой на spinhire.io).",
         "",
         "Параметры: `page` (с 1), `limit` (до 100), `q` (поиск по названию, "
-        "компании и тегам), `category`, `country`, `fmt`.",
+        "компании и тегам), `category`, `country`, `fmt`, `lang` (`en` — английские названия "
+        "направлений, стран и форматов; то же самое отдаёт https://spinhire.io/en/api/jobs).",
         "",
         "В ответе: `total`, `page`, `pages`, `limit` и массив `jobs`; у вакансии — "
         "`title`, `company`, `location`, `country`, `format`, `category`, `salary` "
@@ -2326,6 +2383,7 @@ def _llms_text_en(ctx: dict, lang: str = "en") -> str:
         f"- [Careers]({base}/professions) — what each role does and what employers require",
         f"- [Job market]({base}/market) — how many jobs are open and where",
         f"- [Blog]({base}/blog) — salaries, relocation, career guides",
+        f"- [Press kit]({base}/press.html) — numbers, ready-made descriptions, logos and citation rules",
         f"- [For employers]({base}/post-job) — job posting and pricing",
         f"- [Jobs by country, department and language]({base}/jobs/browse) — e.g. {base}/jobs/malta, "
         f"{base}/jobs/malta/compliance-aml, {base}/jobs/remote, {base}/jobs/german-speaking, each with live counts and salary benchmarks",
@@ -2349,7 +2407,8 @@ def _llms_text_en(ctx: dict, lang: str = "en") -> str:
         "(free to use with attribution to spinhire.io).",
         "",
         "Parameters: `page` (from 1), `limit` (up to 100), `q` (search in title, company and tags), "
-        "`category`, `country`, `fmt`.",
+        "`category`, `country`, `fmt`, `lang` (`en` returns English department, country and format "
+        "names and English salary wording; the same is served from https://spinhire.io/en/api/jobs).",
         "",
         "Response: `total`, `page`, `pages`, `limit` and a `jobs` array; each job has `title`, `company`, "
         "`location`, `country`, `format`, `category`, `salary` with parsed `salary_min`/`salary_max`/"
@@ -6105,9 +6164,19 @@ def job_location_schema(job) -> dict:
 
 def loc_name(name: str, lang: str = "ru") -> str:
     """Страна / формат / направление на языке страницы (для .md и llms.txt)."""
-    if lang == "ru":
+    if lang == "ru" or not name:
         return name
     return COUNTRY_EN.get(name) or _SERVER_VOCAB.get("en", {}).get(name) or name
+
+
+def api_lang(request: Request, explicit: str = "") -> str:
+    """Язык значений в открытом API: ?lang=en или языковой префикс пути (/en/api/…).
+
+    Переводим только справочники, и словарь значений у нас один — английский,
+    поэтому любой не-русский язык страницы отдаёт английские значения.
+    """
+    value = (explicit or (request.scope.get("state") or {}).get("lang") or "ru").strip().lower()
+    return "ru" if value == "ru" else "en"
 
 
 _market_stats_cache = {"at": 0.0, "data": None}
@@ -6222,18 +6291,31 @@ def _market_stats_compute(db: Session) -> dict:
 
 
 @app.get("/api/market-stats")
-def api_market_stats(db: Session = Depends(db_session)):
-    return JSONResponse(market_stats_data(db))
+def api_market_stats(request: Request, db: Session = Depends(db_session), lang: str = ""):
+    """Статистика рынка. Названия направлений и стран — по-английски под /en/ и ?lang=en."""
+    data = market_stats_data(db)
+    if api_lang(request, lang) == "ru":
+        return JSONResponse(data)
+    localized = dict(data)
+    for key in ("directions", "countries"):
+        localized[key] = [{**row, "name": loc_name(row.get("name", ""), "en")}
+                          for row in data.get(key, [])]
+    return JSONResponse(localized)
 
 
 @app.get("/api/jobs")
-def api_jobs(db: Session = Depends(db_session),
+def api_jobs(request: Request, db: Session = Depends(db_session),
              page: int = 1, limit: int = 50, q: str = "",
-             category: str = "", country: str = "", fmt: str = ""):
+             category: str = "", country: str = "", fmt: str = "", lang: str = ""):
     """Открытый список вакансий — без ключа и регистрации.
 
     Открытый он намеренно: агрегаторы и ИИ-агенты забирают то, что могут
     прочитать без договорённостей, и вместе с данными уносят ссылку на нас.
+
+    Значения справочников отдаются по-русски, как в базе. Англоязычному
+    потребителю (а он основной: каталоги открытых API, агенты, зарубежные
+    агрегаторы) нужен ответ без кириллицы — за это отвечает `?lang=en`
+    и тот же ответ по адресу /en/api/jobs.
     """
     limit = max(1, min(100, limit))
     page = max(1, page)
@@ -6258,22 +6340,27 @@ def api_jobs(db: Session = Depends(db_session),
 
     total = len(rows)
     window = rows[(page - 1) * limit: page * limit]
+    out_lang = api_lang(request, lang)
+    localize = (lambda value: loc_name(value, "en")) if out_lang == "en" else (lambda value: value)
+    money = salary_en if out_lang == "en" else (lambda value: value)
     return JSONResponse({
         "total": total,
         "page": page,
         "pages": (total + limit - 1) // limit,
         "limit": limit,
-        "license": "CC BY 4.0 — использование свободно со ссылкой на spinhire.io",
+        "lang": out_lang,
+        "license": ("CC BY 4.0 — free to use with attribution to spinhire.io" if out_lang == "en"
+                    else "CC BY 4.0 — использование свободно со ссылкой на spinhire.io"),
         "jobs": [{
             "id": j.id,
             "title": j.title,
             "company": j.company_name,
             "company_slug": j.company_slug,
             "location": j.location,
-            "country": country_of(j.location),
-            "format": j.fmt,
-            "category": j.category,
-            "salary": j.salary,
+            "country": localize(country_of(j.location)),
+            "format": localize(j.fmt),
+            "category": localize(j.category),
+            "salary": money(j.salary),
             "salary_min": j.sal_min,
             "salary_max": j.sal_max,
             "salary_currency": j.sal_currency if j.has_salary else None,
@@ -6467,6 +6554,7 @@ def sitemap(db: Session = Depends(db_session)):
               *[(f"blog/{slug}", "0.7") for slug in ARTICLE_FILES],
               ("privacy.html", "0.3"), ("terms.html", "0.3"), ("game-rules.html", "0.3")]
     static.append(("editorial.html", "0.5"))
+    static.append(("press.html", "0.5"))
     static.append(("professions", "0.9"))
     static.append(("market", "0.9"))
     for m in market_archive(db):
@@ -6573,14 +6661,22 @@ try:
 
     @app.on_event("startup")
     async def _mcp_start():
+        # session_manager.run() у библиотеки одноразовый: второй вход роняет
+        # приложение («can only be called once per instance»). На проде запуск
+        # один, а тесты поднимают lifespan по разу на каждый TestClient — и вся
+        # проверка перед релизом рассыпалась на ровном месте.
+        if getattr(app.state, "mcp_started", False):
+            return
         app.state.mcp_session_cm = mcp_server.mcp.session_manager.run()
         await app.state.mcp_session_cm.__aenter__()
+        app.state.mcp_started = True
 
     @app.on_event("shutdown")
     async def _mcp_stop():
         cm = getattr(app.state, "mcp_session_cm", None)
         if cm:
             await cm.__aexit__(None, None, None)
+            app.state.mcp_session_cm = None
 except ImportError as _mcp_exc:  # пакет mcp не установлен — сайт работает без него
     print(f"[mcp] сервер не поднят: {_mcp_exc}")
 

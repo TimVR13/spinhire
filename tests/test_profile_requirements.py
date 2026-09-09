@@ -44,8 +44,11 @@ class ProfileRequirementsTests(unittest.TestCase):
 
     def test_avatar_is_required_before_resume_can_be_saved(self):
         with self.client() as client:
-            response = client.post("/profile/resume", data={"title": "CRM Lead", "about": "Опыт",
-                                   "publish": "1", "consent": "1"}, follow_redirects=False)
+            # контакты проверяются раньше аватара — без них до проверки не дойти
+            response = client.post("/profile/resume",
+                                   data={"title": "CRM Lead", "about": "Опыт", "publish": "1",
+                                         "consent": "1", "contact_telegram": "@profile_test"},
+                                   follow_redirects=False)
         self.assertEqual(response.status_code, 303)
         self.assertIn("cv_error=avatar", response.headers["location"])
 

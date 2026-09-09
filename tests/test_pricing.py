@@ -36,11 +36,13 @@ class PricingTests(unittest.TestCase):
             db.commit()
 
     def test_discounted_prices_and_contact_rate(self):
-        self.assertEqual(PLANS["single"][1], 99)
-        self.assertEqual(PLANS["featured"][1], 199)
+        # цены выровняли по рынку (было 99/199/50), а пакет cv40 заменили на cv30
+        self.assertEqual(PLANS["single"][1], 49)
+        self.assertEqual(PLANS["featured"][1], 99)
         self.assertEqual(PLANS["cv1"][1], 5)
-        self.assertEqual(PLANS["cv10"][1], 50)
-        self.assertEqual(PLANS["cv40"][1], 200)
+        self.assertEqual(PLANS["cv10"][1], 45)
+        self.assertEqual(PLANS["cv30"][1], 120)
+        self.assertNotIn("cv40", PLANS)
 
     def test_one_contact_order_grants_one_credit_once(self):
         with TestClient(app) as client:

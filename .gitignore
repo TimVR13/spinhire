@@ -18,3 +18,12 @@ video/public/audio/tracks-full/
 video/public/renders/
 video/out/*.mp4
 video/out/frames/
+
+# локальный прогон: снимки рынка и хвосты sqlite
+data/market-snapshots.json
+data/spinhire.db-shm
+data/spinhire.db-wal
+data/cv_uploads/
+
+# кадры галереи для каталогов пересобираются скриптом с прода
+img/press/launch/*.png
