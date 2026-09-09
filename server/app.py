@@ -867,6 +867,24 @@ def db_session():
 
 
 # порядок важен: специфичные роли — раньше общих, топ-менеджмент и финансы — до «разработки»
+# C-level кандидаты: открытие контакта дороже (решение пользователя 09.09.2026 — в 5 раз).
+# Ключевые слова уже, чем «Топ-менеджмент» в категориях: Head of Support — не C-level.
+CLEVEL_UNLOCK_COST = int(os.environ.get("SPINHIRE_CLEVEL_UNLOCK_COST", "5"))
+_CLEVEL_RE = re.compile(
+    r"\b(ceo|cfo|coo|cto|cmo|cpo|cro|cco|cio|chro|vp|svp|evp)\b"
+    r"|\bchief\b|c-level|managing director|general manager|country manager|vice president"
+    r"|\bdirector\b|директор|генеральн\w*|управляющ\w*", re.I)
+
+
+def is_c_level(text: str) -> bool:
+    return bool(_CLEVEL_RE.search(text or ""))
+
+
+def unlock_cost(resume) -> int:
+    """Сколько открытий списывается за контакт кандидата."""
+    return CLEVEL_UNLOCK_COST if is_c_level(getattr(resume, "title", "")) else 1
+
+
 _CAT_RULES = [
     ("Топ-менеджмент", ("head of", "vp of", "chief", "c-level", "cto", "ceo", "cfo", "coo",
                         "country manager", "managing director", "director of", "директор", "руковод")),
@@ -1129,7 +1147,7 @@ def _public_openapi():
         "employment_type": {"type": "string"}, "languages": {"type": "array", "items": {"type": "string"}},
         "tags": {"type": "array", "items": {"type": "string"}}, "posted_at": {"type": "string", "format": "date"},
         "valid_through": {"type": "string", "format": "date"}, "url": {"type": "string", "format": "uri"},
-        "markdown_url": {"type": "string", "format": "uri"}, "source_url": {"type": "string", "format": "uri"},
+        "markdown_url": {"type": "string", "format": "uri"},
     }
     app.openapi_schema = {
         "openapi": "3.1.0",
@@ -2272,7 +2290,7 @@ def _llms_text_ru(ctx: dict) -> str:
         "`title`, `company`, `location`, `country`, `format`, `category`, `salary` "
         "с разобранными `salary_min`/`salary_max`/`salary_currency`/`salary_unit`, "
         "`employment_type`, `languages`, `tags`, `posted_at`, `valid_through`, "
-        "`url`, `markdown_url` и `source_url` на первоисточник.",
+        "`url` и `markdown_url`.",
         "",
         "## Как цитировать",
         "",
@@ -2354,7 +2372,7 @@ def _llms_text_en(ctx: dict, lang: str = "en") -> str:
         "Response: `total`, `page`, `pages`, `limit` and a `jobs` array; each job has `title`, `company`, "
         "`location`, `country`, `format`, `category`, `salary` with parsed `salary_min`/`salary_max`/"
         "`salary_currency`/`salary_unit`, `employment_type`, `languages`, `tags`, `posted_at`, "
-        "`valid_through`, `url`, `markdown_url` and `source_url` pointing to the original posting.",
+        "`valid_through`, `url` and `markdown_url`.",
         "",
         "## How to cite",
         "",
@@ -3108,6 +3126,11 @@ def job_apply(job_id: int, request: Request, cover: str = Form(""),
         db.add(ApplicationEvent(application_id=application.id, actor_id=user.id,
                                 kind="created", body="Кандидат отправил отклик"))
         track(db, "application_created", user.id, "job", job_id)
+        if job.owner_id is None:
+            # чужая (агрегированная) вакансия: отклик — повод связаться с компанией,
+            # таблица «кому сообщить» — /admin/crm/leads
+            from server import crm
+            crm.note_application(db, job, user, application)
         db.commit()
         return RedirectResponse(f"/job/{job_id}?ok=1{extra}", status_code=303)
     return RedirectResponse(f"/job/{job_id}?ok=1", status_code=303)
@@ -3777,7 +3800,8 @@ def resume_detail(resume_id: int, request: Request, db: Session = Depends(db_ses
     unlocked = resume_contact_access(user, row, db)
     cv_account, cv_team_role = company_context(user, db) if user and user.role == "employer" else (user, "owner")
     return render(request, db, "resume.html", resume=row, unlocked=unlocked,
-                  active="resumes", cv_account=cv_account, cv_team_role=cv_team_role)
+                  active="resumes", cv_account=cv_account, cv_team_role=cv_team_role,
+                  cv_cost=unlock_cost(row), cv_clevel=is_c_level(row.title))
 
 
 @app.get("/resume/{resume_id}/file")
@@ -3827,12 +3851,13 @@ def resume_unlock(resume_id: int, request: Request, db: Session = Depends(db_ses
             unlimited = datetime.fromisoformat(account.cv_access_until) > datetime.utcnow()
         except ValueError:
             unlimited = False
+    cost = unlock_cost(row)
     if not unlimited:
-        charged = (db.query(User).filter(User.id == account.id, User.cv_credits > 0)
-                   .update({User.cv_credits: User.cv_credits - 1}, synchronize_session=False))
+        charged = (db.query(User).filter(User.id == account.id, User.cv_credits >= cost)
+                   .update({User.cv_credits: User.cv_credits - cost}, synchronize_session=False))
         if charged != 1:
             db.rollback()
-            return RedirectResponse(f"/resume/{resume_id}?need_plan=1", status_code=303)
+            return RedirectResponse(f"/resume/{resume_id}?need_plan={cost}", status_code=303)
     try:
         db.add(ResumeUnlock(employer_id=account.id, resume_id=row.id,
                             access_kind="unlimited" if unlimited else "credit"))
@@ -3840,7 +3865,7 @@ def resume_unlock(resume_id: int, request: Request, db: Session = Depends(db_ses
         db.flush()
         db.refresh(account)
         db.add(ResumeCreditLedger(employer_id=account.id, resume_id=row.id,
-                                  delta=0 if unlimited else -1,
+                                  delta=0 if unlimited else -cost,
                                   balance_after=account.cv_credits or 0,
                                   action="unlimited" if unlimited else "unlock"))
         track(db, "resume_unlocked", user.id, "resume", row.id, account_id=account.id)
@@ -6285,7 +6310,6 @@ def api_jobs(db: Session = Depends(db_session),
             "valid_through": j.valid_through,
             "url": f"https://spinhire.io/job/{j.id}",
             "markdown_url": f"https://spinhire.io/job/{j.id}.md",
-            "source_url": j.source_url,
         } for j in window],
     })
 

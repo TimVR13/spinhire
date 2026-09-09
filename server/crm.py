@@ -435,3 +435,165 @@ def crm_import(request: Request, db: Session = Depends(db_session)):
     db.commit()
     return RedirectResponse(f"/admin/crm?msg=Импорт: добавлено {added}, обновлено {updated}",
                             status_code=303)
+
+
+# ---------- отклики на чужие (агрегированные) вакансии ----------
+# Таланты откликаются на сайте, ссылок на первоисточник нет. Каждый отклик на
+# вакансию без владельца — лид: компанию надо найти, сообщить об отклике и
+# предложить открыть контакт кандидата за деньги (обычные cv-открытия).
+
+def ensure_company(db: Session, name: str) -> "CrmCompany | None":
+    name = (name or "").strip()
+    slug = slugify_company(name)
+    if not name or slug == "company":
+        return None
+    company = db.query(CrmCompany).filter_by(slug=slug).first()
+    if not company:
+        company = CrmCompany(name=name, slug=slug, source="applications")
+        db.add(company)
+        db.flush()
+        log_event(db, company.id, "created", "Появился отклик на вакансию компании")
+    return company
+
+
+def note_application(db: Session, job, user, application) -> None:
+    """Вызывается из job_apply для вакансий без владельца. Не коммитит."""
+    company = ensure_company(db, job.company_name)
+    if not company:
+        return
+    company.updated_at = datetime.utcnow()
+    log_event(db, company.id, "application",
+              f"Отклик на «{job.title}» (вакансия #{job.id}) от кандидата #{user.id}")
+
+
+def _lead_rows(db: Session):
+    """Компании с откликами на их агрегированные вакансии, свежие сверху."""
+    from server.app import Application, Resume, User, is_c_level
+    rows = (db.query(Application, Job, User)
+            .join(Job, Job.id == Application.job_id)
+            .join(User, User.id == Application.user_id)
+            .filter(Job.owner_id.is_(None))
+            .order_by(Application.created_at.desc()).all())
+    resumes = {r.user_id: r for r in db.query(Resume).filter(
+        Resume.user_id.in_({u.id for _, _, u in rows} or {0}))}
+    groups: dict[str, dict] = {}
+    for application, job, user in rows:
+        slug = slugify_company(job.company_name)
+        g = groups.get(slug)
+        if not g:
+            company = ensure_company(db, job.company_name)
+            if not company:
+                continue
+            contact = (db.query(CrmContact).filter(CrmContact.company_id == company.id,
+                                                   CrmContact.email != "", CrmContact.do_not_contact.is_(False))
+                       .order_by(CrmContact.id).first())
+            touch = (db.query(CrmTouch).filter(CrmTouch.company_id == company.id,
+                                               CrmTouch.subject.like("Отклик%"), CrmTouch.direction == "out")
+                     .order_by(CrmTouch.happened_at.desc()).first())
+            g = groups[slug] = {"company": company, "contact": contact, "notified": touch,
+                                "items": [], "new_since_notify": 0}
+        resume = resumes.get(user.id)
+        public = bool(resume and resume.published and resume.status == "approved")
+        item = {"application": application, "job": job, "user": user, "resume": resume,
+                "public": public,
+                "clevel": is_c_level(job.title) or is_c_level(resume.title if resume else "")}
+        g["items"].append(item)
+        if not g["notified"] or application.created_at > g["notified"].happened_at:
+            g["new_since_notify"] += 1
+    db.flush()
+    return sorted(groups.values(), key=lambda g: g["items"][0]["application"].created_at, reverse=True)
+
+
+def build_lead_letter(g: dict) -> tuple[str, str, str]:
+    """(subject, text, html) — письмо компании об откликах. По-английски: компании международные."""
+    from server.app import CLEVEL_UNLOCK_COST
+    company = g["company"]
+    items = g["items"]
+    titles = sorted({it["job"].title for it in items})
+    n = len(items)
+    subject = (f"{n} candidate{'s' if n > 1 else ''} applied to your job "
+               f"“{titles[0]}” on SpinHire" if len(titles) == 1 else
+               f"{n} candidates applied to your {len(titles)} jobs on SpinHire")
+    lines = []
+    for it in items[:8]:
+        r = it["resume"]
+        who = (r.title if r and r.title else "Candidate")
+        meta = " · ".join(x for x in [
+            f"{r.experience_years} yrs" if r and r.experience_years else "",
+            (r.location if r else "") or "", (r.desired_format if r else "") or ""] if x)
+        link = f"https://spinhire.io/resume/{r.id}" if it["public"] else ""
+        lines.append((it["job"].title, who, meta, link))
+    text_items = "\n".join(
+        f"• {who}{' — ' + meta if meta else ''} → applied to “{jt}”" + (f"\n  {link}" if link else "\n  (profile is being moderated, we will forward your reply)")
+        for jt, who, meta, link in lines)
+    html_items = "".join(
+        f"<li><b>{who}</b>{' — ' + meta if meta else ''} → applied to “{jt}”"
+        + (f'<br><a href="{link}">{link}</a>' if link else "<br><i>profile is being moderated, we will forward your reply</i>") + "</li>"
+        for jt, who, meta, link in lines)
+    more = f"\n…and {n - 8} more." if n > 8 else ""
+    text = f"""Hello {company.name} team,
+
+Candidates on SpinHire — an iGaming job board with 6 000+ live jobs — applied to your posting{'s' if len(titles) > 1 else ''}:
+
+{text_items}{more}
+
+Open a candidate's contacts (name, email, Telegram) in one click: €5 per contact, €4.5 in a pack of 10. C-level contacts cost {CLEVEL_UNLOCK_COST} credits.
+Pricing: https://spinhire.io/post-job#pricing
+
+Post your own jobs on SpinHire — the first 3 are free: https://spinhire.io/post-job
+
+— SpinHire team, https://spinhire.io"""
+    html = f"""<p>Hello {company.name} team,</p>
+<p>Candidates on <a href="https://spinhire.io">SpinHire</a> — an iGaming job board with 6 000+ live jobs — applied to your posting{'s' if len(titles) > 1 else ''}:</p>
+<ul>{html_items}</ul>{('<p>…and %d more.</p>' % (n - 8)) if n > 8 else ''}
+<p>Open a candidate's contacts (name, email, Telegram) in one click: <b>€5 per contact</b>, €4.5 in a pack of 10. C-level contacts cost {CLEVEL_UNLOCK_COST} credits.<br>
+<a href="https://spinhire.io/post-job#pricing">Pricing</a></p>
+<p>Post your own jobs on SpinHire — the first 3 are free: <a href="https://spinhire.io/post-job">spinhire.io/post-job</a></p>
+<p>— SpinHire team</p>"""
+    return subject, text, html
+
+
+@router.get("/admin/crm/leads", response_class=HTMLResponse)
+def crm_leads(request: Request, db: Session = Depends(db_session)):
+    need_admin(request, db)
+    groups = _lead_rows(db)
+    db.commit()
+    for g in groups:
+        g["subject"], g["text"], _ = build_lead_letter(g)
+    return render(request, db, "crm/leads.html", groups=groups, channels=CHANNELS,
+                  stage_labels=STAGE_LABELS, msg=request.query_params.get("msg"))
+
+
+@router.post("/admin/crm/leads/{cid}/notify")
+def crm_lead_notify(cid: int, request: Request, channel: str = Form("email"),
+                    db: Session = Depends(db_session)):
+    """Отправить письмо об откликах (email через Resend) или отметить, что сообщили вручную."""
+    from server.app import resend_send
+    need_admin(request, db)
+    company = company_or_404(db, cid)
+    g = next((g for g in _lead_rows(db) if g["company"].id == cid), None)
+    if not g:
+        return RedirectResponse("/admin/crm/leads?msg=У компании нет откликов", status_code=303)
+    subject, text, html = build_lead_letter(g)
+    contact = g["contact"]
+    status = "sent"
+    if channel == "email":
+        if not contact:
+            return RedirectResponse("/admin/crm/leads?msg=Нет контакта с email — добавьте его в карточке компании",
+                                    status_code=303)
+        if not resend_send(contact.email, subject, html):
+            status = "failed"
+    db.add(CrmTouch(company_id=company.id, contact_id=contact.id if contact else None,
+                    channel=channel if channel in CHANNEL_LABELS else "other", direction="out",
+                    subject=f"Отклик: {subject}", body=text, status=status))
+    if contact:
+        contact.last_touch_at = datetime.utcnow()
+    if company.stage in ("new", "contact"):
+        set_stage(db, company, "outreach")
+    log_event(db, company.id, "touch",
+              f"Сообщили об откликах ({CHANNEL_LABELS.get(channel, channel)}): {status}")
+    db.commit()
+    msg = ("Письмо отправлено" if status == "sent" and channel == "email"
+           else "Не удалось отправить письмо (Resend)" if status == "failed"
+           else "Отмечено: сообщили " + CHANNEL_LABELS.get(channel, channel))
+    return RedirectResponse(f"/admin/crm/leads?msg={msg}", status_code=303)
