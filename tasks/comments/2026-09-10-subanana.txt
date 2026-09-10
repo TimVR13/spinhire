@@ -1,0 +1,3 @@
+Per-language routing is what makes this credible — "one model for every language" is exactly where multilingual tools fall apart. We run a site in 12 languages, and our worst bugs weren't in the hard languages: they were sentences that mixed two of them halfway through, which read fine to a machine and terribly to a native speaker.
+
+How does the glossary interact with routing — applied per language after the model, or fed into whichever engine handles that language?
