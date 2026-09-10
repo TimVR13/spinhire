@@ -41,7 +41,10 @@
   .adm .btn { padding: 5px 10px; font-size: 0.7rem; }
   .adm form { display: inline; }
   .table-wrap { overflow-x: auto; border: 2px solid var(--line); }
-  .adm td { max-width: 420px; overflow-wrap: anywhere; }  /* длинный заголовок без пробелов не растягивает таблицу */
+  .adm td { max-width: 420px; overflow-wrap: break-word; }  /* длинный заголовок без пробелов не растягивает таблицу; break-word (не anywhere) не схлопывает колонки до одной буквы */
+  .adm td .status { display: inline-block; white-space: nowrap; }
+  .adm .clamp2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .adm td.nowrap, .adm th.nowrap { white-space: nowrap; }
   {% block style %}{% endblock %}
 </style>
 <style>

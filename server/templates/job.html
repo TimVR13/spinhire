@@ -46,6 +46,18 @@
   .side-card dt { color: var(--ink-faint); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.1em; font-weight: 700; padding-top: 2px; }
   .side-card dd { color: var(--ink); font-weight: 600; }
   .apply-card { position: sticky; top: 92px; border-color: var(--acid); }
+  /* насколько кандидат подходит вакансии — видно до отклика, чтобы не слали веером */
+  .match { display: flex; gap: 14px; align-items: flex-start; border: 2px solid var(--line);
+           padding: 12px 14px; border-radius: 12px; background: var(--surface); }
+  .match__num { font-family: var(--font-display); font-size: 1.9rem; font-weight: 800; line-height: 1; }
+  .match__body { font-size: .86rem; color: var(--ink-dim); min-width: 0; }
+  .match__row { margin-top: 4px; }
+  .match__row--plus { color: var(--acid); }
+  .match__row--minus { color: var(--ink-faint); }
+  .match__hint { margin-top: 8px; color: var(--ink-faint); }
+  .match--good { border-color: var(--acid); } .match--good .match__num { color: var(--acid); }
+  .match--mid  { border-color: var(--yellow); } .match--mid .match__num { color: var(--yellow); }
+  .match--low  { border-color: var(--line-strong); } .match--low .match__num { color: var(--ink-faint); }
   .apply-card .btn { width: 100%; }
   .apply-card p { color: var(--ink-dim); font-size: 0.82rem; margin-top: 10px; }
   .copy-link { display: flex; width: 100%; align-items: center; gap: 10px; padding: 10px 12px;
@@ -77,6 +89,7 @@
   {% if request.query_params.get('ok') %}<div class="flash">✓ Отклик отправлен — работодатель увидит его в кабинете.{% if request.query_params.get('extra') %} Дневной лимит был исчерпан — списано {{ request.query_params.get('extra') }} SC.{% endif %}</div>{% endif %}
   {% if request.query_params.get('limit') %}<div class="flash">Лимит откликов на сегодня исчерпан ({{ 10 }}/сутки). Дополнительный отклик стоит 10 SC — загляните за ежедневным фриспином в профиль или вернитесь завтра.</div>{% endif %}
   {% if request.query_params.get('fast') %}<div class="flash">Слишком быстро — выдержите паузу ~20 секунд между откликами и попробуйте снова.</div>{% endif %}
+  {% if request.query_params.get('nocv') %}<div class="flash">Чтобы откликнуться, заполните резюме: должность и пара абзацев о себе. Работодателю мы отправляем анонимную карточку — без имени и контактов, собирать её пока не из чего. <a href="/profile#cv" style="color:inherit;text-decoration:underline;">Заполнить резюме →</a></div>{% endif %}
 
   <div class="job-layout">
     <div>
@@ -99,28 +112,37 @@
           {% if job.category %}<span class="tag">{{ job.category }}</span>{% endif %}
           {% for t in job.tag_list %}<span class="tag tag-acid" data-no-translate>{{ t }}</span>{% endfor %}
         </div>
-        <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}<span style="color: var(--ink-faint); font-size: 0.7em; font-weight: 400;">{% if job.source and job.source != 'internal' %}вилка не указана в источнике{% else %}зарплата не указана работодателем{% endif %}</span>{% endif %}</p>
+        <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}<span style="color: var(--ink-faint); font-size: 0.7em; font-weight: 400;">{% if job.source and job.source != 'internal' %}вилка не указана{% else %}зарплата не указана работодателем{% endif %}</span>{% endif %}</p>
         <div style="display: flex; flex-direction: column; gap: 12px; margin-top: var(--sp-4);">
           {% if is_closed %}
             <a class="btn btn-acid btn-lg" href="/jobs?cat={{ job.category|urlencode }}">Смотреть актуальные вакансии →</a>
           {% elif applied %}
             <span class="status invited" style="align-self: flex-start;">✓ Вы уже откликнулись{% if job.source_url %} — мы передадим отклик работодателю{% endif %}</span>
           {% elif user and user.role == 'talent' %}
+            {% if match %}
+            <div class="match match--{{ match.tone }}">
+              <div class="match__num">{{ match.percent }}%</div>
+              <div class="match__body">
+                <b>{{ match.label }}</b> — так ваше резюме ложится на эту вакансию
+                {% for p in match.plus %}<div class="match__row match__row--plus">+ {{ p }}</div>{% endfor %}
+                {% for m in match.minus %}<div class="match__row match__row--minus">− {{ m }}</div>{% endfor %}
+                {% if match.percent < 45 %}<div class="match__hint">Откликаться можно, но шансы невысокие — посмотрите <a href="/jobs?fit=1">вакансии, которые подходят вам лучше</a>.</div>{% endif %}
+              </div>
+            </div>
+            {% endif %}
             <form id="apply" method="post" action="/job/{{ job.id }}/apply" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
               <input class="input" name="cover" placeholder="Пара слов о себе (необязательно)" aria-label="Сопроводительное" style="flex: 1 1 260px;">
               <button class="btn btn-acid btn-lg" type="submit">Откликнуться через SpinHire →</button>
             </form>
-            {% if job.source_url %}<span style="color: var(--ink-faint); font-size: 0.82rem;">Мы передадим ваш отклик работодателю. Или можно <a href="{{ job.source_url }}" target="_blank" rel="noopener nofollow" style="color: var(--ink-dim);">открыть первоисточник ↗</a></span>{% endif %}
+            {% if job.source_url %}<span style="color: var(--ink-faint); font-size: 0.82rem;">Мы передадим ваш отклик работодателю.</span>{% endif %}
           {% elif user %}
             <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
-              {% if job.source_url %}<a class="btn btn-acid btn-lg" href="{{ job.source_url }}" target="_blank" rel="noopener nofollow">Откликнуться у работодателя ↗</a>{% endif %}
               <a class="btn btn-ghost" href="/logout?next=/job/{{ job.id }}">Войти как соискатель</a>
             </div>
             <span style="color: var(--ink-faint); font-size: 0.85rem;">Сейчас вы вошли как {{ 'администратор' if user.role == 'admin' else 'работодатель' }} — внутренние отклики доступны профилю соискателя.</span>
           {% else %}
             <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
               <form method="post" action="/login/next" style="display:inline"><input type="hidden" name="next" value="/job/{{ job.id }}"><button class="btn btn-acid btn-lg" type="submit">Войти и откликнуться →</button></form>
-              {% if job.source_url %}<a href="{{ job.source_url }}" target="_blank" rel="noopener nofollow" style="color: var(--ink-dim); font-size: 0.85rem;">или у источника ↗</a>{% endif %}
             </div>
           {% endif %}
           {% if applies %}<span style="color: var(--ink-faint); font-size: 0.82rem;">{{ applies }} откл. · {{ job.views }} просмотров</span>{% endif %}
@@ -131,7 +153,7 @@
         <h2 style="font-size: 1.1rem; color: var(--acid); margin-bottom: 12px;">▮ Описание</h2>
         <div class="desc-block" data-no-translate>{{ job.description|pretty_desc }}</div>
       {% else %}
-        <div class="desc-block" style="color: var(--ink-faint);">Работодатель не добавил подробное описание. Основное — в тегах и условиях выше{% if job.source_url %}, полный текст — у источника{% endif %}.</div>
+        <div class="desc-block" style="color: var(--ink-faint);">Работодатель не добавил подробное описание. Основное — в тегах и условиях выше.</div>
       {% endif %}
 
       {% if similar %}
@@ -160,13 +182,13 @@
         {% if applied %}
           <span class="status invited">✓ Отклик отправлен</span>
         {% elif user and user.role == 'talent' %}
+          {% if match %}<p style="margin:0 0 10px;color:var(--ink);"><b style="font-size:1.2rem;">{{ match.percent }}%</b> — {{ match.label }}</p>{% endif %}
           <a class="btn btn-acid" href="#apply">Откликнуться →</a>
           <p>Добавьте пару слов и отправьте отклик через SpinHire.</p>
         {% elif not user %}
           <form method="post" action="/login/next"><input type="hidden" name="next" value="/job/{{ job.id }}"><button class="btn btn-acid" type="submit" style="width:100%">Войти и откликнуться →</button></form>
           <p>Вход нужен, чтобы работодатель получил ваш профиль.</p>
         {% else %}
-          {% if job.source_url %}<a class="btn btn-acid" href="{{ job.source_url }}" target="_blank" rel="noopener nofollow">Откликнуться у работодателя ↗</a>{% endif %}
           <a class="btn btn-ghost" style="margin-top: 10px;" href="/logout?next=/job/{{ job.id }}">Войти как соискатель</a>
           <p>Вы вошли не как соискатель, поэтому внутренний отклик недоступен.</p>
         {% endif %}

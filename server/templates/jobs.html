@@ -13,6 +13,14 @@
 {"@context":"https://schema.org","@type":"ItemList","name":"Вакансии iGaming","itemListElement":[{% for j in jobs %}{"@type":"ListItem","position":{{ ((page - 1) * 30) + loop.index }},"url":"https://spinhire.io/job/{{ j.id }}","name":{{ j.title|tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]}
 </script>{% endblock %}
 {% block style %}
+  /* процент совпадения: кандидат видит, куда его резюме реально попадает */
+  .fit { font-family: var(--font-display); font-weight: 800; font-size: .95rem; line-height: 1;
+         padding: 3px 8px; border: 2px solid; border-radius: 999px; }
+  .fit--good { color: var(--acid); border-color: var(--acid); }
+  .fit--mid { color: var(--yellow); border-color: var(--yellow); }
+  .fit--low { color: var(--ink-faint); border-color: var(--line-strong); }
+  .fit-switch { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+                margin: 0 0 var(--sp-4); color: var(--ink-faint); font-size: .82rem; }
   .jobs-list { display: flex; flex-direction: column; gap: var(--sp-3); }
   .filter-bar { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-block: var(--sp-4) var(--sp-5); align-items: center; }
   .filter-bar .input, .filter-bar .select { width: auto; padding-block: 9px; }
@@ -69,6 +77,13 @@
     <button class="btn btn-acid btn-sm" type="submit">Найти</button>
     {% if q or fmt or cat or loc or lang or salary_only %}<a class="tag" href="/jobs">Сбросить</a>{% endif %}
   </form>
+  {% if has_cv %}
+  <p class="fit-switch">
+    {% if fit %}<a class="tag" href="/jobs">Сначала свежие</a><span class="tag tag-acid">Сначала подходящие вам</span>
+    {% else %}<span class="tag tag-acid">Сначала свежие</span><a class="tag" href="/jobs?fit=1">Сначала подходящие вам →</a>{% endif %}
+    <span>Процент рядом с вакансией — насколько ваше резюме совпадает с требованиями.</span>
+  </p>
+  {% endif %}
 
   <div class="jobs-list">
     {% for j in jobs %}
@@ -83,12 +98,13 @@
           {% if j.category %}<span class="tag">{{ j.category }}</span>{% endif %}
           {% for t in j.tag_list %}<span class="tag">{{ t }}</span>{% endfor %}
           {% for code, label in j.language_list[:3] %}<span class="tag tag-acid" title="Язык работы">{{ label }}</span>{% endfor %}
-          {% if j.source and j.source != 'ручная' %}<span class="tag tag--src" style="color: var(--ink-faint);" title="Агрегировано из {{ j.source }}">↗ агрегатор</span>{% endif %}
         </div>
       </div>
       <div class="job-card__side">
         {% if j.has_salary %}<span class="salary">{{ j.salary }}</span>
                 {% else %}<span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>{% endif %}
+        {% set m = matches.get(j.id) if matches else None %}
+        {% if m %}<span class="fit fit--{{ m.tone }}" title="{{ m.label }}: {{ (m.plus + m.minus)|join('; ') }}">{{ m.percent }}%</span>{% endif %}
         <span class="job-card__age">{{ j.created_at.strftime('%d.%m') }}</span>
       </div>
     </a>

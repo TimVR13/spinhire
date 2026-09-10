@@ -493,6 +493,16 @@ class Resume(Base):
     def skill_list(self):
         return [s.strip() for s in self.skills.split(",") if s.strip()][:8]
 
+    @property
+    def is_empty(self):
+        """Нечего публиковать: ни заголовка, ни текста, ни навыков, ни файла."""
+        title = (self.title or "").strip()
+        return (title in ("", "Без названия", "Резюме на обработке")
+                and len((self.about or "").strip()) < 40
+                and not (self.skills or "").strip()
+                and not (self.employment_history or "").strip()
+                and not (self.cv_file_path or "").strip())
+
 
 class ResumeUnlock(Base):
     __tablename__ = "resume_unlocks"
@@ -878,6 +888,179 @@ def db_session():
 
 
 # порядок важен: специфичные роли — раньше общих, топ-менеджмент и финансы — до «разработки»
+# C-level кандидаты: открытие контакта дороже (решение пользователя 09.09.2026 — в 5 раз).
+# Ключевые слова уже, чем «Топ-менеджмент» в категориях: Head of Support — не C-level.
+CLEVEL_UNLOCK_COST = int(os.environ.get("SPINHIRE_CLEVEL_UNLOCK_COST", "5"))
+_CLEVEL_RE = re.compile(
+    r"\b(ceo|cfo|coo|cto|cmo|cpo|cro|cco|cio|chro|vp|svp|evp)\b"
+    r"|\bchief\b|c-level|managing director|general manager|country manager|vice president"
+    r"|\bdirector\b|директор|генеральн\w*|управляющ\w*", re.I)
+
+
+def is_c_level(text: str) -> bool:
+    return bool(_CLEVEL_RE.search(text or ""))
+
+
+def unlock_cost(resume) -> int:
+    """Сколько открытий списывается за контакт кандидата."""
+    return CLEVEL_UNLOCK_COST if is_c_level(getattr(resume, "title", "")) else 1
+
+
+# ---------- насколько кандидат подходит вакансии ----------
+# Кандидаты откликаются веером на всё подряд, работодатель тонет в нерелевантном.
+# Показываем процент совпадения прямо в карточке вакансии, чтобы человек видел,
+# куда его резюме действительно попадает (решение владельца 09.09.2026).
+_LEVELS = ((("intern", "стажёр", "trainee"), 0), (("junior", "джуниор", "младший"), 1),
+           (("middle", "мидл"), 3), (("senior", "сеньор", "старший"), 5),
+           (("lead", "тимлид", "team lead"), 6), (("head", "руководител"), 7),
+           (("director", "директор", "chief", "vp", "c-level"), 9))
+_STOP_WORDS = {"the", "and", "for", "with", "manager", "specialist", "senior", "junior",
+               "middle", "lead", "head", "remote", "team", "менеджер", "специалист"}
+
+
+def _words(text: str) -> set:
+    return {w for w in re.findall(r"[a-zа-я0-9+#.]{3,}", (text or "").lower()) if w not in _STOP_WORDS}
+
+
+def _level_of(text: str) -> int:
+    t = (text or "").lower()
+    for names, years in reversed(_LEVELS):
+        if any(n in t for n in names):
+            return years
+    return -1
+
+
+def match_score(cv, job, light: bool = False) -> dict:
+    """{percent, label, plus[], minus[]} — насколько резюме подходит вакансии.
+
+    Считаем прозрачно и без ИИ: навыки, роль, уровень, домен, формат, язык.
+    light=True — без описания вакансии: в списке оно отложено (defer) и его
+    подгрузка превратилась бы в сотню лишних запросов.
+    """
+    if not cv or not job:
+        return {}
+    job_text = f"{job.title} {job.tags} {'' if light else job.description}".lower()
+    cv_text = f"{cv.title} {cv.skills} {cv.about} {cv.employment_history}".lower()
+    plus, minus, score = [], [], 0
+
+    skills = [s.strip() for s in (cv.skills or "").split(",") if s.strip()][:12]
+    hits = [s for s in skills if s.lower() in job_text]
+    if skills:
+        score += round(35 * min(1.0, len(hits) / min(4, len(skills))))
+        if hits:
+            plus.append("навыки: " + ", ".join(hits[:4]))
+        else:
+            minus.append("ни один навык из резюме не встречается в вакансии")
+    else:
+        score += 10
+
+    common = _words(cv.title) & _words(job.title)
+    if common:
+        score += 25
+        plus.append("роль совпадает: " + ", ".join(sorted(common)[:3]))
+    elif _words(job.title) & _words(cv_text):
+        score += 12
+        plus.append("похожий опыт в резюме")
+    else:
+        minus.append(f"должность «{job.title}» далека от «{cv.title}»")
+
+    need = _level_of(job.title)
+    have = cv.experience_years or 0
+    if need < 0:
+        score += 10
+    elif have >= need:
+        score += 15
+        if need >= 5:
+            plus.append(f"опыта хватает: {have} лет при требуемых ~{need}")
+    else:
+        score += max(0, 15 - (need - have) * 4)
+        minus.append(f"вакансия уровня ~{need} лет, в резюме {have}")
+
+    from server.crawler import IGAMING_SIGNAL_RE
+    igaming_job = bool(IGAMING_SIGNAL_RE.search(job_text))
+    igaming_cv = bool(IGAMING_SIGNAL_RE.search(cv_text))
+    if igaming_job and igaming_cv:
+        score += 10
+        plus.append("есть опыт в iGaming")
+    elif igaming_job and not igaming_cv:
+        minus.append("нет опыта в iGaming, а вакансия про него")
+    else:
+        score += 5
+
+    fmt_job, fmt_cv = (job.fmt or "").lower(), (cv.desired_format or "").lower()
+    if not fmt_cv or not fmt_job or fmt_cv[:4] == fmt_job[:4]:
+        score += 8
+    elif "удал" in fmt_cv and "удал" not in fmt_job:
+        minus.append(f"вы хотите удалёнку, здесь {job.fmt}")
+    else:
+        score += 4
+
+    cv_langs = {l.strip().lower()[:3] for l in (cv.languages or "").split(",") if l.strip()}
+    job_langs = set() if light else {code[:3] for code, _label in getattr(job, "language_list", []) or []}
+    if not job_langs or not cv_langs or (cv_langs & job_langs):
+        score += 7
+    else:
+        score += 2
+        minus.append("язык вакансии не заявлен в резюме")
+
+    percent = max(5, min(99, score))
+    label = ("высокий шанс" if percent >= 70 else
+             "средний шанс" if percent >= 45 else "низкий шанс")
+    return {"percent": percent, "label": label, "plus": plus[:3], "minus": minus[:3],
+            "tone": "good" if percent >= 70 else "mid" if percent >= 45 else "low"}
+
+
+def resume_is_ready(cv) -> bool:
+    """Резюме годится для отклика: есть должность и хоть какая-то суть о человеке."""
+    if not cv:
+        return False
+    title = (cv.title or "").strip()
+    if not title or title in ("Без названия", "Резюме на обработке"):
+        return False
+    substance = (len((cv.about or "").strip()) >= 80 or len((cv.skills or "").strip()) >= 10
+                 or len((cv.employment_history or "").strip()) >= 40)
+    return substance
+
+
+# в анонимной карточке не должно остаться ни имени, ни способа связаться напрямую
+_CONTACT_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+|\+?\d[\d ()-]{7,}\d"
+                         r"|(?:https?://|www\.)\S+|\b(?:t\.me|telegram|skype|linkedin|whatsapp)\b\S*",
+                         re.I)
+
+
+def strip_contacts(text: str, owner_name: str = "") -> str:
+    """Убрать из текста почты, телефоны, ссылки, мессенджеры и имя владельца."""
+    out = _CONTACT_RE.sub("—", text or "")
+    for part in (owner_name or "").split():
+        if len(part) > 2:
+            out = re.sub(rf"(?<![\w]){re.escape(part)}(?![\w])", "—", out, flags=re.I)
+    return re.sub(r"\s{2,}", " ", out).strip()
+
+
+def resume_card(cv, owner_name: str = "") -> dict:
+    """Анонимная карточка кандидата для работодателя: без имени, почты, телефона и ссылок."""
+    if not cv:
+        return {}
+    skills = [s.strip() for s in (cv.skills or "").split(",") if s.strip()][:8]
+    about = strip_contacts(cv.about or "", owner_name)
+    if len(about) > 600:
+        about = about[:600].rsplit(" ", 1)[0] + "…"
+    facts = [x for x in (
+        f"{cv.experience_years} yrs experience" if cv.experience_years else "",
+        (cv.location or "").strip(),
+        (cv.desired_format or "").strip(),
+        (cv.languages or "").strip(),
+        (cv.salary_expect or "").strip(),
+    ) if x]
+    return {
+        "id": cv.id, "code": cv.public_code, "title": (cv.title or "").strip(),
+        "facts": facts, "skills": skills, "about": about,
+        "history": strip_contacts(cv.employment_history or "", owner_name)[:400],
+        "education": strip_contacts(cv.education or "", owner_name)[:200],
+        "public": cv.status == "approved" and bool(cv.published),
+    }
+
+
 _CAT_RULES = [
     ("Топ-менеджмент", ("head of", "vp of", "chief", "c-level", "cto", "ceo", "cfo", "coo",
                         "country manager", "managing director", "director of", "директор", "руковод")),
@@ -1045,6 +1228,13 @@ def migrate(db: Session):
         "CREATE INDEX IF NOT EXISTS idx_jobs_source ON jobs(source)",
         "CREATE INDEX IF NOT EXISTS idx_apps_user_created ON applications(user_id, created_at)",
         "CREATE INDEX IF NOT EXISTS idx_events_name_entity ON analytics_events(name, entity_type, entity_id)",
+        # шапка админки на каждой вкладке считает job_view за период — без даты в
+        # индексе это скан всех событий просмотра (сотни тысяч строк на проде)
+        "CREATE INDEX IF NOT EXISTS idx_events_name_created ON analytics_events(name, created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_events_created ON analytics_events(created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_apps_job ON applications(job_id)",
+        "CREATE INDEX IF NOT EXISTS idx_users_role_created ON users(role, created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_resumes_status_updated ON resumes(status, updated_at)",
     ):
         db.execute(text(_idx))
     # верификация почты: verified DEFAULT 1 — существующие пользователи остаются рабочими
@@ -1140,7 +1330,7 @@ def _public_openapi():
         "employment_type": {"type": "string"}, "languages": {"type": "array", "items": {"type": "string"}},
         "tags": {"type": "array", "items": {"type": "string"}}, "posted_at": {"type": "string", "format": "date"},
         "valid_through": {"type": "string", "format": "date"}, "url": {"type": "string", "format": "uri"},
-        "markdown_url": {"type": "string", "format": "uri"}, "source_url": {"type": "string", "format": "uri"},
+        "markdown_url": {"type": "string", "format": "uri"},
     }
     app.openapi_schema = {
         "openapi": "3.1.0",
@@ -1761,6 +1951,8 @@ _MONTH_ONLY_RE = re.compile(r"^(" + "|".join(_RU_MONTHS_NOM) + r")$")
 _MINUTES_RE = re.compile(r"(\d+)\s+мин(?:\.|ут[аы]?)?\b")
 
 _NUMBER_RE = re.compile(r"\d[\d\s\u00a0]*\d|\d")
+# дата «10 сентября 2026» на любом языке — в шаблоне словаря она стоит как @
+_ANY_DATE_RE = re.compile(r"\b\d{1,2}\.?\s+[^\W\d_]{3,}\.?\s+\d{4}\b")
 _COUNT_RE = re.compile(r"^(\d[\d\s ]*)\s+(вакансия|вакансии|вакансий|компания|компании|компаний)$")
 _DATE_RE = re.compile(r"\b(\d{1,2})\s+(" + "|".join(_RU_MONTHS_GEN) + r")\s+(\d{4})")
 _MONTH_YEAR_RE = re.compile(r"^(" + "|".join(_RU_MONTHS_NOM) + r")\s+(\d{4})$")
@@ -1850,6 +2042,18 @@ def translate_html(html_text: str, lang: str, prefix_urls: bool = False) -> str:
             if template:
                 numbers = iter(_NUMBER_RE.findall(key))
                 return re.sub(r"#", lambda _: next(numbers, "#"), template)
+            if _ANY_DATE_RE.search(key):
+                # «На 10 сентября 2026 в индустрии открыто 6103 вакансий…»: дата в шаблоне
+                # стоит как @, числа как #. Иначе фраза меняется каждый день и мимо словаря.
+                # Дату шаблон страницы часто отдаёт уже на нужном языке — тогда оставляем как есть.
+                by_date = _ANY_DATE_RE.sub("@", key)
+                template = full.get(_NUMBER_RE.sub("#", by_date))
+                if template:
+                    dates = iter(translate_generated(m.group(0), lang)
+                                 for m in _ANY_DATE_RE.finditer(key))
+                    numbers = iter(_NUMBER_RE.findall(by_date))
+                    return re.sub(r"[@#]", lambda m: next(dates, "@") if m.group(0) == "@"
+                                  else next(numbers, "#"), template)
         if key in full:
             lead = raw[:len(raw) - len(raw.lstrip())]
             trail = raw[len(raw.rstrip()):]
@@ -2381,9 +2585,16 @@ def job_locations_cached(db: Session) -> list:
 
 @app.get("/jobs", response_class=HTMLResponse)
 def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
-              loc: str = "", lang: str = "", salary_only: int = 0, page: int = 1,
+              loc: str = "", lang: str = "", salary_only: int = 0, fit: int = 0, page: int = 1,
               db: Session = Depends(db_session)):
     base = db.query(Job).filter(Job.status == "approved")
+    # соискателю с заполненным резюме считаем процент совпадения (fit=1 — сортировка по нему)
+    viewer_cv = None
+    viewer_user = get_user(request, db)
+    if viewer_user and viewer_user.role == "talent":
+        candidate_cv = db.query(Resume).filter_by(user_id=viewer_user.id).first()
+        viewer_cv = candidate_cv if resume_is_ready(candidate_cv) else None
+    fit = 1 if (fit and viewer_cv) else 0
     qs = base
     fmt = normalize_fmt(fmt)
     if fmt:
@@ -2398,6 +2609,25 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
         from sqlalchemy.orm import defer as _defer
         qs = qs.options(_defer(Job.description))
     ordered = qs.order_by(Job.featured.desc(), Job.created_at.desc())
+    if fit:
+        # считаем по свежим 800 — на всех 7 тысячах это заметная задержка, а хвост
+        # всё равно не попадёт в верх выдачи
+        pool = qs.order_by(Job.created_at.desc()).limit(800).all()
+        scored = sorted(((match_score(viewer_cv, j, light=True), j) for j in pool),
+                        key=lambda pair: -pair[0]["percent"])
+        jobs = [j for _m, j in scored]
+        found = len(jobs)
+        total_pages = max(1, (found + JOBS_PER_PAGE - 1) // JOBS_PER_PAGE)
+        page = max(1, min(page, total_pages))
+        page_jobs = jobs[(page - 1) * JOBS_PER_PAGE: page * JOBS_PER_PAGE]
+        from urllib.parse import urlencode
+        active = {k: v for k, v in (("fmt", fmt), ("cat", cat), ("loc", loc), ("fit", 1)) if v}
+        return render(request, db, "jobs.html", jobs=page_jobs, q=q, fmt=fmt, cat=cat,
+                      loc=loc, lang=lang, salary_only=salary_only, formats=FORMATS, categories=CATEGORIES,
+                      job_languages=JOB_LANGUAGES, locations=job_locations_cached(db), page=page,
+                      total_pages=total_pages, found=found, qs_base=urlencode(active), fit=fit,
+                      matches={j.id: m for m, j in scored}, has_cv=bool(viewer_cv),
+                      total=base.count())
     python_filters = bool(q or salary_only or lang)
     if not python_filters:
         # обычный листинг и SQL-фильтры: страница берётся из базы, а не из 6 тысяч объектов
@@ -2411,6 +2641,8 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
                       loc=loc, lang=lang, salary_only=salary_only, formats=FORMATS, categories=CATEGORIES,
                       job_languages=JOB_LANGUAGES, locations=job_locations_cached(db), page=page,
                       total_pages=total_pages, found=found, qs_base=urlencode(active),
+                      matches={j.id: match_score(viewer_cv, j, light=True) for j in page_jobs} if viewer_cv else {},
+                      has_cv=bool(viewer_cv), fit=fit,
                       total=base.count())
     jobs = ordered.all()
     if q:
@@ -2447,6 +2679,8 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
                   job_languages=JOB_LANGUAGES,
                   locations=locations, page=page, total_pages=total_pages, found=found,
                   qs_base=qs_base,
+                  matches={j.id: match_score(viewer_cv, j, light=True) for j in page_jobs} if viewer_cv else {},
+                  has_cv=bool(viewer_cv), fit=fit,
                   total=base.count())
 
 
@@ -2617,7 +2851,7 @@ def _llms_text_ru(ctx: dict) -> str:
         "`title`, `company`, `location`, `country`, `format`, `category`, `salary` "
         "с разобранными `salary_min`/`salary_max`/`salary_currency`/`salary_unit`, "
         "`employment_type`, `languages`, `tags`, `posted_at`, `valid_through`, "
-        "`url`, `markdown_url` и `source_url` на первоисточник.",
+        "`url` и `markdown_url`.",
         "",
         "## Как цитировать",
         "",
@@ -2701,7 +2935,7 @@ def _llms_text_en(ctx: dict, lang: str = "en") -> str:
         "Response: `total`, `page`, `pages`, `limit` and a `jobs` array; each job has `title`, `company`, "
         "`location`, `country`, `format`, `category`, `salary` with parsed `salary_min`/`salary_max`/"
         "`salary_currency`/`salary_unit`, `employment_type`, `languages`, `tags`, `posted_at`, "
-        "`valid_through`, `url`, `markdown_url` and `source_url` pointing to the original posting.",
+        "`valid_through`, `url` and `markdown_url`.",
         "",
         "## How to cite",
         "",
@@ -3414,8 +3648,14 @@ def job_detail(job_id: str, request: Request, db: Session = Depends(db_session))
     similar = (db.query(Job).filter(Job.status == "approved", Job.id != job.id,
                                     Job.category == job.category)
                .order_by(Job.featured.desc(), Job.created_at.desc()).limit(3).all())
+    # соискателю показываем, насколько его резюме подходит этой вакансии
+    match = {}
+    if user and user.role == "talent":
+        cv = db.query(Resume).filter_by(user_id=user.id).first()
+        if resume_is_ready(cv):
+            match = match_score(cv, job)
     return render(request, db, "job.html", job=job, applied=applied,
-                  applies=len(job.applications), similar=similar,
+                  applies=len(job.applications), similar=similar, match=match,
                   is_closed=job.status == "archived", loc_schema=job_location_schema(job))
 
 
@@ -3431,6 +3671,11 @@ def job_apply(job_id: int, request: Request, cover: str = Form(""),
     job = db.get(Job, job_id)
     if not job or job.status != "approved":
         raise HTTPException(404)
+    # Без заполненного резюме отклика нет: работодателю мы отправляем анонимную
+    # карточку кандидата, а собирать её не из чего (решение владельца 09.09.2026).
+    cv = db.query(Resume).filter_by(user_id=user.id).first()
+    if not cv or not resume_is_ready(cv):
+        return RedirectResponse(f"/job/{job_id}?nocv=1", status_code=303)
     # Отклик принимаем и на агрегированные вакансии — как лид: мы передаём его
     # работодателю и используем как аргумент подключить компанию к SpinHire.
     if not db.query(Application).filter_by(job_id=job_id, user_id=user.id).first():
@@ -3455,6 +3700,11 @@ def job_apply(job_id: int, request: Request, cover: str = Form(""),
         db.add(ApplicationEvent(application_id=application.id, actor_id=user.id,
                                 kind="created", body="Кандидат отправил отклик"))
         track(db, "application_created", user.id, "job", job_id)
+        # каждый отклик попадает в CRM карточкой компании; у агрегированных вакансий
+        # компания ещё не знает о кандидате — она встаёт на этап «Проинформировать»
+        # (таблица «кому сообщить» — /admin/crm/leads)
+        from server import crm
+        crm.note_application(db, job, user, application)
         db.commit()
         return RedirectResponse(f"/job/{job_id}?ok=1{extra}", status_code=303)
     return RedirectResponse(f"/job/{job_id}?ok=1", status_code=303)
@@ -4124,7 +4374,8 @@ def resume_detail(resume_id: int, request: Request, db: Session = Depends(db_ses
     unlocked = resume_contact_access(user, row, db)
     cv_account, cv_team_role = company_context(user, db) if user and user.role == "employer" else (user, "owner")
     return render(request, db, "resume.html", resume=row, unlocked=unlocked,
-                  active="resumes", cv_account=cv_account, cv_team_role=cv_team_role)
+                  active="resumes", cv_account=cv_account, cv_team_role=cv_team_role,
+                  cv_cost=unlock_cost(row), cv_clevel=is_c_level(row.title))
 
 
 @app.get("/resume/{resume_id}/file")
@@ -4174,12 +4425,13 @@ def resume_unlock(resume_id: int, request: Request, db: Session = Depends(db_ses
             unlimited = datetime.fromisoformat(account.cv_access_until) > datetime.utcnow()
         except ValueError:
             unlimited = False
+    cost = unlock_cost(row)
     if not unlimited:
-        charged = (db.query(User).filter(User.id == account.id, User.cv_credits > 0)
-                   .update({User.cv_credits: User.cv_credits - 1}, synchronize_session=False))
+        charged = (db.query(User).filter(User.id == account.id, User.cv_credits >= cost)
+                   .update({User.cv_credits: User.cv_credits - cost}, synchronize_session=False))
         if charged != 1:
             db.rollback()
-            return RedirectResponse(f"/resume/{resume_id}?need_plan=1", status_code=303)
+            return RedirectResponse(f"/resume/{resume_id}?need_plan={cost}", status_code=303)
     try:
         db.add(ResumeUnlock(employer_id=account.id, resume_id=row.id,
                             access_kind="unlimited" if unlimited else "credit"))
@@ -4187,7 +4439,7 @@ def resume_unlock(resume_id: int, request: Request, db: Session = Depends(db_ses
         db.flush()
         db.refresh(account)
         db.add(ResumeCreditLedger(employer_id=account.id, resume_id=row.id,
-                                  delta=0 if unlimited else -1,
+                                  delta=0 if unlimited else -cost,
                                   balance_after=account.cv_credits or 0,
                                   action="unlimited" if unlimited else "unlock"))
         track(db, "resume_unlocked", user.id, "resume", row.id, account_id=account.id)
@@ -5367,16 +5619,28 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
     if tab == "jobs":
         q = (request.query_params.get("q") or "").strip().lower()
         st = request.query_params.get("st") or ""
-        if request.query_params.get("sort") == "views":
-            jobs = db.query(Job).order_by(Job.views.desc(), Job.created_at.desc()).all()
-        else:
-            jobs = db.query(Job).order_by((Job.status == "pending").desc(),
-                                          Job.created_at.desc()).all()
+        # фильтр и лимит уезжают в SQL: раньше вкладка поднимала в память все
+        # тысячи вакансий с описаниями и резала до 200 уже в питоне — отсюда
+        # многосекундное переключение вкладок в админке.
+        jobs_q = db.query(Job).options(defer(Job.description))
         if st:
-            jobs = [j for j in jobs if j.status == st]
+            jobs_q = jobs_q.filter(Job.status == st)
         if q:
-            jobs = [j for j in jobs if q in f"{j.title} {j.company_name} {j.source}".lower()]
-        ctx["jobs"] = jobs[:200]
+            like = f"%{q}%"
+            jobs_q = jobs_q.filter(or_(func.lower(Job.title).like(like),
+                                       func.lower(Job.company_name).like(like),
+                                       func.lower(Job.source).like(like)))
+        if request.query_params.get("sort") == "views":
+            jobs_q = jobs_q.order_by(Job.views.desc(), Job.created_at.desc())
+        else:
+            jobs_q = jobs_q.order_by((Job.status == "pending").desc(), Job.created_at.desc())
+        ctx["jobs"] = jobs_q.limit(200).all()
+        # счётчик откликов одним GROUP BY вместо 200 отдельных запросов из шаблона
+        job_ids = [j.id for j in ctx["jobs"]]
+        ctx["job_apps"] = dict(
+            db.query(Application.job_id, func.count(Application.id))
+              .filter(Application.job_id.in_(job_ids))
+              .group_by(Application.job_id).all()) if job_ids else {}
         ctx["q"], ctx["st"] = q, st
     elif tab == "users":
         role = request.query_params.get("role") or ""
@@ -5389,7 +5653,11 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         ctx["role"] = role
         ctx.update(pr)
     elif tab == "apps":
-        ctx["apps"] = db.query(Application).order_by(Application.created_at.desc()).all()
+        from sqlalchemy.orm import joinedload
+        ctx["apps"] = (db.query(Application)
+                       .options(joinedload(Application.user),
+                                joinedload(Application.job).defer(Job.description))
+                       .order_by(Application.created_at.desc()).limit(300).all())
     elif tab == "resumes":
         st = request.query_params.get("st") or ""
         resumes_q = db.query(Resume)
@@ -5410,8 +5678,10 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
     elif tab == "sources":
         from server import crawler
         from collections import Counter
-        counts = Counter(j.source or "внутренние/ручные"
-                         for j in db.query(Job).filter(Job.status == "approved").all())
+        counts = Counter({(src or "внутренние/ручные"): n for src, n in
+                          db.query(Job.source, func.count(Job.id))
+                            .filter(Job.status == "approved")
+                            .group_by(Job.source).all()})
         ctx["sources"] = crawler.SOURCE_REGISTRY
         ctx["source_counts"] = dict(counts)
         ctx["resume_sources"] = crawler.RESUME_SOURCE_REGISTRY
@@ -6074,8 +6344,10 @@ ARTICLE_FILES = {
 
 
 @app.get("/blog")
-def blog_short():
-    return RedirectResponse("/blog.html", status_code=301)
+def blog_short(request: Request):
+    # префикс языка не теряем: /de/blog вёл на русский блог
+    prefix = ((request.scope.get("state") or {}).get("orig_path") or "/blog")[:-len("/blog")]
+    return RedirectResponse(prefix + "/blog.html", status_code=301)
 
 
 @app.get("/blog/{slug}")
@@ -6087,12 +6359,14 @@ def article_page(slug: str):
 
 
 @app.get("/post-{slug}.html")
-def legacy_article(slug: str):
+def legacy_article(request: Request, slug: str):
     canonical_slug = next((key for key, filename in ARTICLE_FILES.items()
                            if filename == f"post-{slug}.html"), None)
     if not canonical_slug:
         raise HTTPException(404)
-    return RedirectResponse(f"/blog/{canonical_slug}", status_code=301)
+    orig = (request.scope.get("state") or {}).get("orig_path") or ""
+    prefix = orig[:-len(f"/post-{slug}.html")] if orig.endswith(f"/post-{slug}.html") else ""
+    return RedirectResponse(f"{prefix}/blog/{canonical_slug}", status_code=301)
 
 
 @app.get("/indexnow-key.txt")
@@ -6666,7 +6940,6 @@ def api_jobs(request: Request, db: Session = Depends(db_session),
             "valid_through": j.valid_through,
             "url": f"https://spinhire.io/job/{j.id}",
             "markdown_url": f"https://spinhire.io/job/{j.id}.md",
-            "source_url": j.source_url,
         } for j in window],
     })
 

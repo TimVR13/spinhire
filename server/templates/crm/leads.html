@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% set crm_tab = 'leads' %}
+{% block bodyclass %}workspace{% endblock %}
+{% block title %}CRM — отклики на чужие вакансии — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block style %}
+{% include "crm/_style.html" %}
+.lead { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px; }
+.lead__head { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+.lead__head h3 { font-size: 1.05rem; margin: 0; }
+.lead__head .st { font-size: .78rem; color: var(--ink-dim); }
+.lead__head .st b { color: var(--acid); }
+.lead__head .st.warn b { color: var(--pink); }
+.lead__meta { color: var(--ink-dim); font-size: .85rem; margin: 6px 0 12px; }
+.lead table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.lead td { padding: 7px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+.lead td:first-child { padding-left: 0; }
+.lead .cl { display: inline-block; font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: color-mix(in oklch, var(--pink) 14%, transparent); color: var(--pink); margin-left: 6px; }
+.lead .new { color: var(--acid); font-weight: 700; }
+.lead__act { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.lead__act select { background: var(--bg-deep); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font: inherit; }
+.lead details { margin-top: 10px; }
+.lead details summary { cursor: pointer; color: var(--acid); font-weight: 700; font-size: .85rem; }
+.lead pre { white-space: pre-wrap; font: inherit; font-size: .84rem; background: var(--bg-deep); border-radius: 10px; padding: 12px 14px; margin-top: 8px; color: var(--ink-dim); }
+.lead__empty { color: var(--ink-dim); padding: 30px 0; }
+{% endblock %}
+{% block content %}
+{% include "crm/_head.html" %}
+
+<p style="color: var(--ink-dim); max-width: 78ch; margin-bottom: var(--sp-4);">Кандидаты откликаются на сайте на вакансии, собранные из интернета. Здесь — с кем связаться: компания, её вакансии с откликами, кандидаты и было ли уже отправлено уведомление. Письмо предлагает открыть контакт кандидата за обычные открытия (C-level — дороже) и разместить свои вакансии.</p>
+
+{% if not groups %}<div class="lead__empty">Откликов на чужие вакансии пока нет.</div>{% endif %}
+
+{% for g in groups %}
+<section class="lead" id="c{{ g.company.id }}">
+  <div class="lead__head">
+    <h3><a href="/admin/crm/company/{{ g.company.id }}">{{ g.company.name }}</a></h3>
+    <span class="tag">{{ stage_labels.get(g.company.stage, g.company.stage) }}</span>
+    {% if g.notified %}
+      <span class="st">уведомлены <b>{{ g.notified.happened_at.strftime('%d.%m %H:%M') }}</b> ({{ g.notified.channel }}{% if g.notified.status != 'sent' %} · {{ g.notified.status }}{% endif %}){% if g.new_since_notify %} · <span class="new">+{{ g.new_since_notify }} новых</span>{% endif %}</span>
+    {% else %}
+      <span class="st warn"><b>не уведомлены</b> · {{ g['items']|length }} откл.</span>
+    {% endif %}
+  </div>
+  <div class="lead__meta">
+    Контакт:
+    {% if g.contact %}<b style="color: var(--ink);">{{ g.contact.name or '—' }}</b> · {{ g.contact.email }}{% if g.contact.role_title %} · {{ g.contact.role_title }}{% endif %}
+    {% else %}<span style="color: var(--pink);">email не найден</span> — <a href="/admin/crm/company/{{ g.company.id }}" style="color: var(--acid);">добавить в карточке</a>{% endif %}
+    {% if g.company.domain %} · домен {{ g.company.domain }}{% endif %}
+    {% if g.company.careers_url %} · <a href="{{ g.company.careers_url }}" target="_blank" rel="noopener" style="color: var(--ink-dim);">карьерная страница ↗</a>{% endif %}
+  </div>
+  <table>
+    {% for it in g['items'] %}
+    <tr>
+      <td style="white-space: nowrap; color: var(--ink-faint);">{{ it.application.created_at.strftime('%d.%m %H:%M') }}</td>
+      <td><a href="/job/{{ it.job.id }}" target="_blank" style="color: var(--ink);">{{ it.job.title }}</a>{% if it.clevel %}<span class="cl">C-level</span>{% endif %}</td>
+      <td>
+        {% if it.card %}
+          {% if it.public %}<a href="/resume/{{ it.resume.id }}" target="_blank" style="color: var(--acid);">{{ it.card.title }}</a>
+          {% else %}<b style="color: var(--ink);">{{ it.card.title }}</b> <span style="color: var(--ink-faint);">· CV не опубликовано</span>{% endif %}
+          <span style="color: var(--ink-faint);">· {{ it.card.code }}</span>
+          {% if it.card.facts %}<div style="color: var(--ink-faint); font-size: .8rem;">{{ it.card.facts|join(' · ') }}</div>{% endif %}
+          {% if it.card.skills %}<div style="color: var(--ink-dim); font-size: .8rem;">{{ it.card.skills|join(', ') }}</div>{% endif %}
+        {% else %}<span style="color: var(--ink-dim);">кандидат #{{ it.user.id }}</span> <span style="color: var(--ink-faint);">· без резюме (старый отклик)</span>{% endif %}
+        {% if it.application.cover %}<div style="color: var(--ink-faint); font-size: .8rem; margin-top: 2px;">«{{ it.application.cover[:140] }}»</div>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <div class="lead__act">
+    <form method="post" action="/admin/crm/leads/{{ g.company.id }}/notify" style="display: flex; gap: 8px; align-items: center;">
+      <input type="hidden" name="channel" value="email">
+      <button class="btn btn-acid btn-sm" type="submit" {% if not g.contact %}disabled title="Сначала добавьте контакт с email"{% endif %}>{% if g.notified %}Отправить письмо ещё раз{% else %}Отправить письмо{% endif %}</button>
+    </form>
+    <form method="post" action="/admin/crm/leads/{{ g.company.id }}/notify" style="display: flex; gap: 8px; align-items: center;">
+      <select name="channel">{% for code, label in channels %}{% if code != 'email' %}<option value="{{ code }}">{{ label }}</option>{% endif %}{% endfor %}</select>
+      <button class="btn btn-ghost btn-sm" type="submit">Отметить: сообщили вручную</button>
+    </form>
+  </div>
+  <details>
+    <summary>Текст письма — анонимные карточки кандидатов, можно скопировать в Telegram или LinkedIn</summary>
+    <pre id="lead-{{ g.company.id }}">Тема: {{ g.subject }}
+
+{{ g.text }}</pre>
+    <button class="btn btn-ghost btn-sm" type="button"
+            onclick="navigator.clipboard.writeText(document.getElementById('lead-{{ g.company.id }}').innerText).then(()=>{this.textContent='Скопировано ✓'})">Скопировать</button>
+  </details>
+</section>
+{% endfor %}
+{% endblock %}

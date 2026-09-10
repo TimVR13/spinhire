@@ -24,7 +24,7 @@
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / <a href="/resumes">Резюме</a> / {{ resume.public_code }}</nav>
   {% if request.query_params.get('unlocked') %}<div class="flash">Контакты открыты. Повторный просмотр этого CV больше не списывает доступ.</div>{% endif %}
-  {% if request.query_params.get('need_plan') %}<div class="flash err">Закончились открытия контактов. Выберите пакет — после подтверждения оплаты лимит появится в кабинете.</div>{% endif %}
+  {% if request.query_params.get('need_plan') %}<div class="flash err">Не хватает открытий: для этого контакта нужно {{ request.query_params.get('need_plan') }}. Выберите пакет — после подтверждения оплаты лимит появится в кабинете.</div>{% endif %}
   {% if resume.status != 'approved' %}<div class="flash">Предпросмотр владельца: статус CV — {{ {'draft':'черновик','pending':'на модерации','rejected':'нужны правки','paused':'скрыто'}.get(resume.status, resume.status) }}.</div>{% endif %}
   <div class="resume-layout">
     <article class="resume-main">
@@ -62,10 +62,10 @@
       {% else %}
         <span class="kicker pink">Контакты закрыты</span>
         <h2 style="margin:10px 0 8px;">Имя и способы связи скрыты</h2>
-        <p style="color:var(--ink-dim);">Один оплаченный доступ навсегда открывает ФИО, email и Telegram кандидата для вашего аккаунта.</p>
+        <p style="color:var(--ink-dim);">{% if cv_clevel %}C-level кандидат: контакт стоит {{ cv_cost }} открытий. {% endif %}Оплаченный доступ навсегда открывает ФИО, email и Telegram кандидата для вашего аккаунта.</p>
         <div class="locked-lines" aria-hidden="true"><span></span><span></span><span></span></div>
-        {% if user and user.role == 'employer' and cv_team_role != 'viewer' and (cv_account.cv_credits or 0) > 0 %}
-          <form method="post" action="/resume/{{ resume.id }}/unlock"><button class="btn btn-acid" style="width:100%;">Открыть контакт · осталось {{ cv_account.cv_credits }}</button></form>
+        {% if user and user.role == 'employer' and cv_team_role != 'viewer' and (cv_account.cv_credits or 0) >= cv_cost %}
+          <form method="post" action="/resume/{{ resume.id }}/unlock"><button class="btn btn-acid" style="width:100%;">Открыть контакт{% if cv_cost > 1 %} · {{ cv_cost }} открытий{% endif %} · осталось {{ cv_account.cv_credits }}</button></form>
         {% elif user and user.role == 'employer' %}
           <div class="plan-actions">
             {% if cv_team_role == 'owner' %}<form method="post" action="/checkout/cv1"><button class="btn btn-acid">1 контакт · €5</button></form>

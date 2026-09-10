@@ -26,6 +26,7 @@ router = APIRouter()
 STAGES = [
     ("new", "Новая"),
     ("contact", "Контакт найден"),
+    ("to_notify", "Проинформировать"),   # пришёл отклик на вакансию компании — надо сообщить
     ("outreach", "В работе"),
     ("replied", "Ответила"),
     ("talks", "Переговоры"),
@@ -435,3 +436,187 @@ def crm_import(request: Request, db: Session = Depends(db_session)):
     db.commit()
     return RedirectResponse(f"/admin/crm?msg=Импорт: добавлено {added}, обновлено {updated}",
                             status_code=303)
+
+
+# ---------- отклики на чужие (агрегированные) вакансии ----------
+# Таланты откликаются на сайте, ссылок на первоисточник нет. Каждый отклик на
+# вакансию без владельца — лид: компанию надо найти, сообщить об отклике и
+# предложить открыть контакт кандидата за деньги (обычные cv-открытия).
+
+def ensure_company(db: Session, name: str) -> "CrmCompany | None":
+    name = (name or "").strip()
+    slug = slugify_company(name)
+    if not name or slug == "company":
+        return None
+    company = db.query(CrmCompany).filter_by(slug=slug).first()
+    if not company:
+        company = CrmCompany(name=name, slug=slug, source="applications")
+        db.add(company)
+        db.flush()
+        log_event(db, company.id, "created", "Появился отклик на вакансию компании")
+    return company
+
+
+def note_application(db: Session, job, user, application) -> None:
+    """Каждый отклик заводит компанию в CRM и ставит её в очередь «Проинформировать». Не коммитит."""
+    company = ensure_company(db, job.company_name)
+    if not company:
+        return
+    company.updated_at = datetime.utcnow()
+    log_event(db, company.id, "application",
+              f"Отклик на «{job.title}» (вакансия #{job.id}) от кандидата #{user.id}")
+    # пока компании не сообщили — она висит на этапе «Проинформировать»;
+    # письмо или отметка «сообщили вручную» уводит её в «В работе» (crm_lead_notify)
+    # у вакансии с владельцем работодатель видит отклик в своём кабинете — сообщать нечего
+    if job.owner_id is None and company.stage in ("new", "contact"):
+        set_stage(db, company, "to_notify", "")
+
+
+def _lead_rows(db: Session):
+    """Компании с откликами на их агрегированные вакансии, свежие сверху."""
+    from server.app import Application, Resume, User, is_c_level, resume_card
+    rows = (db.query(Application, Job, User)
+            .join(Job, Job.id == Application.job_id)
+            .join(User, User.id == Application.user_id)
+            .filter(Job.owner_id.is_(None))
+            .order_by(Application.created_at.desc()).all())
+    resumes = {r.user_id: r for r in db.query(Resume).filter(
+        Resume.user_id.in_({u.id for _, _, u in rows} or {0}))}
+    groups: dict[str, dict] = {}
+    for application, job, user in rows:
+        slug = slugify_company(job.company_name)
+        g = groups.get(slug)
+        if not g:
+            company = ensure_company(db, job.company_name)
+            if not company:
+                continue
+            contact = (db.query(CrmContact).filter(CrmContact.company_id == company.id,
+                                                   CrmContact.email != "", CrmContact.do_not_contact.is_(False))
+                       .order_by(CrmContact.id).first())
+            touch = (db.query(CrmTouch).filter(CrmTouch.company_id == company.id,
+                                               CrmTouch.subject.like("Отклик%"), CrmTouch.direction == "out")
+                     .order_by(CrmTouch.happened_at.desc()).first())
+            g = groups[slug] = {"company": company, "contact": contact, "notified": touch,
+                                "items": [], "new_since_notify": 0}
+        resume = resumes.get(user.id)
+        public = bool(resume and resume.published and resume.status == "approved")
+        item = {"application": application, "job": job, "user": user, "resume": resume,
+                "public": public, "card": resume_card(resume, user.name or "") if resume else {},
+                "clevel": is_c_level(job.title) or is_c_level(resume.title if resume else "")}
+        g["items"].append(item)
+        if not g["notified"] or application.created_at > g["notified"].happened_at:
+            g["new_since_notify"] += 1
+    db.flush()
+    return sorted(groups.values(), key=lambda g: g["items"][0]["application"].created_at, reverse=True)
+
+
+def build_lead_letter(g: dict) -> tuple[str, str, str]:
+    """(subject, text, html) — письмо компании об откликах: анонимные карточки кандидатов
+    и вопрос, прислать ли полное резюме. По-английски: компании международные."""
+    from server.app import CLEVEL_UNLOCK_COST, resume_card
+    company = g["company"]
+    items = g["items"]
+    titles = sorted({it["job"].title for it in items})
+    n = len(items)
+    subject = (f"{n} candidate{'s' if n > 1 else ''} applied to your job "
+               f"“{titles[0]}” on SpinHire" if len(titles) == 1 else
+               f"{n} candidates applied to your {len(titles)} jobs on SpinHire")
+    text_blocks, html_blocks = [], []
+    for it in items[:8]:
+        card = resume_card(it["resume"], (it["user"].name or "")) if it["resume"] else {}
+        who = card.get("title") or "Candidate"
+        code = card.get("code") or ""
+        facts = " · ".join(card.get("facts") or [])
+        skills = ", ".join(card.get("skills") or [])
+        about = card.get("about") or ""
+        link = f"https://spinhire.io/resume/{card['id']}" if card.get("public") else ""
+        text_blocks.append("\n".join(x for x in [
+            f"▸ {who}{f' ({code})' if code else ''} → applied to “{it['job'].title}”",
+            f"  {facts}" if facts else "",
+            f"  Skills: {skills}" if skills else "",
+            f"  {about}" if about else "",
+            f"  Anonymous profile: {link}" if link else "  Full profile available on request.",
+        ] if x))
+        # вложенная f-строка с экранированием — синтаксис 3.12+, на 3.11 модуль не импортируется
+        code_html = f' <span style="color:#888">({code})</span>' if code else ""
+        html_blocks.append(
+            f'<li style="margin-bottom:14px;"><b>{who}</b>{code_html}'
+            f' → applied to “{it["job"].title}”'
+            + (f'<br><span style="color:#555;">{facts}</span>' if facts else "")
+            + (f'<br><span style="color:#555;">Skills: {skills}</span>' if skills else "")
+            + (f'<br>{about}' if about else "")
+            + (f'<br><a href="{link}">{link}</a>' if link else '<br><i>Full profile available on request.</i>')
+            + "</li>")
+    text_items = "\n\n".join(text_blocks)
+    html_items = "".join(html_blocks)
+    more = f"\n…and {n - 8} more." if n > 8 else ""
+    text = f"""Hello {company.name} team,
+
+Candidates on SpinHire — an iGaming job board with 6 000+ live jobs — applied to your posting{'s' if len(titles) > 1 else ''}.
+Below is what they look like without personal data:
+
+{text_items}{more}
+
+Want the full CV of anyone above — work history, education and contacts? Just reply to this email and tell us who, we will send it over.
+Or open contacts yourself (name, email, Telegram): €5 per contact, €4.5 in a pack of 10. C-level contacts cost {CLEVEL_UNLOCK_COST} credits.
+Pricing: https://spinhire.io/post-job#pricing
+
+Post your own jobs on SpinHire — the first 3 are free: https://spinhire.io/post-job
+
+— SpinHire team, https://spinhire.io"""
+    html = f"""<p>Hello {company.name} team,</p>
+<p>Candidates on <a href="https://spinhire.io">SpinHire</a> — an iGaming job board with 6 000+ live jobs — applied to your posting{'s' if len(titles) > 1 else ''}.
+Below is what they look like without personal data:</p>
+<ul>{html_items}</ul>{('<p>…and %d more.</p>' % (n - 8)) if n > 8 else ''}
+<p><b>Want the full CV of anyone above</b> — work history, education and contacts? Just reply to this email and tell us who, we will send it over.<br>
+Or open contacts yourself (name, email, Telegram): <b>€5 per contact</b>, €4.5 in a pack of 10. C-level contacts cost {CLEVEL_UNLOCK_COST} credits.
+<a href="https://spinhire.io/post-job#pricing">Pricing</a></p>
+<p>Post your own jobs on SpinHire — the first 3 are free: <a href="https://spinhire.io/post-job">spinhire.io/post-job</a></p>
+<p>— SpinHire team</p>"""
+    return subject, text, html
+
+
+@router.get("/admin/crm/leads", response_class=HTMLResponse)
+def crm_leads(request: Request, db: Session = Depends(db_session)):
+    need_admin(request, db)
+    groups = _lead_rows(db)
+    db.commit()
+    for g in groups:
+        g["subject"], g["text"], _ = build_lead_letter(g)
+    return render(request, db, "crm/leads.html", groups=groups, channels=CHANNELS,
+                  stage_labels=STAGE_LABELS, msg=request.query_params.get("msg"))
+
+
+@router.post("/admin/crm/leads/{cid}/notify")
+def crm_lead_notify(cid: int, request: Request, channel: str = Form("email"),
+                    db: Session = Depends(db_session)):
+    """Отправить письмо об откликах (email через Resend) или отметить, что сообщили вручную."""
+    from server.app import resend_send
+    need_admin(request, db)
+    company = company_or_404(db, cid)
+    g = next((g for g in _lead_rows(db) if g["company"].id == cid), None)
+    if not g:
+        return RedirectResponse("/admin/crm/leads?msg=У компании нет откликов", status_code=303)
+    subject, text, html = build_lead_letter(g)
+    contact = g["contact"]
+    status = "sent"
+    if channel == "email":
+        if not contact:
+            return RedirectResponse("/admin/crm/leads?msg=Нет контакта с email — добавьте его в карточке компании",
+                                    status_code=303)
+        if not resend_send(contact.email, subject, html):
+            status = "failed"
+    db.add(CrmTouch(company_id=company.id, contact_id=contact.id if contact else None,
+                    channel=channel if channel in CHANNEL_LABELS else "other", direction="out",
+                    subject=f"Отклик: {subject}", body=text, status=status))
+    if contact:
+        contact.last_touch_at = datetime.utcnow()
+    if company.stage in ("new", "contact", "to_notify"):
+        set_stage(db, company, "outreach")
+    log_event(db, company.id, "touch",
+              f"Сообщили об откликах ({CHANNEL_LABELS.get(channel, channel)}): {status}")
+    db.commit()
+    msg = ("Письмо отправлено" if status == "sent" and channel == "email"
+           else "Не удалось отправить письмо (Resend)" if status == "failed"
+           else "Отмечено: сообщили " + CHANNEL_LABELS.get(channel, channel))
+    return RedirectResponse(f"/admin/crm/leads?msg={msg}", status_code=303)

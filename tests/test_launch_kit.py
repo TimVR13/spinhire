@@ -133,7 +133,7 @@ class LanguageCleanlinessTests(unittest.TestCase):
     """
 
     LANGS = ("en", "de", "pl", "es", "fr", "it", "pt", "ro", "el")
-    PAGES = ("/post-job", "/press.html")
+    PAGES = ("/post-job", "/press.html", "/resumes", "/blog.html")
     # переключатель языков специально остаётся на языке оригинала
     ALLOWED = {"Русский", "Українська", "Български"}
     CYRILLIC = re.compile(r"[А-Яа-яЁё]")
@@ -150,6 +150,33 @@ class LanguageCleanlinessTests(unittest.TestCase):
                 left = [text for text in self._text_nodes(f"/{lang}{page}")
                         if text and text not in self.ALLOWED and self.CYRILLIC.search(text)]
                 self.assertEqual(left, [], f"/{lang}{page}: {left[:5]}")
+
+    def test_ukrainian_and_bulgarian_have_no_russian_words(self):
+        # кириллица тут законна, поэтому ищем буквы и слова, которых в языке не бывает
+        checks = {
+            "uk": re.compile(r"[ыъэЫЪЭ]|(?<![А-Яа-яЁёІіЇїЄєҐґ])(и|или|что|это|Работа|работа|"
+                             r"вакансии|вакансий|зарплаты|нет|можно)(?![А-Яа-яЁёІіЇїЄєҐґ])"),
+            "bg": re.compile(r"[ыэёЫЭЁ]|(?<![А-Яа-яЁё])(что|это|если|чтобы|который|вакансии|"
+                             r"вакансий|зарплаты|нужно|можно|только|всё|ещё)(?![А-Яа-яЁё])"),
+        }
+        for lang, russian in checks.items():
+            for page in self.PAGES:
+                left = [text for text in self._text_nodes(f"/{lang}{page}")
+                        if text not in self.ALLOWED and russian.search(text)]
+                self.assertEqual(left, [], f"/{lang}{page}: {left[:5]}")
+
+    def test_language_prefix_survives_blog_redirects(self):
+        # /de/blog вёл на русский блог: префикс терялся вместе с читателем
+        response = client.get("/de/blog", follow_redirects=False)
+        self.assertEqual(response.headers["location"], "/de/blog.html")
+        legacy = client.get("/uk/post-aml-officer-career.html", follow_redirects=False)
+        self.assertEqual(legacy.headers["location"], "/uk/blog/aml-officer-career")
+
+    def test_sentences_with_a_date_are_localized(self):
+        # дата внутри фразы каждый день новая — в словаре она стоит как @
+        body = client.get("/de/market").text
+        self.assertIn("gibt es in der Branche", body)
+        self.assertNotIn("в индустрии открыто", body)
 
     def test_generated_strings_are_localized(self):
         cases = {
