@@ -435,6 +435,9 @@ class Application(Base):
     assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
     interview_at = Column(String, default="")
     next_action_at = Column(String, default="")
+    # отклик пришёл до того, как компания забрала вакансию по ссылке /claim:
+    # вакансия отдаётся бесплатно, а контакт такого кандидата — за открытия
+    lead_locked = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     job = relationship("Job", back_populates="applications")
     user = relationship("User", back_populates="applications", foreign_keys=[user_id])
@@ -1194,6 +1197,7 @@ def migrate(db: Session):
         "ALTER TABLE applications ADD COLUMN assigned_to INTEGER",
         "ALTER TABLE applications ADD COLUMN interview_at VARCHAR DEFAULT ''",
         "ALTER TABLE applications ADD COLUMN next_action_at VARCHAR DEFAULT ''",
+        "ALTER TABLE applications ADD COLUMN lead_locked INTEGER DEFAULT 0",
     ):
         col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
         if acols and col not in acols:
@@ -3726,6 +3730,13 @@ def verify(request: Request, email: str = Form(...), code: str = Form(...),
     u.otp_attempts = 0
     db.commit()
     _credit_referral(db, u)  # почта подтверждена — можно начислять реферальный бонус
+    try:                     # пришёл по ссылке /claim — забирает свои вакансии
+        from server import claim as _claim
+        if _claim.apply_pending_claim(db, u):
+            db.commit()
+            return set_session(RedirectResponse("/employer?claimed=1", status_code=303), u)
+    except Exception as exc:                                    # noqa: BLE001
+        print(f"[claim] после подтверждения почты: {type(exc).__name__}: {exc}")
     return set_session(RedirectResponse(dest_for(u), status_code=303), u)
 
 
@@ -4727,7 +4738,15 @@ def employer(request: Request, stage: str = "", assigned: int = 0,
     # «Финансы»: заказы кабинета и пакеты для пополнения (featured и hunt покупаются со страницы вакансии/тарифов)
     orders = db.query(Order).filter(Order.user_id == account.id).order_by(Order.created_at.desc()).limit(50).all()
     topup = {"jobs": ["single", "pack3", "pack10", "unlim30"], "cv": ["cv1", "cv10", "cv30", "cvunlim"]}
+    locked_apps = {a.id for a in applications if a.lead_locked}
+    if locked_apps:                       # уже оплаченные контакты не прячем
+        opened = {r.user_id for r in db.query(Resume).join(
+            ResumeUnlock, ResumeUnlock.resume_id == Resume.id).filter(
+            ResumeUnlock.employer_id == account.id)}
+        locked_apps = {a.id for a in applications
+                       if a.lead_locked and a.user_id not in opened}
     return render(request, db, "employer.html", jobs=jobs, unlocked_resumes=unlocked,
+                  locked_apps=locked_apps,
                   credit_ledger=ledger, stats=stats, company_progress=company_progress,
                   account=account, team_role=team_role, team=team, invites=invites,
                   ats_apps=ats_apps, stage=stage, assigned=assigned,
@@ -4832,8 +4851,66 @@ def application_detail(app_id: int, request: Request, db: Session = Depends(db_s
     events = (db.query(ApplicationEvent).filter_by(application_id=application.id)
               .order_by(ApplicationEvent.created_at.desc()).all())
     resume = db.query(Resume).filter_by(user_id=application.user_id).first()
+    # отклик, пришедший до того как компания забрала вакансию по ссылке /claim:
+    # саму вакансию мы отдали бесплатно, контакт кандидата — за открытия
+    locked = bool(application.lead_locked) and not (
+        resume and resume_contact_access(user, resume, db))
     return render(request, db, "application.html", application=application, events=events,
-                  resume=resume, account=account, team_role=team_role, members=members)
+                  resume=None if locked else resume, account=account, team_role=team_role,
+                  members=members, locked=locked,
+                  card=resume_card(resume, application.user.name or "") if locked and resume else {},
+                  unlock_price=unlock_cost(resume) if resume else 1)
+
+
+@app.post("/employer/app/{app_id}/unlock")
+def application_unlock(app_id: int, request: Request, db: Session = Depends(db_session)):
+    """Открыть контакт кандидата, который откликнулся до регистрации компании.
+
+    Отличие от /resume/{id}/unlock — резюме не обязано быть опубликованным в базе:
+    человек откликнулся на вакансию этой компании, значит контакт ей и предлагаем.
+    """
+    user, account, _ = require_company_user(request, db, write=True)
+    application = db.get(Application, app_id)
+    if not application or (application.job.owner_id != account.id and user.role != "admin"):
+        raise HTTPException(404)
+    back = f"/employer/application/{app_id}"
+    resume = db.query(Resume).filter_by(user_id=application.user_id).first()
+    if not resume:
+        return RedirectResponse(f"{back}?no_cv=1", status_code=303)
+    if db.query(ResumeUnlock).filter_by(employer_id=account.id, resume_id=resume.id).first():
+        application.lead_locked = 0
+        db.commit()
+        return RedirectResponse(f"{back}?unlocked=1", status_code=303)
+    unlimited = False
+    if account.cv_access_until:
+        try:
+            unlimited = datetime.fromisoformat(account.cv_access_until) > datetime.utcnow()
+        except ValueError:
+            unlimited = False
+    cost = unlock_cost(resume)
+    if not unlimited:
+        charged = (db.query(User).filter(User.id == account.id, User.cv_credits >= cost)
+                   .update({User.cv_credits: User.cv_credits - cost}, synchronize_session=False))
+        if charged != 1:
+            db.rollback()
+            return RedirectResponse(f"{back}?need_plan={cost}", status_code=303)
+    try:
+        db.add(ResumeUnlock(employer_id=account.id, resume_id=resume.id,
+                            access_kind="unlimited" if unlimited else "credit"))
+        resume.unlock_count = (resume.unlock_count or 0) + 1
+        application.lead_locked = 0
+        db.flush()
+        db.refresh(account)
+        db.add(ResumeCreditLedger(employer_id=account.id, resume_id=resume.id,
+                                  delta=0 if unlimited else -cost,
+                                  balance_after=account.cv_credits or 0,
+                                  action="unlimited" if unlimited else "unlock"))
+        track(db, "resume_unlocked", user.id, "resume", resume.id, account_id=account.id,
+              source="application")
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+    return RedirectResponse(f"{back}?unlocked=1", status_code=303)
 
 
 @app.post("/employer/application/{app_id}/plan")
@@ -6805,6 +6882,13 @@ app.include_router(publications.router)
 from server import moderation_api  # noqa: E402
 app.include_router(moderation_api.router)
 tgpost.start_scheduler()  # молчит, пока не заданы SPINHIRE_TG_BOT_TOKEN и каналы
+
+# ---------- отклики на чужие вакансии: ссылка компании и бот, который шлёт лид ----------
+from server import claim  # noqa: E402
+app.include_router(claim.router)
+from server import leadbot  # noqa: E402  (после claim — берёт из него ссылку регистрации)
+app.include_router(leadbot.router)
+leadbot.start_scheduler()  # молчит, пока не задан SPINHIRE_TG_LEAD_CHAT
 
 # ---------- программные кластеры вакансий: страна × направление × язык ----------
 from server import clusters  # noqa: E402
