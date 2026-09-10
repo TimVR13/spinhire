@@ -107,6 +107,58 @@ class ClaimFlowTests(unittest.TestCase):
             self.assertEqual(first.token, again.token)
 
 
+class NoNameCompanyTests(unittest.TestCase):
+    """Вакансия без работодателя: отклик передавать некому — ведём в первоисточник."""
+
+    @classmethod
+    def setUpClass(cls):
+        Base.metadata.create_all(engine)
+        with SessionLocal() as db:
+            migrate(db)
+
+    def setUp(self):
+        self.suffix = uuid.uuid4().hex[:8]
+        with SessionLocal() as db:
+            job = _job(company="Компания не указана", title=f"Support Agent {self.suffix}")
+            job.source_url = "https://t.me/iGaming_work/1234"
+            job.source = "telegram:iGaming_work"
+            talent = User(email=f"t-{self.suffix}@test.invalid", role="talent",
+                          name="Кандидат", password_hash="x", verified=1)
+            db.add_all([job, talent])
+            db.flush()
+            db.add(Resume(user_id=talent.id, title="Support Agent", about="b" * 120,
+                          skills="чат", experience_years=2, status="approved", published=True))
+            db.commit()
+            self.job_id, self.talent_id = job.id, talent.id
+
+    def tearDown(self):
+        with SessionLocal() as db:
+            db.query(Application).filter_by(job_id=self.job_id).delete()
+            db.query(Job).filter_by(id=self.job_id).delete()
+            db.query(Resume).filter_by(user_id=self.talent_id).delete()
+            db.query(User).filter_by(id=self.talent_id).delete()
+            db.commit()
+
+    def test_page_sends_candidate_to_the_source(self):
+        with TestClient(app) as client:
+            page = client.get(f"/job/{self.job_id}")
+            self.assertEqual(page.status_code, 200)
+            self.assertIn("https://t.me/iGaming_work/1234", page.text)
+            self.assertIn("первоисточнике", page.text)
+            self.assertNotIn(f'action="/job/{self.job_id}/apply"', page.text)
+
+    def test_apply_is_refused(self):
+        from server.app import signer
+        with TestClient(app) as client:
+            client.cookies.set("sh_session", signer.dumps({"uid": self.talent_id}))
+            done = client.post(f"/job/{self.job_id}/apply", data={"cover": ""},
+                               follow_redirects=False)
+            self.assertEqual(done.status_code, 303)
+            self.assertIn("nocompany=1", done.headers["location"])
+        with SessionLocal() as db:
+            self.assertEqual(db.query(Application).filter_by(job_id=self.job_id).count(), 0)
+
+
 class LeadbotTextTests(unittest.TestCase):
     def test_company_lang_follows_cyrillic_and_offices(self):
         self.assertEqual(leadbot.company_lang(

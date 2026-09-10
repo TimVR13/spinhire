@@ -89,6 +89,7 @@
   {% if request.query_params.get('ok') %}<div class="flash">✓ Отклик отправлен — работодатель увидит его в кабинете.{% if request.query_params.get('extra') %} Дневной лимит был исчерпан — списано {{ request.query_params.get('extra') }} SC.{% endif %}</div>{% endif %}
   {% if request.query_params.get('limit') %}<div class="flash">Лимит откликов на сегодня исчерпан ({{ 10 }}/сутки). Дополнительный отклик стоит 10 SC — загляните за ежедневным фриспином в профиль или вернитесь завтра.</div>{% endif %}
   {% if request.query_params.get('fast') %}<div class="flash">Слишком быстро — выдержите паузу ~20 секунд между откликами и попробуйте снова.</div>{% endif %}
+  {% if request.query_params.get('nocompany') %}<div class="flash">В этом объявлении не назван работодатель — отклик передавать некому.{% if job.source_url %} Откликнуться можно в первоисточнике: <a href="{{ job.source_url }}" target="_blank" rel="nofollow noopener" style="color:inherit;text-decoration:underline;">{{ source_host or job.source_url }}</a>{% endif %}</div>{% endif %}
   {% if request.query_params.get('nocv') %}<div class="flash">Чтобы откликнуться, заполните резюме: должность и пара абзацев о себе. Работодателю мы отправляем анонимную карточку — без имени и контактов, собирать её пока не из чего. <a href="/profile#cv" style="color:inherit;text-decoration:underline;">Заполнить резюме →</a></div>{% endif %}
 
   <div class="job-layout">
@@ -116,6 +117,14 @@
         <div style="display: flex; flex-direction: column; gap: 12px; margin-top: var(--sp-4);">
           {% if is_closed %}
             <a class="btn btn-acid btn-lg" href="/jobs?cat={{ job.category|urlencode }}">Смотреть актуальные вакансии →</a>
+          {% elif no_company %}
+            {% if job.source_url %}
+            <a class="btn btn-acid btn-lg" href="{{ job.source_url }}" target="_blank" rel="nofollow noopener">Откликнуться в первоисточнике →</a>
+            <span style="color: var(--ink-faint); font-size: 0.82rem;">Работодатель в объявлении не назван — передать отклик нам некому. Вакансию мы взяли здесь: {{ source_host or job.source_url }}</span>
+            {% else %}
+            <span style="color: var(--ink-faint); font-size: 0.82rem;">Работодатель в объявлении не назван, ссылки на первоисточник у этой вакансии тоже нет — откликнуться не получится.</span>
+            <a class="btn btn-ghost" href="/jobs?cat={{ job.category|urlencode }}">Похожие вакансии →</a>
+            {% endif %}
           {% elif applied %}
             <span class="status invited" style="align-self: flex-start;">✓ Вы уже откликнулись{% if job.source_url %} — мы передадим отклик работодателю{% endif %}</span>
           {% elif user and user.role == 'talent' %}
@@ -179,7 +188,11 @@
       {% if not is_closed %}
       <div class="side-card apply-card">
         <h3>Отклик на вакансию</h3>
-        {% if applied %}
+        {% if no_company %}
+          {% if job.source_url %}<a class="btn btn-acid" href="{{ job.source_url }}" target="_blank" rel="nofollow noopener">Откликнуться в первоисточнике →</a>
+          <p>Работодатель не назван — отклик через SpinHire передать некому.</p>
+          {% else %}<p>Работодатель не назван, первоисточник неизвестен.</p>{% endif %}
+        {% elif applied %}
           <span class="status invited">✓ Отклик отправлен</span>
         {% elif user and user.role == 'talent' %}
           {% if match %}<p style="margin:0 0 10px;color:var(--ink);"><b style="font-size:1.2rem;">{{ match.percent }}%</b> — {{ match.label }}</p>{% endif %}

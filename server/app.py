@@ -633,6 +633,17 @@ def slugify_company(name: str) -> str:
     return re.sub(r"[^a-zа-я0-9]+", "-", (name or "").lower()).strip("-") or "company"
 
 
+# Телеграм-каналы часто публикуют вакансию без работодателя, и парсер ставит
+# «Компания не указана». Отклик по такой вакансии передавать некому: ни имени,
+# ни сайта, ни HR — поэтому кандидата отправляем в первоисточник.
+NONAME_RE = re.compile(r"не\s*указан|unknown|confidential|стелс|stealth|^n/?a$|^-+$", re.I)
+
+
+def is_real_company(name: str) -> bool:
+    name = (name or "").strip()
+    return bool(name) and slugify_company(name) != "company" and not NONAME_RE.search(name)
+
+
 def upsert_company_profiles(db: Session, rows) -> int:
     """Сохранить профили работодателей, не затирая заполненные поля пустыми."""
     saved = 0
@@ -3368,7 +3379,9 @@ def job_detail(job_id: str, request: Request, db: Session = Depends(db_session))
             match = match_score(cv, job)
     return render(request, db, "job.html", job=job, applied=applied,
                   applies=len(job.applications), similar=similar, match=match,
-                  is_closed=job.status == "archived", loc_schema=job_location_schema(job))
+                  is_closed=job.status == "archived", loc_schema=job_location_schema(job),
+                  no_company=not is_real_company(job.company_name),
+                  source_host=host_of(job.source_url or ""))
 
 
 @app.post("/job/{job_id}/apply")
@@ -3385,6 +3398,10 @@ def job_apply(job_id: int, request: Request, cover: str = Form(""),
         raise HTTPException(404)
     # Без заполненного резюме отклика нет: работодателю мы отправляем анонимную
     # карточку кандидата, а собирать её не из чего (решение владельца 09.09.2026).
+    # Работодатель в объявлении не назван — передать отклик некому и продать
+    # контакт кандидата некому: отправляем его в первоисточник.
+    if not is_real_company(job.company_name):
+        return RedirectResponse(f"/job/{job_id}?nocompany=1", status_code=303)
     cv = db.query(Resume).filter_by(user_id=user.id).first()
     if not cv or not resume_is_ready(cv):
         return RedirectResponse(f"/job/{job_id}?nocv=1", status_code=303)

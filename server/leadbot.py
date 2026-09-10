@@ -36,7 +36,8 @@ from sqlalchemy.orm import Session
 
 from server.app import (Application, BASE_URL, Base, Job, Resume, SessionLocal,
                         User, company_domain, db_session, host_of, is_c_level,
-                        need_admin, resume_card, slugify_company, unlock_cost)
+                        is_real_company, need_admin, resume_card, slugify_company,
+                        unlock_cost)
 
 router = APIRouter()
 
@@ -263,15 +264,6 @@ def _save_contact(db: Session, company_name: str, emails: list) -> None:
 
 
 # ---------- язык компании ----------
-
-# Компании-заглушки: писать некому, ссылку регистрации отправлять некуда
-NONAME_RE = re.compile(r"не\s*указан|unknown|confidential|стелс|stealth|^n/?a$|^-+$", re.I)
-
-
-def is_real_company(name: str) -> bool:
-    name = (name or "").strip()
-    return bool(name) and slugify_company(name) != "company" and not NONAME_RE.search(name)
-
 
 CYR_RE = re.compile(r"[а-яё]", re.I)
 UA_RE = re.compile(r"[іїєґ]", re.I)          # украинские буквы, которых нет в русском
