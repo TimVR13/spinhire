@@ -15,7 +15,25 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # Секретов может не быть (их нет с самого начала) — тогда деплой уже сделал
+      # root-cron /opt/spinhire/deploy.sh, который каждые 2 минуты подтягивает main.
+      # Молча выходим вместо падения, чтобы красный крест не висел на каждом пуше.
+      - name: Есть ли ключи для SSH-деплоя
+        id: keys
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          if [ -n "$SSH_KEY" ] && [ -n "$HOST" ] && [ -n "$USER" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::DEPLOY_SSH_KEY/DEPLOY_HOST/DEPLOY_USER не заданы — прод обновит cron на сервере (до 2 минут)."
+          fi
+
       - name: SSH deploy
+        if: steps.keys.outputs.ready == 'true'
         env:
           SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           HOST: ${{ secrets.DEPLOY_HOST }}

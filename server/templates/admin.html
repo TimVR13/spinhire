@@ -36,6 +36,14 @@
   @media (max-width: 640px) { .adm-filters__custom { border-left:0; padding-left:0; margin-left:0; flex-wrap:wrap; } .adm-filters__count { margin-left:0; width:100%; } }
   .adm-filters__custom.on .adm-filters__date { border-color:var(--acid); }
   .adm-filters__dash { color:var(--ink-faint); }
+  /* вакансии: фиксированные колонки, иначе заголовок и источник выдавливают кнопки за край
+     (max-width на td в обычной табличной раскладке ширину колонки не ограничивает) */
+  .adm--jobs { table-layout: fixed; }
+  .adm--jobs .c-title { width: 30%; } .adm--jobs .c-src { width: 108px; }
+  .adm--jobs .c-co { width: 15%; }   .adm--jobs .c-pay { width: 128px; }
+  .adm--jobs .c-st { width: 104px; } .adm--jobs .c-n { width: 52px; }
+  .adm--jobs .c-act { width: 196px; }
+  .t-src { font-size: .75rem; color: var(--ink-faint); overflow-wrap: anywhere; }
   /* очередь модерации: текст слева, действия одной несъезжающей строкой справа */
   .mq { display:grid; grid-template-columns: minmax(0,1fr) auto; gap:14px; align-items:center; margin-bottom:10px; border-color:var(--pink); }
   .mq__body { min-width:0; }
@@ -128,12 +136,13 @@
       {% if q or st %}<a class="btn btn-ghost btn-sm" href="/admin?tab=jobs">Сброс</a>{% endif %}
     </form>
     <p style="color: var(--ink-faint); font-size: 0.82rem; margin-bottom: 10px;">Показано {{ jobs|length }} (макс. 200)</p>
-    <div class="table-wrap"><table class="adm">
+    <div class="table-wrap"><table class="adm adm--jobs">
+      <colgroup><col class="c-title"><col class="c-src"><col class="c-co"><col class="c-pay"><col class="c-st"><col class="c-n"><col class="c-act"></colgroup>
       <tr><th>Вакансия</th><th>Источник</th><th>Компания</th><th>Зарплата</th><th>Статус</th><th>Откл.</th><th>Действия</th></tr>
       {% for j in jobs %}
       <tr>
-        <td><a class="clamp2" href="/job/{{ j.id }}" style="color: inherit;" title="{{ j.title }}">{{ j.title }}</a>{% if j.featured %} ⚡{% endif %}</td>
-        <td style="font-size: 0.78rem; color: var(--ink-faint);">{{ j.source or 'ручная' }}</td>
+        <td class="t-title"><a class="clamp2" href="/job/{{ j.id }}" style="color: inherit;" title="{{ j.title }}">{{ j.title }}</a>{% if j.featured %} ⚡{% endif %}</td>
+        <td class="t-src" title="{{ j.source or 'ручная' }}">{{ j.source or 'ручная' }}</td>
         <td>{% if j.company_name %}<a href="{% if j.owner_id %}/admin/user/{{ j.owner_id }}{% else %}/company/{{ j.company_slug }}{% endif %}" style="color: inherit;" title="{% if j.owner_id %}Карточка работодателя{% else %}Профиль компании{% endif %}">{{ j.company_name }}</a>{% else %}—{% endif %}</td>
         <td class="nowrap">{{ j.salary }}</td>
         <td><span class="status {{ j.status }}">{{ j.status }}</span></td>
