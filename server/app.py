@@ -5470,15 +5470,22 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
                                 joinedload(Application.job).defer(Job.description))
                        .order_by(Application.created_at.desc()).limit(300).all())
     elif tab == "resumes":
+        from sqlalchemy.orm import joinedload
         st = request.query_params.get("st") or ""
-        resumes_q = db.query(Resume)
-        if st == "pending":
-            resumes_q = resumes_q.filter(Resume.status == "pending")
-        elif st == "live":
+        # автора тянем одним JOIN: без него шаблон делал по запросу на каждую строку
+        resumes_q = db.query(Resume).options(joinedload(Resume.user))
+        if st == "live":
             resumes_q = resumes_q.filter(Resume.status == "approved", Resume.published == True)  # noqa: E712
+        elif st in ("pending", "approved", "rejected", "paused", "draft"):
+            resumes_q = resumes_q.filter(Resume.status == st)
+        # период — по дате последней подачи/правки: именно она заводит CV в очередь.
+        # По умолчанию «за всё время», иначе вкладка прятала бы старую непросмотренную очередь.
+        pr = parse_period(request, default="all")
+        resumes_q = _in_period(resumes_q, Resume.updated_at, pr["since_dt"], pr["until_dt"])
         ctx["resumes"] = resumes_q.order_by(
             (Resume.status == "pending").desc(), Resume.updated_at.desc()).all()
         ctx["st"] = st
+        ctx.update(pr)
     elif tab == "unlocks":
         rows = db.query(ResumeUnlock).order_by(ResumeUnlock.created_at.desc()).limit(300).all()
         ctx["unlocks"] = [{

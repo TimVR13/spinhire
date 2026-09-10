@@ -909,7 +909,8 @@ body.workspace h1, body.workspace h2, body.workspace h3, body.workspace .display
 body.workspace .flash { background: var(--surface); border: 2px solid var(--acid); border-radius: var(--radius); box-shadow: var(--shadow-dark); }
 body.workspace .flash.err { border-color: var(--pink); }
 /* область со статистикой и таблицы — белые карточки с обводкой, а не голая мятная подложка */
-body.workspace .table-wrap { background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+/* overflow-x: auto, а не hidden: широкая таблица (модерация CV) должна прокручиваться, а не обрезаться по краю */
+body.workspace .table-wrap { background: var(--surface); border-radius: var(--radius); overflow-x: auto; }
 body.workspace .adm td, body.workspace .adm tbody tr { background: var(--surface); }
 body.workspace .company-stats { background: var(--surface); border: 2px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-dark); }
 body.workspace .site-header { background: color-mix(in oklch, var(--surface) 92%, transparent); border-bottom-width: 1px; }
