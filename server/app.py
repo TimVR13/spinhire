@@ -644,6 +644,15 @@ def is_real_company(name: str) -> bool:
     return bool(name) and slugify_company(name) != "company" and not NONAME_RE.search(name)
 
 
+def source_label(url: str) -> str:
+    """Как назвать первоисточник человеку: у телеграма важен канал, не домен."""
+    host = host_of(url or "")
+    if host in ("t.me", "telegram.me"):
+        first = urllib.parse.urlparse(url).path.strip("/").split("/")[0]
+        return f"{host}/{first}" if first else host
+    return host
+
+
 def upsert_company_profiles(db: Session, rows) -> int:
     """Сохранить профили работодателей, не затирая заполненные поля пустыми."""
     saved = 0
@@ -3381,7 +3390,7 @@ def job_detail(job_id: str, request: Request, db: Session = Depends(db_session))
                   applies=len(job.applications), similar=similar, match=match,
                   is_closed=job.status == "archived", loc_schema=job_location_schema(job),
                   no_company=not is_real_company(job.company_name),
-                  source_host=host_of(job.source_url or ""))
+                  source_host=source_label(job.source_url or ""))
 
 
 @app.post("/job/{job_id}/apply")
