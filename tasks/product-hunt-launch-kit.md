@@ -321,15 +321,15 @@ FastAPI + SQLAlchemy + SQLite, server-rendered. Happy to answer anything about t
 
 | Площадка | Ссылка на подачу | Особенность |
 |---|---|---|
-| Uneed | uneed.best/submit | Бесплатно, очередь ~1–2 недели, есть «Tool of the day» |
-| Fazier | fazier.com/submit | Быстрая модерация, даёт бейдж на сайт |
-| Peerlist Launchpad | peerlist.io/launchpad | Нужен профиль основателя, аудитория — разработчики |
-| Launching Next | launchingnext.com/submit | Бесплатно, живёт долго в поиске |
-| Startup Stash | startupstash.com/add-startup | Каталог с высоким DR, хорошая ссылка |
-| SaaSHub | saashub.com/submit | Сравнения с конкурентами, полезно для «alternative to» запросов |
-| AlternativeTo | alternativeto.net | Завести карточку и указать альтернативы: iGamingCareers, Casino Jobs, Gaming Jobs Online |
-| F6S | f6s.com | Профиль стартапа, нужен для питчей и грантов |
-| BetaPage | betapage.co/submit | Бесплатная очередь |
+| Uneed | https://www.uneed.best/submit-a-tool | Бесплатно, очередь ~1–2 недели, есть «Tool of the day» |
+| Fazier | https://fazier.com/submit | Быстрая модерация, даёт бейдж на сайт |
+| Peerlist Launchpad | https://peerlist.io/launchpad | Нужен профиль основателя, аудитория — разработчики |
+| Launching Next | https://www.launchingnext.com/submit/ | Бесплатно, живёт долго в поиске |
+| Startup Stash | https://startupstash.com/add-listing/ | Каталог с высоким DR, хорошая ссылка |
+| SaaSHub | https://www.saashub.com/submit | Сравнения с конкурентами, полезно для «alternative to» запросов |
+| AlternativeTo | https://alternativeto.net | Завести карточку и указать альтернативы: iGamingCareers, Casino Jobs, Gaming Jobs Online |
+| F6S | https://www.f6s.com | Профиль стартапа, нужен для питчей и грантов |
+| Pitchwall (бывший BetaPage) | https://pitchwall.co/submit | Бесплатная очередь; betapage.co теперь редиректит сюда |
 
 ---
 
@@ -449,14 +449,34 @@ SpinHire — джоб-борд iGaming: 6 100+ живых вакансий от 
 
 ## 6. Чек-лист владельца
 
-Аккаунты (создаёт владелец, тексты выше):
+Аккаунты (создаёт владелец, тексты выше). Адреса регистрации — одним списком,
+чтобы не искать заново:
 
-- [ ] Product Hunt — за 2–3 недели, с прогревом активности
-- [ ] Hacker News — аккаунту нужна хоть какая-то история комментариев
-- [ ] Indie Hackers, BetaList, Uneed, Fazier, Peerlist, Startup Stash, SaaSHub, AlternativeTo, F6S
-- [ ] Reddit — аккаунт с кармой, иначе автомодератор снимет пост
-- [ ] Hugging Face, Kaggle — для датасетов
-- [ ] GitHub — для PR в public-apis и awesome-mcp-servers
+| Где | Регистрация | Когда нужен |
+|---|---|---|
+| Product Hunt | https://www.producthunt.com/login (вход через X или Google) | За 2–3 недели, с прогревом: комментарии к чужим запускам |
+| Hacker News | https://news.ycombinator.com/login | За 2–3 недели: нужна хоть какая-то история комментариев |
+| Reddit | https://www.reddit.com/register/ | За 2–3 недели: без кармы автомодератор снимет пост |
+| Indie Hackers | https://www.indiehackers.com/sign-up | В день запуска |
+| BetaList | https://betalist.com/submit | Подача за 1–2 недели: очередь модерации |
+| Uneed | https://www.uneed.best/submit-a-tool | День запуска +1 |
+| Fazier | https://fazier.com/submit | День запуска +1 |
+| Peerlist | https://peerlist.io/signup, запуск — https://peerlist.io/launchpad | День запуска +1 |
+| Launching Next | https://www.launchingnext.com/submit/ | Волна 2 |
+| Startup Stash | https://startupstash.com/add-listing/ | Волна 2 |
+| SaaSHub | https://www.saashub.com/submit | Волна 2 |
+| AlternativeTo | https://alternativeto.net | Волна 2 |
+| F6S | https://www.f6s.com | Волна 2 |
+| Pitchwall | https://pitchwall.co/submit | Волна 2 |
+| Hugging Face | https://huggingface.co/join, датасет — https://huggingface.co/new-dataset | Волна 2 |
+| Kaggle | https://www.kaggle.com/account/login | Волна 2 |
+| data.world | https://data.world | Волна 2 |
+| GitHub | аккаунт уже есть — нужен для PR в public-apis и awesome-mcp-servers | Волна 2 |
+
+Каталоги MCP и API (аккаунт нужен не везде): https://mcp.so/submit,
+https://www.pulsemcp.com, https://glama.ai/mcp/servers, https://smithery.ai,
+https://github.com/public-apis/public-apis, https://apis.guru,
+https://www.postman.com/explore.
 
 Перед днём X:
 
