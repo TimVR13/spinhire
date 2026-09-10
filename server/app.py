@@ -709,15 +709,21 @@ PLANS = {
     "cv10": ("10 контактов из базы", 45, "Открытие 10 контактов резюме (€4.5/контакт)"),
     "cv30": ("30 контактов из базы", 120, "Открытие 30 контактов резюме (€4/контакт)"),
     "cvunlim": ("База резюме — безлимит / мес", 349, "Безлимитные контакты на 30 дней"),
+    "cvc1": ("1 контакт C-level", 25, "Топ-менеджер или зарплата от $5 000 — 5 открытий"),
+    "cvc5": ("5 контактов C-level", 105, "Пять топ-контактов, €21 за контакт — 25 открытий"),
+    "cvc10": ("10 контактов C-level", 189, "Десять топ-контактов, €18.9 за контакт — 50 открытий"),
     "hunt": ("Подбор под ключ — предоплата", 1000, "Итоговая стоимость — 1 зарплата кандидата"),
 }
 
 # Цена для сравнения «было → стало». У пакетов это честная поштучная стоимость
 # (3 × €49 и 10 × €49), а не выдуманная зачёркнутая цифра.
-PLAN_LIST_PRICE = {"single": 99, "featured": 199, "pack3": 147, "pack10": 490}
+PLAN_LIST_PRICE = {"single": 99, "featured": 199, "pack3": 147, "pack10": 490,
+                   "cvc5": 125, "cvc10": 250}
 
 # Сколько открытий контактов начисляет тариф (cv40 — старый пакет, оставлен для уже созданных заказов).
-PLAN_CV_CREDITS = {"cv1": 1, "cv10": 10, "cv30": 30, "cv40": 40}
+# C-level пакеты начисляют те же открытия, просто пачками по 5 — по цене одного топ-контакта.
+PLAN_CV_CREDITS = {"cv1": 1, "cv10": 10, "cv30": 30, "cv40": 40,
+                   "cvc1": 5, "cvc5": 25, "cvc10": 50}
 
 # Что начисляется работодателю после оплаты.
 PLAN_JOB_CREDITS = {"single": 1, "featured": 1, "pack3": 3, "pack10": 10}
@@ -893,9 +899,54 @@ def is_c_level(text: str) -> bool:
     return bool(_CLEVEL_RE.search(text or ""))
 
 
+# Дорогой контакт — не только по должности: ожидания от $5 000 в месяц это тот же уровень
+# (решение владельца 10.09.2026). Курсы приблизительные и без сети: порог грубый, точность не нужна.
+CLEVEL_SALARY_USD = int(os.environ.get("SPINHIRE_CLEVEL_SALARY_USD", "5000"))
+_CUR_USD = (("$", 1.0), ("usd", 1.0), ("usdt", 1.0), ("€", 1.08), ("eur", 1.08),
+            ("£", 1.27), ("gbp", 1.27), ("₴", 0.024), ("грн", 0.024), ("zł", 0.25), ("pln", 0.25))
+_YEARLY_RE = re.compile(r"год|year|annual|p\.?\s?a\b|/\s*y\b", re.I)
+
+
+def _money(raw: str) -> float:
+    raw = raw.replace(" ", "")
+    if re.fullmatch(r"\d{1,3}([.,]\d{3})+", raw):     # 4,000 и 4.000 — разделитель тысяч
+        return float(raw.replace(",", "").replace(".", ""))
+    return float(raw.replace(",", "."))
+
+
+def salary_usd(text: str) -> int:
+    """Зарплатные ожидания из свободного текста («€4 000», «4000 EUR», «5k$») → доллары в месяц."""
+    s = (text or "").lower().replace(" ", " ").replace(" ", " ")
+    if not s:
+        return 0
+    rate = next((k for token, k in _CUR_USD if token in s), 1.08)   # без валюты считаем евро
+    values = []
+    for m in re.finditer(r"(\d[\d ]*(?:[.,]\d+)?)\s*(k|к|тыс)?", s):
+        try:
+            value = _money(m.group(1))
+        except ValueError:
+            continue
+        if m.group(2):
+            value *= 1000
+        if value >= 100:                              # «5 лет опыта» и «net» — не зарплата
+            values.append(value)
+    if not values:
+        return 0
+    top = max(values)
+    if _YEARLY_RE.search(s):
+        top /= 12
+    return int(top * rate)
+
+
+def is_premium_contact(resume) -> bool:
+    """Контакт уровня C-level: по должности или по ожиданиям от $5 000 в месяц."""
+    return (is_c_level(getattr(resume, "title", ""))
+            or salary_usd(getattr(resume, "salary_expect", "")) >= CLEVEL_SALARY_USD)
+
+
 def unlock_cost(resume) -> int:
     """Сколько открытий списывается за контакт кандидата."""
-    return CLEVEL_UNLOCK_COST if is_c_level(getattr(resume, "title", "")) else 1
+    return CLEVEL_UNLOCK_COST if is_premium_contact(resume) else 1
 
 
 # ---------- насколько кандидат подходит вакансии ----------
@@ -3014,6 +3065,24 @@ def checkout_claim(order_id: int, request: Request, tx: str = Form(""),
     return RedirectResponse(f"/checkout/order/{order_id}?claimed=1", status_code=303)
 
 
+@app.post("/checkout/order/{order_id}/cancel")
+def checkout_cancel(order_id: int, request: Request, back: str = Form(""),
+                    db: Session = Depends(db_session)):
+    """Отмена неоплаченного заказа: висящий счёт не должен мозолить глаза в кабинете."""
+    user = get_user(request, db)
+    o = db.get(Order, order_id)
+    if not user or not o or (o.user_id != user.id and user.role != "admin"):
+        raise HTTPException(403)
+    if o.status != "pending":
+        raise HTTPException(409, "Заказ уже закрыт")
+    o.status = "cancelled"
+    track(db, "order_cancelled", user.id, "order", o.id, plan=o.plan, amount=o.amount)
+    db.commit()
+    if back == "cabinet":
+        return RedirectResponse("/employer?order=cancelled#fin-orders", status_code=303)
+    return RedirectResponse(f"/checkout/order/{order_id}", status_code=303)
+
+
 # ---------- Stripe (карты) и PayKilla (крипта) ----------
 # Ключи только из окружения: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
 # PAYKILLA_SECRET_KEY (+ PAYKILLA_PUBLIC_KEY). Без ключей кнопки не показываются.
@@ -4025,7 +4094,7 @@ def resume_detail(resume_id: int, request: Request, db: Session = Depends(db_ses
     cv_account, cv_team_role = company_context(user, db) if user and user.role == "employer" else (user, "owner")
     return render(request, db, "resume.html", resume=row, unlocked=unlocked,
                   active="resumes", cv_account=cv_account, cv_team_role=cv_team_role,
-                  cv_cost=unlock_cost(row), cv_clevel=is_c_level(row.title))
+                  cv_cost=unlock_cost(row), cv_clevel=is_premium_contact(row))
 
 
 @app.get("/resume/{resume_id}/file")
@@ -4737,7 +4806,8 @@ def employer(request: Request, stage: str = "", assigned: int = 0,
                .order_by(CompanyInvite.created_at.desc()).all())
     # «Финансы»: заказы кабинета и пакеты для пополнения (featured и hunt покупаются со страницы вакансии/тарифов)
     orders = db.query(Order).filter(Order.user_id == account.id).order_by(Order.created_at.desc()).limit(50).all()
-    topup = {"jobs": ["single", "pack3", "pack10", "unlim30"], "cv": ["cv1", "cv10", "cv30", "cvunlim"]}
+    topup = {"jobs": ["single", "pack3", "pack10", "unlim30"], "cv": ["cv1", "cv10", "cv30", "cvunlim"],
+             "cvc": ["cvc1", "cvc5", "cvc10"]}
     locked_apps = {a.id for a in applications if a.lead_locked}
     if locked_apps:                       # уже оплаченные контакты не прячем
         opened = {r.user_id for r in db.query(Resume).join(
@@ -6913,7 +6983,13 @@ try:
 
     @app.on_event("startup")
     async def _mcp_start():
-        app.state.mcp_session_cm = mcp_server.mcp.session_manager.run()
+        # session_manager.run() разрешён один раз на инстанс. В проде это и происходит,
+        # а в тестах приложение поднимают несколько раз за процесс — снимаем флаг после
+        # чистого выхода, иначе второй TestClient(app) валится с RuntimeError.
+        manager = mcp_server.mcp.session_manager
+        if getattr(manager, "_has_started", False):
+            manager._has_started = False
+        app.state.mcp_session_cm = manager.run()
         await app.state.mcp_session_cm.__aenter__()
 
     @app.on_event("shutdown")
