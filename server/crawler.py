@@ -2074,6 +2074,28 @@ IGAMING_SIGNAL_RE = re.compile(
     r"\bmga\b|curacao licen|ukgc|gaming authority", re.I)
 
 
+# «iGaming» в перечне «FinTech, CFD/Forex, Crypto, iGaming» — это не отрасль
+# вакансии, а строчка в разделе «будет плюсом»: так на борд попадали форекс,
+# аутсорс и adtech. Такой маркер считаем разбавленным.
+_ADJACENT_INDUSTRY_RE = re.compile(
+    r"fintech|\bforex\b|\bcfd\b|crypto|e-?commerce|adtech|edtech|healthtech|"
+    r"\btrading\b|banking|insur", re.I)
+
+
+def has_igaming_signal(title: str, company: str, description: str = "") -> bool:
+    """Отраслевой маркер, которому можно верить. В названии вакансии и имени
+    компании он всегда осмысленный, в описании — только если рядом не
+    перечислены соседние отрасли."""
+    if IGAMING_SIGNAL_RE.search(f"{title or ''}\n{company or ''}"):
+        return True
+    text = description or ""
+    for match in IGAMING_SIGNAL_RE.finditer(text):
+        window = text[max(0, match.start() - 70):match.end() + 70]
+        if not _ADJACENT_INDUSTRY_RE.search(window):
+            return True
+    return False
+
+
 def is_generic_source(source: str) -> bool:
     return any((source or "").startswith(p) for p in GENERIC_SOURCES)
 
@@ -2091,7 +2113,7 @@ def companies_proven_by_signal(db, Job) -> set:
             continue
         stat = stats.setdefault(name.strip().lower(), [0, 0])
         stat[0] += 1
-        if IGAMING_SIGNAL_RE.search(f"{title}\n{name}\n{description or ''}"):
+        if has_igaming_signal(title, name, description):
             stat[1] += 1
     return {name for name, (total, signal) in stats.items()
             if signal >= 2 and signal * 3 >= total}
@@ -2135,7 +2157,7 @@ def generic_job_offtopic(source: str, title: str, company: str, description: str
     comp = (company or "").strip().lower()
     if comp in known or _UA_BRANDS_RE.search(comp):
         return False
-    return not IGAMING_SIGNAL_RE.search(f"{title}\n{company}\n{description or ''}")
+    return not has_igaming_signal(title, company, description)
 
 
 def job_is_irrelevant(title: str) -> bool:

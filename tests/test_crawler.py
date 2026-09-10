@@ -208,3 +208,16 @@ class RelevanceFilterTests(unittest.TestCase):
                      "slots content roadmap", "live dealer studio", "MGA licence"):
             with self.subTest(text=text):
                 self.assertIsNotNone(crawler.IGAMING_SIGNAL_RE.search(text))
+
+    def test_marker_in_a_list_of_neighbouring_industries_is_not_enough(self):
+        # форекс-брокер зовёт ASO-специалиста и упоминает iGaming в «будет плюсом»
+        diluted = ("Will be a plus: experience in FinTech, CFD/Forex, Crypto, "
+                   "iGaming, or other mobile-first products.")
+        self.assertFalse(crawler.has_igaming_signal("ASO Specialist", "JustMarkets Tech", diluted))
+        # в названии вакансии маркер поставлен осознанно
+        self.assertTrue(crawler.has_igaming_signal(
+            "AML/Compliance Analyst — Crypto, iGaming, FX", "Prime Partners", diluted))
+        # и в описании, где отрасль — это про сам продукт
+        self.assertTrue(crawler.has_igaming_signal(
+            "Retention Manager", "Some Operator",
+            "Наш продукт — онлайн-казино с живыми дилерами и слотами."))
