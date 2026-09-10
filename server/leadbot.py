@@ -363,8 +363,18 @@ def build_hr_text(company_name: str, items: list, lang: str) -> str:
     return f"Hello!\n\n{head}\n\n{cards}\n\n{tail}"
 
 
+SINGLE_JOB = {
+    "ru": "По ней вы заводите кабинет компании (почта, пароль, подтверждение почты) "
+          "и забираете эту вакансию себе — бесплатно, вместе с откликами на неё.",
+    "uk": "За ним ви створюєте кабінет компанії (пошта, пароль, підтвердження пошти) "
+          "і забираєте цю вакансію собі — безкоштовно, разом із відгуками на неї.",
+    "en": "It creates your company account (email, password, email confirmation) and "
+          "hands you this posting — free, together with the applications it collected.",
+}
+
+
 def build_link_text(company_name: str, url: str, jobs_count: int, lang: str,
-                    cost: int = 1) -> str:
+                    cost: int = 1, single: bool = False) -> str:
     """Сообщение №3 — ссылка на регистрацию и что стоит денег."""
     price = ("Открытие контакта кандидата — по нашим расценкам: €5 за контакт, "
              "€45 за 10, €120 за 30. Контакт руководителя уровня C-level — 5 открытий."
@@ -374,6 +384,10 @@ def build_link_text(company_name: str, url: str, jobs_count: int, lang: str,
              if lang == "uk" else
              "Opening a candidate contact is charged at our rates: €5 per contact, "
              "€45 for 10, €120 for 30. A C-level contact costs 5 credits.")
+    if single:
+        head = {"ru": "Ссылка для регистрации", "uk": "Посилання для реєстрації",
+                "en": "Registration link"}.get(lang, "Registration link")
+        return f"{head}: {url}\n\n{SINGLE_JOB.get(lang, SINGLE_JOB['en'])}\n\n{price}"
     if lang == "uk":
         return (f"Посилання для реєстрації: {url}\n\n"
                 f"За ним ви створюєте кабінет компанії (пошта, пароль, підтвердження пошти). "
@@ -392,12 +406,17 @@ def build_link_text(company_name: str, url: str, jobs_count: int, lang: str,
             f"collected from your own career pages — together with the applications.\n\n{price}")
 
 
-def build_owner_text(company_name: str, items: list, hr: dict, lang: str) -> str:
-    """Сообщение №1 — Алине: что за отклик и куда писать."""
+def build_owner_text(company_name: str, items: list, hr: dict, lang: str,
+                     source: str = "") -> str:
+    """Сообщение №1 — Алине: что за отклик и куда писать.
+
+    `source` — ссылка на пост, откуда вакансия: она приходит вместо блока
+    контактов, когда работодатель в объявлении не назван и искать нечего.
+    """
     n = len(items)
     titles = sorted({it["job"].title for it in items})
     lines = [f"🎯 <b>{'Новый отклик' if n == 1 else 'Новые отклики (%d)' % n}</b> · "
-             f"{_esc(company_name)}",
+             f"{_esc(company_name) if not source else 'работодатель не назван'}",
              "Вакансии: " + ", ".join(_esc(t) for t in titles[:3])
              + (f" и ещё {len(titles) - 3}" if len(titles) > 3 else "")]
     for it in items[:4]:
@@ -419,6 +438,13 @@ def build_owner_text(company_name: str, items: list, hr: dict, lang: str) -> str
     if n > 4:
         lines.append(f"\n…и ещё {n - 4}")
     lines.append("\n📍 <b>Куда писать</b>")
+    if source:
+        lines.append("Работодатель в объявлении не назван — контакт ищи в самом посте:")
+        lines.append(_esc(source))
+        lines.append(f"\nЯзык письма: "
+                     + {"ru": "русский", "uk": "украинский", "en": "английский"}.get(lang, lang)
+                     + f"\nКарточка в CRM: {SITE}/admin/crm/leads")
+        return "\n".join(lines)
     lines.append(f"Сайт: {_esc(hr['website']) or '— не нашли'}")
     if hr.get("careers_url"):
         lines.append(f"Карьера: {_esc(hr['careers_url'])}")
@@ -500,11 +526,13 @@ def pending_batches(db: Session, limit_companies: int = 6) -> tuple:
         if not (card.get("title") or card.get("skills") or card.get("about")):
             empty.append(application.id)
             continue
-        if not is_real_company(job.company_name):
-            empty.append(application.id)
-            continue
-        slug = slugify_company(job.company_name)
-        group = groups.setdefault(slug, {"company": job.company_name, "slug": slug, "items": []})
+        # у объявления без работодателя своя пачка на каждую вакансию: общей
+        # компании нет, и одну ссылку регистрации на «Компания не указана»
+        # выдавать нельзя — она отдала бы кабинету две сотни чужих вакансий
+        named = is_real_company(job.company_name)
+        slug = slugify_company(job.company_name) if named else f"job-{job.id}"
+        group = groups.setdefault(slug, {"company": job.company_name, "slug": slug,
+                                         "items": [], "named": named, "job": job})
         group["items"].append({
             "application": application, "job": job, "user": user, "resume": cv, "card": card,
             "clevel": is_c_level(job.title) or is_c_level(cv.title if cv else ""),
@@ -530,20 +558,28 @@ def send_pending(db: Session, dry: bool = False, refresh_hr: bool = False) -> di
         items = group["items"]
         jobs = [it["job"] for it in items]
         lang = company_lang(jobs)
-        try:
-            hr = find_hr(db, group["company"], jobs, refresh=refresh_hr)
-        except Exception as exc:                               # noqa: BLE001
-            hr = {"website": "", "careers_url": "", "emails": [], "guesses": [],
-                  "linkedin": linkedin_links(group["company"])}
-            out["errors"].append(f"{group['company']}: поиск HR — {type(exc).__name__}")
-        row = claim.get_or_create_claim(db, group["company"], lang)
-        if not row:
-            continue
-        all_jobs = claim.company_jobs(db, group["slug"])
+        hr = {"website": "", "careers_url": "", "emails": [], "guesses": [], "linkedin": ""}
+        if group["named"]:
+            try:
+                hr = find_hr(db, group["company"], jobs, refresh=refresh_hr)
+            except Exception as exc:                           # noqa: BLE001
+                hr = dict(hr, linkedin=linkedin_links(group["company"]))
+                out["errors"].append(f"{group['company']}: поиск HR — {type(exc).__name__}")
+            row = claim.get_or_create_claim(db, group["company"], lang)
+            if not row:
+                continue
+            count = len(claim.company_jobs(db, group["slug"]))
+        else:
+            # работодателя в объявлении нет: контакт ищем в самом посте,
+            # а кабинет отдаём ровно под эту вакансию
+            row = claim.get_or_create_job_claim(db, group["job"], lang)
+            count = 1
         texts = [
-            (build_owner_text(group["company"], items, hr, lang), True),
+            (build_owner_text(group["company"], items, hr, lang,
+                              source=group["job"].source_url if not group["named"] else ""), True),
             (build_hr_text(group["company"], items, lang), False),
-            (build_link_text(group["company"], claim.claim_url(row), len(all_jobs), lang), False),
+            (build_link_text(group["company"], claim.claim_url(row), count, lang,
+                             single=not group["named"]), False),
         ]
         out["companies"] += 1
         out["applications"] += len(items)

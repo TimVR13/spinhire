@@ -644,8 +644,9 @@ def is_real_company(name: str) -> bool:
     return bool(name) and slugify_company(name) != "company" and not NONAME_RE.search(name)
 
 
+
 def source_label(url: str) -> str:
-    """Как назвать первоисточник человеку: у телеграма важен канал, не домен."""
+    """Как назвать первоисточник в сообщении Алине: у телеграма важен канал, не домен."""
     host = host_of(url or "")
     if host in ("t.me", "telegram.me"):
         first = urllib.parse.urlparse(url).path.strip("/").split("/")[0]
@@ -1273,6 +1274,10 @@ def migrate(db: Session):
         col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
         if acols and col not in acols:
             db.execute(text(_sql))
+    # ссылка на одну вакансию — для объявлений, где работодатель не назван
+    ccols = {r[1] for r in db.execute(text("PRAGMA table_info(company_claims)")).fetchall()}
+    if ccols and "job_id" not in ccols:
+        db.execute(text("ALTER TABLE company_claims ADD COLUMN job_id INTEGER"))
     for _sql in (
         "ALTER TABLE resumes ADD COLUMN employment_history TEXT DEFAULT ''",
         "ALTER TABLE resumes ADD COLUMN education TEXT DEFAULT ''",
@@ -3388,9 +3393,7 @@ def job_detail(job_id: str, request: Request, db: Session = Depends(db_session))
             match = match_score(cv, job)
     return render(request, db, "job.html", job=job, applied=applied,
                   applies=len(job.applications), similar=similar, match=match,
-                  is_closed=job.status == "archived", loc_schema=job_location_schema(job),
-                  no_company=not is_real_company(job.company_name),
-                  source_host=source_label(job.source_url or ""))
+                  is_closed=job.status == "archived", loc_schema=job_location_schema(job))
 
 
 @app.post("/job/{job_id}/apply")
@@ -3407,10 +3410,6 @@ def job_apply(job_id: int, request: Request, cover: str = Form(""),
         raise HTTPException(404)
     # Без заполненного резюме отклика нет: работодателю мы отправляем анонимную
     # карточку кандидата, а собирать её не из чего (решение владельца 09.09.2026).
-    # Работодатель в объявлении не назван — передать отклик некому и продать
-    # контакт кандидата некому: отправляем его в первоисточник.
-    if not is_real_company(job.company_name):
-        return RedirectResponse(f"/job/{job_id}?nocompany=1", status_code=303)
     cv = db.query(Resume).filter_by(user_id=user.id).first()
     if not cv or not resume_is_ready(cv):
         return RedirectResponse(f"/job/{job_id}?nocv=1", status_code=303)

@@ -4,7 +4,7 @@
 {% block content %}
 <div style="max-width:920px;margin:40px auto;">
   <span class="kicker">{{ t.kicker }}</span>
-  <h1 style="font-size:clamp(1.6rem,3vw,2.4rem);margin-block:8px 12px;">{{ t.title.format(company=claim.company_name) }}</h1>
+  <h1 style="font-size:clamp(1.6rem,3vw,2.4rem);margin-block:8px 12px;">{{ t.title.format(company=claim.company_name if not ask_company else (jobs[0].title if jobs else 'SpinHire')) }}</h1>
   <p style="color:var(--ink-dim);max-width:640px;">{{ t.lead }}</p>
 
   <div style="display:flex;gap:14px;flex-wrap:wrap;margin:24px 0;">
@@ -47,6 +47,7 @@
         <form method="post" action="/claim/{{ claim.token }}" class="card" style="display:flex;flex-direction:column;gap:14px;">
           <h2 style="font-size:1.05rem;margin:0;">{{ t.form }}</h2>
           <div class="field"><label for="c-name">{{ t.name }}</label><input class="input" id="c-name" name="name" autocomplete="name"></div>
+          {% if ask_company %}<div class="field"><label for="c-company">{{ t.company }}</label><input class="input" id="c-company" name="company_name" autocomplete="organization" required></div>{% endif %}
           <div class="field"><label for="c-email">{{ t.email }}</label><input class="input" id="c-email" type="email" name="email" value="{{ email or '' }}" autocomplete="email" required></div>
           <div class="field"><label for="c-pw">{{ t.pass }}</label><input class="input" id="c-pw" type="password" name="password" minlength="6" autocomplete="new-password" required></div>
           <button class="btn btn-acid btn-block" type="submit">{{ t.submit }}</button>

@@ -23,9 +23,9 @@ from sqlalchemy.orm import Session
 from server.app import (Application, BASE_URL, Base, Job, REQUIRE_VERIFY,
                         Resume, SIGNUP_COIN_BONUS, User, _signup_source,
                         db_session, dest_for, get_user, grant_launch_promo,
-                        hash_pw, is_c_level, issue_otp, render, request_lang,
-                        resume_card, send_otp, set_session, slugify_company,
-                        track)
+                        hash_pw, is_c_level, is_real_company, issue_otp, render,
+                        request_lang, resume_card, send_otp, set_session,
+                        slugify_company, track)
 
 router = APIRouter()
 
@@ -39,8 +39,9 @@ class CompanyClaim(Base):
     """
     __tablename__ = "company_claims"
     id = Column(Integer, primary_key=True)
-    company_slug = Column(String, unique=True, nullable=False)
+    company_slug = Column(String, unique=True, nullable=False)   # у пожобной ссылки — job-<id>
     company_name = Column(String, default="")
+    job_id = Column(Integer, ForeignKey("jobs.id"), nullable=True)  # ссылка на одну вакансию
     token = Column(String, unique=True, nullable=False)
     lang = Column(String, default="en")          # язык письма и страницы: ru | en
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -50,9 +51,11 @@ class CompanyClaim(Base):
 
 
 def get_or_create_claim(db: Session, company_name: str, lang: str = "en") -> "CompanyClaim | None":
-    slug = slugify_company(company_name)
-    if not company_name or slug == "company":
+    """Ссылка компании на все её вакансии. Только для компаний с настоящим именем:
+    по «Компания не указана» ссылка отдала бы двум сотням чужих вакансий один кабинет."""
+    if not is_real_company(company_name):
         return None
+    slug = slugify_company(company_name)
     row = db.query(CompanyClaim).filter_by(company_slug=slug).first()
     if not row:
         row = CompanyClaim(company_slug=slug, company_name=company_name.strip(),
@@ -60,6 +63,31 @@ def get_or_create_claim(db: Session, company_name: str, lang: str = "en") -> "Co
         db.add(row)
         db.flush()
     return row
+
+
+def get_or_create_job_claim(db: Session, job, lang: str = "en") -> "CompanyClaim":
+    """Ссылка на одну вакансию — когда работодатель в объявлении не назван.
+    Компания вводит своё имя при регистрации, им же подписывается вакансия."""
+    slug = f"job-{job.id}"
+    row = db.query(CompanyClaim).filter_by(company_slug=slug).first()
+    if not row:
+        row = CompanyClaim(company_slug=slug, company_name=job.company_name or "",
+                           token=secrets.token_urlsafe(24), lang=lang, job_id=job.id)
+        db.add(row)
+        db.flush()
+    return row
+
+
+def claim_jobs(db: Session, row: "CompanyClaim") -> list:
+    """Что именно уедет в кабинет по этой ссылке."""
+    if row.job_id:
+        job = db.get(Job, row.job_id)
+        return [job] if job and job.owner_id is None else []
+    return company_jobs(db, row.company_slug)
+
+
+def needs_company_name(row: "CompanyClaim") -> bool:
+    return not is_real_company(row.company_name)
 
 
 def claim_url(row: "CompanyClaim") -> str:
@@ -79,11 +107,17 @@ def company_jobs(db: Session, slug: str, only_free: bool = True):
     return [job for job in q.all() if slugify_company(job.company_name) == slug]
 
 
-def attach_company_jobs(db: Session, row: "CompanyClaim", user: User) -> dict:
+def attach_company_jobs(db: Session, row: "CompanyClaim", user: User,
+                        company_name: str = "") -> dict:
     """Передать компании её вакансии и запереть контакты по старым откликам."""
-    jobs = company_jobs(db, row.company_slug)
+    company_name = (company_name or "").strip()
+    if company_name and needs_company_name(row):
+        row.company_name = company_name          # объявление было без работодателя
+    jobs = claim_jobs(db, row)
     for job in jobs:
         job.owner_id = user.id
+        if company_name and not is_real_company(job.company_name):
+            job.company_name = company_name      # и на борде вакансия наконец подписана
     apps = []
     if jobs:
         apps = (db.query(Application)
@@ -93,7 +127,7 @@ def attach_company_jobs(db: Session, row: "CompanyClaim", user: User) -> dict:
     if user.role == "talent":
         user.role = "employer"
     if not (user.company_name or "").strip():
-        user.company_name = row.company_name
+        user.company_name = row.company_name if is_real_company(row.company_name) else company_name
     grant_launch_promo(user)
     row.used_at = datetime.utcnow()
     row.user_id = user.id
@@ -101,7 +135,7 @@ def attach_company_jobs(db: Session, row: "CompanyClaim", user: User) -> dict:
           jobs=len(jobs), applications=len(apps))
     try:
         from server import crm
-        company = crm.ensure_company(db, row.company_name)
+        company = crm.ensure_company(db, row.company_name) if is_real_company(row.company_name) else None
         if company:
             crm.log_event(db, company.id, "claim",
                           f"Компания зарегистрировалась по ссылке: вакансий {len(jobs)}, "
@@ -125,7 +159,7 @@ def apply_pending_claim(db: Session, user: User) -> dict:
            .first())
     if not row or not user.verified:
         return {}
-    return attach_company_jobs(db, row, user)
+    return attach_company_jobs(db, row, user, user.company_name or "")
 
 
 # ---------- страница ----------
@@ -144,6 +178,8 @@ TEXT = {
         "email": "Рабочая почта",
         "pass": "Пароль (от 6 символов)",
         "name": "Ваше имя",
+        "company": "Название компании",
+        "company_error": "Укажите название компании — вакансия опубликована без него",
         "submit": "Забрать вакансии →",
         "have": "Уже есть аккаунт SpinHire?",
         "login": "Войдите",
@@ -167,6 +203,8 @@ TEXT = {
         "email": "Робоча пошта",
         "pass": "Пароль (від 6 символів)",
         "name": "Ваше ім'я",
+        "company": "Назва компанії",
+        "company_error": "Вкажіть назву компанії — вакансію опубліковано без неї",
         "submit": "Забрати вакансії →",
         "have": "Вже є акаунт SpinHire?",
         "login": "Увійдіть",
@@ -190,6 +228,8 @@ TEXT = {
         "email": "Work email",
         "pass": "Password (6+ characters)",
         "name": "Your name",
+        "company": "Company name",
+        "company_error": "Tell us the company name — the posting went out without it",
         "submit": "Claim the jobs →",
         "have": "Already have a SpinHire account?",
         "login": "Sign in",
@@ -212,7 +252,7 @@ def _claim_or_404(db: Session, token: str) -> "CompanyClaim":
 
 def _page(request: Request, db: Session, row: "CompanyClaim", error: str = "",
           email: str = "") -> HTMLResponse:
-    jobs = company_jobs(db, row.company_slug)
+    jobs = claim_jobs(db, row)
     apps = []
     if jobs:
         apps = (db.query(Application)
@@ -231,7 +271,8 @@ def _page(request: Request, db: Session, row: "CompanyClaim", error: str = "",
         cards.append(card)
     return render(request, db, "claim.html", claim=row, jobs=jobs, apps_count=len(apps),
                   cards=cards, t=TEXT.get(row.lang or "en", TEXT["en"]),
-                  error=error, email=email, viewer=get_user(request, db))
+                  error=error, email=email, viewer=get_user(request, db),
+                  ask_company=needs_company_name(row))
 
 
 @router.get("/claim/{token}", response_class=HTMLResponse)
@@ -249,7 +290,7 @@ def claim_page(token: str, request: Request, db: Session = Depends(db_session)):
 @router.post("/claim/{token}")
 def claim_register(token: str, request: Request, email: str = Form(...),
                    password: str = Form(...), name: str = Form(""),
-                   db: Session = Depends(db_session)):
+                   company_name: str = Form(""), db: Session = Depends(db_session)):
     row = _claim_or_404(db, token)
     t = TEXT.get(row.lang or "en", TEXT["en"])
     if row.used_at:
@@ -259,13 +300,18 @@ def claim_register(token: str, request: Request, email: str = Form(...),
         return _page(request, db, row, email=em, error=t["taken"])
     if len(password) < 6:
         return _page(request, db, row, email=em, error=t["pass"])
+    if needs_company_name(row) and not is_real_company(company_name):
+        return _page(request, db, row, email=em, error=t["company_error"])
+    title = row.company_name if is_real_company(row.company_name) else company_name.strip()
     user = User(email=em, password_hash=hash_pw(password), name=name.strip(),
-                role="employer", company_name=row.company_name,
+                role="employer", company_name=title,
                 coins=SIGNUP_COIN_BONUS, signup_source="claim",
                 lang=row.lang or request_lang(request))
     db.add(user)
     db.flush()
     row.user_id = user.id
+    if needs_company_name(row):
+        row.company_name = company_name.strip()   # подтвердит почту — этим и подпишем
     db.commit()
     if REQUIRE_VERIFY:
         user.verified = 0
@@ -278,7 +324,7 @@ def claim_register(token: str, request: Request, email: str = Form(...),
         user.verified = 1                  # письмо не ушло — не запираем компанию
         user.otp_hash = user.otp_expires = ""
         db.commit()
-    result = attach_company_jobs(db, row, user)
+    result = attach_company_jobs(db, row, user, company_name)
     db.commit()
     return set_session(RedirectResponse(
         f"/employer?claimed={result['jobs']}", status_code=303), user)

@@ -108,7 +108,7 @@ class ClaimFlowTests(unittest.TestCase):
 
 
 class NoNameCompanyTests(unittest.TestCase):
-    """Вакансия без работодателя: отклик передавать некому — ведём в первоисточник."""
+    """Объявление без работодателя: ссылку на пост получает Алина, кабинет — под одну вакансию."""
 
     @classmethod
     def setUpClass(cls):
@@ -128,35 +128,77 @@ class NoNameCompanyTests(unittest.TestCase):
             db.flush()
             db.add(Resume(user_id=talent.id, title="Support Agent", about="b" * 120,
                           skills="чат", experience_years=2, status="approved", published=True))
+            db.add(Application(job_id=job.id, user_id=talent.id, cover=""))
             db.commit()
             self.job_id, self.talent_id = job.id, talent.id
 
     def tearDown(self):
         with SessionLocal() as db:
+            row = db.query(claim.CompanyClaim).filter_by(company_slug=f"job-{self.job_id}").first()
+            if row:
+                db.query(User).filter_by(id=row.user_id).delete()
+                db.delete(row)
+            db.query(leadbot.LeadNotice).filter(
+                leadbot.LeadNotice.company_slug == f"job-{self.job_id}").delete()
             db.query(Application).filter_by(job_id=self.job_id).delete()
             db.query(Job).filter_by(id=self.job_id).delete()
             db.query(Resume).filter_by(user_id=self.talent_id).delete()
             db.query(User).filter_by(id=self.talent_id).delete()
             db.commit()
 
-    def test_page_sends_candidate_to_the_source(self):
-        with TestClient(app) as client:
-            page = client.get(f"/job/{self.job_id}")
-            self.assertEqual(page.status_code, 200)
-            self.assertIn("https://t.me/iGaming_work/1234", page.text)
-            self.assertIn("первоисточнике", page.text)
-            self.assertNotIn(f'action="/job/{self.job_id}/apply"', page.text)
+    def _my_group(self, db):
+        groups, _ = leadbot.pending_batches(db, limit_companies=99)
+        return next(g for g in groups if g["slug"] == f"job-{self.job_id}")
 
-    def test_apply_is_refused(self):
-        from server.app import signer
+    def test_lead_goes_out_with_a_link_to_the_source_post(self):
+        with SessionLocal() as db:
+            group = self._my_group(db)
+            self.assertFalse(group["named"])
+            text = leadbot.build_owner_text(
+                group["company"], group["items"],
+                {"website": "", "careers_url": "", "emails": [], "guesses": [], "linkedin": ""},
+                "ru", source=group["job"].source_url)
+        self.assertIn("https://t.me/iGaming_work/1234", text)
+        self.assertIn("контакт ищи в самом посте", text)
+        self.assertIn("работодатель не назван", text)
+        self.assertNotIn("Сайт:", text)
+
+    def test_company_wide_link_is_refused_but_job_link_works(self):
+        with SessionLocal() as db:
+            self.assertIsNone(claim.get_or_create_claim(db, "Компания не указана"))
+            job = db.get(Job, self.job_id)
+            row = claim.get_or_create_job_claim(db, job, "ru")
+            db.commit()
+            self.assertEqual(row.job_id, self.job_id)
+            self.assertEqual([j.id for j in claim.claim_jobs(db, row)], [self.job_id])
+            self.assertTrue(claim.needs_company_name(row))
+
+    def test_registration_names_the_company_and_takes_one_job(self):
+        with SessionLocal() as db:
+            row = claim.get_or_create_job_claim(db, db.get(Job, self.job_id), "ru")
+            db.commit()
+            token = row.token
+        email = f"hr-{self.suffix}@test.invalid"
         with TestClient(app) as client:
-            client.cookies.set("sh_session", signer.dumps({"uid": self.talent_id}))
-            done = client.post(f"/job/{self.job_id}/apply", data={"cover": ""},
+            page = client.get(f"/claim/{token}")
+            self.assertEqual(page.status_code, 200)
+            self.assertIn('name="company_name"', page.text)
+            missing = client.post(f"/claim/{token}",
+                                  data={"email": email, "password": "secret-pass"})
+            self.assertIn("Укажите название компании", missing.text)
+            done = client.post(f"/claim/{token}",
+                               data={"email": email, "password": "secret-pass",
+                                     "name": "HR", "company_name": "Neon Bet Ltd"},
                                follow_redirects=False)
             self.assertEqual(done.status_code, 303)
-            self.assertIn("nocompany=1", done.headers["location"])
         with SessionLocal() as db:
-            self.assertEqual(db.query(Application).filter_by(job_id=self.job_id).count(), 0)
+            owner = db.query(User).filter_by(email=email).one()
+            job = db.get(Job, self.job_id)
+            self.assertEqual(job.owner_id, owner.id)
+            self.assertEqual(job.company_name, "Neon Bet Ltd")   # вакансия наконец подписана
+            self.assertEqual(owner.company_name, "Neon Bet Ltd")
+            self.assertEqual(db.query(Application).filter_by(
+                job_id=self.job_id).one().lead_locked, 1)
 
 
 class LeadbotTextTests(unittest.TestCase):
