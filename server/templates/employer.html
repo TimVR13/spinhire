@@ -74,6 +74,7 @@
   {% if request.query_params.get('job_error') %}<div class="flash err">{{ request.query_params.get('job_error') }}</div>{% endif %}
   {% if request.query_params.get('job_archived') %}<div class="flash">Вакансия закрыта и перенесена в архив.</div>{% endif %}
   {% if request.query_params.get('job_republished') %}<div class="flash">Вакансия отправлена на повторную модерацию — скоро вернётся в поиск.</div>{% endif %}
+  {% if request.query_params.get('order') == 'cancelled' %}<div class="flash">Заказ отменён — счёт закрыт, оплата не потребуется.</div>{% endif %}
   {% if request.query_params.get('invite_sent') %}<div class="flash">Приглашение отправлено. Ссылка действует 7 дней.</div>{% endif %}
   {% if request.query_params.get('invite_accepted') %}<div class="flash">Вы присоединились к командному кабинету.</div>{% endif %}
   {% if request.query_params.get('member_removed') %}<div class="flash">Сотрудник удалён из командного кабинета.</div>{% endif %}
@@ -268,7 +269,19 @@
       </form>
       {% endfor %}
     </div>
-    <p style="color:var(--ink-faint);font-size:.82rem;margin-top:var(--sp-3);">Продвижение конкретной вакансии (€99) — из списка вакансий; подбор под ключ — <a href="/post-job#pricing" style="color:var(--acid);">на странице тарифов</a>.</p>
+    <div class="section-head" style="margin:var(--sp-6) 0 var(--sp-4);"><div><span class="kicker">Пополнить</span><h2 style="font-size:1.35rem;margin:6px 0;">Контакты C-level</h2></div><p style="color:var(--ink-faint);font-size:.85rem;max-width:46ch;">Топ-менеджмент и кандидаты с ожиданиями от $5 000 — контакт списывает 5 открытий. Пакеты дешевле поштучных €25: чем больше объём, тем ниже цена контакта.</p></div>
+    <div class="fin-grid">
+      {% for key in topup.cvc %}{% set name, price, desc = plans[key] %}
+      <form method="post" action="/checkout/{{ key }}" class="fin-plan {% if key == 'cvc5' %}fin-plan--hot{% endif %}">
+        {% if key == 'cvc5' %}<span class="fin-plan__badge">выгодно</span>{% endif %}
+        <b class="fin-plan__name">{{ name }}</b>
+        <div class="fin-plan__price">€{{ price }}{% if list_price.get(key) %}<s>€{{ list_price[key] }}</s>{% endif %}</div>
+        <p class="fin-plan__desc">{{ desc }}</p>
+        <button class="btn {% if key == 'cvc5' %}btn-acid{% else %}btn-ghost{% endif %} btn-block" type="submit">Пополнить</button>
+      </form>
+      {% endfor %}
+    </div>
+    <p style="color:var(--ink-faint);font-size:.82rem;margin-top:var(--sp-3);">Открытия общие: пакеты C-level кладут на баланс 5, 25 и 50 открытий, потратить их можно на любых кандидатов. Продвижение конкретной вакансии (€99) — из списка вакансий; подбор под ключ — <a href="/post-job#pricing" style="color:var(--acid);">на странице тарифов</a>.</p>
   </section>
   {% else %}
   <p class="flash" style="margin-bottom:var(--sp-6);">Пополнять баланс может только владелец кабинета.</p>
@@ -287,7 +300,7 @@
         <td>{{ {'invoice':'по счёту','card':'картой','stripe':'картой','paykilla':'крипта'}.get(o.method, o.method|replace('crypto:', 'USDT ')) or '—' }}</td>
         <td><span class="fin-status fin-status--{{ o.status }}">{{ {'paid':'оплачен','pending':'ждёт оплаты','cancelled':'отменён'}.get(o.status, o.status) }}</span></td>
         <td>{{ o.created_at.strftime('%d.%m.%Y') }}</td>
-        <td style="white-space:nowrap;">{% if o.status == 'pending' %}<a class="btn btn-acid btn-sm" href="/checkout/order/{{ o.id }}">Оплатить</a> {% endif %}<a class="btn btn-ghost btn-sm" href="/checkout/order/{{ o.id }}/invoice.pdf">Счёт PDF</a></td>
+        <td style="white-space:nowrap;">{% if o.status == 'pending' %}<a class="btn btn-acid btn-sm" href="/checkout/order/{{ o.id }}">Оплатить</a> {% endif %}<a class="btn btn-ghost btn-sm" href="/checkout/order/{{ o.id }}/invoice.pdf">Счёт PDF</a>{% if o.status == 'pending' and team_role == 'owner' %} <form method="post" action="/checkout/order/{{ o.id }}/cancel" style="display:inline;" onsubmit="return confirm('Отменить заказ #{{ o.id }} на €{{ o.amount }}? Счёт закроется, деньги списаны не будут.')"><input type="hidden" name="back" value="cabinet"><button class="btn btn-ghost btn-sm" type="submit">Отменить</button></form>{% endif %}</td>
       </tr>
       {% endfor %}
     </table></div>
@@ -347,7 +360,7 @@
 
   <div class="cab-pane" data-pane="ats">
   <section style="margin:0 0 var(--sp-6);"><div class="section-head"><div><span class="kicker pink">Мини-ATS</span><h2 style="font-size:1.25rem;margin-top:6px;">Кандидаты · {{ ats_apps|length }}</h2></div><form method="get" action="/employer" style="display:flex;gap:8px;"><select class="input" name="stage"><option value="">Все этапы</option>{% for value,label in [('new','Новые'),('viewed','Просмотрены'),('invited','Интервью'),('offer','Оффер'),('hired','Наняты'),('rejected','Отказ')] %}<option value="{{ value }}" {% if stage==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="btn btn-ghost">Фильтр</button></form></div>
-  <div style="border-top:2px solid var(--line);">{% for a in ats_apps %}<a href="/employer/application/{{ a.id }}" style="display:grid;grid-template-columns:120px minmax(0,1fr) 180px auto;gap:14px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line);text-decoration:none;"><span class="status {{ a.status }}">{{ a.status }}</span><span><b>{% if a.user.incognito %}Аноним #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</b><small style="display:block;color:var(--ink-faint);margin-top:4px;">{{ a.job.title }}</small></span><span style="color:var(--ink-dim);font-size:.8rem;">{% if a.interview_at %}Интервью {{ a.interview_at|replace('T',' ') }}{% elif a.next_action_at %}Действие {{ a.next_action_at }}{% else %}План не задан{% endif %}</span><span style="color:var(--pink);">→</span></a>{% else %}<p style="padding:24px 0;color:var(--ink-dim);">🃏 За этим столом пока тихо. Разместите вакансию или поднимите её в топ — отклики придут сами.</p>{% endfor %}</div></section>
+  <div style="border-top:2px solid var(--line);">{% for a in ats_apps %}<a href="/employer/application/{{ a.id }}" style="display:grid;grid-template-columns:120px minmax(0,1fr) 180px auto;gap:14px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line);text-decoration:none;"><span class="status {{ a.status }}">{{ a.status }}</span><span><b>{% if a.id in locked_apps %}🔒 Кандидат #{{ a.user.id }}{% elif a.user.incognito %}Аноним #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</b><small style="display:block;color:var(--ink-faint);margin-top:4px;">{{ a.job.title }}</small></span><span style="color:var(--ink-dim);font-size:.8rem;">{% if a.interview_at %}Интервью {{ a.interview_at|replace('T',' ') }}{% elif a.next_action_at %}Действие {{ a.next_action_at }}{% else %}План не задан{% endif %}</span><span style="color:var(--pink);">→</span></a>{% else %}<p style="padding:24px 0;color:var(--ink-dim);">🃏 За этим столом пока тихо. Разместите вакансию или поднимите её в топ — отклики придут сами.</p>{% endfor %}</div></section>
 
   </div><!-- /ats -->
 
@@ -362,9 +375,9 @@
     {% for a in j.applications %}
     <div class="cand-row" id="application-{{ a.id }}">
       <div class="who">
-        <b><a href="/employer/application/{{ a.id }}">{% if a.user.incognito %}🥷 Аноним #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</a></b>
+        <b><a href="/employer/application/{{ a.id }}">{% if a.id in locked_apps %}🔒 Кандидат #{{ a.user.id }}{% elif a.user.incognito %}🥷 Аноним #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</a></b>
         <span>{{ a.user.headline or 'профиль не заполнен' }}{% if a.user.location %} · {{ a.user.location }}{% endif %}{% if a.user.salary_expect %} · хочет {{ a.user.salary_expect }}{% endif %}{% if a.cover %} · «{{ a.cover }}»{% endif %}</span>
-        <span><a href="mailto:{{ a.user.email }}" style="color:var(--acid);">{{ a.user.email }}</a></span>
+        <span>{% if a.id in locked_apps %}<a href="/employer/application/{{ a.id }}" style="color:var(--pink);">Открыть контакт →</a>{% else %}<a href="mailto:{{ a.user.email }}" style="color:var(--acid);">{{ a.user.email }}</a>{% endif %}</span>
       </div>
       <div class="cand-actions">
         <span class="status {{ a.status }}">{{ {'new': 'новый', 'viewed': 'просмотрен', 'invited': 'интервью', 'offer': 'оффер', 'hired': 'нанят', 'rejected': 'отказ'}.get(a.status, a.status) }}</span>
@@ -428,9 +441,24 @@
       tabs.forEach(t => t.classList.toggle('active', t.dataset.pane === name));
       panes.forEach(p => p.classList.toggle('active', p.dataset.pane === name));
     }
+    // Якорь вида #fin-orders — не вкладка, а блок внутри неё: открываем нужную панель и прокручиваем к блоку.
+    function paneOfAnchor(id) {
+      if (!id || KNOWN.includes(id)) return '';
+      const el = document.getElementById(id);
+      const pane = el && el.closest('.cab-pane');
+      return pane ? pane.dataset.pane : '';
+    }
+    function showAnchor(id) {
+      const pane = paneOfAnchor(id);
+      if (!pane) return false;
+      show(pane);
+      requestAnimationFrame(() => document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'start' }));
+      return true;
+    }
     const params = new URLSearchParams(location.search);
     let initial = (location.hash || '').slice(1);
-    if (!KNOWN.includes(initial)) {
+    if (!KNOWN.includes(initial) && showAnchor(initial)) initial = null;
+    else if (!KNOWN.includes(initial)) {
       if (params.get('invite_sent') || params.get('invite_accepted') || params.get('member_removed') || params.get('invite_error')) initial = 'team';
       else if (params.get('profile_ok')) initial = 'company';
       else if (params.get('job_saved') || params.get('job_archived') || params.get('job_posted')) initial = 'jobs';
@@ -439,9 +467,12 @@
       else if (params.get('paid') || params.get('order')) initial = 'finance';
       else initial = 'overview';
     }
-    show(initial);
+    if (initial) show(initial);
     tabs.forEach(t => t.addEventListener('click', e => { e.preventDefault(); history.replaceState(null, '', '#' + t.dataset.pane); show(t.dataset.pane); }));
-    window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+    window.addEventListener('hashchange', () => {
+      const id = location.hash.slice(1);
+      if (!showAnchor(id)) show(id);
+    });
 
     // кнопки «+ Разместить вакансию» и «Пополнить» в шапке кабинета ведут на свои вкладки
     document.querySelectorAll('a[href="#post"]:not([data-pane])').forEach(a =>

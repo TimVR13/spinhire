@@ -15,20 +15,24 @@
 
 Без токена и каналов всё молчит.
 """
+import html
 import json
 import os
 import re
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.orm import Session
 
+from server import postfilter, tgcards
 from server.app import BASE_URL, Base, Job, SessionLocal, db_session, need_admin
 
 router = APIRouter()
@@ -118,41 +122,76 @@ def pretty_salary(text: str, lang: str) -> str:
 
 
 def is_english(job) -> bool:
-    """В английский канал идёт только написанное латиницей: русская вакансия
-    подписчику из Мальты бесполезна."""
-    return not re.search(r"[а-яА-ЯіїєґІЇЄҐ]", f"{job.title} {(job.description or '')[:400]}")
+    """В английский канал идёт только латиница — и в тексте вакансии, и во
+    всех полях, которые увидит подписчик: заголовок, компания, гео, вилка.
+    Одно «маркетинг» в посте — и канал выглядит русским."""
+    if postfilter.has_cyrillic(f"{job.title} {(job.description or '')[:400]}"):
+        return False
+    return postfilter.en_ready(job, salary=pretty_salary(job.salary, "en"),
+                               location=localize(job.location or "", "en"))
+
+
+def _mix(rows, limit: int):
+    """Две трети подборки отдаём Европе и СНГ, остальное добираем по вилке.
+
+    Иначе дайджест «самых дорогих» превращается в список удалёнок: акцент
+    канала — европейские офисы (Мальта, Кипр, Варшава), а не абстрактный
+    remote. Не больше двух вакансий одной компании — это не её реклама.
+    """
+    picked, per_company, taken = [], {}, set()
+
+    def take(pool, cap):
+        for job in pool:
+            if len(picked) >= cap:
+                return
+            key = (job.company_name or "").strip().lower()
+            if job.id in taken or per_company.get(key, 0) >= 2:
+                continue
+            per_company[key] = per_company.get(key, 0) + 1
+            taken.add(job.id)
+            picked.append(job)
+
+    take([j for j in rows if postfilter.geo_rank(j) <= 1], -(-limit * 2 // 3))
+    take(rows, limit)
+    picked.sort(key=salary_eur, reverse=True)
+    return picked
 
 
 def pick_jobs(db: Session, hours: int = 24, limit: int = TOP_N, exclude=(), lang: str = "ru"):
-    """Топ по зарплате среди свежих вакансий; если их мало — расширяем окно."""
+    """Топ по зарплате среди свежих вакансий; если их мало — расширяем окно.
+
+    Окно расширяем и тогда, когда вакансий хватает, но европейских среди них
+    почти нет: подборка из одних удалёнок обещанного акцента не даёт.
+    """
+    quota, picked = -(-limit * 2 // 3), []
     for window in (hours, hours * 3, hours * 7):
         since = datetime.utcnow() - timedelta(hours=window)
         rows = (db.query(Job)
                 .filter(Job.status == "approved", Job.created_at >= since)
                 .all())
-        rows = [j for j in rows if j.id not in exclude and salary_eur(j) > 0]
+        # верхняя планка та же, что у горячих: «€1 815 293 в год» у game
+        # presenter — это ошибка парсера, а не самая дорогая вакансия недели
+        rows = [j for j in rows
+                if j.id not in exclude and 0 < salary_eur(j) <= HOT_EUR_MAX]
+        # США не постим ни в один канал, остальной мир кроме Европы, СНГ и
+        # удалёнки — тоже: подписчику из Варшавы вакансия в Маниле не нужна
+        rows = [j for j in rows if postfilter.allowed(j)]
         if lang == "en":
             rows = [j for j in rows if is_english(j)]
         rows.sort(key=salary_eur, reverse=True)
-        # не больше двух вакансий одной компании — иначе дайджест выглядит
-        # как реклама одного работодателя
-        picked, per_company = [], {}
-        for job in rows:
-            key = (job.company_name or "").strip().lower()
-            if per_company.get(key, 0) >= 2:
-                continue
-            per_company[key] = per_company.get(key, 0) + 1
-            picked.append(job)
-            if len(picked) >= limit:
-                break
-        if len(picked) >= limit:
+        picked = _mix(rows, limit)
+        europe = sum(1 for job in picked if postfilter.geo_rank(job) <= 1)
+        if len(picked) >= limit and europe >= quota:
             return picked, window
     return picked, window
 
 
 
 def localize(text: str, lang: str) -> str:
-    """Гео и служебные слова — словарём языка канала (Польша → Poland)."""
+    """Гео и служебные слова — словарём языка канала (Польша → Poland),
+    ISO-коды источников разворачиваем в страну: «Sofia, bg» → «Sofia,
+    Болгария»."""
+    text = postfilter.pretty_location(text, lang)
     if lang == "ru" or not text:
         return text
     try:
@@ -189,13 +228,27 @@ TEXT = {
     },
 }
 FMT_KEY = {"удалёнка": "remote", "гибрид": "hybrid", "офис": "office"}
+# «Remote · удалёнка» в одной строке — это одно и то же дважды
+REMOTE_LABELS = {"remote", "удалёнка", "удалённо", "anywhere", "global",
+                 "worldwide", "remote job", "global - remote"}
+
+
+def place_of(job, lang: str) -> str:
+    """«Мальта · офис» — гео и формат на языке канала, без повторов."""
+    t = TEXT.get(lang, TEXT["en"])
+    location = localize(job.location or "", lang).strip()
+    fmt = t.get(FMT_KEY.get(job.fmt, ""), "")
+    if fmt and location.lower() in REMOTE_LABELS:
+        location = ""
+    place = " · ".join(x for x in (location, fmt) if x)
+    return postfilter.en_clean(place) if lang == "en" else place
 
 
 def build_digest(db: Session, lang: str, jobs=None, window=24) -> tuple:
     """Готовый HTML-текст поста и список id вошедших вакансий."""
     t = TEXT.get(lang, TEXT["en"])
     if jobs is None:
-        jobs, window = pick_jobs(db)
+        jobs, window = pick_jobs(db, lang=lang)
     if not jobs:
         return "", []
     period = t["today"] if window <= 24 else t["week"]
@@ -205,11 +258,8 @@ def build_digest(db: Session, lang: str, jobs=None, window=24) -> tuple:
     for i, job in enumerate(jobs, 1):
         url = f"{SITE}{prefix}/job/{job.id}?utm_source=telegram&utm_medium=digest&utm_campaign={lang}"
         title = _esc((job.title or "").strip())[:70]
-        place = " · ".join(x for x in (
-            _esc(job.company_name or ""),
-            _esc(localize(job.location or "", lang)),
-            t.get(FMT_KEY.get(job.fmt, ""), ""),
-        ) if x)
+        place = " · ".join(x for x in (_esc(job.company_name or ""),
+                                       _esc(place_of(job, lang))) if x)
         lines.append(f"<b>{i}. <a href=\"{url}\">{title}</a></b>")
         lines.append(f"    <b>{_esc(pretty_salary(job.salary, lang))}</b>")
         lines.append(f"    <i>{place}</i>")
@@ -224,7 +274,7 @@ def build_digest(db: Session, lang: str, jobs=None, window=24) -> tuple:
     return "\n".join(lines), [j.id for j in jobs]
 
 
-def job_bullets(job, limit: int = 4) -> list:
+def job_bullets(job, limit: int = 4, lang: str = "ru") -> list:
     """Первые пункты требований из описания — <li> или строки-буллеты."""
     text = job.description or ""
     items = [re.sub(r"<[^>]+>", "", m).strip()
@@ -235,6 +285,8 @@ def job_bullets(job, limit: int = 4) -> list:
     out = []
     for item in items:
         item = re.sub(r"\s+", " ", item)
+        if lang == "en" and postfilter.has_cyrillic(item):
+            continue          # русский буллет в английском канале недопустим
         if 8 <= len(item) <= 90:
             out.append(item)
         if len(out) >= limit:
@@ -247,15 +299,14 @@ def build_hot(job, lang: str) -> str:
     t = TEXT.get(lang, TEXT["en"])
     prefix = "" if lang == "ru" else f"/{lang}"
     url = f"{SITE}{prefix}/job/{job.id}?utm_source=telegram&utm_medium=hot&utm_campaign={lang}"
-    fmt = t.get(FMT_KEY.get(job.fmt, ""), "")
-    place = " · ".join(x for x in (_esc(localize(job.location or "", lang)), fmt) if x)
+    place = _esc(place_of(job, lang))
     lines = [f"{t['hot']}",
              "",
              f"🎰 <b>{_esc((job.title or '').strip())}</b> — {_esc(job.company_name or '')}"]
     if place:
         lines.append(f"📍 {place}")
     lines.append(f"💰 <b>{_esc(pretty_salary(job.salary, lang))}</b>")
-    bullets = job_bullets(job)
+    bullets = job_bullets(job, lang=lang)
     if bullets:
         lines += ["", f"<i>{t['need']}</i>"]
         lines += [f"• {_esc(localize(b, lang))}" for b in bullets]
@@ -266,12 +317,6 @@ def build_hot(job, lang: str) -> str:
 HOT_EUR_MAX = float(os.environ.get("SPINHIRE_TG_HOT_EUR_MAX", "40000"))
 
 
-def _us_office(job) -> bool:
-    loc = f"{job.location or ''}".lower()
-    fmt = f"{getattr(job, 'fmt', '') or ''}".lower()
-    return any(x in loc for x in ("united states", "usa", ", us", "сша", "new york", "las vegas", "new jersey")) and "удал" not in fmt and "remote" not in fmt
-
-
 def pick_hot(db: Session, lang: str):
     """Самая дорогая непощенная вакансия за последние двое суток от порога HOT_EUR."""
     posted = {r.job_id for r in db.query(TgHotPost.job_id).filter(TgHotPost.channel == lang)}
@@ -279,12 +324,11 @@ def pick_hot(db: Session, lang: str):
     rows = (db.query(Job).filter(Job.status == "approved", Job.created_at >= since).all())
     # верхняя планка: > €40 000/мес — почти всегда ошибка парсера («€1 815 293 в год» у game presenter)
     rows = [j for j in rows if j.id not in posted and HOT_EUR <= salary_eur(j) <= HOT_EUR_MAX]
+    # отдельный пост — самое заметное место в канале: США мимо, гео обязательна
+    rows = [j for j in rows if postfilter.allowed(j, strict=True)]
     if lang == "en":
         rows = [j for j in rows if is_english(j)]
-    else:
-        # русскоязычной аудитории офис в США без визы не нужен
-        rows = [j for j in rows if not _us_office(j)]
-    rows.sort(key=salary_eur, reverse=True)
+    rows.sort(key=lambda job: (postfilter.geo_rank(job), -salary_eur(job)))
     return rows[0] if rows else None
 
 
@@ -310,12 +354,15 @@ def send_hot(db: Session, force: bool = False, dry: bool = False) -> dict:
         if not job:
             result[lang] = "no_hot_jobs"
             continue
-        text = build_hot(job, lang)
+        text = en_guard(build_hot(job, lang), lang)
         if dry:
             result[lang] = text
             continue
-        resp = _api("sendMessage", {"chat_id": chat, "text": text, "parse_mode": "HTML",
-                                    "disable_web_page_preview": True})
+        photo = tgcards.hot_card(lang, (job.title or "").strip(),
+                                 pretty_salary(job.salary, lang),
+                                 place_of(job, lang),
+                                 (job.company_name or "").strip())
+        resp = _send(chat, text, photo)
         if resp.get("ok"):
             db.add(TgHotPost(job_id=job.id, channel=lang,
                              message_id=(resp.get("result") or {}).get("message_id")))
@@ -326,17 +373,86 @@ def send_hot(db: Session, force: bool = False, dry: bool = False) -> dict:
     return result or {"skipped": "no_channels"}
 
 
-def _api(method: str, payload: dict) -> dict:
-    body = json.dumps(payload).encode()
-    req = urllib.request.Request(
-        f"https://api.telegram.org/bot{TOKEN}/{method}", data=body,
-        headers={"Content-Type": "application/json",
-                 "User-Agent": "SpinHire/1.0 (+https://spinhire.io)"})
+def _call(req) -> dict:
+    """Ответ Телеграма как есть: на ошибку он отдаёт 400 с описанием в теле,
+    а голое «HTTP Error 400» в логе не говорит ничего."""
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
+        with urllib.request.urlopen(req, timeout=60) as resp:
             return json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        try:
+            return json.loads(exc.read())
+        except Exception:                                       # noqa: BLE001
+            return {"ok": False, "error": f"HTTP {exc.code}"}
     except Exception as exc:                                    # noqa: BLE001
         return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+
+
+def _api(method: str, payload: dict) -> dict:
+    body = json.dumps(payload).encode()
+    return _call(urllib.request.Request(
+        f"https://api.telegram.org/bot{TOKEN}/{method}", data=body,
+        headers={"Content-Type": "application/json",
+                 "User-Agent": "SpinHire/1.0 (+https://spinhire.io)"}))
+
+
+CAPTION_LIMIT = 1024
+
+
+def _visible_len(text: str) -> int:
+    """Телеграм меряет подпись после разбора разметки: ссылки в лимит не идут."""
+    return len(html.unescape(re.sub(r"<[^>]+>", "", text or "")))
+
+
+def _photo(chat_id: str, photo: bytes, caption: str) -> dict:
+    """sendPhoto: multipart собираем руками, чтобы не тащить requests."""
+    boundary = "spinhire" + uuid.uuid4().hex
+    body = bytearray()
+    for name, value in (("chat_id", chat_id), ("caption", caption),
+                        ("parse_mode", "HTML")):
+        body += (f"--{boundary}\r\nContent-Disposition: form-data; "
+                 f"name=\"{name}\"\r\n\r\n{value}\r\n").encode()
+    body += (f"--{boundary}\r\nContent-Disposition: form-data; name=\"photo\"; "
+             f"filename=\"spinhire.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n").encode()
+    body += photo + b"\r\n" + f"--{boundary}--\r\n".encode()
+    return _call(urllib.request.Request(
+        f"https://api.telegram.org/bot{TOKEN}/sendPhoto", data=bytes(body),
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}",
+                 "User-Agent": "SpinHire/1.0 (+https://spinhire.io)"}))
+
+
+def _send(chat_id: str, text: str, photo=None) -> dict:
+    """Пост с картинкой; не получилось или подпись длинновата — уходит текстом."""
+    if photo and _visible_len(text) <= CAPTION_LIMIT:
+        resp = _photo(chat_id, photo, text)
+        if resp.get("ok"):
+            return resp
+        print("[tgpost] фото не ушло "
+              f"({resp.get('description') or resp.get('error')}), шлю текстом")
+    return _api("sendMessage", {"chat_id": chat_id, "text": text,
+                                "parse_mode": "HTML",
+                                "disable_web_page_preview": True})
+
+
+def en_guard(text: str, lang: str) -> str:
+    """Страховка перед отправкой: в английском канале не остаётся ни одной
+    строки с кириллицей. Отборы выше их уже отсеяли, но пост дороже строки."""
+    if lang != "en" or not postfilter.has_cyrillic(text):
+        return text
+    kept = [line for line in text.split("\n") if not postfilter.has_cyrillic(line)]
+    print("[tgpost] выбросил русские строки из английского поста")
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(kept))
+
+
+def card_rows(jobs, lang: str) -> list:
+    """Три верхние вакансии для картинки: заголовок, вилка, место."""
+    rows = []
+    for job in jobs[:3]:
+        place = " · ".join(x for x in ((job.company_name or "").strip(),
+                                       place_of(job, lang)) if x)
+        rows.append(((job.title or "").strip(),
+                     pretty_salary(job.salary, lang), place))
+    return rows
 
 
 def posted_today(db: Session, channel: str) -> bool:
@@ -370,13 +486,19 @@ def send_digest(db: Session, force: bool = False, dry: bool = False) -> dict:
         if not text:
             result[lang] = "no_jobs"
             continue
+        # подпись к фото — 1024 знака после разбора разметки; если не влезли,
+        # укорачиваем подборку, а не режем текст на полуслове
+        while len(jobs) > 3 and _visible_len(en_guard(text, lang)) > CAPTION_LIMIT:
+            jobs = jobs[:-1]
+            text, ids = build_digest(db, lang, jobs, window)
+        text = en_guard(text, lang)
         if dry:
             result[lang] = text
             continue
-        resp = _api("sendMessage", {
-            "chat_id": chat, "text": text, "parse_mode": "HTML",
-            "disable_web_page_preview": True,
-        })
+        total = db.query(Job).filter(Job.status == "approved").count()
+        photo = tgcards.digest_card(lang, card_rows(jobs, lang), total,
+                                    extra=max(0, len(ids) - 3))
+        resp = _send(chat, text, photo)
         if resp.get("ok"):
             db.add(TgDigestPost(channel=lang, job_ids=",".join(map(str, ids)),
                                 message_id=(resp.get("result") or {}).get("message_id")))
@@ -396,6 +518,26 @@ def tgpost_run(request: Request, dry: int = 0, kind: str = "digest",
     return JSONResponse(send(db, force=True, dry=bool(dry)))
 
 
+@router.get("/admin/tgpost/card")
+def tgpost_card(request: Request, kind: str = "digest", lang: str = "ru",
+                db: Session = Depends(db_session)):
+    """Картинка поста как есть — посмотреть перед выходом в канал."""
+    need_admin(request, db)
+    if kind == "hot":
+        job = pick_hot(db, lang)
+        photo = job and tgcards.hot_card(
+            lang, (job.title or "").strip(), pretty_salary(job.salary, lang),
+            place_of(job, lang), (job.company_name or "").strip())
+    else:
+        jobs, _ = pick_jobs(db, lang=lang)
+        total = db.query(Job).filter(Job.status == "approved").count()
+        photo = jobs and tgcards.digest_card(lang, card_rows(jobs, lang), total,
+                                             extra=max(0, len(jobs) - 3))
+    if not photo:
+        return JSONResponse({"error": "нечего рисовать"}, status_code=404)
+    return Response(content=photo, media_type="image/png")
+
+
 @router.get("/admin/tgpost/preview")
 def tgpost_preview(request: Request, db: Session = Depends(db_session)):
     need_admin(request, db)
@@ -403,8 +545,9 @@ def tgpost_preview(request: Request, db: Session = Depends(db_session)):
     out = {}
     for lang in langs:
         job = pick_hot(db, lang)
-        out[lang] = {"digest": build_digest(db, lang)[0],
-                     "hot": build_hot(job, lang) if job else None}
+        out[lang] = {"digest": en_guard(build_digest(db, lang)[0], lang),
+                     "hot": en_guard(build_hot(job, lang), lang) if job else None,
+                     "card": f"/admin/tgpost/card?kind=digest&lang={lang}"}
     return JSONResponse(out)
 
 

@@ -62,13 +62,16 @@
       {% else %}
         <span class="kicker pink">Контакты закрыты</span>
         <h2 style="margin:10px 0 8px;">Имя и способы связи скрыты</h2>
-        <p style="color:var(--ink-dim);">{% if cv_clevel %}C-level кандидат: контакт стоит {{ cv_cost }} открытий. {% endif %}Оплаченный доступ навсегда открывает ФИО, email и Telegram кандидата для вашего аккаунта.</p>
+        <p style="color:var(--ink-dim);">{% if cv_clevel %}Кандидат уровня C-level (должность или ожидания от $5 000): контакт стоит {{ cv_cost }} открытий. {% endif %}Оплаченный доступ навсегда открывает ФИО, email и Telegram кандидата для вашего аккаунта.</p>
         <div class="locked-lines" aria-hidden="true"><span></span><span></span><span></span></div>
         {% if user and user.role == 'employer' and cv_team_role != 'viewer' and (cv_account.cv_credits or 0) >= cv_cost %}
           <form method="post" action="/resume/{{ resume.id }}/unlock"><button class="btn btn-acid" style="width:100%;">Открыть контакт{% if cv_cost > 1 %} · {{ cv_cost }} открытий{% endif %} · осталось {{ cv_account.cv_credits }}</button></form>
         {% elif user and user.role == 'employer' %}
           <div class="plan-actions">
-            {% if cv_team_role == 'owner' %}<form method="post" action="/checkout/cv1"><button class="btn btn-acid">1 контакт · €5</button></form>
+            {% if cv_team_role == 'owner' and cv_clevel %}<form method="post" action="/checkout/cvc1"><button class="btn btn-acid">1 контакт C-level · €25</button></form>
+            <form method="post" action="/checkout/cvc5"><button class="btn btn-ghost">5 контактов · €105</button></form>
+            <form method="post" action="/checkout/cvc10"><button class="btn btn-ghost">10 контактов · €189</button></form>
+            {% elif cv_team_role == 'owner' %}<form method="post" action="/checkout/cv1"><button class="btn btn-acid">1 контакт · €5</button></form>
             <form method="post" action="/checkout/cv10"><button class="btn btn-ghost">10 открытий · €45</button></form>
             <form method="post" action="/checkout/cv30"><button class="btn btn-ghost">30 открытий · €120</button></form>{% else %}<p style="color:var(--ink-dim);">Попросите владельца кабинета пополнить общий баланс.</p>{% endif %}
           </div>

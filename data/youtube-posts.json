@@ -57,5 +57,53 @@
   "publish_at": "2026-09-10T17:00:00Z",
   "slug": "casino-operations-manager",
   "uploaded_at": "2026-09-08T22:48:26Z"
+ },
+ {
+  "id": "2026-09-10-morning",
+  "video_id": "eCxLoHk3ifQ",
+  "url": "https://youtube.com/shorts/eCxLoHk3ifQ",
+  "format": "hot_jobs",
+  "playlist": "jobs",
+  "title": "Вакансии iGaming: топ-5 за 10 сентября, зарплаты до $16 950 в месяц",
+  "publish_at": "2026-09-10T07:00:00Z",
+  "slug": null,
+  "featured": [
+   "https://spinhire.io/job/10029",
+   "https://spinhire.io/job/9869",
+   "https://spinhire.io/job/9952",
+   "https://spinhire.io/job/9749",
+   "https://spinhire.io/job/9606"
+  ],
+  "uploaded_at": "2026-09-10T04:38:12Z"
+ },
+ {
+  "id": "2026-09-11-morning",
+  "video_id": "n42fGAdRKoc",
+  "url": "https://youtube.com/shorts/n42fGAdRKoc",
+  "format": "hot_jobs",
+  "playlist": "jobs",
+  "title": "Вакансии в iGaming: топ-5 за 11 сентября, зарплаты до $14 900 в месяц",
+  "publish_at": "2026-09-11T07:00:00Z",
+  "slug": null,
+  "featured": [
+   "https://spinhire.io/job/9868",
+   "https://spinhire.io/job/9870",
+   "https://spinhire.io/job/9858",
+   "https://spinhire.io/job/9816",
+   "https://spinhire.io/job/9826"
+  ],
+  "uploaded_at": "2026-09-10T09:38:37Z"
+ },
+ {
+  "id": "2026-09-11-day",
+  "video_id": "mEaQ2VP2zEE",
+  "url": "https://youtube.com/shorts/mEaQ2VP2zEE",
+  "format": "salary",
+  "playlist": "salary",
+  "title": "Зарплата трейдера беттинга в iGaming 2026: Мальта, Кипр, Европа, удалёнка",
+  "publish_at": "2026-09-11T12:00:00Z",
+  "slug": "sportsbook-trader",
+  "featured": [],
+  "uploaded_at": "2026-09-10T14:21:26Z"
  }
 ]

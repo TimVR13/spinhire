@@ -76,9 +76,15 @@
       </div>
 
       {% if not gateways.stripe %}<button class="btn btn-ghost btn-block" disabled style="opacity: 0.6;">Оплата картой — скоро</button>{% endif %}
+
+      <form method="post" action="/checkout/order/{{ order.id }}/cancel" onsubmit="return confirm('Отменить заказ #{{ order.id }} на €{{ order.amount }}? Счёт закроется, деньги списаны не будут.')" style="margin-top: 4px;">
+        <button class="btn btn-ghost btn-sm" type="submit" style="color: var(--ink-faint);">Отменить заказ</button>
+      </form>
     </div>
     {% elif order.status == 'paid' %}
       <div class="flash">✓ Оплачено. Услуга активна. Спасибо!</div>
+    {% elif order.status == 'cancelled' %}
+      <div class="flash" style="border-color: var(--yellow);">Заказ отменён, платить по нему не нужно. Новый заказ можно создать в <a href="/employer#topup" style="color:inherit;font-weight:800;">кабинете, раздел «Финансы»</a>.</div>
     {% endif %}
   </div>
 {% endblock %}

@@ -31,6 +31,13 @@ def short_item(text: str, limit: int = 64) -> str:
     return head
 
 
+MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
+
+
+def ru_date(d: "dt.date") -> str:
+    return f"{d.day} {MONTHS[d.month - 1]} {d.year}"
+
+
 US = {"сша", "us", "usa", "united states"}
 N_JOBS = 5
 EMPLOYMENT = {"FULL_TIME": "полная занятость", "PART_TIME": "частичная", "CONTRACTOR": "контракт", "INTERN": "стажировка"}
@@ -69,6 +76,14 @@ def top_locations(queries: list[str], family: str, n: int = 3) -> tuple[list[dic
     top = cnt.most_common(n)
     mx = top[0][1] if top else 1
     return [{"label": k, "text": f"{v} вак.", "pct": round(v / mx, 3), "n": v} for k, v in top], scope
+
+
+def job_age(j: dict, today: dt.date) -> int:
+    """Возраст вакансии в днях. Без корректной даты публикации считаем несвежей."""
+    try:
+        return (today - dt.date.fromisoformat(j.get("posted_at") or "")).days
+    except ValueError:
+        return 999
 
 
 def us_office(j: dict) -> bool:
@@ -120,7 +135,7 @@ def build_hot_jobs(seed: str, args) -> dict:
         lo, hi = monthly(j)
         if not hi or j["url"] in seen:
             continue
-        age = (today - dt.date.fromisoformat(j["posted_at"])).days
+        age = job_age(j, today)
         if age > 2 or usd_equiv(hi, j["salary_currency"]) < 4000 or us_office(j):
             continue
         cands.append((usd_equiv(hi, j["salary_currency"]), lo, hi, j))
@@ -140,7 +155,7 @@ def build_hot_jobs(seed: str, args) -> dict:
             break
     n = len(picked)
     NUM = {3: "Три горячие вакансии", 4: "Четыре горячие вакансии", 5: "Пять горячих вакансий"}
-    scenes = [{"id": "hook", "type": "hook", "kicker": "Вакансии дня", "title": f"{n} вакансий дня" if n != 4 else "4 вакансии дня",
+    scenes = [{"id": "hook", "type": "hook", "kicker": "Вакансии дня", "date": ru_date(today), "title": f"{n} вакансий дня" if n != 4 else "4 вакансии дня",
                "sub": f"с зарплатой {fmt_range(None, picked[0][2], picked[0][3]['salary_currency'])} в месяц"}]
     phrases = [{"id": "hook", "scene": "hook", "text": f"{NUM.get(n, 'Горячие вакансии')} дня в iGaming. Максимум — {say_money(picked[0][2], picked[0][3]['salary_currency'])} в месяц."}]
     words = ["Первая", "Вторая", "Третья", "Четвёртая", "Пятая"]
@@ -157,7 +172,6 @@ def build_hot_jobs(seed: str, args) -> dict:
     phrases.append({"id": "cta", "scene": "cta", "text": "Ссылки на все — в описании. Ещё шесть тысяч вакансий на spinhire.io."})
     links = "\n".join(f"{i + 1}. {j['title']} — {j['company']}: {j['url']}" for i, (_, _, _, j) in enumerate(picked))
     day = today
-    MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
     title = f"Вакансии iGaming с зарплатой {fmt_range(None, picked[0][2], picked[0][3]['salary_currency'])}: топ-{n} за {day.day} {MONTHS[day.month - 1]} | работа в гемблинге"
     desc = (f"Самые высокооплачиваемые вакансии за сегодня в гемблинге.\n\n{links}\n\n"
             f"Все вакансии с зарплатами → {SITE}/jobs\nTelegram с горячими вакансиями → {TG}\n\n{HASHTAGS}")

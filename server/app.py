@@ -446,6 +446,9 @@ class Application(Base):
     assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
     interview_at = Column(String, default="")
     next_action_at = Column(String, default="")
+    # отклик пришёл до того, как компания забрала вакансию по ссылке /claim:
+    # вакансия отдаётся бесплатно, а контакт такого кандидата — за открытия
+    lead_locked = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     job = relationship("Job", back_populates="applications")
     user = relationship("User", back_populates="applications", foreign_keys=[user_id])
@@ -641,6 +644,27 @@ def slugify_company(name: str) -> str:
     return re.sub(r"[^a-zа-я0-9]+", "-", (name or "").lower()).strip("-") or "company"
 
 
+# Телеграм-каналы часто публикуют вакансию без работодателя, и парсер ставит
+# «Компания не указана». Отклик по такой вакансии передавать некому: ни имени,
+# ни сайта, ни HR — поэтому кандидата отправляем в первоисточник.
+NONAME_RE = re.compile(r"не\s*указан|unknown|confidential|стелс|stealth|^n/?a$|^-+$", re.I)
+
+
+def is_real_company(name: str) -> bool:
+    name = (name or "").strip()
+    return bool(name) and slugify_company(name) != "company" and not NONAME_RE.search(name)
+
+
+
+def source_label(url: str) -> str:
+    """Как назвать первоисточник в сообщении Алине: у телеграма важен канал, не домен."""
+    host = host_of(url or "")
+    if host in ("t.me", "telegram.me"):
+        first = urllib.parse.urlparse(url).path.strip("/").split("/")[0]
+        return f"{host}/{first}" if first else host
+    return host
+
+
 def upsert_company_profiles(db: Session, rows) -> int:
     """Сохранить профили работодателей, не затирая заполненные поля пустыми."""
     saved = 0
@@ -717,15 +741,21 @@ PLANS = {
     "cv10": ("10 контактов из базы", 45, "Открытие 10 контактов резюме (€4.5/контакт)"),
     "cv30": ("30 контактов из базы", 120, "Открытие 30 контактов резюме (€4/контакт)"),
     "cvunlim": ("База резюме — безлимит / мес", 349, "Безлимитные контакты на 30 дней"),
+    "cvc1": ("1 контакт C-level", 25, "Топ-менеджер или зарплата от $5 000 — 5 открытий"),
+    "cvc5": ("5 контактов C-level", 105, "Пять топ-контактов, €21 за контакт — 25 открытий"),
+    "cvc10": ("10 контактов C-level", 189, "Десять топ-контактов, €18.9 за контакт — 50 открытий"),
     "hunt": ("Подбор под ключ — предоплата", 1000, "Итоговая стоимость — 1 зарплата кандидата"),
 }
 
 # Цена для сравнения «было → стало». У пакетов это честная поштучная стоимость
 # (3 × €49 и 10 × €49), а не выдуманная зачёркнутая цифра.
-PLAN_LIST_PRICE = {"single": 99, "featured": 199, "pack3": 147, "pack10": 490}
+PLAN_LIST_PRICE = {"single": 99, "featured": 199, "pack3": 147, "pack10": 490,
+                   "cvc5": 125, "cvc10": 250}
 
 # Сколько открытий контактов начисляет тариф (cv40 — старый пакет, оставлен для уже созданных заказов).
-PLAN_CV_CREDITS = {"cv1": 1, "cv10": 10, "cv30": 30, "cv40": 40}
+# C-level пакеты начисляют те же открытия, просто пачками по 5 — по цене одного топ-контакта.
+PLAN_CV_CREDITS = {"cv1": 1, "cv10": 10, "cv30": 30, "cv40": 40,
+                   "cvc1": 5, "cvc5": 25, "cvc10": 50}
 
 # Что начисляется работодателю после оплаты.
 PLAN_JOB_CREDITS = {"single": 1, "featured": 1, "pack3": 3, "pack10": 10}
@@ -901,9 +931,54 @@ def is_c_level(text: str) -> bool:
     return bool(_CLEVEL_RE.search(text or ""))
 
 
+# Дорогой контакт — не только по должности: ожидания от $5 000 в месяц это тот же уровень
+# (решение владельца 10.09.2026). Курсы приблизительные и без сети: порог грубый, точность не нужна.
+CLEVEL_SALARY_USD = int(os.environ.get("SPINHIRE_CLEVEL_SALARY_USD", "5000"))
+_CUR_USD = (("$", 1.0), ("usd", 1.0), ("usdt", 1.0), ("€", 1.08), ("eur", 1.08),
+            ("£", 1.27), ("gbp", 1.27), ("₴", 0.024), ("грн", 0.024), ("zł", 0.25), ("pln", 0.25))
+_YEARLY_RE = re.compile(r"год|year|annual|p\.?\s?a\b|/\s*y\b", re.I)
+
+
+def _money(raw: str) -> float:
+    raw = raw.replace(" ", "")
+    if re.fullmatch(r"\d{1,3}([.,]\d{3})+", raw):     # 4,000 и 4.000 — разделитель тысяч
+        return float(raw.replace(",", "").replace(".", ""))
+    return float(raw.replace(",", "."))
+
+
+def salary_usd(text: str) -> int:
+    """Зарплатные ожидания из свободного текста («€4 000», «4000 EUR», «5k$») → доллары в месяц."""
+    s = (text or "").lower().replace(" ", " ").replace(" ", " ")
+    if not s:
+        return 0
+    rate = next((k for token, k in _CUR_USD if token in s), 1.08)   # без валюты считаем евро
+    values = []
+    for m in re.finditer(r"(\d[\d ]*(?:[.,]\d+)?)\s*(k|к|тыс)?", s):
+        try:
+            value = _money(m.group(1))
+        except ValueError:
+            continue
+        if m.group(2):
+            value *= 1000
+        if value >= 100:                              # «5 лет опыта» и «net» — не зарплата
+            values.append(value)
+    if not values:
+        return 0
+    top = max(values)
+    if _YEARLY_RE.search(s):
+        top /= 12
+    return int(top * rate)
+
+
+def is_premium_contact(resume) -> bool:
+    """Контакт уровня C-level: по должности или по ожиданиям от $5 000 в месяц."""
+    return (is_c_level(getattr(resume, "title", ""))
+            or salary_usd(getattr(resume, "salary_expect", "")) >= CLEVEL_SALARY_USD)
+
+
 def unlock_cost(resume) -> int:
     """Сколько открытий списывается за контакт кандидата."""
-    return CLEVEL_UNLOCK_COST if is_c_level(getattr(resume, "title", "")) else 1
+    return CLEVEL_UNLOCK_COST if is_premium_contact(resume) else 1
 
 
 # ---------- насколько кандидат подходит вакансии ----------
@@ -1205,10 +1280,15 @@ def migrate(db: Session):
         "ALTER TABLE applications ADD COLUMN assigned_to INTEGER",
         "ALTER TABLE applications ADD COLUMN interview_at VARCHAR DEFAULT ''",
         "ALTER TABLE applications ADD COLUMN next_action_at VARCHAR DEFAULT ''",
+        "ALTER TABLE applications ADD COLUMN lead_locked INTEGER DEFAULT 0",
     ):
         col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
         if acols and col not in acols:
             db.execute(text(_sql))
+    # ссылка на одну вакансию — для объявлений, где работодатель не назван
+    ccols = {r[1] for r in db.execute(text("PRAGMA table_info(company_claims)")).fetchall()}
+    if ccols and "job_id" not in ccols:
+        db.execute(text("ALTER TABLE company_claims ADD COLUMN job_id INTEGER"))
     for _sql in (
         "ALTER TABLE resumes ADD COLUMN employment_history TEXT DEFAULT ''",
         "ALTER TABLE resumes ADD COLUMN education TEXT DEFAULT ''",
@@ -3371,6 +3451,24 @@ def checkout_claim(order_id: int, request: Request, tx: str = Form(""),
     return RedirectResponse(f"/checkout/order/{order_id}?claimed=1", status_code=303)
 
 
+@app.post("/checkout/order/{order_id}/cancel")
+def checkout_cancel(order_id: int, request: Request, back: str = Form(""),
+                    db: Session = Depends(db_session)):
+    """Отмена неоплаченного заказа: висящий счёт не должен мозолить глаза в кабинете."""
+    user = get_user(request, db)
+    o = db.get(Order, order_id)
+    if not user or not o or (o.user_id != user.id and user.role != "admin"):
+        raise HTTPException(403)
+    if o.status != "pending":
+        raise HTTPException(409, "Заказ уже закрыт")
+    o.status = "cancelled"
+    track(db, "order_cancelled", user.id, "order", o.id, plan=o.plan, amount=o.amount)
+    db.commit()
+    if back == "cabinet":
+        return RedirectResponse("/employer?order=cancelled#fin-orders", status_code=303)
+    return RedirectResponse(f"/checkout/order/{order_id}", status_code=303)
+
+
 # ---------- Stripe (карты) и PayKilla (крипта) ----------
 # Ключи только из окружения: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
 # PAYKILLA_SECRET_KEY (+ PAYKILLA_PUBLIC_KEY). Без ключей кнопки не показываются.
@@ -4087,6 +4185,13 @@ def verify(request: Request, email: str = Form(...), code: str = Form(...),
     u.otp_attempts = 0
     db.commit()
     _credit_referral(db, u)  # почта подтверждена — можно начислять реферальный бонус
+    try:                     # пришёл по ссылке /claim — забирает свои вакансии
+        from server import claim as _claim
+        if _claim.apply_pending_claim(db, u):
+            db.commit()
+            return set_session(RedirectResponse("/employer?claimed=1", status_code=303), u)
+    except Exception as exc:                                    # noqa: BLE001
+        print(f"[claim] после подтверждения почты: {type(exc).__name__}: {exc}")
     return set_session(RedirectResponse(dest_for(u), status_code=303), u)
 
 
@@ -4375,7 +4480,7 @@ def resume_detail(resume_id: int, request: Request, db: Session = Depends(db_ses
     cv_account, cv_team_role = company_context(user, db) if user and user.role == "employer" else (user, "owner")
     return render(request, db, "resume.html", resume=row, unlocked=unlocked,
                   active="resumes", cv_account=cv_account, cv_team_role=cv_team_role,
-                  cv_cost=unlock_cost(row), cv_clevel=is_c_level(row.title))
+                  cv_cost=unlock_cost(row), cv_clevel=is_premium_contact(row))
 
 
 @app.get("/resume/{resume_id}/file")
@@ -5087,8 +5192,17 @@ def employer(request: Request, stage: str = "", assigned: int = 0,
                .order_by(CompanyInvite.created_at.desc()).all())
     # «Финансы»: заказы кабинета и пакеты для пополнения (featured и hunt покупаются со страницы вакансии/тарифов)
     orders = db.query(Order).filter(Order.user_id == account.id).order_by(Order.created_at.desc()).limit(50).all()
-    topup = {"jobs": ["single", "pack3", "pack10", "unlim30"], "cv": ["cv1", "cv10", "cv30", "cvunlim"]}
+    topup = {"jobs": ["single", "pack3", "pack10", "unlim30"], "cv": ["cv1", "cv10", "cv30", "cvunlim"],
+             "cvc": ["cvc1", "cvc5", "cvc10"]}
+    locked_apps = {a.id for a in applications if a.lead_locked}
+    if locked_apps:                       # уже оплаченные контакты не прячем
+        opened = {r.user_id for r in db.query(Resume).join(
+            ResumeUnlock, ResumeUnlock.resume_id == Resume.id).filter(
+            ResumeUnlock.employer_id == account.id)}
+        locked_apps = {a.id for a in applications
+                       if a.lead_locked and a.user_id not in opened}
     return render(request, db, "employer.html", jobs=jobs, unlocked_resumes=unlocked,
+                  locked_apps=locked_apps,
                   credit_ledger=ledger, stats=stats, company_progress=company_progress,
                   account=account, team_role=team_role, team=team, invites=invites,
                   ats_apps=ats_apps, stage=stage, assigned=assigned,
@@ -5193,8 +5307,66 @@ def application_detail(app_id: int, request: Request, db: Session = Depends(db_s
     events = (db.query(ApplicationEvent).filter_by(application_id=application.id)
               .order_by(ApplicationEvent.created_at.desc()).all())
     resume = db.query(Resume).filter_by(user_id=application.user_id).first()
+    # отклик, пришедший до того как компания забрала вакансию по ссылке /claim:
+    # саму вакансию мы отдали бесплатно, контакт кандидата — за открытия
+    locked = bool(application.lead_locked) and not (
+        resume and resume_contact_access(user, resume, db))
     return render(request, db, "application.html", application=application, events=events,
-                  resume=resume, account=account, team_role=team_role, members=members)
+                  resume=None if locked else resume, account=account, team_role=team_role,
+                  members=members, locked=locked,
+                  card=resume_card(resume, application.user.name or "") if locked and resume else {},
+                  unlock_price=unlock_cost(resume) if resume else 1)
+
+
+@app.post("/employer/app/{app_id}/unlock")
+def application_unlock(app_id: int, request: Request, db: Session = Depends(db_session)):
+    """Открыть контакт кандидата, который откликнулся до регистрации компании.
+
+    Отличие от /resume/{id}/unlock — резюме не обязано быть опубликованным в базе:
+    человек откликнулся на вакансию этой компании, значит контакт ей и предлагаем.
+    """
+    user, account, _ = require_company_user(request, db, write=True)
+    application = db.get(Application, app_id)
+    if not application or (application.job.owner_id != account.id and user.role != "admin"):
+        raise HTTPException(404)
+    back = f"/employer/application/{app_id}"
+    resume = db.query(Resume).filter_by(user_id=application.user_id).first()
+    if not resume:
+        return RedirectResponse(f"{back}?no_cv=1", status_code=303)
+    if db.query(ResumeUnlock).filter_by(employer_id=account.id, resume_id=resume.id).first():
+        application.lead_locked = 0
+        db.commit()
+        return RedirectResponse(f"{back}?unlocked=1", status_code=303)
+    unlimited = False
+    if account.cv_access_until:
+        try:
+            unlimited = datetime.fromisoformat(account.cv_access_until) > datetime.utcnow()
+        except ValueError:
+            unlimited = False
+    cost = unlock_cost(resume)
+    if not unlimited:
+        charged = (db.query(User).filter(User.id == account.id, User.cv_credits >= cost)
+                   .update({User.cv_credits: User.cv_credits - cost}, synchronize_session=False))
+        if charged != 1:
+            db.rollback()
+            return RedirectResponse(f"{back}?need_plan={cost}", status_code=303)
+    try:
+        db.add(ResumeUnlock(employer_id=account.id, resume_id=resume.id,
+                            access_kind="unlimited" if unlimited else "credit"))
+        resume.unlock_count = (resume.unlock_count or 0) + 1
+        application.lead_locked = 0
+        db.flush()
+        db.refresh(account)
+        db.add(ResumeCreditLedger(employer_id=account.id, resume_id=resume.id,
+                                  delta=0 if unlimited else -cost,
+                                  balance_after=account.cv_credits or 0,
+                                  action="unlimited" if unlimited else "unlock"))
+        track(db, "resume_unlocked", user.id, "resume", resume.id, account_id=account.id,
+              source="application")
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+    return RedirectResponse(f"{back}?unlocked=1", status_code=303)
 
 
 @app.post("/employer/application/{app_id}/plan")
@@ -6340,6 +6512,7 @@ ARTICLE_FILES = {
     "seo-specialist-gambling": "post-seo-specialist-gambling.html",
     "rabota-v-armenii-igaming": "post-rabota-v-armenii-igaming.html",
     "aml-officer-career": "post-aml-officer-career.html",
+    "head-of-affiliates-career": "post-head-of-affiliates-career.html",
 }
 
 
@@ -7205,6 +7378,13 @@ from server import moderation_api  # noqa: E402
 app.include_router(moderation_api.router)
 tgpost.start_scheduler()  # молчит, пока не заданы SPINHIRE_TG_BOT_TOKEN и каналы
 
+# ---------- отклики на чужие вакансии: ссылка компании и бот, который шлёт лид ----------
+from server import claim  # noqa: E402
+app.include_router(claim.router)
+from server import leadbot  # noqa: E402  (после claim — берёт из него ссылку регистрации)
+app.include_router(leadbot.router)
+leadbot.start_scheduler()  # молчит, пока не задан SPINHIRE_TG_LEAD_CHAT
+
 # ---------- программные кластеры вакансий: страна × направление × язык ----------
 from server import clusters  # noqa: E402
 app.include_router(clusters.router)
@@ -7228,13 +7408,13 @@ try:
 
     @app.on_event("startup")
     async def _mcp_start():
-        # session_manager.run() у библиотеки одноразовый: второй вход роняет
-        # приложение («can only be called once per instance»). На проде запуск
-        # один, а тесты поднимают lifespan по разу на каждый TestClient — и вся
-        # проверка перед релизом рассыпалась на ровном месте.
-        if getattr(app.state, "mcp_started", False):
-            return
-        app.state.mcp_session_cm = mcp_server.mcp.session_manager.run()
+        # session_manager.run() разрешён один раз на инстанс. В проде это и происходит,
+        # а в тестах приложение поднимают несколько раз за процесс — снимаем флаг после
+        # чистого выхода, иначе второй TestClient(app) валится с RuntimeError.
+        manager = mcp_server.mcp.session_manager
+        if getattr(manager, "_has_started", False):
+            manager._has_started = False
+        app.state.mcp_session_cm = manager.run()
         await app.state.mcp_session_cm.__aenter__()
         app.state.mcp_started = True
 

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ claim.company_name }} — SpinHire{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+<div style="max-width:920px;margin:40px auto;">
+  <span class="kicker">{{ t.kicker }}</span>
+  <h1 style="font-size:clamp(1.6rem,3vw,2.4rem);margin-block:8px 12px;">{{ t.title.format(company=claim.company_name if not ask_company else (jobs[0].title if jobs else 'SpinHire')) }}</h1>
+  <p style="color:var(--ink-dim);max-width:640px;">{{ t.lead }}</p>
+
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin:24px 0;">
+    <div class="company-stat"><span>{{ t.jobs }}</span><b>{{ jobs|length }}</b></div>
+    <div class="company-stat"><span>{{ t.apps }}</span><b>{{ apps_count }}</b></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:28px;align-items:start;">
+    <section>
+      {% if cards %}
+      <h2 style="font-size:1.1rem;margin-bottom:12px;">{{ t.cands }}</h2>
+      {% for card in cards %}
+      <div class="card" style="margin-bottom:12px;">
+        <b>{{ card.title or '—' }}</b>{% if card.clevel %} <span class="kicker pink">C-level</span>{% endif %}
+        <small style="display:block;color:var(--ink-faint);margin-top:4px;">→ {{ card.job }}</small>
+        {% if card.facts %}<p style="color:var(--ink-dim);margin-top:8px;">{{ card.facts|join(' · ') }}</p>{% endif %}
+        {% if card.skills %}<p style="margin-top:6px;">{{ card.skills|join(', ') }}</p>{% endif %}
+        {% if card.about %}<p style="color:var(--ink-dim);margin-top:6px;">{{ card.about }}</p>{% endif %}
+      </div>
+      {% endfor %}
+      {% endif %}
+      {% if jobs %}
+      <details style="margin-top:16px;">
+        <summary style="cursor:pointer;color:var(--acid);">{{ t.jobs }}: {{ jobs|length }}</summary>
+        <ul style="margin-top:10px;color:var(--ink-dim);">
+          {% for job in jobs[:40] %}<li><a href="/job/{{ job.id }}" style="color:inherit;">{{ job.title }}</a>{% if job.location %} · {{ job.location }}{% endif %}</li>{% endfor %}
+        </ul>
+      </details>
+      {% endif %}
+    </section>
+
+    <aside>
+      {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+      {% if viewer %}
+        <form method="post" action="/claim/{{ claim.token }}/attach" class="card">
+          <p style="margin-bottom:14px;">{{ viewer.email }}</p>
+          <button class="btn btn-acid btn-block" type="submit">{{ t.attach }}</button>
+        </form>
+      {% else %}
+        <form method="post" action="/claim/{{ claim.token }}" class="card" style="display:flex;flex-direction:column;gap:14px;">
+          <h2 style="font-size:1.05rem;margin:0;">{{ t.form }}</h2>
+          <div class="field"><label for="c-name">{{ t.name }}</label><input class="input" id="c-name" name="name" autocomplete="name"></div>
+          {% if ask_company %}<div class="field"><label for="c-company">{{ t.company }}</label><input class="input" id="c-company" name="company_name" autocomplete="organization" required></div>{% endif %}
+          <div class="field"><label for="c-email">{{ t.email }}</label><input class="input" id="c-email" type="email" name="email" value="{{ email or '' }}" autocomplete="email" required></div>
+          <div class="field"><label for="c-pw">{{ t.pass }}</label><input class="input" id="c-pw" type="password" name="password" minlength="6" autocomplete="new-password" required></div>
+          <button class="btn btn-acid btn-block" type="submit">{{ t.submit }}</button>
+          <p style="color:var(--ink-faint);font-size:.8rem;">{{ t.have }} <a href="/login?next=/claim/{{ claim.token }}" style="color:var(--acid);">{{ t.login }}</a></p>
+        </form>
+      {% endif %}
+      <p style="color:var(--ink-faint);font-size:.8rem;margin-top:14px;">{{ t.note }}</p>
+    </aside>
+  </div>
+</div>
+{% endblock %}

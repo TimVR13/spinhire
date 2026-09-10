@@ -7,7 +7,10 @@ const C = { bg: "#0a120e", bg2: "#0f1a14", ink: "#f2f7f4", dim: "#9fb3a8", acid:
 
 type Scene = { id: string; type: string; start: number; end: number; [k: string]: any };
 /* размер шрифта, чтобы строка влезла в ширину (Unbounded ≈ 0.68em на символ) */
-const fit = (text: string, maxW: number, maxSize: number, k = 0.68) => Math.max(40, Math.min(maxSize, Math.floor(maxW / (Math.max(1, text.length) * k))));
+const fit = (text: string, maxW: number, maxSize: number, k = 0.68, min = 40) => Math.max(min, Math.min(maxSize, Math.floor(maxW / (Math.max(1, text.length) * k))));
+/* заглавная кириллица шире латиницы — свой коэффициент */
+const fitCaps = (text: string, maxW: number, maxSize: number) => fit(text, maxW, maxSize, 0.9);
+/* нижние ~520 px кадра занимают субтитры и кнопки Shorts — контент сцен заканчивается выше 1400 */
 type Caption = { text: string; start: number; end: number };
 export type ShortProps = { id: string; format: string; bg: string; music: string; voice: string; duration: number; scenes: Scene[]; captions: Caption[] };
 
@@ -29,8 +32,8 @@ const Logo: React.FC<{ size?: number }> = ({ size = 48 }) => (
   </div>
 );
 
-const Kicker: React.FC<{ children: React.ReactNode; color?: string }> = ({ children, color = C.acid }) => (
-  <div style={{ display: "inline-block", fontFamily: body, fontWeight: 700, fontSize: 26, letterSpacing: 4, textTransform: "uppercase", color, border: `2px solid ${color}66`, borderRadius: 999, padding: "10px 22px" }}>● {children}</div>
+const Kicker: React.FC<{ children: React.ReactNode; color?: string; dot?: boolean }> = ({ children, color = C.acid, dot = true }) => (
+  <div style={{ display: "inline-block", fontFamily: body, fontWeight: 700, fontSize: 26, letterSpacing: 4, textTransform: "uppercase", color, border: `2px solid ${color}66`, borderRadius: 999, padding: "10px 22px" }}>{dot ? "● " : ""}{children}</div>
 );
 
 const Top: React.FC<{ n?: number; total?: number }> = ({ n, total }) => (
@@ -58,8 +61,11 @@ const Hook: React.FC<{ sc: Scene; bg: string }> = ({ sc, bg }) => {
       <Bg src={bg} zoom={1 + 0.1 * p} />
       <div style={{ position: "absolute", top: 96, left: 72, opacity: s }}><Logo size={56} /></div>
       <div style={{ position: "absolute", left: 72, right: 72, top: 900, transform: `translateY(${(1 - s2) * 60}px)`, opacity: s2 }}>
-        <Kicker>{sc.kicker}</Kicker>
-        <div style={{ marginTop: 34, fontFamily: display, fontWeight: 800, fontSize: sc.title.length > 22 ? 78 : 104, lineHeight: 1.02, textTransform: "uppercase", color: C.ink, letterSpacing: -1 }}>{sc.title}</div>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16 }}>
+          <Kicker>{sc.kicker}</Kicker>
+          {sc.date ? <Kicker color={C.gold} dot={false}>{sc.date}</Kicker> : null}
+        </div>
+        <div style={{ marginTop: 30, fontFamily: display, fontWeight: 800, fontSize: sc.title.length > 22 ? 78 : 104, lineHeight: 1.02, textTransform: "uppercase", color: C.ink, letterSpacing: -1 }}>{sc.title}</div>
         {sc.sub ? <div style={{ marginTop: 22, fontFamily: body, fontWeight: 600, fontSize: 36, color: C.dim }}>{sc.sub}</div> : null}
       </div>
     </AbsoluteFill>
@@ -122,9 +128,9 @@ const Big: React.FC<{ sc: Scene; bg: string }> = ({ sc, bg }) => {
   const { s, s2, out } = useScene(sc);
   return (
     <AbsoluteFill style={{ opacity: out }}>
-      <Bg src={bg} height={900} dim={0.35} />
+      <Bg src={bg} height={1120} dim={0.35} />
       <Top />
-      <div style={{ position: "absolute", left: 72, right: 72, top: 760, opacity: s, transform: `translateY(${(1 - s) * 50}px)` }}>
+      <div style={{ position: "absolute", left: 72, right: 72, top: 1010, opacity: s, transform: `translateY(${(1 - s) * 50}px)` }}>
         <Kicker color={C.gold}>{sc.kicker}</Kicker>
         <div style={{ marginTop: 30, transform: `scale(${0.8 + 0.2 * s2})`, transformOrigin: "left center", fontFamily: display, fontWeight: 800, fontSize: fit(sc.number, 900, 124), lineHeight: 1, color: C.acid, letterSpacing: -3, textShadow: `0 0 60px ${C.acid}55`, whiteSpace: "nowrap" }}>{sc.number}</div>
         <div style={{ marginTop: 24, fontFamily: body, fontWeight: 600, fontSize: 40, color: C.dim }}>{sc.label}</div>
@@ -177,18 +183,25 @@ const Quote: React.FC<{ sc: Scene; bg: string }> = ({ sc, bg }) => {
 const Cta: React.FC<{ sc: Scene }> = ({ sc }) => {
   const { s, s2, local, p } = useScene(sc);
   const pulse = 1 + 0.025 * Math.sin(local / 5);
+  const slog = fitCaps("Скучная карьера", 936, 84);            // три строки, ни одна не переносится
+  // длинный адрес ломаем по последнему слэшу на две строки, чтобы он не вылезал за поля и остался читаемым
+  const cut = sc.url.lastIndexOf("/") + 1;
+  const urlLines: string[] = sc.url.length > 26 && cut > 1 ? [sc.url.slice(0, cut), sc.url.slice(cut)] : [sc.url];
+  const urlSize = fit(urlLines.reduce((a, b) => (a.length > b.length ? a : b)), 848, 64, 0.687, 30);
   return (
     <AbsoluteFill>
-      <Bg src="cta-v.jpg" height={1000} zoom={1.04 + 0.1 * p} />
+      <Bg src="cta-v.jpg" height={980} zoom={1.04 + 0.1 * p} />
       <div style={{ position: "absolute", top: 96, left: 72, opacity: s }}><Logo size={56} /></div>
-      <div style={{ position: "absolute", left: 72, right: 72, top: 880, opacity: s, transform: `translateY(${(1 - s) * 50}px)` }}>
-        <div style={{ fontFamily: display, fontWeight: 800, fontSize: 84, lineHeight: 1.0, textTransform: "uppercase", color: C.ink, letterSpacing: -1 }}>
+      <div style={{ position: "absolute", left: 72, right: 72, top: 700, opacity: s, transform: `translateY(${(1 - s) * 50}px)` }}>
+        <div style={{ fontFamily: display, fontWeight: 800, fontSize: slog, lineHeight: 1.06, textTransform: "uppercase", color: C.ink, letterSpacing: -1 }}>
           <div>Скучная карьера</div><div style={{ color: "rgba(242,247,244,.85)" }}>закончилась</div><div style={{ color: C.acid, textShadow: `0 0 40px ${C.acid}55` }}>Иди ва‑банк</div>
         </div>
       </div>
-      <div style={{ position: "absolute", left: 72, right: 72, bottom: 420, opacity: s2, transform: `translateY(${(1 - s2) * 40}px)` }}>
-        <div style={{ fontFamily: body, fontWeight: 700, fontSize: 32, color: C.acid, letterSpacing: 3, textTransform: "uppercase", marginBottom: 18 }}>{sc.line} →</div>
-        <div style={{ display: "inline-block", transform: `scale(${pulse})`, transformOrigin: "left center", fontFamily: display, fontWeight: 800, fontSize: sc.url.length > 22 ? 46 : 64, color: "#06130c", background: C.acid, padding: "22px 44px", borderRadius: 999, boxShadow: `0 0 80px ${C.acid}77`, whiteSpace: "nowrap" }}>{sc.url}</div>
+      <div style={{ position: "absolute", left: 72, right: 72, top: 1050, opacity: s2, transform: `translateY(${(1 - s2) * 40}px)` }}>
+        <div style={{ fontFamily: body, fontWeight: 700, fontSize: 32, color: C.acid, letterSpacing: 3, textTransform: "uppercase", marginBottom: 20 }}>{sc.line} →</div>
+        <div style={{ display: "inline-block", transform: `scale(${pulse})`, transformOrigin: "left center", fontFamily: display, fontWeight: 800, fontSize: urlSize, lineHeight: 1.08, color: "#06130c", background: C.acid, padding: urlLines.length > 1 ? "26px 44px" : "22px 44px", borderRadius: urlLines.length > 1 ? 44 : 999, boxShadow: `0 0 80px ${C.acid}77`, whiteSpace: "nowrap" }}>
+          {urlLines.map((l, i) => <div key={i}>{l}</div>)}
+        </div>
       </div>
     </AbsoluteFill>
   );
