@@ -71,6 +71,14 @@ def top_locations(queries: list[str], family: str, n: int = 3) -> tuple[list[dic
     return [{"label": k, "text": f"{v} вак.", "pct": round(v / mx, 3), "n": v} for k, v in top], scope
 
 
+def job_age(j: dict, today: dt.date) -> int:
+    """Возраст вакансии в днях. Без корректной даты публикации считаем несвежей."""
+    try:
+        return (today - dt.date.fromisoformat(j.get("posted_at") or "")).days
+    except ValueError:
+        return 999
+
+
 def us_office(j: dict) -> bool:
     """Офис в США — без визы недоступен русскоязычной аудитории, в подборку дня не берём."""
     return (j.get("country") or "").strip().lower() in US and "удал" not in (j.get("format") or "").lower()
@@ -120,7 +128,7 @@ def build_hot_jobs(seed: str, args) -> dict:
         lo, hi = monthly(j)
         if not hi or j["url"] in seen:
             continue
-        age = (today - dt.date.fromisoformat(j["posted_at"])).days
+        age = job_age(j, today)
         if age > 2 or usd_equiv(hi, j["salary_currency"]) < 4000 or us_office(j):
             continue
         cands.append((usd_equiv(hi, j["salary_currency"]), lo, hi, j))
