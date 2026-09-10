@@ -24,6 +24,7 @@ import socket
 import struct
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta
@@ -413,15 +414,26 @@ def _api(method: str, payload: dict) -> dict:
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
             return json.loads(resp.read())
+    except urllib.error.HTTPError as exc:                      # 429 отдаёт retry_after в теле
+        try:
+            return json.loads(exc.read())
+        except Exception:                                      # noqa: BLE001
+            return {"ok": False, "error": f"HTTP {exc.code}"}
     except Exception as exc:                                   # noqa: BLE001
         return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
 
 
 def _send(text: str, html: bool = False) -> dict:
+    """Одно сообщение в чат лидов. На 429 ждём столько, сколько просит Telegram."""
     payload = {"chat_id": LEAD_CHAT, "text": text, "disable_web_page_preview": True}
     if html:
         payload["parse_mode"] = "HTML"
-    return _api("sendMessage", payload)
+    resp = _api("sendMessage", payload)
+    if not resp.get("ok") and resp.get("error_code") == 429:
+        wait = int((resp.get("parameters") or {}).get("retry_after") or 5)
+        time.sleep(min(wait + 1, 60))
+        resp = _api("sendMessage", payload)
+    return resp
 
 
 def pending_batches(db: Session, limit_companies: int = 6) -> tuple:
@@ -512,11 +524,12 @@ def send_pending(db: Session, dry: bool = False, refresh_hr: bool = False) -> di
                 error = str(resp.get("description") or resp.get("error"))[:200]
                 out["errors"].append(f"{group['company']}: {error}")
                 break
-            time.sleep(0.4)
+            time.sleep(1.0)          # Telegram не любит очередь в один личный чат
         for it in items:
             db.add(LeadNotice(application_id=it["application"].id, company_slug=group["slug"],
                               chat_id=str(LEAD_CHAT), ok=ok, error=error))
         db.commit()
+        time.sleep(1.5)              # пауза между компаниями — чтобы пачка читалась
     return out
 
 
