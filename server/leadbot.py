@@ -251,6 +251,15 @@ def _save_contact(db: Session, company_name: str, emails: list) -> None:
 
 # ---------- язык компании ----------
 
+# Компании-заглушки: писать некому, ссылку регистрации отправлять некуда
+NONAME_RE = re.compile(r"не\s*указан|unknown|confidential|стелс|stealth|^n/?a$|^-+$", re.I)
+
+
+def is_real_company(name: str) -> bool:
+    name = (name or "").strip()
+    return bool(name) and slugify_company(name) != "company" and not NONAME_RE.search(name)
+
+
 CYR_RE = re.compile(r"[а-яё]", re.I)
 RU_PLACES = ("cyprus", "кипр", "limassol", "лимассол", "nicosia", "georgia", "грузи",
              "tbilisi", "тбилиси", "armenia", "армени", "yerevan", "ереван", "kazakh",
@@ -432,6 +441,9 @@ def pending_batches(db: Session, limit_companies: int = 6) -> tuple:
         if not (card.get("title") or card.get("skills") or card.get("about")):
             empty.append(application.id)
             continue
+        if not is_real_company(job.company_name):
+            empty.append(application.id)
+            continue
         slug = slugify_company(job.company_name)
         group = groups.setdefault(slug, {"company": job.company_name, "slug": slug, "items": []})
         group["items"].append({
@@ -452,7 +464,7 @@ def send_pending(db: Session, dry: bool = False, refresh_hr: bool = False) -> di
     if empty and not dry:
         for app_id in empty:
             db.add(LeadNotice(application_id=app_id, ok=False,
-                              error="старый отклик или пустое резюме — не отправляли"))
+                              error="старый отклик, пустое резюме или компания без имени"))
         db.commit()
     out["skipped"] = len(empty)
     for group in groups:
