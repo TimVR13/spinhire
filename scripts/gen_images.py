@@ -8,14 +8,40 @@ from google.auth.transport.requests import Request
 from PIL import Image
 from io import BytesIO
 
-SA = os.environ.get("VERTEX_SA", os.path.expanduser("~/Desktop/planner/.data/vertex-sa.json"))
+_SA_CACHE = []
+
+
+def sa_path() -> str:
+    """Путь к сервис-аккаунту Vertex.
+
+    Локально VERTEX_SA — путь к файлу. В облачной routine и в Actions секрет
+    приходит содержимым (JSON или base64, чтобы значение было однострочным) —
+    тогда кладём его в ~/.spinhire/vertex-sa.json, как это делает
+    video/pipeline/common.py:env_or_file для ключей YouTube и TTS.
+    """
+    if _SA_CACHE:
+        return _SA_CACHE[0]
+    raw = (os.environ.get("VERTEX_SA") or "").strip()
+    path = os.path.expanduser("~/Desktop/planner/.data/vertex-sa.json")
+    if raw and not os.path.exists(raw):
+        value = raw if raw.startswith("{") else base64.b64decode(raw).decode()
+        path = os.path.expanduser("~/.spinhire/vertex-sa.json")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(value)
+        os.chmod(path, 0o600)
+    elif raw:
+        path = raw
+    _SA_CACHE.append(path)
+    return path
 PROJECT = "skillproof-502320"; LOCATION = "global"; MODEL = "gemini-2.5-flash-image"
 STYLE = ("Premium 3D render, luxury game app-icon style, glossy materials, gold and emerald-green neon accents with a little "
          "hot-pink rim light, soft radial glow behind the object on a very dark near-black green background (not flat black), "
          "object fills ~80% of the frame, centered, sharp studio lighting, no text, no letters, no watermark.")
 
 def token():
-    creds = service_account.Credentials.from_service_account_file(SA, scopes=["https://www.googleapis.com/auth/cloud-platform"])
+    creds = service_account.Credentials.from_service_account_file(
+        sa_path(), scopes=["https://www.googleapis.com/auth/cloud-platform"])
     creds.refresh(Request()); return creds.token
 
 def gen(prompt, aspect="1:1"):
