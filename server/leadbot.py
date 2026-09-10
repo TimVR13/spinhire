@@ -50,6 +50,18 @@ FETCH_TIMEOUT = 12
 # Отклики старше этого срока не пересылаем: на первом запуске бот иначе высыпает
 # в чат весь исторический хвост. Их по-прежнему видно в /admin/crm/leads.
 MAX_AGE_DAYS = int(os.environ.get("SPINHIRE_LEAD_MAX_AGE_DAYS", "14"))
+# Нижняя граница: 09.09.2026 17:30 UTC — деплой 7fcb624, с которого кандидат
+# откликается на SpinHire, а не уходит по ссылке в первоисточник. Всё, что
+# раньше, компании предлагать нечестно: тот кандидат до неё дошёл сам.
+SINCE = os.environ.get("SPINHIRE_LEAD_SINCE", "2026-09-09T17:30:00")
+
+
+def _floor() -> datetime:
+    floor = datetime.utcnow() - timedelta(days=MAX_AGE_DAYS)
+    try:
+        return max(floor, datetime.fromisoformat(SINCE))
+    except ValueError:
+        return floor
 
 
 class LeadNotice(Base):
@@ -425,7 +437,7 @@ def pending_batches(db: Session, limit_companies: int = 6) -> tuple:
             .join(User, User.id == Application.user_id)
             .filter(Job.owner_id.is_(None))
             .order_by(Application.created_at.desc()).limit(200).all())
-    fresh_from = datetime.utcnow() - timedelta(days=MAX_AGE_DAYS)
+    fresh_from = _floor()
     stale = [r[0].id for r in rows
              if r[0].id not in sent and r[0].created_at and r[0].created_at < fresh_from]
     rows = [r for r in rows if r[0].id not in sent and r[0].id not in set(stale)]
@@ -464,7 +476,7 @@ def send_pending(db: Session, dry: bool = False, refresh_hr: bool = False) -> di
     if empty and not dry:
         for app_id in empty:
             db.add(LeadNotice(application_id=app_id, ok=False,
-                              error="старый отклик, пустое резюме или компания без имени"))
+                              error="отклик до отключения ссылок на первоисточник, пустое резюме или компания без имени"))
         db.commit()
     out["skipped"] = len(empty)
     for group in groups:
