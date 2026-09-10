@@ -63,7 +63,11 @@ def get_or_create_claim(db: Session, company_name: str, lang: str = "en") -> "Co
 
 
 def claim_url(row: "CompanyClaim") -> str:
-    return f"{(BASE_URL or 'https://spinhire.io').rstrip('/')}/claim/{row.token}"
+    """Ссылка в языке компании: /uk/claim/… отдаёт HR страницу целиком украинской
+    (шапка, кнопки, футер), русский — базовый язык сайта и префикса не требует."""
+    lang = (row.lang or "ru").lower()
+    prefix = "" if lang == "ru" else f"/{lang}"
+    return f"{(BASE_URL or 'https://spinhire.io').rstrip('/')}{prefix}/claim/{row.token}"
 
 
 def company_jobs(db: Session, slug: str, only_free: bool = True):
@@ -148,6 +152,30 @@ TEXT = {
                 "(имя, почта, телефон, мессенджер) — по тарифам: €5 за контакт, "
                 "€45 за 10, €120 за 30. Контакт руководителя уровня C-level — 5 открытий.",
         "used": "Эта ссылка уже использована — войдите в кабинет.",
+        "taken": "Такая почта уже зарегистрирована — войдите и заберите вакансии",
+    },
+    "uk": {
+        "kicker": "Ваші вакансії на SpinHire",
+        "title": "{company}: кандидати вже відгукнулися",
+        "lead": "Ми зібрали ваші вакансії на SpinHire — майданчику вакансій iGaming. "
+                "На них відгукуються кандидати. Заберіть вакансії у свій кабінет: "
+                "це безкоштовно й займає хвилину.",
+        "jobs": "Вакансій перейде в кабінет",
+        "apps": "Відгуків чекає на відповідь",
+        "cands": "Хто відгукнувся",
+        "form": "Створити кабінет компанії",
+        "email": "Робоча пошта",
+        "pass": "Пароль (від 6 символів)",
+        "name": "Ваше ім'я",
+        "submit": "Забрати вакансії →",
+        "have": "Вже є акаунт SpinHire?",
+        "login": "Увійдіть",
+        "attach": "Забрати вакансії в цей кабінет →",
+        "note": "Вакансії та кабінет — безкоштовно. Відкриття контакту кандидата "
+                "(ім'я, пошта, телефон, месенджер) — за тарифами: €5 за контакт, "
+                "€45 за 10, €120 за 30. Контакт керівника рівня C-level — 5 відкриттів.",
+        "used": "Це посилання вже використано — увійдіть у кабінет.",
+        "taken": "Ця пошта вже зареєстрована — увійдіть і заберіть вакансії",
     },
     "en": {
         "kicker": "Your jobs on SpinHire",
@@ -170,6 +198,7 @@ TEXT = {
                 "(name, email, phone, messenger) is charged at our rates: €5 per "
                 "contact, €45 for 10, €120 for 30. A C-level contact costs 5 credits.",
         "used": "This link has already been used — please sign in.",
+        "taken": "This email is already registered — sign in and claim the jobs",
     },
 }
 
@@ -227,10 +256,7 @@ def claim_register(token: str, request: Request, email: str = Form(...),
         return RedirectResponse("/login?claimed=1", status_code=303)
     em = email.strip().lower()
     if db.query(User).filter(func.lower(User.email) == em).first():
-        return _page(request, db, row, email=em,
-                     error="Такая почта уже зарегистрирована — войдите и заберите вакансии"
-                     if row.lang == "ru" else
-                     "This email is already registered — sign in and claim the jobs")
+        return _page(request, db, row, email=em, error=t["taken"])
     if len(password) < 6:
         return _page(request, db, row, email=em, error=t["pass"])
     user = User(email=em, password_hash=hash_pw(password), name=name.strip(),

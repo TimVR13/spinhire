@@ -88,6 +88,17 @@ class ClaimFlowTests(unittest.TestCase):
             self.assertIsNotNone(db.query(claim.CompanyClaim).filter_by(
                 company_slug=claim.slugify_company(self.company)).one().used_at)
 
+    def test_claim_link_opens_in_the_company_language(self):
+        with SessionLocal() as db:
+            row = claim.get_or_create_claim(db, self.company, "uk")
+            db.commit()
+            token = row.token
+            self.assertIn(f"/uk/claim/{token}", claim.claim_url(row))
+        with TestClient(app) as client:
+            page = client.get(f"/uk/claim/{token}")
+            self.assertEqual(page.status_code, 200)
+            self.assertIn("Забрати вакансії", page.text)
+
     def test_claim_link_is_stable_for_the_same_company(self):
         with SessionLocal() as db:
             first = claim.get_or_create_claim(db, self.company, "en")
@@ -107,10 +118,14 @@ class LeadbotTextTests(unittest.TestCase):
         self.assertEqual(leadbot.company_lang(
             [SimpleNamespace(title="VIP Manager", company_name="X", description="",
                              location="Malta", source="greenhouse:x")]), "en")
-        # украинская вакансия — тоже английский: русский шаблон ей не подходит
+        # украинская вакансия — украинский шаблон, не русский
         self.assertEqual(leadbot.company_lang(
             [SimpleNamespace(title="QA інженер", company_name="X", description="Досвід",
-                             location="Kyiv", source="djinni")]), "en")
+                             location="Kyiv", source="")]), "uk")
+        # площадка украинская, а текст вакансии русский — всё равно украинский
+        self.assertEqual(leadbot.company_lang(
+            [SimpleNamespace(title="Менеджер по работе с клиентами", company_name="X",
+                             description="Опыт", location="Remote", source="djinni")]), "uk")
         # русскоязычный телеграм-канал как источник
         self.assertEqual(leadbot.company_lang(
             [SimpleNamespace(title="Key Account Manager", company_name="X", description="",
@@ -127,12 +142,27 @@ class LeadbotTextTests(unittest.TestCase):
         self.assertIn("VIP Manager", ru)
         en = leadbot.build_hr_text("Test Ltd", items, "en")
         self.assertIn("applied to your job", en)
+        uk = leadbot.build_hr_text("Test Ltd", items, "uk")
+        self.assertIn("Доброго дня", uk)
+        self.assertIn("з'явився відгук", uk)
+        self.assertIn("пройти реєстрацію", uk)
+        self.assertNotIn("Добрый день", uk)
 
     def test_link_text_carries_link_and_price(self):
-        text = leadbot.build_link_text("Test Ltd", "https://spinhire.io/claim/abc", 12, "ru")
-        self.assertIn("https://spinhire.io/claim/abc", text)
-        self.assertIn("12", text)
-        self.assertIn("€5", text)
+        for lang, marker in (("ru", "Ссылка для регистрации"),
+                             ("uk", "Посилання для реєстрації"),
+                             ("en", "Registration link")):
+            text = leadbot.build_link_text("Test Ltd", "https://spinhire.io/claim/abc",
+                                           12, lang)
+            self.assertIn(marker, text)
+            self.assertIn("https://spinhire.io/claim/abc", text)
+            self.assertIn("12", text)
+            self.assertIn("€5", text)
+
+    def test_claim_page_speaks_every_language(self):
+        for code in ("ru", "uk", "en"):
+            self.assertEqual(set(claim.TEXT[code]), set(claim.TEXT["en"]))
+        self.assertIn("Забрати вакансії", claim.TEXT["uk"]["submit"])
 
     def test_emails_are_filtered_to_the_company_domain(self):
         page = ('hello hr@acme.com, sales@acme.com, spam@example.com, '

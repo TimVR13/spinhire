@@ -280,46 +280,58 @@ RU_PLACES = ("cyprus", "кипр", "limassol", "лимассол", "nicosia", "g
              "казах", "almaty", "алматы", "belarus", "беларус", "minsk", "минск",
              "russia", "росси", "moscow", "москв", "montenegro", "черногор",
              "serbia", "сербия", "belgrade", "белград")
-RU_SOURCES = ("telegram:", "hh.ru", "hh:")   # русскоязычные каналы и борды
+UA_PLACES = ("ukraine", "україн", "украин", "kyiv", "kiev", "київ", "киев", "lviv",
+             "львів", "львов", "odesa", "odessa", "одес", "kharkiv", "харків", "харьков",
+             "dnipro", "дніпро", "днепр", "vinnytsia", "вінниц", "ivano-frankivsk")
+RU_SOURCES = ("telegram:", "hh.ru", "hh:")            # русскоязычные каналы и борды
+UA_SOURCES = ("djinni", "rabota.ua", "work.ua", "dou")  # украинские площадки
 
 
 def company_lang(jobs) -> str:
-    """RU — только при явном признаке русскоязычной команды.
+    """Язык письма компании: uk | ru | en. По умолчанию английский.
 
-    Английское письмо русскоязычному HR читается нормально, обратное — нет,
-    поэтому по умолчанию английский. Украинские вакансии тоже уходят на
-    английском: русский шаблон украинской компании — плохая идея, а
-    украинского у нас нет (Djinni и rabota.ua ловятся именно так).
+    Украинская площадка или украинские буквы (і, ї, є, ґ) — пишем украинской
+    компании по-украински, даже если сама вакансия составлена по-русски:
+    русский шаблон здесь читается как чужой.
     """
     texts = [" ".join([job.title or "", job.company_name or "",
                        (job.description or "")[:600]]) for job in jobs]
+    sources = [(job.source or "").lower() for job in jobs]
+    places = [(job.location or "").lower() for job in jobs]
     if any(UA_RE.search(blob) for blob in texts):
-        return "en"
+        return "uk"
+    if any(src.startswith(UA_SOURCES) for src in sources):
+        return "uk"
     if any(CYR_RE.search(blob) for blob in texts):
         return "ru"
-    if any((job.source or "").lower().startswith(RU_SOURCES) for job in jobs):
+    if any(src.startswith(RU_SOURCES) for src in sources):
         return "ru"
-    for job in jobs:
-        place = (job.location or "").lower()
-        if any(word in place for word in RU_PLACES):
-            return "ru"
+    if any(word in place for place in places for word in UA_PLACES):
+        return "uk"
+    if any(word in place for place in places for word in RU_PLACES):
+        return "ru"
     return "en"
 
 
 # ---------- тексты ----------
 
+WHO = {"ru": "Кандидат", "uk": "Кандидат", "en": "Candidate"}
+APPLIED = {"ru": "▸ {who} → откликнулся на «{job}»",
+           "uk": "▸ {who} → відгукнувся на «{job}»",
+           "en": "▸ {who} → applied to “{job}”"}
+SKILLS = {"ru": "  Навыки: ", "uk": "  Навички: ", "en": "  Skills: "}
+
+
 def _card_lines(card: dict, job_title: str, lang: str) -> str:
-    who = card.get("title") or ("Кандидат" if lang == "ru" else "Candidate")
+    who = card.get("title") or WHO.get(lang, WHO["en"])
     facts = " · ".join(card.get("facts") or [])
     skills = ", ".join(card.get("skills") or [])
     about = (card.get("about") or "")[:400]
-    head = (f"▸ {who} → откликнулся на «{job_title}»" if lang == "ru"
-            else f"▸ {who} → applied to “{job_title}”")
-    lines = [head]
+    lines = [APPLIED.get(lang, APPLIED["en"]).format(who=who, job=job_title)]
     if facts:
         lines.append(f"  {facts}")
     if skills:
-        lines.append(("  Навыки: " if lang == "ru" else "  Skills: ") + skills)
+        lines.append(SKILLS.get(lang, SKILLS["en"]) + skills)
     if about:
         lines.append(f"  {about}")
     return "\n".join(lines)
@@ -330,8 +342,17 @@ def build_hr_text(company_name: str, items: list, lang: str) -> str:
     cards = "\n\n".join(_card_lines(it["card"], it["job"].title, lang) for it in items[:4])
     titles = sorted({it["job"].title for it in items})
     one = len(items) == 1
-    job_line = ("«" + "», «".join(titles[:3]) + "»" if lang == "ru"
+    job_line = ("«" + "», «".join(titles[:3]) + "»" if lang in ("ru", "uk")
                 else "“" + "”, “".join(titles[:3]) + "”")
+    if lang == "uk":
+        head = (f"На нашій платформі SpinHire з'явився відгук на вашу вакансію {job_line}. "
+                f"Ось коротке резюме кандидата:" if one else
+                f"На нашій платформі SpinHire з'явилися відгуки на ваші вакансії {job_line}. "
+                f"Ось короткі резюме кандидатів:")
+        tail = ("Щоб отримати його повне резюме, вам необхідно пройти реєстрацію."
+                if one else
+                "Щоб отримати їхні повні резюме, вам необхідно пройти реєстрацію.")
+        return f"Доброго дня!\n\n{head}\n\n{cards}\n\n{tail}"
     if lang == "ru":
         head = (f"На нашей платформе SpinHire появился отклик на вашу вакансию {job_line}. "
                 f"Вот краткое резюме кандидата:" if one else
@@ -356,8 +377,17 @@ def build_link_text(company_name: str, url: str, jobs_count: int, lang: str,
     price = ("Открытие контакта кандидата — по нашим расценкам: €5 за контакт, "
              "€45 за 10, €120 за 30. Контакт руководителя уровня C-level — 5 открытий."
              if lang == "ru" else
+             "Відкриття контакту кандидата — за нашими розцінками: €5 за контакт, "
+             "€45 за 10, €120 за 30. Контакт керівника рівня C-level — 5 відкриттів."
+             if lang == "uk" else
              "Opening a candidate contact is charged at our rates: €5 per contact, "
              "€45 for 10, €120 for 30. A C-level contact costs 5 credits.")
+    if lang == "uk":
+        return (f"Посилання для реєстрації: {url}\n\n"
+                f"За ним ви створюєте кабінет компанії (пошта, пароль, підтвердження пошти). "
+                f"У кабінеті одразу й безкоштовно лежать усі ваші вакансії — "
+                f"{jobs_count} шт., ми зібрали їх з ваших кар'єрних сторінок. "
+                f"Там же ви бачите відгуки.\n\n{price}")
     if lang == "ru":
         return (f"Ссылка для регистрации: {url}\n\n"
                 f"По ней вы заводите кабинет компании (почта, пароль, подтверждение почты). "
@@ -410,8 +440,9 @@ def build_owner_text(company_name: str, items: list, hr: dict, lang: str) -> str
     if not (hr.get("emails") or hr.get("guesses")):
         lines.append("Почта не нашлась — пишите в LinkedIn")
     lines.append("LinkedIn:\n" + _esc(hr["linkedin"]))
-    lines.append(f"\nЯзык письма: {'русский' if lang == 'ru' else 'английский'}"
-                 f"\nКарточка в CRM: {SITE}/admin/crm/leads")
+    lines.append("\nЯзык письма: "
+                 + {"ru": "русский", "uk": "украинский", "en": "английский"}.get(lang, lang)
+                 + f"\nКарточка в CRM: {SITE}/admin/crm/leads")
     return "\n".join(lines)
 
 
