@@ -100,13 +100,21 @@ class LeadbotTextTests(unittest.TestCase):
     def test_company_lang_follows_cyrillic_and_offices(self):
         self.assertEqual(leadbot.company_lang(
             [SimpleNamespace(title="VIP-менеджер", company_name="X", description="",
-                             location="Remote")]), "ru")
+                             location="Remote", source="")]), "ru")
         self.assertEqual(leadbot.company_lang(
             [SimpleNamespace(title="VIP Manager", company_name="X", description="",
-                             location="Limassol, Cyprus")]), "ru")
+                             location="Limassol, Cyprus", source="")]), "ru")
         self.assertEqual(leadbot.company_lang(
             [SimpleNamespace(title="VIP Manager", company_name="X", description="",
-                             location="Malta")]), "en")
+                             location="Malta", source="greenhouse:x")]), "en")
+        # украинская вакансия — тоже английский: русский шаблон ей не подходит
+        self.assertEqual(leadbot.company_lang(
+            [SimpleNamespace(title="QA інженер", company_name="X", description="Досвід",
+                             location="Kyiv", source="djinni")]), "en")
+        # русскоязычный телеграм-канал как источник
+        self.assertEqual(leadbot.company_lang(
+            [SimpleNamespace(title="Key Account Manager", company_name="X", description="",
+                             location="Remote", source="telegram:betting_job")]), "ru")
 
     def test_hr_text_matches_the_agreed_script(self):
         items = [{"card": {"title": "VIP Manager", "facts": ["5 yrs"], "skills": ["CRM"],

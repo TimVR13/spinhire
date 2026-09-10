@@ -274,19 +274,31 @@ def is_real_company(name: str) -> bool:
 
 
 CYR_RE = re.compile(r"[а-яё]", re.I)
+UA_RE = re.compile(r"[іїєґ]", re.I)          # украинские буквы, которых нет в русском
 RU_PLACES = ("cyprus", "кипр", "limassol", "лимассол", "nicosia", "georgia", "грузи",
              "tbilisi", "тбилиси", "armenia", "армени", "yerevan", "ереван", "kazakh",
-             "казах", "almaty", "алматы", "ukraine", "украин", "kyiv", "киев", "belarus",
-             "беларус", "minsk", "минск", "russia", "росси", "moscow", "москв",
-             "montenegro", "черногор", "serbia", "сербия", "belgrade", "белград")
+             "казах", "almaty", "алматы", "belarus", "беларус", "minsk", "минск",
+             "russia", "росси", "moscow", "москв", "montenegro", "черногор",
+             "serbia", "сербия", "belgrade", "белград")
+RU_SOURCES = ("telegram:", "hh.ru", "hh:")   # русскоязычные каналы и борды
 
 
 def company_lang(jobs) -> str:
-    """RU, если у компании русскоязычная команда: кириллица в вакансиях или офис в СНГ."""
-    for job in jobs:
-        blob = " ".join([job.title or "", job.company_name or "", (job.description or "")[:600]])
-        if CYR_RE.search(blob):
-            return "ru"
+    """RU — только при явном признаке русскоязычной команды.
+
+    Английское письмо русскоязычному HR читается нормально, обратное — нет,
+    поэтому по умолчанию английский. Украинские вакансии тоже уходят на
+    английском: русский шаблон украинской компании — плохая идея, а
+    украинского у нас нет (Djinni и rabota.ua ловятся именно так).
+    """
+    texts = [" ".join([job.title or "", job.company_name or "",
+                       (job.description or "")[:600]]) for job in jobs]
+    if any(UA_RE.search(blob) for blob in texts):
+        return "en"
+    if any(CYR_RE.search(blob) for blob in texts):
+        return "ru"
+    if any((job.source or "").lower().startswith(RU_SOURCES) for job in jobs):
+        return "ru"
     for job in jobs:
         place = (job.location or "").lower()
         if any(word in place for word in RU_PLACES):
