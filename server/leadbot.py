@@ -49,6 +49,9 @@ _hours = os.environ.get("SPINHIRE_LEAD_HOURS", "9-22").split("-")
 HOUR_FROM, HOUR_TO = int(_hours[0]), int(_hours[-1])
 SITE = (BASE_URL or "https://spinhire.io").rstrip("/")
 FETCH_TIMEOUT = 12
+# Сколько всего ходить по сайту одной компании. Без потолка один медленный
+# домен (12 с на страницу × десяток адресов) держит весь прогон рассылки.
+HR_BUDGET = float(os.environ.get("SPINHIRE_LEAD_HR_BUDGET", "20"))
 # Отклики старше этого срока не пересылаем: на первом запуске бот иначе высыпает
 # в чат весь исторический хвост. Их по-прежнему видно в /admin/crm/leads.
 MAX_AGE_DAYS = int(os.environ.get("SPINHIRE_LEAD_MAX_AGE_DAYS", "14"))
@@ -202,18 +205,20 @@ def find_hr(db: Session, company_name: str, jobs, refresh: bool = False) -> dict
         website = f"https://{host}"
 
     emails, guesses = [], []
+    deadline = time.monotonic() + HR_BUDGET
     if domain:
         hosts = [domain] + ([host] if host and host != domain else [])
         for site in hosts:
             for path in CONTACT_PATHS:
-                if len(emails) >= 3:
+                if len(emails) >= 3 or time.monotonic() > deadline:
                     break
                 try:
                     emails += [m for m in _emails_from(_get(f"https://{site}{path}"), domain)
                                if m not in emails]
                 except Exception:                              # noqa: BLE001
                     continue
-        if careers and not any(m.split("@")[0] in HR_WORDS for m in emails):
+        if (careers and time.monotonic() < deadline
+                and not any(m.split("@")[0] in HR_WORDS for m in emails)):
             try:
                 emails += [m for m in _emails_from(_get(careers), domain) if m not in emails]
             except Exception:                                  # noqa: BLE001
