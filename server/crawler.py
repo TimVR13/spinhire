@@ -1968,9 +1968,24 @@ def crawl_bettingjobs(max_details: int = 150):
 
 
 # ---------- фильтр релевантности ----------
-# Борд — про карьеры в iGaming. Физические/сервисные роли наземных казино и
-# офисов (уборка, кухня, охрана, склад) не публикуем, даже если компания наша.
-_RELEVANT_OVERRIDE_RE = re.compile(r"game\s+(?:host|presenter)|croupier|dealer", re.I)
+# Борд — про карьеры в iGaming. Физические и сервисные роли наземных казино,
+# отелей и офисов (уборка, кухня, спа, торговый зал, склад, логистика) не
+# публикуем, даже если компания наша. Игровой этаж наземки остаётся: дилеры,
+# слоты, касса-cage, наблюдение — это всё-таки гемблинг.
+_RELEVANT_OVERRIDE_RE = re.compile(
+    # игровой этаж, лайв-казино и работа с игроком
+    r"game\s+(?:host|presenter)|croupier|dealer|table\s+games|pit\s+(?:manager|boss)|"
+    r"slot\s+(?:attendant|technician|performance|operations|host)|"
+    r"casino\s+(?:host|cashier|ops|operations)|\bcage\b|count\s*room|countroom|"
+    r"main\s+banker|drop\s+and\s+count|surveillance|sportsbook|player\s+development|"
+    r"\bvlt\b|racing\s+secretary|on\s+camera|live\s+casino|"
+    # цифровые роли, которые ловятся общими словами (server, security, warehouse)
+    r"data\s+(?:warehouse|engineer|centre|center)|sql\s+server|windows\s+server|"
+    r"server\s+(?:administrator|admin|engineer|side)|"
+    r"(?:information|cyber|cloud|application|product|network|infra\w*|it|data)\s+security|"
+    r"security\s+(?:engineer|analyst|architect|operations|awareness)|infosec|appsec|"
+    r"production\s+(?:operator|manager|coordinator|editor)|"
+    r"software\s+supply\s+chain|supply\s+chain\s+(?:security|risk)", re.I)
 _IRRELEVANT_TITLE_RE = re.compile(
     r"\b("
     r"housekeep\w*|cleaner|cleaning|janitor|steward\w*|laundry|"
@@ -1989,6 +2004,39 @@ _IRRELEVANT_TITLE_RE = re.compile(
     r"охорон\w*|прибиральн\w*|покоївк\w*|кухар\w*|офіціант\w*|водій|кур'?єр\w*|"
     r"вантажник\w*|різнороб\w*|адміністратор\w* (?:на|у) ресепшн|ресепшн"
     r")\b", re.I)
+
+
+# Второй список — там, где границу слова не поставить в общей обёртке: роли
+# отеля, ресторана, торгового зала, склада и инженерной службы здания.
+_OFFTOPIC_TITLE_RE = re.compile(
+    # ресторан, бар, банкеты
+    r"\bdishwasher\b|\bbus\s*(?:person|boy)\b|\bfood\s+runner\b|\bbar\s+(?:prep|back)\b|"
+    r"\bfountain\s+worker\b|\bbanquet\b|\bhostess\b|\bhost\s+person\b|\bsommelier\b|"
+    r"\b(?:food|beverage|banquet|cocktail|specialty|assistant|room)\s+server\b|"
+    r"(?:^|[-–—(,]\s*)server\b|\bserver\s*[-–—]|\bserver\s*$|"
+    r"\brestaurant\s+(?:manager|supervisor|assistant)\b|"
+    r"\bbeverage\s+(?:shift\s+)?supervisor\b|"
+    # отель, спа, бассейн, зона отдыха
+    r"\bguest\s+room\b|\broom\s+inspector\b|\bconcierge\b|\bbell\s*(?:hop|man|person)\b|"
+    r"\bspa\b|\bpool\s+attendant\b|\battendant\s+(?:pool|spa|wardrobe)\b|\blifeguard\b|"
+    r"\bwardrobe\b|\bpublic\s+areas\b|\bcabana\b|\bfront\s+desk\b|"
+    r"\battraction\s+ambassador\b|"
+    # торговый зал
+    r"\b(?:retail\s+)?sales\s+associate\b|\bstock\s+associate\b|\bstocker\b|\bcashier\b|"
+    # склад и логистика
+    r"\blogistics?\b|\bsupply\s*chain\b|\bfreight\b|\bcargo\b|\bshipping\b|"
+    r"\bcustoms\s+(?:broker|clerk|officer)\b|\bmaterial\s+(?:picker|handler|handling)\b|"
+    r"\border\s+picker\b|\binventory\s+(?:clerk|associate|controller)\b|"
+    r"\bлогист\w*\b|\bсклад(?:ск\w+|)\b|\bперевозк\w*\b|"
+    # производство физических автоматов
+    r"\bassembly\b|\bproduction\s+test\b|\bmachine\s+operator\b|\bwelder\b|"
+    # инженерная служба здания и физическая охрана
+    r"\bgeneral\s+maint\w*\b|\(maintenance\)|\bmechanic\b|\blife\s+safety\b|"
+    r"\bsecurity\s*[/\s]\s*(?:shift\s+)?(?:supervisor|officer|guard|host|agent)\b|"
+    r"\bsecurity\s+shift\b|\bdirector\s+of\s+security\b|"
+    # совсем другие отрасли
+    r"\breal\s+estate\b|\bquantity\s+surveyor\b|\buav\b|\bdrone\b|"
+    r"\bрецепці\w*|\bресепш\w*|\bадм[іи]н[іи]стратор\w*\s+рецепц\w*", re.I)
 
 
 # Компании общего профиля: аутсорс, бигтех, консалтинг, универсальные платёжки.
@@ -2014,11 +2062,15 @@ def company_is_offtopic(company: str, title: str = "", description: str = "") ->
 # только если в тексте есть отраслевой маркер или компания уже известна как iGaming
 # (есть на профильных источниках или в каталоге компаний).
 GENERIC_SOURCES = ("djinni", "hh.ru", "work.ua", "rabota.ua", "partner:", "justjoin.it", "arbeitnow", "dev.bg")
+# «betting on» — оборот речи («мы делаем ставку на Google Ads»), а не отрасль.
+# «slot» в единственном числе — это ещё и слот памяти в прошивке дрона.
+# KYC/AML в маркеры не берём: это словарь всего финтеха, банков и крипты.
 IGAMING_SIGNAL_RE = re.compile(
-    r"igaming|i-gaming|gambl|гембл|casino|казино|bett?ing|беттінг|беттинг|bookmak|букмекер|sportsbook|"
-    r"ставк[аи] на спорт|ставок на спорт|\bslots?\b|слот|poker|покер|bingo|бинго|lotter|лотере|азарт|игорн|"
+    r"igaming|i-gaming|gambl|гембл|casino|казино|bett?ing\b(?!\s+on\b)|беттінг|беттинг|bookmak|букмекер|sportsbook|"
+    r"ставк[аи] на спорт|ставок на спорт|\bslots\b|\bslot\s+(?:game|machine|provider|studio|content|develop)|"
+    r"слот|poker|покер|bingo|бинго|lotter|лотере|азарт|игорн|"
     r"live[ -]?dealer|croupier|крупье|круп'є|game (?:provider|studio|presenter)|wager|jackpot|джекпот|roulette|рулетк|"
-    r"esports? bet|fantasy sports|sweepstake|social casino|\bkyc\b|\baml\b|responsible gaming|gaming (?:operator|industry|licen)|"
+    r"esports? bet|fantasy sports|sweepstake|social casino|responsible gaming|gaming (?:operator|industry|licen)|"
     r"\bmga\b|curacao licen|ukgc|gaming authority", re.I)
 
 
@@ -2026,20 +2078,54 @@ def is_generic_source(source: str) -> bool:
     return any((source or "").startswith(p) for p in GENERIC_SOURCES)
 
 
+def companies_proven_by_signal(db, Job) -> set:
+    """Компании с универсальных бордов, доказавшие профиль делом.
+    Нужно минимум две вакансии с отраслевыми маркерами и не меньше трети всего
+    их потока: у настоящего оператора или аффилиата так и есть, а у аутсорса и
+    рекрут-агентства гемблинг-заказ — редкое исключение среди SAP и Amazon PPC."""
+    stats = {}
+    rows = (db.query(Job.company_name, Job.source, Job.title, Job.description)
+            .filter(Job.source != "").all())
+    for name, source, title, description in rows:
+        if not name or not is_generic_source(source):
+            continue
+        stat = stats.setdefault(name.strip().lower(), [0, 0])
+        stat[0] += 1
+        if IGAMING_SIGNAL_RE.search(f"{title}\n{name}\n{description or ''}"):
+            stat[1] += 1
+    return {name for name, (total, signal) in stats.items()
+            if signal >= 2 and signal * 3 >= total}
+
+
+def catalog_igaming_companies(entries) -> set:
+    """Из снимка каталога берём только тех, кто пришёл с профильного источника."""
+    names = set()
+    for company in entries or []:
+        sources = company.get("sources") or []
+        if company.get("name") and any(not is_generic_source(s) for s in sources):
+            names.add(company["name"].strip().lower())
+    return names
+
+
 def known_igaming_companies(db, Job) -> set:
-    """Компании, которые точно из индустрии: пришли с профильных источников или есть в каталоге."""
+    """Компании, которые точно из индустрии: пришли с профильных источников
+    либо сами доказали профиль потоком вакансий."""
     names = set()
     rows = db.query(Job.company_name, Job.source).filter(Job.source != "").distinct().all()
     for name, source in rows:
         if name and not is_generic_source(source):
             names.add(name.strip().lower())
+    # companies.json — снимок каталога, собранный из этих же вакансий, включая
+    # универсальные борды. Доверяем только компаниям с профильных источников:
+    # иначе каталог сам себя одобряет — попал раз, и весь поток проходит без
+    # проверки (так на борд заезжали аутсорс, форекс и облачная безопасность).
     try:
-        for c in json.loads((Path(__file__).resolve().parent.parent / "data" / "companies.json").read_text(encoding="utf-8")):
-            if c.get("name"):
-                names.add(c["name"].strip().lower())
+        entries = json.loads((Path(__file__).resolve().parent.parent / "data" /
+                              "companies.json").read_text(encoding="utf-8"))
+        names |= catalog_igaming_companies(entries)
     except Exception:  # noqa: BLE001
         pass
-    return names
+    return names | companies_proven_by_signal(db, Job)
 
 
 def generic_job_offtopic(source: str, title: str, company: str, description: str, known: set) -> bool:
@@ -2057,7 +2143,7 @@ def job_is_irrelevant(title: str) -> bool:
     t = title or ""
     if _RELEVANT_OVERRIDE_RE.search(t):
         return False
-    return bool(_IRRELEVANT_TITLE_RE.search(t))
+    return bool(_IRRELEVANT_TITLE_RE.search(t) or _OFFTOPIC_TITLE_RE.search(t))
 
 
 def sweep_irrelevant(db, Job, dry: bool = False, samples: list | None = None) -> int:

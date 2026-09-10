@@ -120,3 +120,91 @@ class CrawlerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RelevanceFilterTests(unittest.TestCase):
+    """Борд — про iGaming. Проверяем, что мимо не проезжает логистика,
+    ресторан наземного казино и аутсорс с универсального борда."""
+
+    def test_offtopic_roles_are_irrelevant(self):
+        for title in ("Global Logistics Lead", "Director of Supply Chain Accounting",
+                      "Logistics Coordinator", "Shipping Specialist I", "Material Handler I",
+                      "Dishwasher Brew Brothers", "Beverage Server (Harrah's)",
+                      "Server - Part Time (New Haven Winners Circle)", "Brew Brothers Server",
+                      "GUEST ROOM ATTENDANT", "Spa Attendant", "Lifeguard (Citywide LV)",
+                      "Concierge - Villas", "Retail Sales Associate - Full Time",
+                      "Cashier - Cross Street Grill", "Restaurant Manager - Brew Brothers",
+                      "Security Supervisor - Full Time", "Mechanic General Maint A",
+                      "Engineer I (Maintenance)", "Assembly and Handling Technician",
+                      "Quantity Surveyor", "Administrator - Real Estate",
+                      "UAV Pilot and Technician", "Адіністратор рецепції"):
+            with self.subTest(title=title):
+                self.assertTrue(crawler.job_is_irrelevant(title))
+
+    def test_igaming_roles_survive_the_filter(self):
+        for title in ("Table Games Dealer", "WSOP Dealer", "ASSISTANT PIT MANAGER",
+                      "Cage Cashier", "Casino Cashier-Full-Time(Bettendorf)",
+                      "Count Room Team Member", "Slot Attendant | Part Time",
+                      "Slot Technician", "Surveillance Operator", "Executive Casino Host",
+                      "Sportsbook Ticket Writer", "Shift Manager VLT",
+                      "Cashier? Earn Up to $23/hr (Tips) On Camera – No Register",
+                      "Data Warehouse Modelling Engineer", "SQL Server Administrator",
+                      "Information Security Manager", "Production Operator Part Time",
+                      "Senior Software Supply Chain Security Researcher",
+                      "VIP Manager", "Head of Affiliates", "AML Officer"):
+            with self.subTest(title=title):
+                self.assertFalse(crawler.job_is_irrelevant(title))
+
+    def test_catalog_trusts_only_niche_sources(self):
+        # каталог компаний собран из тех же вакансий: доверять его строкам с
+        # универсальных бордов нельзя, иначе он сам себя одобряет
+        entries = [{"name": "Upwind", "sources": ["djinni"]},
+                   {"name": "Bank Pivdenny", "sources": ["djinni", "work.ua"]},
+                   {"name": "Betsson Group", "sources": ["greenhouse:betsson", "djinni"]},
+                   {"name": "SOFTSWISS", "sources": ["softswiss"]},
+                   {"name": "Без источников", "sources": []}]
+        self.assertEqual(crawler.catalog_igaming_companies(entries),
+                         {"betsson group", "softswiss"})
+
+    def test_company_proves_profile_by_its_own_flow(self):
+        rows = [
+            # аутсорс: один гемблинг-заказ среди чужих отраслей — доверия нет
+            ("Sigma Software", "djinni", "Casino platform developer", ""),
+            ("Sigma Software", "djinni", "SAP Consultant", ""),
+            ("Sigma Software", "djinni", "Amazon PPC Specialist", ""),
+            ("Sigma Software", "djinni", "Shopify Developer", ""),
+            # аффилиат: отрасль в большинстве вакансий
+            ("RedCore", "djinni", "Affiliate Manager", "iGaming traffic"),
+            ("RedCore", "djinni", "Senior SEO Specialist", "casino brands"),
+            ("RedCore", "djinni", "Product Manager", ""),
+            # профильный источник в вайтлист через эту функцию не попадает
+            ("Betsson Group", "greenhouse:betsson", "Backend Engineer", ""),
+        ]
+
+        class Query:
+            def filter(self, *args, **kwargs):
+                return self
+
+            def distinct(self):
+                return self
+
+            def all(self):
+                return rows
+
+        class DB:
+            def query(self, *args):
+                return Query()
+
+        job = SimpleNamespace(company_name="", source="", title="", description="")
+        self.assertEqual(crawler.companies_proven_by_signal(DB(), job), {"redcore"})
+
+    def test_signal_ignores_words_from_other_industries(self):
+        for text in ("Google Ads is the channel we're betting on",
+                     "A/B (dual-slot) update schemes and OTA frameworks",
+                     "integrations with third-party providers for KYC, payments and compliance"):
+            with self.subTest(text=text):
+                self.assertIsNone(crawler.IGAMING_SIGNAL_RE.search(text))
+        for text in ("experience in sports betting", "iGaming affiliate marketing",
+                     "slots content roadmap", "live dealer studio", "MGA licence"):
+            with self.subTest(text=text):
+                self.assertIsNotNone(crawler.IGAMING_SIGNAL_RE.search(text))
