@@ -178,10 +178,12 @@ def _footer(draw, lang: str, accent, note: str = ""):
         draw.text((56, H - 112), note, font=font, fill=MUTE)
 
 
-def _png(img) -> bytes:
+def _jpeg(img) -> bytes:
+    """JPEG, а не PNG: фото на фоне даёт полмегабайта в PNG, и Телеграм
+    всё равно пережимает картинку в JPEG на своей стороне."""
     import io
     buf = io.BytesIO()
-    img.save(buf, format="PNG", optimize=True)
+    img.save(buf, format="JPEG", quality=90, optimize=True, progressive=True)
     return buf.getvalue()
 
 
@@ -225,7 +227,7 @@ def digest_card(lang: str, rows, total_open: int = 0, extra: int = 0):
             note = f"{note} · {_jobs_count(total_open, lang)}" if note else \
                 _jobs_count(total_open, lang)
         _footer(draw, lang, accent, note)
-        return _png(img)
+        return _jpeg(img)
     except Exception as exc:                                    # noqa: BLE001
         print(f"[tgcards] дайджест без картинки: {type(exc).__name__}: {exc}")
         return None
@@ -248,7 +250,7 @@ def hot_card(lang: str, title: str, salary: str, place: str, company: str = ""):
             _fit(draw, line, 56, bottom + 22, 900, 28, GREEN, "regular")
         _fit(draw, _clean(salary), 56, bottom + 76, 820, 62, accent)
         _footer(draw, lang, accent)
-        return _png(img)
+        return _jpeg(img)
     except Exception as exc:                                    # noqa: BLE001
         print(f"[tgcards] горячая вакансия без картинки: {type(exc).__name__}: {exc}")
         return None

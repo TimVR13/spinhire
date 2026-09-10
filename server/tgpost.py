@@ -402,7 +402,7 @@ def _photo(chat_id: str, photo: bytes, caption: str) -> dict:
         body += (f"--{boundary}\r\nContent-Disposition: form-data; "
                  f"name=\"{name}\"\r\n\r\n{value}\r\n").encode()
     body += (f"--{boundary}\r\nContent-Disposition: form-data; name=\"photo\"; "
-             f"filename=\"spinhire.png\"\r\nContent-Type: image/png\r\n\r\n").encode()
+             f"filename=\"spinhire.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n").encode()
     body += photo + b"\r\n" + f"--{boundary}--\r\n".encode()
     req = urllib.request.Request(
         f"https://api.telegram.org/bot{TOKEN}/sendPhoto", data=bytes(body),
