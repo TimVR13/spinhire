@@ -126,7 +126,10 @@ async def jobs_apply(request: Request, x_publish_key: str = Header(default=""),
     updates = await request.json()
     if not isinstance(updates, dict):
         raise HTTPException(400, "ожидается {\"<id>\": {...}}")
+    from server import crawler
     approved, rejected, edited, skipped, missing = [], [], [], [], []
+    # вайтлист компаний считаем один раз и только если что-то одобряют
+    known = None
     for raw_id, payload in updates.items():
         try:
             job = db.get(Job, int(raw_id))
@@ -145,8 +148,23 @@ async def jobs_apply(request: Request, x_publish_key: str = Header(default=""),
             edited.append({"id": job.id, "fields": changed})
         action = (payload.get("action") or "skip").lower()
         if action == "approve":
-            job.status = "approved"
-            approved.append(job.id)
+            # борд про iGaming: одобрение модератора не отменяет фильтр
+            # релевантности, иначе логистика и аутсорс висят до следующего
+            # прохода краулера
+            if known is None:
+                known = crawler.known_igaming_companies(db, Job)
+            offtopic = (crawler.job_is_irrelevant(job.title)
+                        or crawler.company_is_offtopic(job.company_name, job.title,
+                                                       job.description or "")
+                        or crawler.generic_job_offtopic(job.source, job.title, job.company_name,
+                                                        job.description or "", known))
+            if offtopic:
+                job.status = "rejected"
+                job.closed_at = datetime.utcnow().date().isoformat()
+                rejected.append({"id": job.id, "reason": "не про iGaming"})
+            else:
+                job.status = "approved"
+                approved.append(job.id)
         elif action == "reject":
             job.status = "rejected"
             job.closed_at = datetime.utcnow().date().isoformat()
