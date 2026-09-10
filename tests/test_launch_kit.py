@@ -2,6 +2,7 @@
 
 пресс-кит с живыми цифрами и английский открытый API без кириллицы в значениях.
 """
+import os
 import re
 import unittest
 from html import unescape
@@ -114,6 +115,22 @@ class LaunchKitTests(unittest.TestCase):
             self.assertGreater(len(payload), 100, lang)
             self.assertIn("Вакансии", payload, lang)
         self.assertEqual(client.get("/js/i18n-xx.js").status_code, 404)
+
+    def test_product_hunt_badge_appears_only_when_configured(self):
+        # до запуска id поста не существует: без переменной в разметке не должно быть
+        # ни ссылки на PH, ни запроса к api.producthunt.com
+        self.assertNotIn("ph-badge", client.get("/en/jobs").text)
+        os.environ["SPINHIRE_PH_POST_ID"] = "123456"
+        try:
+            body = client.get("/en/jobs").text
+            self.assertIn('class="ph-badge"', body)
+            self.assertIn("post_id=123456", body)
+            self.assertIn("producthunt.com/posts/spinhire", body)
+            # бейдж один и на языковых версиях тоже
+            self.assertEqual(client.get("/de/press.html").text.count("ph-badge"), 1)
+        finally:
+            os.environ.pop("SPINHIRE_PH_POST_ID")
+        self.assertNotIn("ph-badge", client.get("/en/jobs").text)
 
     def test_market_stats_translate_directions_for_english(self):
         ru = client.get("/api/market-stats").json()

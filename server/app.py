@@ -2244,6 +2244,24 @@ def _lang_links(path: str, current: str) -> str:
             + "".join(links) + "</nav>")
 
 
+def _ph_badge() -> str:
+    """Бейдж Product Hunt в подвале — появляется, когда задан SPINHIRE_PH_POST_ID.
+
+    Ставить его до запуска нечем: id поста выдаёт PH только после публикации. Поэтому
+    вёрстка уже готова, а включается одной переменной окружения без правки страниц.
+    """
+    post_id = os.environ.get("SPINHIRE_PH_POST_ID", "").strip()
+    if not post_id.isdigit():
+        return ""
+    slug = os.environ.get("SPINHIRE_PH_SLUG", "spinhire").strip() or "spinhire"
+    return (f'<a class="ph-badge" href="https://www.producthunt.com/posts/{slug}'
+            '?utm_source=badge-featured&amp;utm_medium=badge" target="_blank" rel="noopener"'
+            ' aria-label="SpinHire on Product Hunt">'
+            f'<img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id={post_id}'
+            '&amp;theme=dark" alt="SpinHire — open-data job board for iGaming | Product Hunt"'
+            ' width="250" height="54" loading="lazy"></a>')
+
+
 def _hreflang_block(path: str, canonical_lang: str) -> str:
     """hreflang по всем языкам: базовый на корне, остальные в поддиректориях."""
     site = "https://spinhire.io"
@@ -2331,6 +2349,9 @@ async def language_layer(request: Request, call_next):
     if "lang-links" not in text:
         text = text.replace('<div class="footer-bottom">',
                             '<div class="footer-bottom">' + _lang_links(inner_path, lang), 1)
+    if "ph-badge" not in text:
+        text = text.replace('<div class="footer-bottom">',
+                            '<div class="footer-bottom">' + _ph_badge(), 1)
     headers = dict(response.headers)
     headers.pop("content-length", None)
     return HTMLResponse(text, status_code=response.status_code, headers=headers)

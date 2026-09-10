@@ -198,6 +198,11 @@ I'll be here all day. What would you build on top of the API?
 
 ### 2.7 Заготовки ответов на комментарии
 
+Полный банк — в [`tasks/launch-comments.md`](launch-comments.md): комментарии для прогрева
+аккаунта, 20+ готовых ответов по темам (категория, данные, деньги, конкуренты, техника),
+тональность для Show HN и Reddit, ответ модерации PH и шаблон вечернего итога. Ниже — короткая
+выжимка на случай, когда отвечать надо прямо сейчас.
+
 - **«Это же гемблинг?»** → *SpinHire is a job board, not a gambling product. We index vacancies at
   licensed operators, studios and vendors — the same way a fintech job board indexes banks. No
   betting or money games anywhere on the site.*
@@ -374,10 +379,15 @@ URL: https://spinhire.io/mcp
 
 ### 4.3 Каталоги данных
 
+Файлы собирает `python3 scripts/launch_dataset.py` — `jobs.csv`, `jobs.jsonl`,
+`market_history.csv` и `README.md` с готовым front matter Hugging Face — в `data/launch-dataset/`.
+Скрипт ругается, если API ещё отдаёт русские значения: значит, деплой не выкачен и датасет
+собирать рано.
+
 | Площадка | Что выкладываем |
 |---|---|
-| Hugging Face Datasets | Снимок индекса + история рынка, карточка датасета с методикой, лицензия CC BY 4.0 |
-| Kaggle Datasets | То же, но с notebook-примером: «iGaming hiring by country» |
+| Hugging Face Datasets | `jobs.csv` + `market_history.csv`, `README.md` идёт карточкой датасета |
+| Kaggle Datasets | Те же файлы, плюс notebook-пример: «iGaming hiring by country» |
 | data.world | Зеркало CSV `/market.csv` |
 | Google Dataset Search | Подхватит сам из Dataset-разметки на `/market` — проверить через Rich Results Test |
 
@@ -483,6 +493,8 @@ https://www.postman.com/explore.
 - [ ] Изменения этой ветки задеплоены на прод
 - [ ] `python3 scripts/launch_facts.py` — цифры в текстах обновлены
 - [ ] `python3 scripts/launch_shots.py` — галерея снята уже после деплоя
+- [ ] `python3 scripts/launch_dataset.py` — файлы для Hugging Face и Kaggle собраны (тоже после деплоя)
+- [ ] Ответы из `tasks/launch-comments.md` перечитаны: цифры в них совпадают с `launch_facts.py`
 - [ ] `/en/` и `/en/press.html` открыты и прочитаны глазами: английский без машинных ляпов
 - [ ] `/en/api/jobs` отвечает без кириллицы в значениях, `/mcp`, `/market.csv`, `/llms.txt` отвечают
 - [ ] Ссылка `https://spinhire.io/en/` прогнана через отладчики карточек X и LinkedIn:
@@ -493,24 +505,22 @@ https://www.postman.com/explore.
 
 После:
 
-- [ ] Бейдж Product Hunt на сайт (см. ниже)
+- [ ] Бейдж Product Hunt на сайт: `SPINHIRE_PH_POST_ID` на проде (см. ниже)
 - [ ] Итоги в отчёт: визиты, регистрации, обращения работодателей по каждой площадке
 - [ ] Волна 2 (MCP- и API-каталоги) — в течение недели после
 
 ### Бейдж Product Hunt
 
-PH выдаёт готовый код на странице продукта («Embed» → Badge). Он выглядит так —
-подставьте свой `post-id` и slug:
+Вёрстка уже в коде: бейдж появляется в подвале **всех** страниц и на всех языках, как только
+задана переменная окружения. Править HTML руками не нужно.
 
-```html
-<a href="https://www.producthunt.com/posts/spinhire?utm_source=badge-featured&utm_medium=badge"
-   target="_blank" rel="noopener" aria-label="SpinHire on Product Hunt">
-  <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=POST_ID&theme=dark"
-       alt="SpinHire — open-data job board for iGaming | Product Hunt"
-       width="250" height="54" loading="lazy">
-</a>
+```bash
+# на проде, после того как PH выдал id поста («Embed» → Badge, число в post_id=)
+systemctl edit spinhire      # или ваш файл окружения
+SPINHIRE_PH_POST_ID=123456
+SPINHIRE_PH_SLUG=spinhire    # необязательно, по умолчанию spinhire
+systemctl restart spinhire
 ```
 
-Куда класть: в подвал (`server/templates/base.html` и статические страницы — тот же блок,
-что и ссылка на пресс-кит) либо отдельным блоком в пресс-кит. Картинка тянется с
-`api.producthunt.com`, поэтому ставить её с `loading="lazy"` и не в самый верх страницы.
+Пока переменной нет — в разметке нет ни ссылки, ни запроса к `api.producthunt.com`. Картинка
+грузится с `loading="lazy"`, так что на скорость подвала не влияет.
