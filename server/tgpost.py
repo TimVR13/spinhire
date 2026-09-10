@@ -21,6 +21,7 @@ import os
 import re
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
@@ -372,17 +373,27 @@ def send_hot(db: Session, force: bool = False, dry: bool = False) -> dict:
     return result or {"skipped": "no_channels"}
 
 
-def _api(method: str, payload: dict) -> dict:
-    body = json.dumps(payload).encode()
-    req = urllib.request.Request(
-        f"https://api.telegram.org/bot{TOKEN}/{method}", data=body,
-        headers={"Content-Type": "application/json",
-                 "User-Agent": "SpinHire/1.0 (+https://spinhire.io)"})
+def _call(req) -> dict:
+    """Ответ Телеграма как есть: на ошибку он отдаёт 400 с описанием в теле,
+    а голое «HTTP Error 400» в логе не говорит ничего."""
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
+        with urllib.request.urlopen(req, timeout=60) as resp:
             return json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        try:
+            return json.loads(exc.read())
+        except Exception:                                       # noqa: BLE001
+            return {"ok": False, "error": f"HTTP {exc.code}"}
     except Exception as exc:                                    # noqa: BLE001
         return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+
+
+def _api(method: str, payload: dict) -> dict:
+    body = json.dumps(payload).encode()
+    return _call(urllib.request.Request(
+        f"https://api.telegram.org/bot{TOKEN}/{method}", data=body,
+        headers={"Content-Type": "application/json",
+                 "User-Agent": "SpinHire/1.0 (+https://spinhire.io)"}))
 
 
 CAPTION_LIMIT = 1024
@@ -404,15 +415,10 @@ def _photo(chat_id: str, photo: bytes, caption: str) -> dict:
     body += (f"--{boundary}\r\nContent-Disposition: form-data; name=\"photo\"; "
              f"filename=\"spinhire.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n").encode()
     body += photo + b"\r\n" + f"--{boundary}--\r\n".encode()
-    req = urllib.request.Request(
+    return _call(urllib.request.Request(
         f"https://api.telegram.org/bot{TOKEN}/sendPhoto", data=bytes(body),
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}",
-                 "User-Agent": "SpinHire/1.0 (+https://spinhire.io)"})
-    try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            return json.loads(resp.read())
-    except Exception as exc:                                    # noqa: BLE001
-        return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+                 "User-Agent": "SpinHire/1.0 (+https://spinhire.io)"}))
 
 
 def _send(chat_id: str, text: str, photo=None) -> dict:
