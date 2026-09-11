@@ -301,7 +301,7 @@ if __name__ == "__main__":
     ap.add_argument("--login-url", default="https://old.reddit.com/login", help="какую форму входа открыть (старая надёжнее новой)")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--post", action="store_true")
-    ap.add_argument("--subreddit")
+    ap.add_argument("--subreddit", default="spinhire")
     ap.add_argument("--title")
     ap.add_argument("--text-file")
     ap.add_argument("--url", default="")
