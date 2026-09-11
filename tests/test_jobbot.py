@@ -162,17 +162,53 @@ class JobbotTests(unittest.TestCase):
             jobbot.handle_update(db, update)
         return sent
 
-    def test_start_greets_and_shows_menu(self):
-        """Первое сообщение — меню кнопок: писать что-то человек не обязан."""
+    def test_start_shows_banner_and_five_cis_jobs(self):
+        """Первое касание: баннер, сразу пятёрка вакансий по СНГ и кнопки — без ввода."""
         sent = self._run(self._update("/start igc-channel"))
-        self.assertTrue(sent.texts())
-        self.assertIn("SpinHire", sent.texts()[0])
-        actions = {b.get("callback_data") for b in sent.buttons()}
-        self.assertTrue({"cats", "geos", "top", "fresh", "cv"} <= actions)
+        methods = [m for m, _p in sent]
+        self.assertEqual(methods[0], "sendPhoto")
+        caption = sent[0][1]["caption"]
+        self.assertIn("SpinHire", caption)
+        self.assertNotIn("iGaming", caption)
+        cards = " ".join(sent.texts())
+        self.assertIn("СНГ", cards)
+        applies = [b for b in sent.buttons() if b.get("callback_data", "").startswith("a:")]
+        self.assertTrue(1 <= len(applies) <= 5)
+        self.assertTrue(any(b.get("callback_data") == "menu" for b in sent.buttons()))
         with SessionLocal() as db:
             chat = db.query(jobbot.BotChat).filter_by(chat_id=self.chat_id).first()
-            self.assertEqual(chat.source, "igc-channel")
+            self.assertEqual(chat.source, "igc-channel")   # метка канала из /start <payload>
             self.assertEqual(chat.lang, "ru")
+
+    def test_menu_button_opens_full_menu(self):
+        self._run(self._update("/start"))
+        sent = self._run(self._update(data="menu"))
+        actions = {b.get("callback_data") for b in sent.buttons()}
+        self.assertTrue({"cats", "geos", "top", "fresh", "cv"} <= actions)
+
+    def test_linkedin_link_builds_the_profile(self):
+        """Ссылка на публичный профиль вместо файла — резюме собирается само."""
+        fields = {"title": "Head of CRM", "about": "a" * 200, "skills": "CRM, Retention",
+                  "languages": "English", "location": "Limassol", "education": ""}
+        self._run(self._update("биздев"))
+        with patch.object(jobbot, "linkedin_fields", lambda url: fields):
+            sent = self._run(self._update("https://www.linkedin.com/in/someone-crm"))
+        self.assertIn("LinkedIn", " ".join(sent.texts()))
+        with SessionLocal() as db:
+            chat = db.query(jobbot.BotChat).filter_by(chat_id=self.chat_id).first()
+            resume = db.query(Resume).filter_by(user_id=chat.user_id).first()
+            self.assertEqual(resume.title, "Head of CRM")
+            self.assertEqual(resume.linkedin_url, "https://www.linkedin.com/in/someone-crm")
+            self.assertEqual(resume.moderation_note, "auto:linkedin")
+
+    def test_closed_linkedin_profile_is_admitted_not_faked(self):
+        """Профиль закрыт — честно говорим и просим файл, а не выдумываем резюме."""
+        with patch.object(jobbot, "linkedin_fields", lambda url: {}):
+            sent = self._run(self._update("https://www.linkedin.com/in/private-one"))
+        self.assertIn("закрыт", " ".join(sent.texts()))
+        with SessionLocal() as db:
+            chat = db.query(jobbot.BotChat).filter_by(chat_id=self.chat_id).first()
+            self.assertIsNone(db.query(Resume).filter_by(user_id=chat.user_id or 0).first())
 
     def test_menu_walks_to_jobs_without_typing(self):
         """Кнопками: меню → направления → вакансии в направлении → отклик."""

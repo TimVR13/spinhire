@@ -40,6 +40,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta
+from functools import lru_cache
 from types import SimpleNamespace
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -55,6 +56,7 @@ from server.app import (APPLY_DAILY_LIMIT, APPLY_EXTRA_COST, APPLY_MIN_INTERVAL,
                         CATEGORIES, TG_ACCOUNT_DOMAIN, country_of, resume_is_ready,
                         salary_usd, set_session, track)
 from server.terms import REMOTE_COUNTRY, TERMS, UNKNOWN_COUNTRY
+from server import postfilter
 
 router = APIRouter()
 
@@ -63,13 +65,14 @@ SECRET = (os.environ.get("SPINHIRE_JOBBOT_SECRET", "")
           or (hashlib.sha256(TOKEN.encode()).hexdigest()[:32] if TOKEN else ""))
 SITE = (BASE_URL or "https://spinhire.io").rstrip("/")
 CARDS = 3                       # вакансий в одном сообщении
+START_CARDS = 5                 # на первом экране показываем пятёрку сразу
+BANNER = f"{(BASE_URL or 'https://spinhire.io').rstrip('/')}/img/bot-welcome.jpg"
 MAX_CARDS = 30                  # дальше «Ещё» не листаем — человеку пора на сайт
 INDEX_TTL = 300                 # кэш поискового индекса, секунд
 CV_LIMIT = 5 * 1024 * 1024
 TZ_OFFSET = int(os.environ.get("SPINHIRE_TG_TZ_OFFSET", "3"))
 _push_hours = os.environ.get("SPINHIRE_JOBBOT_PUSH_HOURS", "10-21").split("-")
 PUSH_FROM, PUSH_TO = int(_push_hours[0]), int(_push_hours[-1])
-PUSH_EVERY_MIN = int(os.environ.get("SPINHIRE_JOBBOT_PUSH_EVERY_MIN", "30"))
 # Правило каналов «США не постим» действует и здесь: аудитория у нас Европа,
 # СНГ и удалёнка, американский оффер такому кандидату недоступен, а с топовой
 # вилкой он ещё и вытесняет из выдачи то, на что реально можно откликнуться.
@@ -114,14 +117,14 @@ class BotLogin(Base):
 
 T = {
  "start": {
-  "ru": ("Это бот SpinHire — работа в iGaming.\n\n"
-         "В базе <b>{n}</b> вакансий. Выбирай кнопкой, что показать.\n\n"
-         "Можно и написать должность словом — «биздев», «саппорт», «affiliate» — "
-         "или прислать резюме файлом: скажу, на что ты проходишь."),
-  "en": ("SpinHire bot — iGaming jobs.\n\n"
-         "<b>{n}</b> openings in the base. Pick what to show.\n\n"
-         "You can also type a role — \"bizdev\", \"support\", \"affiliate\" — "
-         "or send your CV as a file and I'll score the match."),
+  "ru": ("<b>SpinHire</b> — работа в казино, беттинге и партнёрских программах.\n\n"
+         "В базе <b>{n}</b> вакансий. Ниже — пять самых денежных по СНГ прямо сейчас, "
+         "дальше смотри кнопками.\n\n"
+         "Резюме можно прислать файлом или просто ссылкой на LinkedIn — соберём сами."),
+  "en": ("<b>SpinHire</b> — jobs in casino, betting and affiliate programmes.\n\n"
+         "<b>{n}</b> openings in the base. Below are the five best paying right now, "
+         "the rest is behind the buttons.\n\n"
+         "Send your CV as a file or just drop a LinkedIn link — we'll build the profile."),
  },
  "menu": {
   "ru": "Что показать?",
@@ -165,17 +168,39 @@ T = {
  },
  "empty": {
   "ru": ("По «{q}» сейчас ничего. Могу прислать, как только появится, — "
-         "или попробуй другое слово: «support», «affiliate», «head of»."),
+         "или попробуй другое слово: «саппорт», «аффилейт», «head of»."),
   "en": ("Nothing for \"{q}\" right now. I can ping you when it shows up — "
          "or try another word: \"support\", \"affiliate\", \"head of\"."),
  },
+ "li_ok": {
+  "ru": "Профиль забрал с LinkedIn: <b>{title}</b>{years}.",
+  "en": "Pulled from LinkedIn: <b>{title}</b>{years}.",
+ },
+ "li_fail": {
+  "ru": ("По этой ссылке профиль закрыт — LinkedIn отдаёт его только своим. "
+         "Пришли резюме файлом (PDF или DOCX) или текстом, так надёжнее."),
+  "en": ("That profile is not public — LinkedIn only shows it to logged-in users. "
+         "Send the CV as a file (PDF or DOCX) or as text instead."),
+ },
+ "li_wait": {
+  "ru": "Секунду, читаю профиль…",
+  "en": "One moment, reading the profile…",
+ },
+ "cis_top": {
+  "ru": "💰 Топ-5 по деньгам, СНГ:",
+  "en": "💰 Top 5 by money, CIS:",
+ },
  "need_cv": {
-  "ru": ("Чтобы откликнуться, нужно резюме. Пришли файлом (PDF или DOCX) "
-         "или вставь текстом одним сообщением.\n\n"
+  "ru": ("Чтобы откликнуться, нужно резюме. Три способа, любой:\n"
+         "• файл PDF или DOCX;\n"
+         "• ссылка на профиль LinkedIn — соберём по ней сами;\n"
+         "• просто текст резюме одним сообщением.\n\n"
          "Работодатель получает анонимную карточку; имя и контакт он открывает "
          "за деньги — поэтому твои данные не расходятся по базам."),
-  "en": ("An application needs a CV. Send it as a file (PDF or DOCX) "
-         "or paste it as one message.\n\n"
+  "en": ("An application needs a CV. Any of the three:\n"
+         "• a PDF or DOCX file;\n"
+         "• a LinkedIn profile link — we'll build the profile from it;\n"
+         "• the CV text pasted as one message.\n\n"
          "The employer sees an anonymous card; your name and contact are unlocked "
          "for money — so your data doesn't leak into random databases."),
  },
@@ -254,6 +279,7 @@ MENU = {
     "sub_off": {"ru": "🔕 Отключить рассылку", "en": "🔕 Stop alerts"},
     "site": {"ru": "🌐 Открыть сайт", "en": "🌐 Open the site"},
     "back": {"ru": "← Меню", "en": "← Menu"},
+    "menu_btn": {"ru": "☰ Всё меню", "en": "☰ Full menu"},
 }
 
 
@@ -292,6 +318,16 @@ def send(chat_id, text: str, keyboard: list = None) -> dict:
         time.sleep(min(wait + 1, 30))
         resp = api("sendMessage", payload)
     return resp
+
+
+def send_photo(chat_id, photo: str, caption: str, keyboard: list = None) -> dict:
+    """Фото с подписью. Telegram показывает его крупно — пустой текстовый экран
+    на первом касании выглядит как служебный скрипт, а не как продукт."""
+    payload = {"chat_id": str(chat_id), "photo": photo, "caption": caption[:1024],
+               "parse_mode": "HTML"}
+    if keyboard:
+        payload["reply_markup"] = {"inline_keyboard": keyboard}
+    return api("sendPhoto", payload)
 
 
 def esc(value: str) -> str:
@@ -388,6 +424,12 @@ def _geo_map() -> dict:
 
 
 GEO = _geo_map()
+# Компилируем на импорте: иначе каждое сообщение в чате прогоняло бы по запросу
+# три сотни регулярок стран и полсотни синонимов — это 0,4 с на ровном месте.
+GEO_RE = {stem: re.compile(rf"(?<![а-яёa-z])({re.escape(stem)}[а-яё]{{0,3}})(?![а-яёa-z])")
+          for stem in GEO}
+SYNONYM_RE = {key: re.compile(rf"(?<![а-яёa-z]){re.escape(key)}[а-яё]{{0,3}}(?![а-яёa-z])")
+              for key in SYNONYMS}
 
 # «в год», «per annum», «/yr» — там, где источник период назвал
 YEARLY_WORDS = ("в год", "год", "year", "annual", "p.a", "per annum", "/yr", "рік", "річн")
@@ -415,9 +457,41 @@ def month_usd(salary: str) -> int:
 _index_cache = {"at": 0.0, "rows": []}
 
 
+# Страны, ради которых бот и живёт: аудитория русскоязычная. Имена — как их
+# отдаёт country_of(), то есть канонические русские.
+CIS_COUNTRIES = {"Украина", "Беларусь", "Казахстан", "Грузия", "Армения", "Азербайджан",
+                 "Узбекистан", "Киргизия", "Кыргызстан", "Молдова", "Россия",
+                 "Таджикистан", "Туркменистан"}
+
+
+@lru_cache(maxsize=4096)
+def _region_place(location: str) -> str:
+    return postfilter.region(SimpleNamespace(title="", location=location, description=""))
+
+
+@lru_cache(maxsize=4096)
+def country_cached(location: str) -> str:
+    return country_of(location)
+
+
+def region_of(location: str, title: str) -> str:
+    """Регион вакансии. Кэш держим по месту, а не по паре с заголовком.
+
+    Разбор региона лезет во все словари стран и на 5 тысячах строк стоил
+    11 секунд — собеседник в чате столько не ждёт. Разных локаций семь сотен
+    на пять тысяч вакансий, поэтому считаем по локации, а заголовок
+    переспрашиваем только у невнятных («Remote», пусто): «Sales Rep (USA)»
+    страну называет именно там.
+    """
+    zone = _region_place(location)
+    if zone in ("remote", "unknown") and title:
+        zone = postfilter.region(SimpleNamespace(title=title, location=location,
+                                                 description=""))
+    return zone
+
+
 def job_index(db: Session) -> list:
     """Лёгкий индекс одобренных вакансий: в чате нельзя ждать секунду на запрос."""
-    from server import postfilter
     now = time.time()
     if _index_cache["rows"] and now - _index_cache["at"] < INDEX_TTL:
         return _index_cache["rows"]
@@ -439,9 +513,8 @@ def job_index(db: Session) -> list:
             "where_low": f"{company} {location} {r.fmt or ''}".lower(),
             # регион и страна разбираются по всему тексту и спрашиваются на каждый
             # запрос — держим ответ в индексе, а не считаем на 7 тысячах строк заново
-            "region": postfilter.region(SimpleNamespace(
-                title=title, location=location, description="")),
-            "country": country_of(location) if location else (
+            "region": region_of(location, title),
+            "country": country_cached(location) if location else (
                 REMOTE_COUNTRY if (r.fmt or "") == "удалёнка" else UNKNOWN_COUNTRY),
         })
     _index_cache.update(at=now, rows=out)
@@ -458,11 +531,11 @@ def concepts(query: str) -> list:
     groups, covered = [], set()
     for key, values in SYNONYMS.items():
         # «продажам», «саппорта», «аффилейтом» — падеж не должен ломать распознавание
-        if re.search(rf"(?<![а-яёa-z]){re.escape(key)}[а-яё]{{0,3}}(?![а-яёa-z])", low):
+        if SYNONYM_RE[key].search(low):
             groups.append(("role", {key, *values}))
             covered.add(key)
     for stem, names in GEO.items():
-        found = re.search(rf"(?<![а-яёa-z])({re.escape(stem)}[а-яё]{{0,3}})(?![а-яёa-z])", low)
+        found = GEO_RE[stem].search(low)
         if found:
             groups.append(("geo", set(names)))
             covered.add(found.group(1))
@@ -507,7 +580,6 @@ def hit(row: dict, kind: str, match) -> int:
 
 def geo_ok(row: dict) -> bool:
     """Пускаем ли вакансию в чат: те же регионы, что и в каналы."""
-    from server import postfilter
     zone = row.get("region") or "unknown"
     return zone in postfilter.ALLOWED or zone == "unknown"
 
@@ -571,10 +643,10 @@ def card(row: dict, index: int, lang: str, fit: dict = None) -> str:
 
 
 def jobs_message(db: Session, chat: BotChat, rows: list, offset: int,
-                 header: str) -> tuple:
+                 header: str, limit: int = CARDS) -> tuple:
     """Текст + клавиатура для пачки вакансий."""
     lang = chat.lang
-    page = rows[offset:offset + CARDS]
+    page = rows[offset:offset + limit]
     cv = None
     if chat.user_id:
         candidate = db.query(Resume).filter_by(user_id=chat.user_id).first()
@@ -592,14 +664,14 @@ def jobs_message(db: Session, chat: BotChat, rows: list, offset: int,
             {"text": t("btn_open", lang, i=i), "url": f"{SITE}/job/{row['id']}"},
         ])
     tail = []
-    if offset + CARDS < min(len(rows), MAX_CARDS):
+    if offset + limit < min(len(rows), MAX_CARDS):
         tail.append({"text": t("btn_more", lang, n=CARDS),
-                     "callback_data": f"m:{offset + CARDS}"})
+                     "callback_data": f"m:{offset + limit}"})
     if not chat.sub:
         tail.append({"text": t("btn_sub", lang), "callback_data": "s:1"})
     if tail:
         keyboard.append(tail)
-    keyboard.append([{"text": MENU["back"][lang], "callback_data": "menu"},
+    keyboard.append([{"text": MENU["menu_btn"][lang], "callback_data": "menu"},
                      {"text": t("btn_all", lang), "url": site_link(chat.query)}])
     return "\n\n".join(blocks), keyboard
 
@@ -630,8 +702,16 @@ def slice_rows(db: Session, spec: str) -> tuple:
     не знает, что именно листает.
     """
     kind, _, value = spec.partition(":")
-    if kind in ("cat", "geo", "top", "fresh"):
+    if kind in ("cat", "geo", "top", "fresh", "cis"):
         rows = [r for r in job_index(db) if geo_ok(r)]
+        if kind == "cis":
+            # Аудитория у бота русскоязычная: на первом экране показываем то, куда
+            # её реально возьмут. Берём по стране, а не по region(): Украину
+            # postfilter числит Европой, и «СНГ» без неё — это полсотни вакансий.
+            near = [r for r in rows if r["country"] in CIS_COUNTRIES]
+            paid = by_money([r for r in near if r["usd"]])
+            return (paid or by_money(near) or by_money([r for r in rows if r["usd"]]),
+                    True, spec)
         if kind == "cat":
             return by_money([r for r in rows if r["category"] == value]), True, spec
         if kind == "geo":
@@ -653,6 +733,8 @@ def slice_header(spec: str, rows: list, offset: int, exact: bool, lang: str) -> 
         return t("slice_cat", lang, q=esc(label_of(value, lang)), n=len(rows))
     if kind == "top":
         return t("slice_top", lang)
+    if kind == "cis":
+        return t("cis_top", lang)
     if kind == "fresh":
         return t("slice_fresh", lang)
     if not exact:
@@ -666,7 +748,8 @@ def slice_header(spec: str, rows: list, offset: int, exact: bool, lang: str) -> 
     return t("found_all", lang, q=esc(spec), n=len(rows))
 
 
-def show_jobs(db: Session, chat: BotChat, spec: str, offset: int = 0) -> None:
+def show_jobs(db: Session, chat: BotChat, spec: str, offset: int = 0,
+              limit: int = CARDS) -> None:
     rows, exact, spec = slice_rows(db, spec)
     lang = chat.lang
     chat.query, chat.offset = spec, offset
@@ -677,7 +760,7 @@ def show_jobs(db: Session, chat: BotChat, spec: str, offset: int = 0) -> None:
         track(db, "bot_search_empty", chat.user_id, "bot", None, q=spec[:80])
         return
     header = slice_header(spec, rows, offset, exact, lang)
-    text, keyboard = jobs_message(db, chat, rows, offset, header)
+    text, keyboard = jobs_message(db, chat, rows, offset, header, limit)
     send(chat.chat_id, text, keyboard)
     track(db, "bot_slice", chat.user_id, "bot", None, spec=spec[:80], found=len(rows))
 
@@ -712,6 +795,73 @@ def login_link(db: Session, user: User) -> str:
     return f"{SITE}/tg/login/{token}"
 
 
+LINKEDIN_RE = re.compile(r"https?://(?:[a-z]{2,3}\.)?linkedin\.com/in/[^\s?#]+", re.I)
+# Публичный профиль отдаётся обычному браузеру и без логина — этого хватает на
+# заголовок, «о себе», место и опыт. Ходим строго по ссылке, которую человек дал
+# сам, один раз на кандидата: аккаунта в этом запросе нет, банить нечего.
+LI_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+         "(KHTML, like Gecko) Chrome/127.0 Safari/537.36")
+
+
+def _og(html: str, prop: str) -> str:
+    found = re.search(rf'property="{prop}"\s+content="([^"]*)"', html)
+    if not found:
+        found = re.search(rf'content="([^"]*)"\s+property="{prop}"', html)
+    value = found.group(1) if found else ""
+    for entity, char in (("&amp;", "&"), ("&quot;", '"'), ("&#39;", "'"),
+                         ("&lt;", "<"), ("&gt;", ">"), ("&middot;", "·")):
+        value = value.replace(entity, char)
+    return value.strip()
+
+
+def linkedin_fields(url: str) -> dict:
+    """Публичный профиль LinkedIn → черновик резюме. Пусто — профиль закрыт."""
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": LI_UA, "Accept-Language": "en-US,en;q=0.9"})
+        with urllib.request.urlopen(req, timeout=25) as resp:
+            html = resp.read(900_000).decode("utf8", "ignore")
+    except Exception:                                          # noqa: BLE001
+        return {}
+    title_raw, desc = _og(html, "og:title"), _og(html, "og:description")
+    if not title_raw or not desc:
+        return {}
+    # «Имя Фамилия - Head of CRM at Acme | LinkedIn»
+    name, _, headline = title_raw.split(" | LinkedIn")[0].partition(" - ")
+    parts = [p.strip() for p in desc.split("·") if p.strip()]
+    location, experience, education, summary = "", "", "", []
+    for part in parts:
+        low = part.lower()
+        if low.startswith("location:"):
+            location = part.split(":", 1)[1].strip()
+        elif low.startswith("experience:"):
+            experience = part.split(":", 1)[1].strip()
+        elif low.startswith("education:"):
+            education = part.split(":", 1)[1].strip()
+        elif "connections on linkedin" in low or "followers" in low:
+            continue
+        else:
+            summary.append(part)
+    about_parts = summary + ([f"Experience: {experience}"] if experience else [])
+    about = anonymize_resume_text(" ".join(about_parts))
+    for token in (name or "").split():
+        if len(token) > 2:
+            about = re.sub(r"(?i)(?<!\w)" + re.escape(token) + r"(?!\w)", "", about)
+    about = re.sub(r"\s{2,}", " ", about).strip()
+    from server.app import CV_SKILL_WORDS
+    low_all = f"{headline} {desc}".lower()
+    skills = [w for w in CV_SKILL_WORDS
+              if re.search(r"(?<![a-zа-я])" + re.escape(w.lower()) + r"(?![a-zа-я])", low_all)]
+    langs = [w for w in skills if w in ("English", "German", "Spanish", "French",
+                                        "Portuguese", "Italian", "Polish", "Turkish",
+                                        "Ukrainian", "Russian")]
+    out = {"title": (headline or "").strip()[:120], "about": about[:900],
+           "skills": ", ".join(w for w in skills if w not in langs)[:400],
+           "languages": ", ".join(langs), "location": location[:120],
+           "education": education[:200]}
+    return out if out["title"] else {}
+
+
 def _text_cv_fields(text: str, person_name: str = "") -> dict:
     """Поля профиля из резюме, вставленного текстом (файл разбирает эвристика сайта)."""
     from server.app import CV_SKILL_WORDS, CV_TITLE_HINTS, clean_role_title
@@ -744,7 +894,7 @@ def _text_cv_fields(text: str, person_name: str = "") -> dict:
 
 
 def save_cv(db: Session, chat: BotChat, *, payload: bytes = b"", filename: str = "",
-            text: str = "") -> Resume:
+            text: str = "", fields: dict = None, linkedin: str = "") -> Resume:
     """Резюме из файла или текста → тот же черновик, что даёт быстрая загрузка на сайте.
 
     Дальше его подхватывает ежечасная задача модерации и переписывает начисто —
@@ -756,7 +906,9 @@ def save_cv(db: Session, chat: BotChat, *, payload: bytes = b"", filename: str =
         row = Resume(user_id=user.id, desired_format="удалёнка", status="draft")
         db.add(row)
         db.flush()
-    if payload:
+    if fields is not None:
+        pass                                   # поля уже разобраны (LinkedIn)
+    elif payload:
         os.makedirs(CV_UPLOAD_DIR, exist_ok=True)
         ext = os.path.splitext(filename or "")[1].lower()
         ext = ext if ext in (".pdf", ".docx") else ".pdf"
@@ -768,6 +920,8 @@ def save_cv(db: Session, chat: BotChat, *, payload: bytes = b"", filename: str =
         fields = heuristic_cv_fields(stored, user.name or "")
     else:
         fields = _text_cv_fields(text, user.name or "")
+    if linkedin:
+        row.linkedin_url = linkedin[:500]
     for key, value in (fields or {}).items():
         # заголовок и «о себе» всегда берём из свежего файла, остальное — только
         # в пустые поля: человек мог поправить их руками в кабинете
@@ -780,7 +934,7 @@ def save_cv(db: Session, chat: BotChat, *, payload: bytes = b"", filename: str =
     complete = resume_is_ready(row) and len(row.about or "") >= 80
     row.status = "approved" if complete else "pending"
     row.published = complete
-    row.moderation_note = "auto:jobbot"
+    row.moderation_note = "auto:linkedin" if linkedin else "auto:jobbot"
     track(db, "bot_cv", user.id, "resume", row.id, complete=complete)
     return row
 
@@ -894,11 +1048,21 @@ def geos_keyboard(db: Session, lang: str) -> list:
     return _pairs(buttons, lang)
 
 
-def show_menu(db: Session, chat: BotChat, greeting: bool = False) -> None:
+def show_menu(db: Session, chat: BotChat) -> None:
+    send(chat.chat_id, t("menu", chat.lang), menu_keyboard(chat))
+
+
+def show_welcome(db: Session, chat: BotChat) -> None:
+    """Первое касание: баннер, сразу пятёрка вакансий по СНГ и кнопки.
+
+    Меню отдельным сообщением не шлём — человек, пришедший из канала, должен
+    увидеть вакансию в первые три секунды, а не список разделов.
+    """
     total = len([r for r in job_index(db) if geo_ok(r)])
-    text = (t("start", chat.lang, n=f"{total:,}".replace(",", " ")) if greeting
-            else t("menu", chat.lang))
-    send(chat.chat_id, text, menu_keyboard(chat))
+    caption = t("start", chat.lang, n=f"{total:,}".replace(",", " "))
+    if not send_photo(chat.chat_id, BANNER, caption).get("ok"):
+        send(chat.chat_id, caption)          # картинка не отдалась — не молчим
+    show_jobs(db, chat, "cis", 0, START_CARDS)
 
 
 def fetch_file(file_id: str) -> bytes:
@@ -949,6 +1113,30 @@ def after_cv(db: Session, chat: BotChat, row: Resume) -> None:
     show_jobs(db, chat, chat.query or row.title or "fresh", 0)
 
 
+def handle_linkedin(db: Session, chat: BotChat, url: str) -> None:
+    """Ссылка на профиль вместо файла: самый короткий путь к отклику."""
+    lang = chat.lang
+    send(chat.chat_id, t("li_wait", lang))
+    fields = linkedin_fields(url)
+    if not fields:
+        send(chat.chat_id, t("li_fail", lang))
+        track(db, "bot_linkedin_fail", chat.user_id, "bot", None)
+        return
+    row = save_cv(db, chat, fields=fields, linkedin=url)
+    years = ""
+    if row.experience_years:
+        years = (f", {row.experience_years} лет опыта" if lang == "ru"
+                 else f", {row.experience_years} yrs")
+    send(chat.chat_id, t("li_ok", lang, title=esc(row.title), years=years))
+    track(db, "bot_linkedin", chat.user_id, "resume", row.id)
+    chat.state = ""
+    if chat.pending_job:
+        job_id, chat.pending_job = chat.pending_job, None
+        do_apply(db, chat, job_id)
+        return
+    show_jobs(db, chat, chat.query or row.title or "fresh", 0)
+
+
 def handle_text(db: Session, chat: BotChat, text: str) -> None:
     lang = chat.lang
     body = text.strip()
@@ -958,7 +1146,7 @@ def handle_text(db: Session, chat: BotChat, text: str) -> None:
         payload = body[len(command):].strip()
         if command == "/start":
             chat.source = (payload or chat.source)[:80]
-            show_menu(db, chat, greeting=True)
+            show_welcome(db, chat)
             track(db, "bot_start", chat.user_id, "bot", None, source=chat.source)
         elif command in ("/menu", "/help"):
             show_menu(db, chat)
@@ -975,6 +1163,10 @@ def handle_text(db: Session, chat: BotChat, text: str) -> None:
             show_menu(db, chat)
         else:
             send(chat.chat_id, t("help", lang), menu_keyboard(chat))
+        return
+    link = LINKEDIN_RE.search(body)
+    if link:
+        handle_linkedin(db, chat, link.group(0))
         return
     if chat.state == "title":
         row = db.query(Resume).filter_by(user_id=chat.user_id).first() if chat.user_id else None
@@ -1019,7 +1211,7 @@ def handle_callback(db: Session, chat: BotChat, data: str) -> None:
     elif kind == "s":
         chat.sub, chat.sub_query = 1, chat.query or ""
         chat.sub_last = datetime.utcnow().isoformat()
-        name = chat.sub_query.partition(":")[2] or chat.sub_query or "iGaming"
+        name = chat.sub_query.partition(":")[2] or chat.sub_query or "все вакансии"
         send(chat.chat_id, t("subbed", lang, q=esc(label_of(name, lang))),
              menu_keyboard(chat))
         track(db, "bot_subscribe", chat.user_id, "bot", None, q=chat.sub_query[:80])
@@ -1082,7 +1274,7 @@ def push_pending(db: Session, dry: bool = False) -> dict:
         if not rows:
             continue
         text, keyboard = jobs_message(db, chat, rows[:CARDS], 0,
-                                      t("fresh", chat.lang, q=esc(chat.sub_query or "iGaming")))
+                                      t("fresh", chat.lang, q=esc(chat.sub_query or "новое")))
         if dry:
             stats["sent"] += 1
             stats["jobs"] += len(rows[:CARDS])
@@ -1101,11 +1293,23 @@ def push_pending(db: Session, dry: bool = False) -> dict:
 
 
 def _scheduler() -> None:
-    time.sleep(90)          # даём приложению подняться и создать таблицы
+    started = time.time()
     while True:
         try:
+            db = SessionLocal()
+            try:
+                # индекс пересобираем здесь, а не на первом сообщении после
+                # протухшего кэша: собеседник не должен ждать сборку
+                _index_cache["at"] = 0.0
+                job_index(db)
+            finally:
+                db.close()
+        except Exception as exc:                               # noqa: BLE001
+            print(f"[jobbot] индекс не пересобрался: {type(exc).__name__}: {exc}")
+        try:
             local = datetime.utcnow() + timedelta(hours=TZ_OFFSET)
-            if PUSH_FROM <= local.hour < PUSH_TO:
+            # первый круг пропускаем: таблицы бота создаются на старте приложения
+            if time.time() - started > 60 and PUSH_FROM <= local.hour < PUSH_TO:
                 db = SessionLocal()
                 try:
                     res = push_pending(db)
@@ -1115,7 +1319,7 @@ def _scheduler() -> None:
                     db.close()
         except Exception as exc:                               # noqa: BLE001
             print(f"[jobbot] ошибка планировщика: {type(exc).__name__}: {exc}")
-        time.sleep(PUSH_EVERY_MIN * 60)
+        time.sleep(INDEX_TTL)
 
 
 def start_scheduler() -> None:
