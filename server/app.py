@@ -7113,6 +7113,10 @@ jobbot.start_scheduler()  # молчит, пока не задан SPINHIRE_JOBB
 from server import clusters  # noqa: E402
 app.include_router(clusters.router)
 
+# ---------- XML-фиды вакансий для внешних агрегаторов ----------
+from server import feeds  # noqa: E402
+app.include_router(feeds.router)
+
 # ---------- удалённый MCP-сервер поверх открытого API: https://spinhire.io/mcp ----------
 try:
     from server import mcp_server  # noqa: E402
