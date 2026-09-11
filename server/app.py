@@ -7222,8 +7222,11 @@ def api_jobs(request: Request, db: Session = Depends(db_session),
             "salary_currency": j.sal_currency if j.has_salary else None,
             "salary_unit": j.sal_unit if j.has_salary else None,
             "employment_type": j.employment_type,
-            "languages": [label for _, label in j.language_list],
-            "tags": j.tag_list,
+            # теги и языки — наша же лексика: в ответе на ?lang=en «беттинг»
+            # рядом с «Casino operations» выглядел недоделкой (латинские теги
+            # вроде Unity и DevOps словаря не касаются и остаются как есть)
+            "languages": [localize(label) for _, label in j.language_list],
+            "tags": [localize(tag) for tag in j.tag_list],
             "posted_at": j.posted_at,
             "valid_through": j.valid_through,
             "url": f"https://spinhire.io/job/{j.id}",
