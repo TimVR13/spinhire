@@ -2210,6 +2210,9 @@ def translate_html(html_text: str, lang: str, prefix_urls: bool = False) -> str:
         return value
 
     def translate_text(raw: str) -> str:
+        # неразрывный пробел в разметке записан сущностью, и «Иди&nbsp;» из заголовка
+        # главной проходил мимо словаря: для нормализации это не пробел, а буквы
+        raw = raw.replace("&nbsp;", " ")
         key = " ".join(raw.split())
         lead = raw[:len(raw) - len(raw.lstrip())]
         trail = raw[len(raw.rstrip()):]
