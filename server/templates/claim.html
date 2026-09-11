@@ -30,7 +30,7 @@
       <details style="margin-top:16px;">
         <summary style="cursor:pointer;color:var(--acid);">{{ t.jobs }}: {{ jobs|length }}</summary>
         <ul style="margin-top:10px;color:var(--ink-dim);">
-          {% for job in jobs[:40] %}<li><a href="/job/{{ job.id }}" style="color:inherit;">{{ job.title }}</a>{% if job.location %} · {{ job.location }}{% endif %}</li>{% endfor %}
+          {% for job in jobs[:40] %}<li><a href="/job/{{ job.id }}" style="color:inherit;">{{ job.title }}</a>{% if job.location %} · {{ job.location|place(page_lang) }}{% endif %}</li>{% endfor %}
         </ul>
       </details>
       {% endif %}

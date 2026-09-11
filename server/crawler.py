@@ -230,11 +230,31 @@ def _fetch(url):
         return r.read().decode("utf-8", "replace")
 
 
-def _fetch_html(url, user_agent=None):
-    req = urllib.request.Request(url, headers={
-        "User-Agent": user_agent or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                                    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml"})
+BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+
+# Часть бордов (work.ua) закрыта анти-ботом, который отбивает запрос с куцым
+# набором заголовков — нужен полный браузерный. Accept-Encoding не шлём
+# намеренно: urllib не умеет распаковывать brotli, а без заголовка сервер
+# отдаёт чистый текст.
+BROWSER_HEADERS = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,"
+              "image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "uk-UA,uk;q=0.9,ru;q=0.8,en;q=0.7",
+    "Sec-Fetch-Dest": "document", "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none", "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+    "sec-ch-ua-mobile": "?0", "sec-ch-ua-platform": '"Windows"',
+}
+
+
+def _fetch_html(url, user_agent=None, browser=False):
+    headers = {"User-Agent": user_agent or BROWSER_UA,
+               "Accept": "text/html,application/xhtml+xml"}
+    if browser:
+        headers.update(BROWSER_HEADERS)
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
         return r.read().decode("utf-8", "replace")
 
@@ -631,8 +651,10 @@ def crawl_casino_seed_registry():
 
 try:  # как часть пакета: from server import crawler
     from .salary import format_salary, parse_salary
+    from . import terms as _terms
 except ImportError:  # как скрипт: python server/crawler.py
     from salary import format_salary, parse_salary
+    import terms as _terms
 
 
 def _clean_text(raw):
@@ -1465,21 +1487,32 @@ WORK_UA_QUERIES = ["казино", "гемблінг", "igaming", "ставки"
 
 
 def crawl_work_ua(max_details: int = 120):
-    """work.ua: страницы поиска отдаются с браузерным UA, описание — в
-    div#job-description; JSON-LD на карточках нет, парсим разметку."""
+    """work.ua: анти-бот пускает только с полным браузерным набором заголовков,
+    и то не всегда — Cloudflare периодически закрывает датацентровые IP целиком
+    (с дроплета 403 даже на главную, с домашнего IP та же страница отдаётся).
+    Описание — в div#job-description, JSON-LD на карточках нет, парсим разметку."""
     import urllib.parse as _up
     ids = set()
+    asked = blocked = 0
     for query in WORK_UA_QUERIES:
         for lang in ("", "ru/"):
+            asked += 1
             try:
-                page = _fetch_html(f"https://www.work.ua/{lang}jobs-{_up.quote(query)}/")
+                page = _fetch_html(f"https://www.work.ua/{lang}jobs-{_up.quote(query)}/",
+                                   browser=True)
             except Exception:
+                blocked += 1
                 continue
             ids.update(re.findall(r'/(?:ru/)?jobs/(\d+)', page))
+    # Ни одна страница не открылась — источник недоступен, а не пуст. Молча
+    # вернуть ноль нельзя: именно так work.ua и justjoin.it месяц числились
+    # исправными, пока в логе стояло «+0».
+    if blocked == asked:
+        raise RuntimeError("work.ua: все запросы отбиты, похоже на блокировку IP")
     out = []
     for vid in sorted(ids)[:max_details]:
         try:
-            page = _fetch_html(f"https://www.work.ua/jobs/{vid}/")
+            page = _fetch_html(f"https://www.work.ua/jobs/{vid}/", browser=True)
         except Exception:
             continue
         title_m = re.search(r'<h1[^>]*id="h1-name"[^>]*>(.*?)</h1>', page, re.S)
@@ -1529,10 +1562,39 @@ def _eu_item_relevant(item) -> bool:
 _PL_KEYWORD_RE = re.compile(r"casino|igaming|gambling|betting|bukmacher|sportsbook|slots?\b", re.I)
 
 
-def _justjoin_api(url):
-    req = urllib.request.Request(url, headers={"Version": "2", "User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-        return json.loads(r.read())
+JUSTJOIN_QUERIES = ["casino", "igaming", "gambling", "betting", "sportsbook", "slots"]
+
+
+def _justjoin_rsc(page: str) -> str:
+    """Склеить RSC-поток страницы Next.js — как есть, с экранированием:
+    _justjoin_body режет его по экранированным разделителям секций."""
+    return "".join(re.findall(r'self\.__next_f\.push\(\[1,"(.*?)"\]\)', page, re.S))
+
+
+def _justjoin_search(keyword: str):
+    """Листинг офферов по ключевому слову.
+
+    Открытый api.justjoin.it/v2/user-panel/offers отключён (nginx за Cloudflare
+    отдаёт 503), но те же объекты офферов лежат в RSC-потоке страницы поиска —
+    поля совпадают с тем, что раньше приходило из API.
+    """
+    page = _fetch_html("https://justjoin.it/job-offers/all-locations"
+                       f"?keyword={urllib.parse.quote(keyword)}")
+    joined = _justjoin_rsc(page)
+    try:
+        txt = json.loads('"' + joined + '"')
+    except Exception:
+        txt = joined
+    decoder = json.JSONDecoder()
+    out = []
+    for m in re.finditer(r'\{"applyUrl"', txt):
+        try:
+            offer, _ = decoder.raw_decode(txt[m.start():])
+        except Exception:
+            continue
+        if offer.get("slug"):
+            out.append(offer)
+    return out
 
 
 def _justjoin_body(slug: str) -> str:
@@ -1541,7 +1603,7 @@ def _justjoin_body(slug: str) -> str:
         page = _fetch_html(f"https://justjoin.it/job-offer/{slug}")
     except Exception:
         return ""
-    joined = "".join(re.findall(r'self\.__next_f\.push\(\[1,"(.*?)"\]\)', page, re.S))
+    joined = _justjoin_rsc(page)
     ref = re.search(r'body\\+":\\+"\$(\w+)\\+"', joined)
     if not ref:
         return ""
@@ -1567,26 +1629,26 @@ def _justjoin_body(slug: str) -> str:
     return _clean_html(raw)
 
 
-def crawl_justjoin(max_pages: int = 120, max_details: int = 60):
-    out, page = [], 1
-    candidates = []
-    while page <= max_pages:
+def crawl_justjoin(max_details: int = 60):
+    seen = {}
+    blocked = 0
+    for keyword in JUSTJOIN_QUERIES:
         try:
-            data = _justjoin_api("https://api.justjoin.it/v2/user-panel/offers"
-                                 f"?perPage=100&page={page}")
+            offers = _justjoin_search(keyword)
         except Exception:
-            break
-        offers = data.get("data") or []
+            blocked += 1
+            continue
         for o in offers:
-            company = o.get("companyName") or ""
-            title = o.get("title") or ""
-            if _PL_BRANDS_RE.search(company) or _PL_KEYWORD_RE.search(f"{title} {company}"):
-                candidates.append(o)
-        meta = data.get("meta") or {}
-        if page >= (meta.get("totalPages") or 1):
-            break
-        page += 1
-        time.sleep(0.12)
+            seen.setdefault(o["slug"], o)
+        time.sleep(0.3)
+    if blocked == len(JUSTJOIN_QUERIES):
+        raise RuntimeError("justjoin.it: поиск недоступен ни по одному ключу")
+    out, candidates = [], []
+    for o in seen.values():
+        company = o.get("companyName") or ""
+        title = o.get("title") or ""
+        if _PL_BRANDS_RE.search(company) or _PL_KEYWORD_RE.search(f"{title} {company}"):
+            candidates.append(o)
     for o in candidates[:max_details]:
         slug = o.get("slug") or ""
         desc = _justjoin_body(slug)
@@ -1773,29 +1835,12 @@ def crawl_jobsinmalta(max_details: int = 80):
 
 
 # ---------- общие помощники для JSON-LD-карточек ----------
-_COUNTRY_RU = {
-    "united kingdom": "Великобритания", "uk": "Великобритания", "england": "Великобритания",
-    "malta": "Мальта", "cyprus": "Кипр", "gibraltar": "Гибралтар", "isle of man": "Остров Мэн",
-    "spain": "Испания", "portugal": "Португалия", "germany": "Германия", "poland": "Польша",
-    "bulgaria": "Болгария", "romania": "Румыния", "serbia": "Сербия", "ukraine": "Украина",
-    "georgia": "Грузия", "armenia": "Армения", "estonia": "Эстония", "latvia": "Латвия",
-    "lithuania": "Литва", "netherlands": "Нидерланды", "ireland": "Ирландия", "italy": "Италия",
-    "greece": "Греция", "sweden": "Швеция", "denmark": "Дания", "france": "Франция",
-    "belgium": "Бельгия", "austria": "Австрия", "switzerland": "Швейцария", "hungary": "Венгрия",
-    "czech republic": "Чехия", "croatia": "Хорватия", "montenegro": "Черногория",
-    "moldova": "Молдова", "turkey": "Турция", "israel": "Израиль", "kazakhstan": "Казахстан",
-    "uzbekistan": "Узбекистан", "united arab emirates": "ОАЭ", "uae": "ОАЭ",
-    "united states": "США", "usa": "США", "canada": "Канада", "mexico": "Мексика",
-    "brazil": "Бразилия", "colombia": "Колумбия", "peru": "Перу", "argentina": "Аргентина",
-    "chile": "Чили", "australia": "Австралия", "south africa": "ЮАР", "nigeria": "Нигерия",
-    "kenya": "Кения", "philippines": "Филиппины", "india": "Индия", "thailand": "Таиланд",
-    "singapore": "Сингапур", "hong kong": "Гонконг", "vietnam": "Вьетнам",
-    "sri lanka": "Шри-Ланка", "malaysia": "Малайзия", "indonesia": "Индонезия",
-    "egypt": "Египет", "morocco": "Марокко", "ghana": "Гана", "tanzania": "Танзания",
-    "uganda": "Уганда", "north macedonia": "Северная Македония", "bosnia and herzegovina": "Босния",
-    "slovakia": "Словакия", "slovenia": "Словения", "norway": "Норвегия", "finland": "Финляндия",
-    "curacao": "Кюрасао", "curaçao": "Кюрасао", "costa rica": "Коста-Рика", "panama": "Панама",
-}
+# Страны краулер и витрина берут из одной таблицы (server/terms.py). Раньше у
+# краулера был свой список на 70 стран, а у переводчика витрины — свой на 20:
+# всё, что попадало в разрыв (Кения, ОАЭ, Канада, Шри-Ланка), навсегда
+# оставалось русским на всех языковых версиях.
+_COUNTRY_RU = _terms.COUNTRY_NAMES
+
 _CURRENCY_SIGN = {"USD": "$", "EUR": "€", "GBP": "£"}
 
 

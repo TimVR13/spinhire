@@ -14,21 +14,46 @@ from pathlib import Path
 
 from common import (DATA, OUT, RENDERS, SITE, TG, api_jobs, fmt_range, monthly, pick_track, professions, role,
                     say_money, say_range)
+from theme import (CTA_LINES, DO_SAYS, DO_TITLES, ENTRY_KICKERS, HOOK_KICKERS, HOOK_LINES, SKILL_SAYS,
+                   SKILL_TITLES, TITLE_TEMPLATES, pick, theme_for, voice_for)
 from tts import voice_track
 
 HASHTAGS = "#igaming #вакансии #гемблинг #работа #карьера #shorts"
+
+
+def title_lc(t: str) -> str:
+    """«Бонус-менеджер» → «бонус-менеджер», но «VIP-менеджер» и «Head of Affiliates» остаются как есть."""
+    head = re.split(r"[-\s]", t)[0]
+    if head.isascii() or sum(c.isupper() for c in head) > 1:
+        return t
+    return t[0].lower() + t[1:]
 
 
 def first_sentence(text: str) -> str:
     return re.split(r"(?<=[.!?])\s", text.strip())[0]
 
 
+TAIL_WORDS = {"в", "во", "и", "или", "с", "со", "на", "по", "для", "из", "от", "до", "к", "у", "о", "об", "при", "за", "под", "над", "без", "через"}
+
+
 def short_item(text: str, limit: int = 64) -> str:
-    """Пункт обязанностей до двоеточия/запятой, чтобы влезал в строку."""
+    """Пункт обязанностей до двоеточия/запятой, чтобы влезал в строку.
+    Служебное слово в конце обрезки («…лимитов в») выбрасываем — строка не должна обрываться на предлоге."""
     head = re.split(r"[:—;]", text)[0].strip()
     if len(head) > limit:
-        head = head[:limit].rsplit(" ", 1)[0] + "…"
+        words = head[:limit].split()[:-1]
+        while words and words[-1].lower().strip(",") in TAIL_WORDS:
+            words.pop()
+        head = " ".join(words) + "…"
     return head
+
+
+def plural(n: int, one: str, few: str, many: str) -> str:
+    """«1 вакансия / 2 вакансии / 7 вакансий» — иначе диктор читает «2 вакансий»."""
+    n = abs(n) % 100
+    if 11 <= n <= 14:
+        return many
+    return {1: one, 2: few, 3: few, 4: few}.get(n % 10, many)
 
 
 MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
@@ -39,6 +64,7 @@ def ru_date(d: "dt.date") -> str:
 
 
 US = {"сша", "us", "usa", "united states"}
+NO_COUNTRY = {"не указана", "не указано", "не указан", "—", "-"}   # страна не заполнена — в «где ищут» не показываем
 N_JOBS = 5
 EMPLOYMENT = {"FULL_TIME": "полная занятость", "PART_TIME": "частичная", "CONTRACTOR": "контракт", "INTERN": "стажировка"}
 GRADES = [("junior", "Junior"), ("middle", "Middle"), ("senior", "Senior"), ("lead", "Lead")]
@@ -65,11 +91,11 @@ def top_locations(queries: list[str], family: str, n: int = 3) -> tuple[list[dic
             break
     if len(jobs) < 8:
         jobs = api_jobs(pages=6, category=family)
-        scope = f"направление «{family.lower()}»"
+        scope = f"направление «{family}»"
     cnt = Counter()
     for j in jobs:
         key = "Удалёнка" if "удал" in (j.get("format") or "").lower() else (j.get("country") or "").strip()
-        if len(key) >= 4 and key.lower() not in US and not key.isascii():
+        if len(key) >= 4 and key.lower() not in US | NO_COUNTRY and not key.isascii():
             cnt[key] += 1
         elif key == "Удалёнка":
             cnt[key] += 1
@@ -226,48 +252,55 @@ def build_salary(seed: str, args) -> dict:
 
 def build_profession(seed: str, args) -> dict:
     r = role(args.slug)
-    items = [short_item(x) for x in r["responsibilities"][:3]]
+    slug = r["slug"]
+    items = [short_item(x) for x in r["responsibilities"][:3]]        # на экран — влезает в строку
+    say_items = [x.rstrip(". ") for x in r["responsibilities"][:3]]    # в озвучку — целиком, без обрыва на полуслове
     lo, hi = r["salary"]["mt_cy"]["middle"]
     entry = first_sentence(r["entry"])
     skills = [short_item(x, 58) for x in r["hard_skills"][:3]]
+    say_skills = [x.rstrip(". ") for x in r["hard_skills"][:3]]
     sal = r["salary"]
     locs, loc_scope = top_locations([r["title_en"]] + [a for a in r.get("aliases", []) if a.isascii()], r["family"])
+    # оформление и формулировки — свои у каждой роли, иначе 35 роликов серии читаются как один шаблон
+    th, do_title, skill_title = theme_for(r), pick(DO_TITLES, slug), pick(SKILL_TITLES, slug)
     scenes = [
-        {"id": "hook", "type": "hook", "kicker": "Профессия за минуту", "title": r["title"], "sub": r["title_en"]},
+        {"id": "hook", "type": "hook", "kicker": pick(HOOK_KICKERS, slug), "title": r["title"], "sub": r["title_en"]},
         {"id": "lead", "type": "quote", "text": first_sentence(r["lead"])},
-        {"id": "do", "type": "bullets", "title": "Что делает", "items": items},
-        {"id": "grades", "type": "bars", "title": r["title"], "sub": "Зарплата по грейдам · Мальта и Кипр, $ в месяц", "bars": grade_bars(sal)},
-        {"id": "skills", "type": "bullets", "title": "Что нужно уметь", "items": skills},
+        {"id": "do", "type": "bullets", "title": do_title, "items": items},
+        {"id": "grades", "type": "bars", "title": "Зарплата по грейдам", "sub": "Мальта и Кипр, $ в месяц", "bars": grade_bars(sal)},
+        {"id": "skills", "type": "bullets", "title": skill_title, "items": skills},
         *([{"id": "locs", "type": "bars", "title": "Где ищут", "sub": loc_scope, "bars": locs}] if locs else []),
-        {"id": "entry", "type": "quote", "kicker": "Как войти", "text": entry},
-        {"id": "cta", "type": "cta", "line": "Полный разбор профессии", "url": f"spinhire.io/professions/{r['slug']}"},
+        {"id": "entry", "type": "quote", "kicker": pick(ENTRY_KICKERS, slug), "text": entry},
+        {"id": "cta", "type": "cta", "line": pick(CTA_LINES, slug), "url": f"spinhire.io/professions/{r['slug']}"},
     ]
-    loc_say = ", ".join(f"{l['label']} — {l['n']}" for l in locs)
+    loc_say = ", ".join(f"{l['label']} — {l['n']} {plural(l['n'], 'вакансия', 'вакансии', 'вакансий')}" for l in locs)
+    loc_intro = "Где ищут прямо сейчас" if loc_scope == "по этой роли" else f"Где ищут по направлению «{r['family']}»"
     phrases = [
-        {"id": "hook", "scene": "hook", "text": f"{r['title']} в iGaming за минуту: что делает, сколько получает и как войти."},
+        {"id": "hook", "scene": "hook", "text": pick(HOOK_LINES, slug).format(t=r["title"])},
         {"id": "lead", "scene": "lead", "text": first_sentence(r["lead"])},
-        {"id": "do0", "scene": "do", "text": "Что делает. " + items[0].rstrip("…") + "."},
-        {"id": "do1", "scene": "do", "text": items[1].rstrip("…") + "."},
-        {"id": "do2", "scene": "do", "text": items[2].rstrip("…") + "."},
+        {"id": "do0", "scene": "do", "text": pick(DO_SAYS, slug) + say_items[0] + "."},
+        {"id": "do1", "scene": "do", "text": say_items[1] + "."},
+        {"id": "do2", "scene": "do", "text": say_items[2] + "."},
         {"id": "g1", "scene": "grades", "text": f"Зарплаты на Мальте и Кипре. Джуниор — от {say_money(sal['mt_cy']['junior'][0], 'USD')}."},
         {"id": "g2", "scene": "grades", "text": f"Мидл — {say_range(lo, hi, 'USD')}."},
         {"id": "g3", "scene": "grades", "text": f"Сеньор — до {say_money(sal['mt_cy']['senior'][1], 'USD')}."},
         {"id": "g4", "scene": "grades", "text": f"Тимлид — до {say_money(sal['mt_cy']['lead'][1], 'USD')} в месяц."},
-        {"id": "s0", "scene": "skills", "text": "Что нужно уметь. " + skills[0].rstrip("…") + "."},
-        {"id": "s1", "scene": "skills", "text": skills[1].rstrip("…") + "."},
-        {"id": "s2", "scene": "skills", "text": skills[2].rstrip("…") + "."},
-        *([{"id": "locs", "scene": "locs", "text": f"Где ищут прямо сейчас, {loc_scope}: {loc_say} вакансий."}] if locs else []),
-        {"id": "entry", "scene": "entry", "text": "Как войти. " + entry},
+        {"id": "s0", "scene": "skills", "text": pick(SKILL_SAYS, slug) + say_skills[0] + "."},
+        {"id": "s1", "scene": "skills", "text": say_skills[1] + "."},
+        {"id": "s2", "scene": "skills", "text": say_skills[2] + "."},
+        *([{"id": "locs", "scene": "locs", "text": f"{loc_intro}: {loc_say}."}] if locs else []),
+        {"id": "entry", "scene": "entry", "text": pick(ENTRY_KICKERS, slug) + ". " + entry},
         {"id": "cta", "scene": "cta", "text": "Полный разбор профессии, навыки и вакансии — на spinhire.io, ссылка в описании."},
     ]
-    title = f"Кто такой {r['title'].lower()} в iGaming: обязанности, зарплата, как стать | профессии гемблинга"
-    desc = (f"{r['lead']}\n\nЧто делает:\n" + "\n".join(f"• {x}" for x in r["responsibilities"][:5])
+    title = pick(TITLE_TEMPLATES, slug).format(t=title_lc(r["title"]), T=r["title"])
+    desc = (f"{r['lead']}\n\n{do_title}:\n" + "\n".join(f"• {x}" for x in r["responsibilities"][:5])
             + f"\n\nЗарплата (Мальта/Кипр, $ в месяц):\n" + "\n".join(f"• {b['label']}: {b['text']}" for b in grade_bars(sal))
-            + "\n\nЧто нужно уметь:\n" + "\n".join(f"• {x}" for x in r["hard_skills"][:5])
+            + f"\n\n{skill_title}:\n" + "\n".join(f"• {x}" for x in r["hard_skills"][:5])
             + ("\n\nГде ищут: " + ", ".join(f"{l['label']} ({l['n']})" for l in locs) if locs else "") + "\n\n"
             f"Полный разбор профессии → {SITE}/professions/{r['slug']}\nВакансии → {SITE}/jobs?q={r['title_en'].replace(' ', '+')}\n"
             f"Telegram → {TG}\n\n{HASHTAGS} #профессии").replace(",", " ")
-    return {"format": "profession", "playlist": "profession", "mood": "bright", "bg": "hero-v2.jpg", "scenes": scenes, "phrases": phrases,
+    return {"format": "profession", "playlist": "profession", "mood": "bright", "bg": th["hero"], "theme": th,
+            "voice": voice_for(slug), "scenes": scenes, "phrases": phrases,
             "title": title[:100], "description": desc, "tags": ["igaming", "профессии", r["title"], r["title_en"], "карьера", "spinhire"]}
 
 
@@ -319,7 +352,7 @@ def apply_script(spec: dict, path: str) -> dict:
         for cur in spec["scenes"]:
             if cur["id"] == sc["id"]:
                 cur.update(sc)
-    for k in ("title", "description", "tags", "mood", "bg"):
+    for k in ("title", "description", "tags", "mood", "bg", "voice", "theme"):
         if over.get(k):
             spec[k] = over[k]
     return spec
@@ -328,7 +361,7 @@ def apply_script(spec: dict, path: str) -> dict:
 def assemble(spec: dict, vid: str) -> dict:
     """Озвучка → тайминги → сцены по фразам → props."""
     work = RENDERS / vid
-    voice, timings = voice_track(spec["phrases"], work)
+    voice, timings = voice_track(spec["phrases"], work, voice=spec.get("voice", ""))
     total = timings[-1]["end"] + 1.4
     by_scene = {}
     for t in timings:
@@ -342,7 +375,7 @@ def assemble(spec: dict, vid: str) -> dict:
         sc["end"] = round(scenes[i + 1]["start"], 3) if i + 1 < len(scenes) else round(total, 3)
     scenes[0]["start"] = 0.0
     props = {
-        "id": vid, "format": spec["format"], "bg": spec["bg"],
+        "id": vid, "format": spec["format"], "bg": spec["bg"], "theme": spec.get("theme"),
         "music": pick_track(spec["mood"], vid), "voice": f"renders/{vid}/voice.mp3",
         "duration": round(total, 3), "scenes": scenes,
         "captions": [{"text": t["text"], "start": t["start"], "end": t["end"]} for t in timings],
@@ -351,7 +384,8 @@ def assemble(spec: dict, vid: str) -> dict:
     OUT.mkdir(exist_ok=True)
     meta = {k: spec[k] for k in ("format", "playlist", "title", "description", "tags")}
     meta["featured"] = spec.get("featured", [])
-    meta.update({"id": vid, "duration": props["duration"], "music": props["music"], "props": str(work / "props.json")})
+    meta.update({"id": vid, "duration": props["duration"], "music": props["music"], "props": str(work / "props.json"),
+                 "voice": spec.get("voice", ""), "theme": (spec.get("theme") or {}).get("name", "")})
     (OUT / f"{vid}.meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))
     return props
 

@@ -195,14 +195,12 @@ def localize(text: str, lang: str) -> str:
     if lang == "ru" or not text:
         return text
     try:
-        from server.app import _SERVER_VOCAB
+        from server import terms
     except Exception:
         return text
-    vocab = _SERVER_VOCAB.get(lang) or {}
-    for source in sorted(vocab, key=len, reverse=True):
-        if source in text:
-            text = text.replace(source, vocab[source])
-    return text
+    # та же подстановка, что на сайте: с границами слова, чтобы «вакансиям»
+    # не превращалось в «jobм»
+    return terms.translate_terms(text, lang)
 
 
 TEXT = {

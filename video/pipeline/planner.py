@@ -38,9 +38,15 @@ def history() -> list[dict]:
     return json.load(open(p, encoding="utf-8")) if p.exists() else []
 
 
-def recent_slugs(days: int = 14) -> set[str]:
+def recent_slugs(days: int = 14, include_queue: bool = True) -> set[str]:
+    """Роли, которые нельзя брать сейчас: недавно опубликованные и (для новой сборки) уже ждущие в очереди.
+    При выборе ролика ИЗ очереди очередь, понятно, исключать нельзя — include_queue=False."""
+    import vqueue
     since = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days)).isoformat()
-    return {r.get("slug") for r in history() if r.get("slug") and r.get("uploaded_at", "") >= since}
+    used = {r.get("slug") for r in history() if r.get("slug") and r.get("uploaded_at", "") >= since}
+    if not include_queue:
+        return used
+    return used | {r.get("slug") for r in vqueue.load() if r.get("status") == "ready" and r.get("slug")}
 
 
 def pick_role(fmt: str, seed: int) -> dict:

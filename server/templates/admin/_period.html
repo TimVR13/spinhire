@@ -1,9 +1,10 @@
-{# фильтр периода админки: ждёт tab, period, date_from, date_to, today_iso; опц. role, count_label #}
+{# фильтр периода админки: ждёт tab, period, date_from, date_to, today_iso; опц. role, st, count_label #}
 <form class="adm-filters__row" method="get" action="/admin">
   <input type="hidden" name="tab" value="{{ tab }}">
   {% if role %}<input type="hidden" name="role" value="{{ role }}">{% endif %}
+  {% if st %}<input type="hidden" name="st" value="{{ st }}">{% endif %}
   {% for value, label in [('today', 'Сегодня'), ('yesterday', 'Вчера'), ('week', 'Неделя'), ('month', 'Месяц'), ('all', 'За всё время')] %}
-  <a class="tag {% if period == value %}tag-acid{% endif %}" href="/admin?tab={{ tab }}{% if role %}&role={{ role }}{% endif %}&period={{ value }}">{{ label }}</a>
+  <a class="tag {% if period == value %}tag-acid{% endif %}" href="/admin?tab={{ tab }}{% if role %}&role={{ role }}{% endif %}{% if st %}&st={{ st }}{% endif %}&period={{ value }}">{{ label }}</a>
   {% endfor %}
   <span class="adm-filters__custom {% if period == 'custom' %}on{% endif %}">
     <input type="hidden" name="period" value="custom">

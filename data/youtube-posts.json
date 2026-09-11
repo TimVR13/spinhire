@@ -105,5 +105,35 @@
   "slug": "sportsbook-trader",
   "featured": [],
   "uploaded_at": "2026-09-10T14:21:26Z"
+ },
+ {
+  "id": "2026-09-11-evening",
+  "video_id": "M07x1jC7Db0",
+  "url": "https://youtube.com/shorts/M07x1jC7Db0",
+  "format": "profession",
+  "playlist": "profession",
+  "title": "Дата-инженер в iGaming: зарплата по грейдам, обязанности и как войти",
+  "publish_at": "2026-09-11T17:00:00Z",
+  "slug": "data-engineer-igaming",
+  "featured": [],
+  "uploaded_at": "2026-09-11T04:22:21Z"
+ },
+ {
+  "id": "2026-09-12-morning",
+  "video_id": "OsXG3Xc3LGA",
+  "url": "https://youtube.com/shorts/OsXG3Xc3LGA",
+  "format": "hot_jobs",
+  "playlist": "jobs",
+  "title": "Вакансии в iGaming с зарплатой до $15 400 — топ-5 на 12 сентября 2026",
+  "publish_at": "2026-09-12T07:00:00Z",
+  "slug": null,
+  "featured": [
+   "https://spinhire.io/job/10261",
+   "https://spinhire.io/job/10147",
+   "https://spinhire.io/job/10150",
+   "https://spinhire.io/job/10025",
+   "https://spinhire.io/job/8954"
+  ],
+  "uploaded_at": "2026-09-11T09:24:23Z"
  }
 ]

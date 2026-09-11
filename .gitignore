@@ -33,3 +33,9 @@ data/launch-dataset/
 
 # лог отправленных комментариев PH — локальная история оператора
 data/ph-comments.json
+
+# контакты людей из TG-каналов: персональные данные, в репозиторий и на прод не едут
+data/tg-contacts.jsonl
+data/tg-contacts.csv
+data/tg-contacts-resolved.json
+data/tg-usernames.txt

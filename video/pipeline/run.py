@@ -14,8 +14,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import vqueue as q  # noqa: E402
 from common import OUT, RENDERS, ROOT, VIDEO_DIR  # noqa: E402
-from planner import plan  # noqa: E402
+from planner import plan, recent_slugs  # noqa: E402
 
 
 def done_ids() -> set[str]:
@@ -41,6 +42,16 @@ def next_free_slot(min_lead_minutes: int = 40):
     return None, None
 
 
+def shift_if_past(publish_at: str, date: str) -> str:
+    """Слот уже прошёл (или вот-вот) — публикуем в то же время завтра."""
+    if dt.datetime.fromisoformat(publish_at.replace("Z", "+00:00")) > dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=5):
+        return publish_at
+    nxt = dt.date.fromisoformat(date) + dt.timedelta(days=1)
+    shifted = f"{nxt.isoformat()}T{publish_at[11:]}"
+    print("слот прошёл — публикация переносится на", shifted)
+    return shifted
+
+
 def sh(cmd: list[str], **kw):
     print("$", " ".join(cmd), flush=True)
     return subprocess.run(cmd, check=True, cwd=str(VIDEO_DIR), **kw)
@@ -55,6 +66,7 @@ def main():
     ap.add_argument("--slug", default="")
     ap.add_argument("--script", default="", help="JSON с фразами/сценами от агента поверх автосборки")
     ap.add_argument("--dry", action="store_true", help="собрать и отрендерить, но не загружать")
+    ap.add_argument("--no-queue", action="store_true", help="собрать ролик заново, даже если в очереди есть готовый")
     ap.add_argument("--plan-only", action="store_true", help="только выбрать слот и напечатать план")
     a = ap.parse_args()
 
@@ -71,6 +83,18 @@ def main():
         p["slug"] = a.slug
     print("план:", json.dumps(p, ensure_ascii=False), flush=True)
     if a.plan_only:
+        return
+
+    # готовое из батча: озвучка и рендер уже сделаны, в слот остаётся только загрузка
+    item = None if (a.no_queue or a.dry) else next(iter(q.ready(p["format"], exclude_slugs=recent_slugs(include_queue=False))), None)
+    if item and Path(VIDEO_DIR / item["mp4"]).exists():
+        print("из очереди:", item["id"], "·", item["title"], flush=True)
+        publish_at = shift_if_past(p["publish_at"], a.date)
+        r = sh([sys.executable, "pipeline/upload.py", str(VIDEO_DIR / item["mp4"]), "--publish-at", publish_at,
+                "--slug", item.get("slug", ""), "--slot-id", p["id"]], capture_output=True, text=True)
+        line = r.stdout.strip().splitlines()[-1]
+        print(line)
+        q.mark_used(item["id"], p["id"], json.loads(line)["video_id"])
         return
 
     cmd = [sys.executable, "pipeline/build.py", p["format"], p["id"], "--date", a.date]
@@ -90,11 +114,7 @@ def main():
     if a.dry:
         print("dry-run: без загрузки")
         return
-    publish_at = p["publish_at"]
-    if dt.datetime.fromisoformat(publish_at.replace("Z", "+00:00")) <= dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=5):
-        nxt = dt.date.fromisoformat(a.date) + dt.timedelta(days=1)
-        publish_at = f"{nxt.isoformat()}T{publish_at[11:]}"
-        print("слот прошёл — публикация переносится на", publish_at)
+    publish_at = shift_if_past(p["publish_at"], a.date)
     r = sh([sys.executable, "pipeline/upload.py", str(mp4), "--publish-at", publish_at, "--slug", p.get("slug", "")],
            capture_output=True, text=True)
     print(r.stdout.strip().splitlines()[-1])

@@ -81,10 +81,10 @@ def split_langs(text: str) -> list[tuple[str, str]]:
     return segs
 
 
-def synth_wav(text: str, lang: str) -> bytes:
+def synth_wav(text: str, lang: str, voice: str = "") -> bytes:
     r = client().synthesize_speech(
         input=tts.SynthesisInput(text=text),
-        voice=tts.VoiceSelectionParams(language_code=lang, name=f"{lang}-{VOICE}"),
+        voice=tts.VoiceSelectionParams(language_code=lang, name=f"{lang}-{voice or VOICE}"),
         audio_config=tts.AudioConfig(audio_encoding=tts.AudioEncoding.LINEAR16, sample_rate_hertz=SR, speaking_rate=RATE),
     )
     return r.audio_content
@@ -103,8 +103,11 @@ def wav_seconds(path: Path) -> float:
     return float(out)
 
 
-def voice_track(phrases: list[dict], workdir: Path, gap: float = 0.18, lead: float = 0.3) -> tuple[Path, list[dict]]:
-    """phrases: [{id, text}] → voice.mp3 + [{id, text, start, end}] в секундах."""
+def voice_track(phrases: list[dict], workdir: Path, gap: float = 0.18, lead: float = 0.3, voice: str = "") -> tuple[Path, list[dict]]:
+    """phrases: [{id, text}] → voice.mp3 + [{id, text, start, end}] в секундах.
+
+    voice — имя Chirp3-HD без кода языка (например «Chirp3-HD-Kore»); пустое = голос по умолчанию.
+    Голос один на весь ролик: и русские куски, и латиница читаются им же."""
     workdir.mkdir(parents=True, exist_ok=True)
     pieces, timings, t = [], [], lead
     pieces.append(("silence", lead))
@@ -113,7 +116,7 @@ def voice_track(phrases: list[dict], workdir: Path, gap: float = 0.18, lead: flo
         parts = []
         for j, (lang, seg) in enumerate(split_langs(ph["text"])):
             raw = workdir / f"ph{i:02d}_{j}_raw.wav"
-            raw.write_bytes(synth_wav(seg, lang))
+            raw.write_bytes(synth_wav(seg, lang, voice))
             p = workdir / f"ph{i:02d}_{j}.wav"
             trim_silence(raw, p)
             raw.unlink()

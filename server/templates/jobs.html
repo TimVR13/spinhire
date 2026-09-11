@@ -49,7 +49,7 @@
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Вакансии</nav>
   <span class="kicker">Живая база</span>
-  <h1 style="font-size: clamp(1.6rem, 3vw, 2.2rem); margin-top: 8px;" data-i18n-prefix="jobsCount">Вакансии iGaming — {{ found }}{% if q or fmt or cat or loc or lang or salary_only %} по фильтрам{% endif %}</h1>
+  <h1 style="font-size: clamp(1.6rem, 3vw, 2.2rem); margin-top: 8px;">Вакансии iGaming — {{ found }}{% if q or fmt or cat or loc or lang or salary_only %} по фильтрам{% endif %}</h1>
 
   <form class="filter-bar" method="get" action="/jobs" role="search">
     <input class="input" type="search" name="q" value="{{ q }}" placeholder="Должность, компания, тег…" aria-label="Поиск вакансий">
@@ -62,7 +62,7 @@
     </select>
     <select class="select input" name="loc" aria-label="Страна и город">
       <option value="">Любая страна / город</option>
-      {% for l in locations %}<option value="{{ l }}" {% if loc == l %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      {% for l in locations %}<option value="{{ l }}" {% if loc == l %}selected{% endif %}>{{ l|place(page_lang) }}</option>{% endfor %}
     </select>
     <select class="select input" name="cat" aria-label="Направление">
       <option value="">Все направления</option>
@@ -93,7 +93,7 @@
       </div>
       <div>
         <h3 class="job-card__title">{{ j.title }} {% if j.featured %}<span class="tag tag-hot">⚡ Featured</span>{% endif %}</h3>
-        <p class="job-card__meta"><b>{{ j.company_name }}</b> · {{ j.location or '—' }} · {{ j.fmt }}</p>
+        <p class="job-card__meta"><b>{{ j.company_name|company(page_lang) }}</b> · {{ j.location|place(page_lang) or '—' }} · {{ j.fmt }}</p>
         <div class="job-card__tags">
           {% if j.category %}<span class="tag">{{ j.category }}</span>{% endif %}
           {% for t in j.tag_list %}<span class="tag">{{ t }}</span>{% endfor %}
@@ -101,7 +101,7 @@
         </div>
       </div>
       <div class="job-card__side">
-        {% if j.has_salary %}<span class="salary">{{ j.salary }}</span>
+        {% if j.has_salary %}<span class="salary">{{ j.salary|money(page_lang) }}</span>
                 {% else %}<span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>{% endif %}
         {% set m = matches.get(j.id) if matches else None %}
         {% if m %}<span class="fit fit--{{ m.tone }}" title="{{ m.label }}: {{ (m.plus + m.minus)|join('; ') }}">{{ m.percent }}%</span>{% endif %}
