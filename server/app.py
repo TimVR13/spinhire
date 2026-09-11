@@ -105,6 +105,10 @@ APPLY_MIN_INTERVAL = int(os.environ.get("SPINHIRE_APPLY_MIN_INTERVAL", "20"))
 REF_BONUS_REFERRER = int(os.environ.get("SPINHIRE_REF_BONUS_REFERRER", "50"))
 REF_BONUS_FRIEND = int(os.environ.get("SPINHIRE_REF_BONUS_FRIEND", "30"))
 REF_MONTHLY_CAP = int(os.environ.get("SPINHIRE_REF_MONTHLY_CAP", "10"))
+# Резюме в топе выдачи: 500 SC = десять приглашённых друзей по REF_BONUS_REFERRER,
+# либо тариф boost30 за деньги (PLANS). Срок один и тот же.
+BOOST_COST_SC = int(os.environ.get("SPINHIRE_BOOST_COST_SC", "500"))
+BOOST_DAYS = int(os.environ.get("SPINHIRE_BOOST_DAYS", "30"))
 LANG_HOSTS = {"en": "spinhire.io", "ru": "ru.spinhire.io", "uk": "ua.spinhire.io"}
 
 # Европейские языки живут в поддиректориях (/de/, /pl/…): не нужны ни DNS-записи,
@@ -220,6 +224,8 @@ class User(Base):
     avatar_file_path = Column(String, default="")
     last_spin = Column(DateTime, nullable=True)     # последний ежедневный фриспин
     verified = Column(Integer, default=1)           # 0 — ждём подтверждения почты; старые = 1
+    alerts_enabled = Column(Boolean, default=True)  # письма о вакансиях под резюме (не чаще раза в день)
+    alerts_last_sent = Column(String, default="")   # ISO — когда ушла последняя подборка
     otp_hash = Column(String, default="")           # хэш текущего кода подтверждения
     otp_expires = Column(String, default="")        # ISO-время истечения кода
     otp_attempts = Column(Integer, default=0)       # попыток ввода текущего кода
@@ -488,9 +494,18 @@ class Resume(Base):
     submitted_at = Column(String, default="")
     views = Column(Integer, default=0)
     unlock_count = Column(Integer, default=0)
+    boosted_until = Column(String, default="")   # ISO — до этой даты резюме первым в выдаче
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
     user = relationship("User")
+
+    @property
+    def is_boosted(self):
+        return bool(self.boosted_until) and self.boosted_until > datetime.utcnow().isoformat()
+
+    @property
+    def boosted_until_date(self):
+        return (self.boosted_until or "")[:10]
 
     @property
     def public_code(self):
@@ -749,6 +764,8 @@ PLANS = {
     "cvc5": ("5 контактов C-level", 105, "Пять топ-контактов, €21 за контакт — 25 открытий"),
     "cvc10": ("10 контактов C-level", 189, "Десять топ-контактов, €18.9 за контакт — 50 открытий"),
     "hunt": ("Подбор под ключ — предоплата", 1000, "Итоговая стоимость — 1 зарплата кандидата"),
+    # единственный тариф для соискателя: резюме первым в /resumes
+    "boost30": ("Резюме в топе поиска — 30 дней", 10, "Ваше резюме первым в выдаче для работодателей 30 дней"),
 }
 
 # Цена для сравнения «было → стало». У пакетов это честная поштучная стоимость
@@ -1229,6 +1246,10 @@ def migrate(db: Session):
         db.execute(text("ALTER TABLE users ADD COLUMN referral_credited BOOLEAN DEFAULT 0"))
     if "promo_code" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN promo_code VARCHAR DEFAULT ''"))
+    if "alerts_enabled" not in ucols:
+        db.execute(text("ALTER TABLE users ADD COLUMN alerts_enabled BOOLEAN DEFAULT 1"))
+    if "alerts_last_sent" not in ucols:
+        db.execute(text("ALTER TABLE users ADD COLUMN alerts_last_sent VARCHAR DEFAULT ''"))
     ecols = {r[1] for r in db.execute(text("PRAGMA table_info(events)")).fetchall()}
     for _sql in (
         "ALTER TABLE events ADD COLUMN image VARCHAR DEFAULT ''",
@@ -1266,6 +1287,7 @@ def migrate(db: Session):
         "ALTER TABLE resumes ADD COLUMN unlock_count INTEGER DEFAULT 0",
         "ALTER TABLE resumes ADD COLUMN cv_file_name VARCHAR DEFAULT ''",
         "ALTER TABLE resumes ADD COLUMN cv_file_path VARCHAR DEFAULT ''",
+        "ALTER TABLE resumes ADD COLUMN boosted_until VARCHAR DEFAULT ''",
     ):
         col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
         if rcols and col not in rcols:
@@ -2786,11 +2808,26 @@ JOB_LANGUAGES = (
 _locations_cache = {"at": 0.0, "value": []}
 
 
+_LOCATION_JUNK_RE = re.compile(
+    r"^[^A-Za-zА-Яа-яЁёІіЇїЄєÀ-ÿ]"          # начинается не с буквы: «-, us», «2 Locations», «(Remote)»
+    r"|\blocations?\b|multiple|anywhere|\w\((remote|hybrid|within)"   # «Multiple locations», «Anywhere; Europe», «FRHybrid (Remote…»
+    r"|лет на рынке|человек|в зависимости|только офис|под nda|usdt|гибрид|беттинг",
+    re.I)
+
+
 def job_locations_cached(db: Session) -> list:
     now = time.time()
     if now - _locations_cache["at"] > 600 or not _locations_cache["value"]:
-        rows = db.query(Job.location).filter(Job.status == "approved", Job.location != "").distinct().all()
-        _locations_cache.update(at=now, value=sorted({r[0] for r in rows if r[0]}))
+        from sqlalchemy import func as _func
+        rows = (db.query(Job.location, _func.count(Job.id))
+                .filter(Job.status == "approved", Job.location != "")
+                .group_by(Job.location).all())
+        # В фильтр попадают только похожие на место названия, где есть хотя бы 2 вакансии:
+        # сырые строки краулеров («2 Locations», «Bordeaux, FRHybrid (Remote…)», «в USDT»)
+        # раньше шли в выпадающий список как есть — 729 пунктов, половина мусор.
+        _locations_cache.update(at=now, value=sorted(
+            loc for loc, n in rows
+            if loc and n >= 2 and len(loc) <= 40 and not _LOCATION_JUNK_RE.search(loc)))
     return _locations_cache["value"]
 
 
@@ -3514,6 +3551,8 @@ def checkout_create(plan: str, request: Request, job_id: int = Form(None),
     if plan not in PLANS:
         raise HTTPException(404)
     if plan.startswith("cv") and user.role not in ("employer", "admin"):
+        raise HTTPException(403)
+    if plan == "boost30" and user.role not in ("talent", "admin"):
         raise HTTPException(403)
     if user.role == "employer":
         _, account, team_role = require_company_user(request, db)
@@ -4520,6 +4559,8 @@ def resumes(request: Request, q: str = "", location: str = "", fmt: str = "",
     if fmt.strip():
         query = query.filter(Resume.desired_format == fmt.strip())
     rows = query.order_by(Resume.updated_at.desc()).all()
+    # оплаченное поднятие — первым, внутри группы прежний порядок по свежести
+    rows.sort(key=lambda cv: not cv.is_boosted)
 
     # пометки и сохранённые поиски — только для работодателей, общие на кабинет
     user = get_user(request, db)
@@ -4591,6 +4632,19 @@ def resume_search_delete(search_id: int, request: Request, db: Session = Depends
     return RedirectResponse("/resumes", status_code=303)
 
 
+_CONTACT_RE = re.compile(
+    r"[\w.+-]+@[\w-]+\.[\w.-]+"                                   # email
+    r"|(?:https?://)?(?:t\.me|telegram\.me|wa\.me|linkedin\.com/in)/\S+"  # мессенджеры и LinkedIn
+    r"|(?<![\w/])@[A-Za-z0-9_]{4,}"                               # @handle
+    r"|(?=(?:\D*\d){9})\+?\d[\d\s().-]{7,}\d",                    # телефон: не меньше 9 цифр, чтобы «2019 – 2023» не прятать
+    re.I)
+
+
+def mask_contacts(text: str) -> str:
+    """Прячет контакты в свободном тексте резюме, пока работодатель их не открыл."""
+    return _CONTACT_RE.sub("[скрыто]", text or "")
+
+
 @app.get("/resume/CV-{code}", response_class=HTMLResponse)
 def resume_by_code(code: str, db: Session = Depends(db_session)):
     """Публичный код вида CV-000005 виден в списке — по нему тоже открываем карточку (иначе 422 от int-пути)."""
@@ -4614,7 +4668,9 @@ def resume_detail(resume_id: int, request: Request, db: Session = Depends(db_ses
         db.commit()
     unlocked = resume_contact_access(user, row, db)
     cv_account, cv_team_role = company_context(user, db) if user and user.role == "employer" else (user, "owner")
-    return render(request, db, "resume.html", resume=row, unlocked=unlocked,
+    # «Контакты закрыты» в сайдбаре, а в тексте «О специалисте» — почта и телеграм: маскируем, пока не открыли
+    about_text = row.about if (unlocked or is_owner_or_admin) else mask_contacts(row.about)
+    return render(request, db, "resume.html", resume=row, unlocked=unlocked, about_text=about_text,
                   active="resumes", cv_account=cv_account, cv_team_role=cv_team_role,
                   cv_cost=unlock_cost(row), cv_clevel=is_premium_contact(row))
 
@@ -4731,7 +4787,42 @@ def profile(request: Request, db: Session = Depends(db_session)):
                   recommendations=recommendations, notifications=notifications,
                   ref_code=user.referral_code, ref_invited=ref_invited,
                   ref_credited=ref_credited, ref_bonus=REF_BONUS_REFERRER,
-                  ref_bonus_friend=REF_BONUS_FRIEND)
+                  ref_bonus_friend=REF_BONUS_FRIEND,
+                  boost_cost=BOOST_COST_SC, boost_days=BOOST_DAYS,
+                  boost_price=PLANS["boost30"][1])
+
+
+def boost_resume(cv, days: int = None) -> None:
+    """Продлить поднятие: если ещё в топе — от текущей даты окончания, иначе от сейчас."""
+    now = datetime.utcnow()
+    start = now
+    if cv.boosted_until and cv.boosted_until > now.isoformat():
+        start = datetime.fromisoformat(cv.boosted_until)
+    cv.boosted_until = (start + timedelta(days=days or BOOST_DAYS)).isoformat()
+
+
+@app.post("/profile/boost")
+def profile_boost(request: Request, db: Session = Depends(db_session)):
+    """Поднять резюме в топ выдачи за SpinCoins. За деньги — обычный /checkout/boost30."""
+    user = get_user(request, db)
+    if not user:
+        return login_redirect("/profile")
+    if user.role != "talent":
+        raise HTTPException(403)
+    cv = db.query(Resume).filter_by(user_id=user.id).first()
+    if not cv or cv.status != "approved" or not cv.published:
+        # в топе нечего показывать, пока резюме не прошло модерацию и не опубликовано
+        return RedirectResponse("/profile?boost=notready#cv", status_code=303)
+    if (user.coins or 0) < BOOST_COST_SC:
+        return RedirectResponse("/profile?boost=nocoins#cv", status_code=303)
+    user.coins = (user.coins or 0) - BOOST_COST_SC
+    boost_resume(cv)
+    add_notification(db, user.id, "boost", "Резюме в топе поиска",
+                     f"До {cv.boosted_until_date} ваше резюме показывается первым. Списано {BOOST_COST_SC} SC.",
+                     "/profile#cv")
+    track(db, "resume_boosted", user.id, "resume", cv.id, method="coins", cost=BOOST_COST_SC)
+    db.commit()
+    return RedirectResponse("/profile?boost=ok#cv", status_code=303)
 
 
 @app.post("/account/role/{target_role}")
@@ -5044,7 +5135,8 @@ def profile_save(request: Request, name: str = Form(""), headline: str = Form(""
                  salary_expect: str = Form(""), languages: str = Form(""),
                  location: str = Form(""),
                  job_search_status: str = Form("active"),
-                 incognito: str = Form(None), db: Session = Depends(db_session)):
+                 incognito: str = Form(None), alerts: str = Form(None),
+                 db: Session = Depends(db_session)):
     user = get_user(request, db)
     if not user:
         return login_redirect("/profile")
@@ -5053,6 +5145,7 @@ def profile_save(request: Request, name: str = Form(""), headline: str = Form(""
     user.location = location.strip()
     user.job_search_status = job_search_status if job_search_status in ("active", "open", "paused") else "active"
     user.incognito = bool(incognito)
+    user.alerts_enabled = bool(alerts)
     db.commit()
     return RedirectResponse("/profile?ok=1", status_code=303)
 
@@ -6233,6 +6326,12 @@ def mark_order_paid(db: Session, o, source: str = "admin") -> bool:
         o.user.cv_credits = (o.user.cv_credits or 0) + delta
         db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=delta,
                                   balance_after=o.user.cv_credits, action="purchase"))
+    elif not already_paid and o.user and o.plan == "boost30":
+        cv = db.query(Resume).filter_by(user_id=o.user.id).first()
+        if cv:
+            boost_resume(cv)
+            add_notification(db, o.user.id, "boost", "Резюме в топе поиска",
+                             f"До {cv.boosted_until_date} ваше резюме показывается первым.", "/profile#cv")
     elif not already_paid and o.user and o.plan == "cvunlim":
         o.user.cv_access_until = (datetime.utcnow() + timedelta(days=30)).isoformat()
         db.add(ResumeCreditLedger(employer_id=o.user.id, order_id=o.id, delta=0,
@@ -7105,7 +7204,9 @@ def _market_stats_compute(db: Session) -> dict:
         directions[job.category or "Другое"] = directions.get(job.category or "Другое", 0) + 1
         country = country_of(job.location)
         countries[country] = countries.get(country, 0) + 1
-        formats[job.fmt or "не указан"] = formats.get(job.fmt or "не указан", 0) + 1
+        # только известные форматы: одна вакансия с битой кодировкой в fmt давала строку «Ð¾Ñ‚…» на /market
+        fmt_key = job.fmt if job.fmt in FORMATS else "не указан"
+        formats[fmt_key] = formats.get(fmt_key, 0) + 1
         for _, label in job.language_list:
             languages[label] = languages.get(label, 0) + 1
         if job.has_salary:
@@ -7515,6 +7616,11 @@ app.include_router(clusters.router)
 # ---------- XML-фиды вакансий для внешних агрегаторов ----------
 from server import feeds  # noqa: E402
 app.include_router(feeds.router)
+
+# ---------- письма о вакансиях под резюме ----------
+from server import alerts  # noqa: E402
+app.include_router(alerts.router)
+alerts.start_scheduler()  # выключается SPINHIRE_ALERTS_ENABLED=0
 
 # ---------- удалённый MCP-сервер поверх открытого API: https://spinhire.io/mcp ----------
 try:

@@ -2,13 +2,13 @@
 {% block title %}Оплата заказа #{{ order.id }} — SpinHire{% endblock %}
 {% block robots %}<meta name="robots" content="noindex">{% endblock %}
 {% block content %}
-  <nav class="crumbs"><a href="{{ '/employer#finance' if user and user.role == 'employer' else '/post-job' }}">← {{ 'Финансы кабинета' if user and user.role == 'employer' else 'Тарифы' }}</a> / Оплата</nav>
+  <nav class="crumbs"><a href="{{ '/profile#cv' if order.plan == 'boost30' else ('/employer#finance' if user and user.role == 'employer' else '/post-job') }}">← {{ 'Кабинет' if order.plan == 'boost30' else ('Финансы кабинета' if user and user.role == 'employer' else 'Тарифы') }}</a> / Оплата</nav>
   <div style="max-width: 560px; margin: 20px auto;">
     <span class="kicker">Заказ #{{ order.id }}</span>
     <h1 style="font-size: 1.8rem; margin: 8px 0 20px;">Оплата</h1>
 
     {% if request.query_params.get('sent') %}
-      <div class="flash">✓ Счёт формируется. Мы пришлём реквизиты на вашу почту, после оплаты активируем услугу. Статус — в <a href="/employer#finance" style="color:inherit;font-weight:800;">кабинете, раздел «Финансы»</a>.</div>
+      <div class="flash">✓ Счёт формируется. Мы пришлём реквизиты на вашу почту, после оплаты активируем услугу. Статус — в <a href="{{ '/profile#cv' if order.plan == 'boost30' else '/employer#finance' }}" style="color:inherit;font-weight:800;">{{ 'кабинете' if order.plan == 'boost30' else 'кабинете, раздел «Финансы»' }}</a>.</div>
     {% endif %}
 
     <div class="card" style="margin-bottom: 20px;">

@@ -51,6 +51,7 @@
   .cv-actions button.on { color:var(--yellow); border-color:var(--yellow); }
   .cv-fill { display:block; margin-top:6px; color:var(--ink-faint); font-size:.7rem; }
   .cv-fresh { color:var(--emerald, var(--acid)); font-weight:600; }
+  .cv-top { display:inline-block; margin-left:8px; padding:2px 8px; border-radius:999px; background:var(--acid); color:#0b0f0c; font-size:.68rem; font-weight:700; letter-spacing:.02em; vertical-align:middle; }
   .cv-salary { color:var(--yellow); }
   .cv-cta { display:flex; align-items:center; justify-content:space-between; gap:var(--sp-4); flex-wrap:wrap; margin-top:var(--sp-6); padding:var(--sp-5); border:1px solid var(--line); border-radius:var(--radius); background:color-mix(in oklch,var(--surface) 82%,transparent); }
   .cv-cta b { font-family:var(--font-display); font-size:1rem; }
@@ -111,7 +112,7 @@
     <a class="cv-row" href="/resume/{{ cv.id }}">
       <div class="cv-code">{{ cv.public_code }}<span class="cv-fill" title="Заполненность профиля">{{ extras[cv.id].fill }}%</span></div>
       <div>
-        <div class="cv-title">{{ cv.title }}</div>
+        <div class="cv-title">{{ cv.title }}{% if cv.is_boosted %}<span class="cv-top">⚡ В топе</span>{% endif %}</div>
         <p class="cv-meta">{{ cv.experience_years }} лет опыта · {{ cv.location or 'локация скрыта' }} · {{ cv.desired_format }} · {{ 'активно ищет' if cv.user.job_search_status=='active' else 'открыт предложениям' }}</p>
         <p class="cv-meta"><span class="cv-fresh">{{ extras[cv.id].fresh }}</span>{% if cv.salary_expect %} · хочет <b class="cv-salary">{{ cv.salary_expect }}</b>{% endif %}</p>
       </div>

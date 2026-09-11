@@ -49,6 +49,9 @@
   {% elif request.query_params.get('cv_error') == 'name' %}<div class="flash err">Укажите ФИО — работодатель получает его вместе с контактами после оплаченного открытия.</div>
   {% elif request.query_params.get('cv_error') == 'contacts' %}<div class="flash err">Укажите Telegram и email — их получает работодатель после оплаченного открытия.</div>
   {% elif request.query_params.get('cv_error') %}<div class="flash err">Заполните роль и описание резюме.</div>{% endif %}
+  {% if request.query_params.get('boost') == 'ok' %}<div class="flash">⚡ Готово: резюме в топе поиска. Срок — в карточке ниже.</div>
+  {% elif request.query_params.get('boost') == 'nocoins' %}<div class="flash err">Не хватает SpinCoins: нужно {{ boost_cost }} SC. Пригласите друзей или поднимите резюме за €{{ boost_price }}.</div>
+  {% elif request.query_params.get('boost') == 'notready' %}<div class="flash err">Поднять можно только опубликованное резюме, прошедшее модерацию.</div>{% endif %}
   {% if request.query_params.get('avatar_error') == 'type' %}<div class="flash err">Аватар принимается только в JPG, PNG или WebP.</div>{% endif %}
   {% if request.query_params.get('avatar_error') == 'size' %}<div class="flash err">Фотография больше 3 МБ. Уменьшите файл и попробуйте снова.</div>{% endif %}
   {% if request.query_params.get('cv_file_error') == 'type' %}<div class="flash err">CV принимается только в PDF, DOC или DOCX.</div>{% endif %}
@@ -122,6 +125,28 @@
       </div>
     </div>
   </div>
+
+  <!-- Поднять резюме в топ выдачи: за SpinCoins (= приглашённые друзья) или за деньги -->
+  {% if resume %}
+  <div class="card" style="margin-bottom: var(--sp-5);">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap;">
+      <div style="min-width: 240px;">
+        <b style="font-family: var(--font-display); text-transform: uppercase;">⚡ Резюме в топе поиска</b>
+        {% if resume.is_boosted %}<b class="cv-top-until">⚡ {{ resume.boosted_until_date }}</b>{% endif %}
+        <p style="color: var(--ink-dim); font-size: 0.88rem; margin-top: 4px;">
+          {% if resume.is_boosted %}Ваше резюме показывается работодателям первым. Продление складывает срок.
+          {% else %}Первое место в выдаче для работодателей на {{ boost_days }} дней. {{ boost_cost }} SC — это {{ boost_cost // ref_bonus }} приглашённых друзей, или €{{ boost_price }} деньгами.{% endif %}
+        </p>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        {% if resume.status == 'approved' and resume.published %}
+        <form method="post" action="/profile/boost"><button class="btn {{ 'btn-acid' if (user.coins or 0) >= boost_cost else 'btn-ghost' }}" type="submit"{% if (user.coins or 0) < boost_cost %} title="Не хватает SpinCoins"{% endif %}>За {{ boost_cost }} SC</button></form>
+        <form method="post" action="/checkout/boost30"><button class="btn btn-ghost" type="submit">За €{{ boost_price }}</button></form>
+        {% else %}<span class="btn btn-ghost" style="pointer-events: none; opacity: 0.6;">Сначала опубликуйте резюме</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   {% if recommendations %}<section><span class="kicker">Под ваш профиль</span><h2 style="font-size:1.25rem;margin:8px 0 16px;">Рекомендованные вакансии</h2><div class="recommend-grid">{% for job in recommendations %}<a class="recommend-job" href="/job/{{ job.id }}"><b>{{ job.title }}</b><p style="color:var(--ink-faint);font-size:.82rem;margin-top:6px;">{{ job.company_name|company(page_lang) }} · {{ job.location|place(page_lang) or job.fmt }}</p>{% if job.has_salary %}<span class="salary">{{ job.salary|money(page_lang) }}</span>{% endif %}</a>{% endfor %}</div></section>{% endif %}
   </div><!-- /overview -->
@@ -237,6 +262,7 @@
       <div class="field"><label>Языки</label><input class="input" name="languages" value="{{ user.languages }}" placeholder="английский C1, немецкий B2"></div>
       <div class="field"><label>Статус поиска</label><select class="input" name="job_search_status"><option value="active" {% if user.job_search_status=='active' %}selected{% endif %}>Активно ищу</option><option value="open" {% if user.job_search_status=='open' %}selected{% endif %}>Открыт предложениям</option><option value="paused" {% if user.job_search_status=='paused' %}selected{% endif %}>Сейчас не ищу</option></select></div>
       <label class="check"><input type="checkbox" name="incognito" {% if user.incognito %}checked{% endif %}> 🥷 Инкогнито: скрывать имя от работодателей</label>
+      <label class="check"><input type="checkbox" name="alerts" {% if user.alerts_enabled %}checked{% endif %}> ✉️ Письма о новых вакансиях под резюме — не чаще раза в день</label>
       <button class="btn btn-acid" type="submit">Сохранить</button>
     </form>
 
