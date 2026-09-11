@@ -6159,6 +6159,7 @@ ARTICLE_FILES = {
     "rabota-v-armenii-igaming": "post-rabota-v-armenii-igaming.html",
     "aml-officer-career": "post-aml-officer-career.html",
     "head-of-affiliates-career": "post-head-of-affiliates-career.html",
+    "data-engineer-igaming": "post-data-engineer-igaming.html",
 }
 
 

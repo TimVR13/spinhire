@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script defer src="/js/analytics.js?v=20260821c"></script>
+<!-- Google tag (gtag.js) -->
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-0W5XWDYPZ3');(function(){var d=false;function l(){if(d)return;d=true;var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-0W5XWDYPZ3';document.head.appendChild(s);}window.addEventListener('load',function(){(window.requestIdleCallback||function(f){setTimeout(f,2500)})(l);});['pointerdown','keydown','scroll','touchstart'].forEach(function(e){window.addEventListener(e,l,{once:true,passive:true});});})();</script>
+<base href="/">
+<title>Дата-инженер в iGaming: зарплата и стек | SpinHire</title>
+<link rel="icon" href="/favicon.svg?v=3" type="image/svg+xml">
+<link rel="icon" href="/img/favicons/favicon-32.png?v=3" sizes="32x32" type="image/png">
+<link rel="icon" href="/img/favicons/favicon-16.png?v=3" sizes="16x16" type="image/png">
+<link rel="icon" href="/favicon.ico?v=3" sizes="any">
+<link rel="apple-touch-icon" href="/img/favicons/apple-touch-icon.png?v=3">
+<meta name="description" content="Дата-инженер в iGaming: зачем казино своя платформа данных, стек Kafka, Airflow и dbt, вилки €1.6–13K по грейдам и регионам и как войти из обычного IT.">
+<link rel="canonical" href="https://spinhire.io/blog/data-engineer-igaming">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="SpinHire">
+<meta property="og:title" content="Дата-инженер в iGaming: зарплата и стек">
+<meta property="og:description" content="Почему казино строит отдельную платформу данных, какие витрины на ней живут, вилки по грейдам и регионам и как перейти из обычного дата-инжиниринга.">
+<meta property="og:url" content="https://spinhire.io/blog/data-engineer-igaming">
+<meta property="og:image" content="https://spinhire.io/img/blog-data-engineer-igaming.jpg">
+<meta property="article:published_time" content="2026-09-11">
+<meta property="article:modified_time" content="2026-09-11">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Дата-инженер в iGaming: зачем казино отдельная платформа данных",
+  "description": "Чем событийный поток онлайн-казино отличается от обычного продукта, какие витрины строит дата-инженер, стек, зарплатные вилки по грейдам и регионам и маршрут входа из классического IT.",
+  "datePublished": "2026-09-11",
+  "dateModified": "2026-09-11",
+  "author": { "@type": "Organization", "name": "SpinHire", "url": "https://spinhire.io" },
+  "publisher": { "@type": "Organization", "name": "SpinHire", "url": "https://spinhire.io" },
+  "image": "https://spinhire.io/img/blog-data-engineer-igaming.jpg",
+  "mainEntityOfPage": "https://spinhire.io/blog/data-engineer-igaming",
+  "inLanguage": "ru"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Главная", "item": "https://spinhire.io/" },
+    { "@type": "ListItem", "position": 2, "name": "Блог", "item": "https://spinhire.io/blog" },
+    { "@type": "ListItem", "position": 3, "name": "Дата-инженер в iGaming" }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Сколько зарабатывает дата-инженер в iGaming?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "На Мальте и Кипре junior получает €2.6–3.4K net, middle €4.2–5.8K, senior €6.5–8.8K, а Data Platform Lead €9–13K. В Польше, Румынии и Балтии те же грейды стоят на 20–25% меньше: €2–2.7K, €3.2–4.6K, €5–7K и €7.5–10.5K. На удалёнке вилка идёт от €1.6K у джуна до €7–10K у лида. Сверху обычно годовой бонус 10–15%."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Нужен ли опыт в гемблинге, чтобы стать дата-инженером в iGaming?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Нет. Это одна из немногих ролей индустрии, куда берут без доменного опыта: работодателя интересует инженерный стек — SQL, Python, Kafka, Airflow, dbt и колоночное хранилище. Специфику метрик GGR, NGR и бонусной себестоимости доучивают за месяц-полтора вместе с аналитиками."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Чем дата-инженер отличается от BI-аналитика в казино?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Дата-инженер отвечает за то, чтобы цифра доехала до хранилища вовремя и была одна и та же во всех отчётах. BI-аналитик отвечает за то, что эта цифра означает и какое решение по ней принимать. Инженер работает с пайплайнами и моделями данных, аналитик — с дашбордами и гипотезами. Вилка у инженера обычно на 10–15% выше на том же грейде."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Какой стек нужен дата-инженеру в онлайн-казино?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Базовый набор: продвинутый SQL и моделирование данных, Python, Kafka или другой стриминг, Airflow для оркестрации, dbt для трансформаций и колоночное хранилище — ClickHouse, Snowflake или BigQuery. Плюс Docker, Kubernetes и CI/CD. ClickHouse в индустрии встречается чаще, чем в среднем по рынку: событий много, а отчёты нужны в тот же день."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Куда растёт дата-инженер в iGaming?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Senior Data Engineer, дальше Data Platform Lead с командой из трёх-шести человек, затем Head of Data и CDO. Боковые треки: аналитическая инженерия ближе к продукту, антифрод-платформа и ML-инфраструктура под модели оттока и скоринг игроков."
+      }
+    }
+  ]
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap"></noscript>
+<link rel="stylesheet" href="css/style.css?v=20260909e">
+<style>
+  .tldr{border-left:3px solid var(--acid);padding:12px 16px;margin:0 0 24px;background:var(--surface)}
+  .tldr p{margin:0;color:var(--ink);font-size:1.02rem;line-height:1.65}
+  .faq h3{font-size:1.02rem;margin:18px 0 6px}
+  .faq p{color:var(--ink-dim);font-size:1rem;line-height:1.65;margin-bottom:var(--sp-3)}
+  .sources ul{font-size:.9rem;color:var(--ink-dim)}
+  .sources li{margin:4px 0;font-size:.9rem}
+  .sources a{color:var(--acid)}
+  .article-head { border-bottom: 2px solid var(--line); padding-block: var(--sp-7) var(--sp-6);
+    background: linear-gradient(90deg, oklch(0.13 0.02 305 / 0.92) 35%, oklch(0.13 0.02 305 / 0.55)), url('img/blog-data-engineer-igaming.webp') right center / cover no-repeat, var(--bg); }
+  .article-head h1 { max-width: 24ch; }
+  .article-head .meta { color: var(--ink-faint); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; margin-top: var(--sp-4); }
+  .article-layout { display: grid; grid-template-columns: 1fr 300px; gap: var(--sp-7); align-items: start; padding-top: var(--sp-6); }
+  .article-body { max-width: 72ch; }
+  .article-body > p, .article-body li { color: var(--ink-dim); font-size: 1.02rem; line-height: 1.7; }
+  .article-body > p { margin-bottom: var(--sp-4); }
+  .article-body h2 { font-size: 1.3rem; margin: var(--sp-7) 0 var(--sp-4); color: var(--acid); }
+  .article-body h2::before { content: "▮ "; }
+  .article-body ul, .article-body ol { padding-left: 1.2em; margin-bottom: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); }
+  .article-body li::marker { color: var(--pink); }
+  .salary-table-wrap { overflow-x: auto; border: 2px solid var(--line); margin-block: var(--sp-5); }
+  table.salary-table { border-collapse: collapse; width: 100%; min-width: 480px; font-size: 0.9rem; }
+  .salary-table th { background: var(--bg-deep); color: var(--acid); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.12em; text-align: left; padding: 12px 14px; border-bottom: 2px solid var(--line); }
+  .salary-table td { padding: 10px 14px; border-bottom: 1px solid var(--line); color: var(--ink-dim); }
+  .salary-table td:first-child { color: var(--ink); font-weight: 600; }
+  .salary-table td.money { color: var(--acid); font-weight: 700; white-space: nowrap; }
+  .salary-table tr:last-child td { border-bottom: none; }
+  .callout { border: 2px dashed var(--pink); background: oklch(0.2 0.06 350); padding: var(--sp-5); margin-block: var(--sp-5); }
+  .callout b { color: var(--pink); }
+  .timeline { border: 2px solid var(--line); background: var(--surface); margin-block: var(--sp-5); }
+  .timeline .t-row { display: grid; grid-template-columns: 90px 1fr; gap: var(--sp-4); padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--line); }
+  .timeline .t-row:last-child { border-bottom: none; }
+  .timeline .t-time { font-family: var(--font-display); font-weight: 800; color: var(--yellow); font-size: 0.85rem; }
+  .timeline .t-what { color: var(--ink-dim); font-size: 0.95rem; }
+  .toc { border: 2px solid var(--line); background: var(--surface); padding: var(--sp-5); position: sticky; top: 92px; }
+  .toc h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-faint); margin-bottom: var(--sp-3); }
+  .toc ol { list-style: none; display: flex; flex-direction: column; gap: var(--sp-2); counter-reset: toc; }
+  .toc a { text-decoration: none; color: var(--ink-dim); font-size: 0.9rem; counter-increment: toc; display: flex; gap: 10px; }
+  .toc a::before { content: "0" counter(toc); color: var(--acid); font-weight: 800; font-family: var(--font-display); font-size: 0.8rem; }
+  .toc a:hover { color: var(--acid); }
+  .toc .cta { margin-top: var(--sp-4); }
+  @media (max-width: 900px) { .article-layout { grid-template-columns: 1fr; } .article-layout > * { min-width: 0; max-width: 100%; } .toc { position: static; order: -1; } }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="/index.html" class="logo" aria-label="SpinHire — главная"><img class="logo__mark" src="/img/spinhire-slot.svg" alt="" width="60" height="36">spin<b>hire</b></a>
+    <nav class="main-nav" aria-label="Основная навигация">
+      <a href="/jobs.html">Вакансии</a>
+      <a href="/companies.html">Компании</a>
+      <a href="/blog.html">Блог</a>
+      <a href="/post-job.html">Работодателям</a>
+    </nav>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" data-auth>Войти</button>
+      <button class="nav-burger" aria-label="Меню">☰</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="article-head">
+    <div class="container">
+      <nav class="crumbs" aria-label="Хлебные крошки"><a href="/index.html">Главная</a> / <a href="/blog.html">Блог</a> / Дата-инженер в iGaming</nav>
+      <span class="kicker" style="color: var(--yellow);">Профессии</span>
+      <h1 style="margin-top: 8px;">Дата-инженер в iGaming: зачем казино отдельная платформа данных</h1>
+      <p class="meta">11 сентября 2026 · 9 минут · серия «Профессии iGaming»</p>
+    </div>
+  </div>
+
+  <div class="container article-layout">
+    <article class="article-body">
+      <div class="tldr"><p><b>Коротко:</b> каждый спин, ставка и изменение баланса — отдельное событие, и в пике их десятки тысяч в секунду. Дата-инженер собирает эти потоки в хранилище и строит витрины, на которых живут CRM, антифрод, партнёрка и отчётность регулятору. Вилки: €2.6–8.8K net на Мальте и Кипре, €2–7K в Восточной Европе, €1.6–6.5K на удалёнке, у Data Platform Lead до €13K. Доменный опыт не обязателен — это самая проходимая дверь в индустрию для человека из классического IT.</p></div>
+
+      <p>В обычном SaaS-продукте аналитика может опаздывать на сутки, и ничего страшного не случится. В онлайн-казино сутки задержки означают, что медиабайер ещё день льёт бюджет на источник, который приводит бонус-абьюзеров, а антифрод видит серию подозрительных выплат уже после того, как деньги ушли. Поэтому платформа данных здесь не вспомогательная функция, а часть операционного контура — и человек, который её строит, стоит дороже, чем в среднем по рынку дата-инжиниринга.</p>
+
+      <h2 id="why">Чем данные казино отличаются от обычного продукта</h2>
+      <p>Разница в трёх вещах: объём, количество источников и цена ошибки.</p>
+      <ul>
+        <li><b>Гранулярность событий.</b> Единица учёта — не заказ и не сессия, а отдельный спин: ставка, результат, изменение баланса, срабатывание бонусной механики. Средний оператор генерирует десятки тысяч таких событий в секунду в вечерний пик, и все они нужны в разрезе игрока, игры, провайдера и валюты.</li>
+        <li><b>Десяток внешних источников, и все разные.</b> Игровая платформа, агрегаторы контента (каждый провайдер слотов отдаёт свои отчёты в своём формате и по своему расписанию), платёжные провайдеры, крипто-процессинг, трекеры партнёрской программы, CRM-платформа, рекламные кабинеты. Ни один из них не обязан быть согласован с остальными.</li>
+        <li><b>Цена расхождения.</b> Если GGR в отчёте провайдера и в хранилище оператора не сходятся на 0,4%, это не «погрешность» — это спор о деньгах с внешней компанией и вопрос от финдиректора. Согласованность цифры здесь дороже красоты пайплайна.</li>
+      </ul>
+      <div class="callout"><b>Что удивляет пришедших из обычного IT:</b> ретроспективные корректировки. Провайдер может через неделю прислать сторнирование раунда, платёжка — вернуть чарджбэк месячной давности, а курс криптовалюты надо фиксировать на момент транзакции, а не на момент загрузки. Витрина, которая просто досчитывает вчерашний день и никогда не пересобирает прошлое, в iGaming ломается на первом же месячном закрытии.</div>
+
+      <h2 id="what">Что дата-инженер строит на самом деле</h2>
+      <p>Формально — ETL/ELT-пайплайны и витрины. Практически — четыре контура, у каждого свой заказчик и свои требования к свежести данных:</p>
+      <ul>
+        <li><b>Маркетинг и партнёрка.</b> Когорты по источникам, CPA против LTV, отчётность по выплатам аффилиатам. Здесь важна атрибуция: один и тот же игрок приходит с промокодом, кликом партнёра и ретаргетингом одновременно.</li>
+        <li><b>CRM и retention.</b> Сегменты для рассылок и бонусных кампаний, признаки оттока, бонусная себестоимость. Витрина должна обновляться быстро — кампания на возврат игрока запускается в тот же день, когда он перестал заходить.</li>
+        <li><b>Антифрод и платежи.</b> Фичи для правил и моделей: скорость депозитов, связки устройств, аномалии в паттерне ставок. Тот же поток данных, но с требованием к задержке в минуты, а не часы.</li>
+        <li><b>Комплаенс и регулятор.</b> Регулярная отчётность по игровой активности, данные для проверок AML, поддержка права на удаление по GDPR и раздельное хранение данных по юрисдикциям. Скучная часть работы, но именно на ней держится лицензия.</li>
+      </ul>
+      <p>Бизнес-смысл этих цифр — отдельная профессия: как их читают и на что опираются в решениях, разобрано в статье про <a href="/blog/data-analyst-casino" style="color: var(--acid);">аналитика данных в казино</a>.</p>
+
+      <h2 id="stack">Стек и как выглядит рабочая неделя</h2>
+      <p>Набор технологий предсказуемый: SQL и моделирование данных, Python, Kafka или другой стриминг, Airflow для оркестрации, dbt для трансформаций, колоночное хранилище — ClickHouse, Snowflake или BigQuery, плюс Docker, Kubernetes и CI/CD. ClickHouse в индустрии встречается заметно чаще, чем в среднем по рынку: он дёшев на больших событийных потоках и отвечает быстро, а это ровно то, чего требует ежедневный цикл решений.</p>
+      <div class="timeline">
+        <div class="t-row"><span class="t-time">Понедельник</span><span class="t-what">Разбор выходных: пиковые нагрузки, отставшие пайплайны, расхождения с отчётами провайдеров за уикенд — самый нагруженный период для казино.</span></div>
+        <div class="t-row"><span class="t-time">Вторник–среда</span><span class="t-what">Работа по бэклогу: новая витрина под кампанию CRM, подключение очередного провайдера контента, оптимизация запроса, который съедает треть бюджета хранилища.</span></div>
+        <div class="t-row"><span class="t-time">Четверг</span><span class="t-what">Качество данных: тесты dbt, сверка контрольных сумм по GGR, разбор «почему в дашборде одно число, а в выгрузке другое».</span></div>
+        <div class="t-row"><span class="t-time">Начало месяца</span><span class="t-what">Закрытие: пересбор витрин с учётом корректировок, отчёты для финансов и регулятора. Неделя, когда пайплайн не имеет права упасть.</span></div>
+      </div>
+
+      <h2 id="vs">Дата-инженер или BI-аналитик: что выбрать</h2>
+      <p>Эти две роли часто сидят в одной команде и путаются в вакансиях. Разделение простое: инженер отвечает за то, чтобы цифра доехала вовремя и была одинаковой во всех отчётах, аналитик — за то, что она означает. Инженер живёт в пайплайнах и моделях данных, аналитик — в дашбордах, гипотезах и разговорах с продуктом. На одном грейде инженер получает примерно на 10–15% больше: middle BI-аналитик на Мальте стоит €3.8–5.2K, дата-инженер — €4.2–5.8K. Взамен у аналитика короче путь к продуктовым ролям, а у инженера — к платформенным и руководящим.</p>
+
+      <h2 id="salary">Сколько платят</h2>
+      <p>Вилки ниже — net в месяц, из <a href="/professions" style="color: var(--acid);">картотеки профессий SpinHire</a>. Первая колонка — Мальта и Кипр, вторая — Польша, Румыния и Балтия, третья — удалёнка и хабы вроде Тбилиси, Еревана и Киева.</p>
+      <div class="salary-table-wrap">
+        <table class="salary-table">
+          <thead><tr><th>Грейд</th><th>Мальта / Кипр</th><th>Польша / Балтия</th><th>Удалёнка</th></tr></thead>
+          <tbody>
+            <tr><td>Junior</td><td class="money">€2.6–3.4K</td><td class="money">€2–2.7K</td><td class="money">€1.6–2.4K</td></tr>
+            <tr><td>Middle</td><td class="money">€4.2–5.8K</td><td class="money">€3.2–4.6K</td><td class="money">€2.9–4.2K</td></tr>
+            <tr><td>Senior</td><td class="money">€6.5–8.8K</td><td class="money">€5–7K</td><td class="money">€4.6–6.5K</td></tr>
+            <tr><td>Data Platform Lead</td><td class="money">€9–13K</td><td class="money">€7.5–10.5K</td><td class="money">€7–10K</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Сверху идёт годовой бонус, обычно 10–15% — скромнее, чем у маркетинговых ролей, где переменная часть доходит до половины дохода, но и не зависит от того, как отработал канал привлечения. Вилку двигают вверх три вещи: опыт с потоками в десятки тысяч событий в секунду, умение считать и резать стоимость хранилища и готовность отвечать за витрины, на которые смотрит регулятор. Джуна на эту роль берут редко: почти все вакансии начинаются с middle, потому что учить человека одновременно инженерии и домену никто не хочет.</p>
+
+      <h2 id="entry">Как войти из классического IT</h2>
+      <p>Это одна из немногих ролей в iGaming, где доменный опыт почти не спрашивают. Приходят из дата-инжиниринга любой индустрии — финтеха, e-commerce, телекома — и из backend-разработки. Финтех-бэкграунд ценится особенно: там те же требования к согласованности денежных цифр и к аудиту изменений.</p>
+      <ol>
+        <li><b>Стек важнее домена.</b> В резюме на первом месте должны быть объёмы и инструменты: сколько событий в сутки, какое хранилище, чем оркестрировали. Специфику метрик — GGR, NGR, бонусная себестоимость — доучивают за месяц-полтора прямо в работе.</li>
+        <li><b>Английский B1+ технического уровня.</b> Команда почти всегда распределённая, документация и переписка с провайдерами — на английском. Разговорной беглости тут требуют меньше, чем в клиентских ролях.</li>
+        <li><b>Будьте готовы к вопросу про качество данных.</b> На собеседовании почти наверняка спросят, как вы ловите расхождения и что делаете с поздно приходящими событиями. Это и есть основной экзамен на роль.</li>
+      </ol>
+      <p>Общая механика перехода в индустрию — от того, как читать вакансии, до разговора о зарплате — разобрана в материале про <a href="/blog/perehod-iz-it-v-igaming" style="color: var(--acid);">переход из классического IT в iGaming</a>. Роль почти всегда допускает полную удалёнку: график 5/2, привязки к офису на острове обычно нет.</p>
+
+      <h2 id="growth">Куда расти дальше</h2>
+      <p>Вверх — Senior Data Engineer, затем Data Platform Lead с командой из трёх-шести человек, дальше Head of Data и CDO. В сторону — аналитическая инженерия ближе к продукту, антифрод-платформа или ML-инфраструктура под модели оттока и скоринг игроков. Спрос на роль устойчиво высокий при дефиците кандидатов с опытом больших событийных потоков: это тот случай, когда узкое место рынка работает на кандидата.</p>
+      <p>Полное описание роли с обязанностями, KPI и инструментами — на странице <a href="/profession/data-engineer-igaming" style="color: var(--acid);">профессии дата-инженера</a>, а открытые позиции — в разделе <a href="/jobs.html" style="color: var(--acid);">вакансий SpinHire</a>.</p>
+
+      <section class="faq">
+        <h2 id="faq">Частые вопросы</h2>
+        <h3>Сколько зарабатывает дата-инженер в iGaming?</h3>
+        <p>На Мальте и Кипре junior получает €2.6–3.4K net, middle €4.2–5.8K, senior €6.5–8.8K, а Data Platform Lead €9–13K. В Польше, Румынии и Балтии те же грейды стоят на 20–25% меньше: €2–2.7K, €3.2–4.6K, €5–7K и €7.5–10.5K. На удалёнке вилка идёт от €1.6K у джуна до €7–10K у лида. Сверху обычно годовой бонус 10–15%.</p>
+        <h3>Нужен ли опыт в гемблинге, чтобы стать дата-инженером в iGaming?</h3>
+        <p>Нет. Это одна из немногих ролей индустрии, куда берут без доменного опыта: работодателя интересует инженерный стек — SQL, Python, Kafka, Airflow, dbt и колоночное хранилище. Специфику метрик GGR, NGR и бонусной себестоимости доучивают за месяц-полтора вместе с аналитиками.</p>
+        <h3>Чем дата-инженер отличается от BI-аналитика в казино?</h3>
+        <p>Дата-инженер отвечает за то, чтобы цифра доехала до хранилища вовремя и была одна и та же во всех отчётах. BI-аналитик отвечает за то, что эта цифра означает и какое решение по ней принимать. Инженер работает с пайплайнами и моделями данных, аналитик — с дашбордами и гипотезами. Вилка у инженера обычно на 10–15% выше на том же грейде.</p>
+        <h3>Какой стек нужен дата-инженеру в онлайн-казино?</h3>
+        <p>Базовый набор: продвинутый SQL и моделирование данных, Python, Kafka или другой стриминг, Airflow для оркестрации, dbt для трансформаций и колоночное хранилище — ClickHouse, Snowflake или BigQuery. Плюс Docker, Kubernetes и CI/CD. ClickHouse в индустрии встречается чаще, чем в среднем по рынку: событий много, а отчёты нужны в тот же день.</p>
+        <h3>Куда растёт дата-инженер в iGaming?</h3>
+        <p>Senior Data Engineer, дальше Data Platform Lead с командой из трёх-шести человек, затем Head of Data и CDO. Боковые треки: аналитическая инженерия ближе к продукту, антифрод-платформа и ML-инфраструктура под модели оттока и скоринг игроков.</p>
+      </section>
+
+      <section class="sources">
+        <h2 id="sources">Источники</h2>
+        <ul>
+          <li><a href="https://www.mga.org.mt/" target="_blank" rel="noopener">Malta Gaming Authority: требования к хранению игровых данных и отчётности лицензиата</a></li>
+          <li><a href="https://gdpr.eu/" target="_blank" rel="noopener">GDPR: право на удаление и ограничения на обработку персональных данных</a></li>
+          <li><a href="https://clickhouse.com/docs" target="_blank" rel="noopener">ClickHouse: документация по колоночному хранилищу для событийных потоков</a></li>
+          <li><a href="https://spinhire.io/market" target="_blank" rel="noopener">SpinHire: рынок iGaming-вакансий, зарплаты и спрос по ролям</a></li>
+          <li><a href="https://spinhire.io/professions" target="_blank" rel="noopener">SpinHire: картотека профессий iGaming с вилками по грейдам</a></li>
+        </ul>
+      </section>
+    </article>
+
+    <aside class="toc">
+      <h3>Содержание</h3>
+      <ol>
+        <li><a href="#why">Данные казино</a></li>
+        <li><a href="#what">Что он строит</a></li>
+        <li><a href="#stack">Стек и неделя</a></li>
+        <li><a href="#vs">Инженер vs аналитик</a></li>
+        <li><a href="#salary">Зарплаты</a></li>
+        <li><a href="#entry">Вход из IT</a></li>
+        <li><a href="#growth">Куда расти</a></li>
+      </ol>
+      <div class="cta">
+        <a href="/jobs.html" class="btn btn-acid btn-block btn-sm">Вакансии в iGaming →</a>
+        <button class="btn btn-ghost btn-block btn-sm" style="margin-top: 8px;" data-auth>Создать профиль</button>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <a href="/index.html" class="logo"><img class="logo__mark" src="/img/spinhire-slot.svg" alt="" width="60" height="36">spin<b>hire</b></a>
+        <p class="footer-tagline" style="margin-top: 16px;">Самый громкий джоб-борд в iGaming.</p>
+        <div class="footer-social" data-no-translate>
+          <a href="https://t.me/spinhire_ru" target="_blank" rel="noopener" aria-label="Telegram-канал на русском">✈️ Telegram · RU</a>
+          <a href="https://t.me/spinhire" target="_blank" rel="noopener" aria-label="Telegram channel in English">✈️ Telegram · EN</a>
+          <a href="https://www.linkedin.com/company/spinhirejob/" target="_blank" rel="noopener" aria-label="SpinHire в LinkedIn">💼 LinkedIn</a>
+        </div>
+      </div>
+      <div>
+        <h4>Кандидатам</h4>
+        <ul>
+          <li><a href="/jobs.html">Вакансии</a></li>
+          <li><a href="/profile.html">Мой профиль</a></li>
+          <li><a href="/professions">Профессии и зарплаты</a></li>
+          <li><a href="/events.html">Календарь событий</a></li>
+          <li><a href="/games.html">🎡 Игровая зона</a></li>
+          <li><a href="/blog.html">Карьерный блог</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Работодателям</h4>
+        <ul>
+          <li><a href="/post-job.html">Разместить вакансию</a></li>
+          <li><a href="/employer.html">Кабинет работодателя</a></li>
+          <li><a href="/post-job.html#pricing">Тарифы</a></li>
+          <li><a href="/post-job.html#pricing">База резюме</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>О проекте</h4>
+        <ul>
+          <li><a href="/about.html">О нас</a></li>
+          <li><a href="mailto:hello@spinhire.io">Контакты</a></li>
+          <li><a href="/privacy.html">Конфиденциальность</a></li>
+          <li><a href="/terms.html">Условия</a></li>
+          <li><a href="/game-rules.html">Правила игр</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 SpinHire — играй ответственно, работай громко</span>
+      <span>Индустрия 18+ · лицензии проверяем</span>
+    </div>
+  </div>
+</footer>
+
+<div class="modal-backdrop" id="auth-modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Регистрация">
+    <button class="modal__close" aria-label="Закрыть">✕</button>
+    <span class="kicker">Присаживайся к столу</span>
+    <h3 style="margin-top: 8px; font-size: 1.4rem;">Входи в игру</h3>
+    <a class="btn btn-acid btn-block" href="/register?role=talent">Регистрация соискателя →</a>
+    <a class="btn btn-pink btn-block" style="margin-top: 10px;" href="/register?role=employer">Регистрация работодателя →</a>
+    <p style="margin-top: 14px; font-size: 0.85rem; color: var(--ink-faint); text-align: center;">Уже есть аккаунт? <a href="/login" style="color: var(--acid);">Войти</a></p>
+    <div style="display: flex; gap: 8px; margin-top: 14px;">
+      <a href="/profile.html" class="btn btn-ghost btn-sm" style="flex: 1;">Кабинет соискателя</a>
+      <a href="/employer.html" class="btn btn-ghost btn-sm" style="flex: 1;">Кабинет работодателя</a>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/app.js?v=20260909e"></script>
+</body>
+</html>
