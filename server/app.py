@@ -2416,6 +2416,9 @@ def _localize_og(text: str, lang: str) -> str:
     """
     text = text.replace('<meta property="og:locale" content="ru_RU">',
                         f'<meta property="og:locale" content="{OG_LOCALES.get(lang, "en_US")}">', 1)
+    # общая обложка подписана по-русски; у языковых версий своя, с подписью на их языке
+    if lang != "ru" and os.path.exists(os.path.join(ROOT, "img", f"og-cover-{lang}.jpg")):
+        text = text.replace('/img/og-cover.jpg"', f'/img/og-cover-{lang}.jpg"', 1)
 
     def repl(m):
         path = m.group(2)
