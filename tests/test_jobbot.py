@@ -224,6 +224,23 @@ class JobbotTests(unittest.TestCase):
             chat = db.query(jobbot.BotChat).filter_by(chat_id=self.chat_id).first()
             self.assertTrue(chat.query.startswith("cat:"))
 
+    def test_job_opens_inside_the_chat(self):
+        """«Подробнее» присылает описание вакансии в чат, без единой ссылки наружу."""
+        self._run(self._update("биздев"))
+        sent = self._run(self._update(data=f"j:{self.bd_id}"))
+        text = " ".join(sent.texts())
+        self.assertIn("Business Development Manager", text)
+        self.assertIn("Описание вакансии", text)
+        buttons = sent.buttons()
+        self.assertFalse([b for b in buttons if b.get("url")])
+        self.assertTrue(any(b.get("callback_data") == f"a:{self.bd_id}" for b in buttons))
+
+    def test_menu_has_no_link_buttons(self):
+        sent = self._run(self._update("/start"))
+        self.assertFalse([b for b in sent.buttons() if b.get("url")])
+        menu = self._run(self._update(data="menu"))
+        self.assertFalse([b for b in menu.buttons() if b.get("url")])
+
     def test_top_salaries_are_actually_paid(self):
         """«Топ зарплат» показывает только вакансии с вилкой, по убыванию."""
         with SessionLocal() as db:
@@ -247,7 +264,10 @@ class JobbotTests(unittest.TestCase):
         buttons = sent.buttons()
         self.assertTrue(any(b.get("callback_data", "").startswith("a:") for b in buttons))
         self.assertTrue(any(b.get("callback_data") == "s:1" for b in buttons))
-        self.assertTrue(any("/job/" in (b.get("url") or "") for b in buttons))
+        # вакансия открывается в чате, а не на сайте: Telegram Ads забраковал
+        # бота как переходник на лендинг, и ссылок в выдаче быть не должно
+        self.assertTrue(any(b.get("callback_data", "").startswith("j:") for b in buttons))
+        self.assertFalse([b for b in buttons if b.get("url")])
 
     def test_apply_without_cv_asks_for_it(self):
         self._run(self._update("биздев"))

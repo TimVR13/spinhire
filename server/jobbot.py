@@ -37,7 +37,6 @@ import secrets
 import threading
 import time
 import urllib.error
-import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta
 from functools import lru_cache
@@ -265,8 +264,8 @@ T = {
  "btn_apply": {"ru": "Откликнуться {i}", "en": "Apply {i}"},
  "btn_more": {"ru": "Ещё {n}", "en": "More {n}"},
  "btn_sub": {"ru": "Присылать новые", "en": "Alert me"},
- "btn_open": {"ru": "Открыть {i}", "en": "Open {i}"},
- "btn_all": {"ru": "Все вакансии на сайте", "en": "All openings on the site"},
+ "btn_open": {"ru": "Подробнее {i}", "en": "Details {i}"},
+ "btn_back": {"ru": "← К списку", "en": "← Back to list"},
 }
 
 MENU = {
@@ -277,7 +276,6 @@ MENU = {
     "cv": {"ru": "📄 Загрузить резюме", "en": "📄 Upload CV"},
     "sub_on": {"ru": "🔔 Присылать новые", "en": "🔔 Alert me"},
     "sub_off": {"ru": "🔕 Отключить рассылку", "en": "🔕 Stop alerts"},
-    "site": {"ru": "🌐 Открыть сайт", "en": "🌐 Open the site"},
     "back": {"ru": "← Меню", "en": "← Menu"},
     "menu_btn": {"ru": "☰ Всё меню", "en": "☰ Full menu"},
 }
@@ -661,7 +659,7 @@ def jobs_message(db: Session, chat: BotChat, rows: list, offset: int,
         blocks.append(card(row, i, lang, fit))
         keyboard.append([
             {"text": t("btn_apply", lang, i=i), "callback_data": f"a:{row['id']}"},
-            {"text": t("btn_open", lang, i=i), "url": f"{SITE}/job/{row['id']}"},
+            {"text": t("btn_open", lang, i=i), "callback_data": f"j:{row['id']}"},
         ])
     tail = []
     if offset + limit < min(len(rows), MAX_CARDS):
@@ -671,19 +669,8 @@ def jobs_message(db: Session, chat: BotChat, rows: list, offset: int,
         tail.append({"text": t("btn_sub", lang), "callback_data": "s:1"})
     if tail:
         keyboard.append(tail)
-    keyboard.append([{"text": MENU["menu_btn"][lang], "callback_data": "menu"},
-                     {"text": t("btn_all", lang), "url": site_link(chat.query)}])
+    keyboard.append([{"text": MENU["menu_btn"][lang], "callback_data": "menu"}])
     return "\n\n".join(blocks), keyboard
-
-
-def site_link(spec: str) -> str:
-    """Тот же срез, но на сайте: человек не должен искать заново."""
-    kind, _, value = (spec or "").partition(":")
-    if kind == "cat":
-        return f"{SITE}/jobs?cat=" + urllib.parse.quote(value)
-    if kind in ("geo", "top", "fresh") or not spec:
-        return f"{SITE}/jobs"
-    return f"{SITE}/jobs?q=" + urllib.parse.quote(spec)
 
 
 def label_of(name: str, lang: str) -> str:
@@ -1011,7 +998,6 @@ def menu_keyboard(chat: BotChat) -> list:
          {"text": MENU["fresh"][lang], "callback_data": "fresh"}],
         [{"text": MENU["cv"][lang], "callback_data": "cv"}],
         [{"text": MENU[sub[0]][lang], "callback_data": sub[1]}],
-        [{"text": MENU["site"][lang], "url": f"{SITE}/jobs"}],
     ]
 
 
@@ -1046,6 +1032,54 @@ def geos_keyboard(db: Session, lang: str) -> list:
     buttons = [{"text": f"{label_of(name, lang)} ({count})",
                 "callback_data": f"g:{name[:40]}"} for name, count in geo_counts(db)]
     return _pairs(buttons, lang)
+
+
+TAG_BREAKS = re.compile(r"(?i)</(?:p|div|li|tr|h[1-6])>|<br\s*/?>")
+TAG_BULLET = re.compile(r"(?i)<li[^>]*>")
+TAGS = re.compile(r"<[^>]+>")
+ENTITIES = (("&nbsp;", " "), ("&amp;", "&"), ("&quot;", '"'), ("&#39;", "'"),
+            ("&mdash;", "—"), ("&ndash;", "–"), ("&lt;", "<"), ("&gt;", ">"))
+
+
+def plain(raw: str, limit: int = 2600) -> str:
+    """Описание вакансии → текст для чата: без разметки, со списками и абзацами."""
+    text = TAG_BULLET.sub("\n• ", raw or "")
+    text = TAG_BREAKS.sub("\n", text)
+    text = TAGS.sub("", text)
+    for entity, char in ENTITIES:
+        text = text.replace(entity, char)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    if len(text) > limit:
+        text = text[:limit].rsplit(" ", 1)[0] + "…"
+    return text
+
+
+def show_job(db: Session, chat: BotChat, job_id: int) -> None:
+    """Вакансия целиком в чате.
+
+    Раньше здесь была ссылка на сайт, и модерация Telegram Ads справедливо
+    сочла бота переходником на лендинг («Irrelevant destinations»). Описание
+    у нас своё — значит и читать его человек должен здесь.
+    """
+    lang = chat.lang
+    job = db.get(Job, job_id)
+    if not job or job.status != "approved":
+        send(chat.chat_id, t("gone", lang))
+        return
+    where = " · ".join(x for x in (esc(job.company_name), esc(job.location),
+                                   esc(job.fmt)) if x)
+    head = [f"<b>{esc(job.title)}</b>", where]
+    if any(c.isdigit() for c in (job.salary or "")):
+        head.append(f"💰 {esc(job.salary)}")
+    body = plain(job.description or "")
+    text = "\n".join(x for x in head if x) + ("\n\n" + esc(body) if body else "")
+    keyboard = [[{"text": t("btn_apply", lang, i="").strip(),
+                  "callback_data": f"a:{job.id}"}],
+                [{"text": t("btn_back", lang), "callback_data": f"m:{chat.offset or 0}"},
+                 {"text": MENU["menu_btn"][lang], "callback_data": "menu"}]]
+    send(chat.chat_id, text, keyboard)
+    track(db, "bot_job_view", chat.user_id, "job", job.id)
 
 
 def show_menu(db: Session, chat: BotChat) -> None:
@@ -1188,6 +1222,8 @@ def handle_callback(db: Session, chat: BotChat, data: str) -> None:
     lang = chat.lang
     if kind == "a" and value.isdigit():
         do_apply(db, chat, int(value))
+    elif kind == "j" and value.isdigit():
+        show_job(db, chat, int(value))
     elif kind == "m" and value.isdigit():
         show_jobs(db, chat, chat.query, int(value))
     elif data == "menu":
