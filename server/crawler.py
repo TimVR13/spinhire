@@ -1487,19 +1487,28 @@ WORK_UA_QUERIES = ["казино", "гемблінг", "igaming", "ставки"
 
 
 def crawl_work_ua(max_details: int = 120):
-    """work.ua: анти-бот пускает только с полным браузерным набором заголовков
-    (один UA не спасает — с датацентровых IP прилетает 403), описание — в
-    div#job-description; JSON-LD на карточках нет, парсим разметку."""
+    """work.ua: анти-бот пускает только с полным браузерным набором заголовков,
+    и то не всегда — Cloudflare периодически закрывает датацентровые IP целиком
+    (с дроплета 403 даже на главную, с домашнего IP та же страница отдаётся).
+    Описание — в div#job-description, JSON-LD на карточках нет, парсим разметку."""
     import urllib.parse as _up
     ids = set()
+    asked = blocked = 0
     for query in WORK_UA_QUERIES:
         for lang in ("", "ru/"):
+            asked += 1
             try:
                 page = _fetch_html(f"https://www.work.ua/{lang}jobs-{_up.quote(query)}/",
                                    browser=True)
             except Exception:
+                blocked += 1
                 continue
             ids.update(re.findall(r'/(?:ru/)?jobs/(\d+)', page))
+    # Ни одна страница не открылась — источник недоступен, а не пуст. Молча
+    # вернуть ноль нельзя: именно так work.ua и justjoin.it месяц числились
+    # исправными, пока в логе стояло «+0».
+    if blocked == asked:
+        raise RuntimeError("work.ua: все запросы отбиты, похоже на блокировку IP")
     out = []
     for vid in sorted(ids)[:max_details]:
         try:
@@ -1622,14 +1631,18 @@ def _justjoin_body(slug: str) -> str:
 
 def crawl_justjoin(max_details: int = 60):
     seen = {}
+    blocked = 0
     for keyword in JUSTJOIN_QUERIES:
         try:
             offers = _justjoin_search(keyword)
         except Exception:
+            blocked += 1
             continue
         for o in offers:
             seen.setdefault(o["slug"], o)
         time.sleep(0.3)
+    if blocked == len(JUSTJOIN_QUERIES):
+        raise RuntimeError("justjoin.it: поиск недоступен ни по одному ключу")
     out, candidates = [], []
     for o in seen.values():
         company = o.get("companyName") or ""
