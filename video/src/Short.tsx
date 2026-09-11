@@ -6,17 +6,61 @@ export const FPS = 30;
 const C = { bg: "#0a120e", bg2: "#0f1a14", ink: "#f2f7f4", dim: "#9fb3a8", acid: "#12e08e", pink: "#ff3fa4", gold: "#d4a94a", line: "rgba(18,224,142,.22)" };
 
 type Scene = { id: string; type: string; start: number; end: number; [k: string]: any };
+/* тема серии: акцент направления вместо единственного изумруда — иначе 35 роликов выглядят одинаково */
+export type Theme = { accent: string; second: string; pattern: "rays" | "grid" | "orbs"; hero?: string; name?: string };
+const DEFAULT_THEME: Theme = { accent: C.acid, second: C.gold, pattern: "rays" };
+const ThemeCtx = React.createContext<Theme>(DEFAULT_THEME);
+const useTheme = () => React.useContext(ThemeCtx);
 /* размер шрифта, чтобы строка влезла в ширину (Unbounded ≈ 0.68em на символ) */
 const fit = (text: string, maxW: number, maxSize: number, k = 0.68, min = 40) => Math.max(min, Math.min(maxSize, Math.floor(maxW / (Math.max(1, text.length) * k))));
 /* заглавная кириллица шире латиницы — свой коэффициент */
 const fitCaps = (text: string, maxW: number, maxSize: number) => fit(text, maxW, maxSize, 0.9);
 /* нижние ~520 px кадра занимают субтитры и кнопки Shorts — контент сцен заканчивается выше 1400 */
 type Caption = { text: string; start: number; end: number };
-export type ShortProps = { id: string; format: string; bg: string; music: string; voice: string; duration: number; scenes: Scene[]; captions: Caption[] };
+export type ShortProps = { id: string; format: string; bg: string; music: string; voice: string; duration: number; scenes: Scene[]; captions: Caption[]; theme?: Theme | null };
 
-const Grain: React.FC = () => (
-  <AbsoluteFill style={{ background: `radial-gradient(900px 700px at 80% 12%, rgba(212,169,74,.14), transparent 60%), radial-gradient(1000px 800px at 10% 100%, rgba(18,224,142,.12), transparent 60%), ${C.bg}` }} />
-);
+const Grain: React.FC = () => {
+  const th = useTheme();
+  return <AbsoluteFill style={{ background: `radial-gradient(900px 700px at 80% 12%, ${th.second}26, transparent 60%), radial-gradient(1000px 800px at 10% 100%, ${th.accent}1f, transparent 60%), ${C.bg}` }} />;
+};
+
+/* Рисунок подложки — свой у каждого направления: лучи, перспективная сетка или боке.
+   Медленно плывёт, чтобы кадр не выглядел статичной картинкой. */
+const Pattern: React.FC = () => {
+  const th = useTheme();
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const t = f / fps;
+  if (th.pattern === "grid") {
+    return (
+      <AbsoluteFill style={{ opacity: 0.5, overflow: "hidden" }}>
+        <div style={{ position: "absolute", left: -200, right: -200, top: 700, height: 1400, transform: "perspective(700px) rotateX(62deg)", transformOrigin: "50% 0%",
+          background: `repeating-linear-gradient(90deg, ${th.accent}2e 0 2px, transparent 2px 92px), repeating-linear-gradient(0deg, ${th.accent}22 0 2px, transparent 2px 92px)`,
+          backgroundPosition: `0 ${(t * 26) % 92}px`,
+          maskImage: "linear-gradient(180deg, transparent, #000 35%, transparent 92%)", WebkitMaskImage: "linear-gradient(180deg, transparent, #000 35%, transparent 92%)" }} />
+      </AbsoluteFill>
+    );
+  }
+  if (th.pattern === "orbs") {
+    const orbs = [{ x: 84, y: 18, r: 460, c: th.second }, { x: 8, y: 52, r: 620, c: th.accent }, { x: 72, y: 86, r: 520, c: th.accent }];
+    return (
+      <AbsoluteFill style={{ opacity: 0.85, overflow: "hidden" }}>
+        {orbs.map((o, i) => (
+          <div key={i} style={{ position: "absolute", left: `${o.x}%`, top: `${o.y}%`, width: o.r, height: o.r, marginLeft: -o.r / 2, marginTop: -o.r / 2,
+            borderRadius: "50%", background: `radial-gradient(circle, ${o.c}52, transparent 70%)`,
+            transform: `translateY(${Math.sin(t * 0.5 + i * 2) * 26}px) scale(${1 + 0.05 * Math.sin(t * 0.7 + i)})` }} />
+        ))}
+      </AbsoluteFill>
+    );
+  }
+  return (
+    <AbsoluteFill style={{ opacity: 0.32, overflow: "hidden" }}>
+      <div style={{ position: "absolute", inset: "-30%", transform: `rotate(${t * 1.6}deg)`,
+        background: `repeating-conic-gradient(from 0deg at 50% 50%, ${th.accent}26 0deg 5deg, transparent 5deg 22deg)`,
+        maskImage: "radial-gradient(circle at 50% 42%, #000 6%, transparent 62%)", WebkitMaskImage: "radial-gradient(circle at 50% 42%, #000 6%, transparent 62%)" }} />
+    </AbsoluteFill>
+  );
+};
 
 const Bg: React.FC<{ src: string; height?: number; zoom?: number; dim?: number }> = ({ src, height = 1100, zoom = 1, dim = 0 }) => (
   <div style={{ position: "absolute", top: 0, left: 0, right: 0, height, overflow: "hidden" }}>
@@ -32,16 +76,23 @@ const Logo: React.FC<{ size?: number }> = ({ size = 48 }) => (
   </div>
 );
 
-const Kicker: React.FC<{ children: React.ReactNode; color?: string; dot?: boolean }> = ({ children, color = C.acid, dot = true }) => (
-  <div style={{ display: "inline-block", fontFamily: body, fontWeight: 700, fontSize: 26, letterSpacing: 4, textTransform: "uppercase", color, border: `2px solid ${color}66`, borderRadius: 999, padding: "10px 22px" }}>{dot ? "● " : ""}{children}</div>
-);
+const Kicker: React.FC<{ children: React.ReactNode; color?: string; dot?: boolean }> = ({ children, color, dot = true }) => {
+  const th = useTheme();
+  const c = color || th.accent;
+  return (
+  <div style={{ display: "inline-block", fontFamily: body, fontWeight: 700, fontSize: 26, letterSpacing: 4, textTransform: "uppercase", color: c, border: `2px solid ${c}66`, borderRadius: 999, padding: "10px 22px" }}>{dot ? "● " : ""}{children}</div>
+  );
+};
 
-const Top: React.FC<{ n?: number; total?: number }> = ({ n, total }) => (
+const Top: React.FC<{ n?: number; total?: number }> = ({ n, total }) => {
+  const A = useTheme().accent;
+  return (
   <div style={{ position: "absolute", top: 110, left: 72, right: 72, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
     <Logo size={44} />
-    {total ? <div style={{ display: "flex", gap: 10 }}>{Array.from({ length: total }).map((_, i) => <div key={i} style={{ width: i === (n ?? 0) - 1 ? 44 : 14, height: 14, borderRadius: 7, background: i === (n ?? 0) - 1 ? C.acid : "rgba(255,255,255,.18)" }} />)}</div> : null}
+    {total ? <div style={{ display: "flex", gap: 10 }}>{Array.from({ length: total }).map((_, i) => <div key={i} style={{ width: i === (n ?? 0) - 1 ? 44 : 14, height: 14, borderRadius: 7, background: i === (n ?? 0) - 1 ? A : "rgba(255,255,255,.18)" }} />)}</div> : null}
   </div>
-);
+  );
+};
 
 /* прогресс сцены 0..1 и пружина входа — считаются от локального кадра */
 const useScene = (sc: Scene) => {
@@ -74,18 +125,19 @@ const Hook: React.FC<{ sc: Scene; bg: string }> = ({ sc, bg }) => {
 
 const JobCard: React.FC<{ sc: Scene }> = ({ sc }) => {
   const { s, s2, out } = useScene(sc);
+  const A = useTheme().accent;
   return (
     <AbsoluteFill style={{ justifyContent: "center", padding: "0 72px", opacity: out }}>
       <Top n={sc.n} total={sc.total} />
       <div style={{ marginTop: -120, transform: `translateY(${(1 - s) * 120}px) scale(${0.94 + 0.06 * s})`, opacity: s, border: `2px solid ${C.line}`, borderRadius: 36, padding: "52px 56px 56px", background: `linear-gradient(180deg, ${C.bg2}, rgba(15,26,20,.6))`, boxShadow: "0 40px 120px rgba(0,0,0,.45)" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 24 }}>
-          <div style={{ fontFamily: display, fontWeight: 800, fontSize: 140, lineHeight: 1, color: C.acid, textShadow: `0 0 40px ${C.acid}66` }}>{sc.n}</div>
+          <div style={{ fontFamily: display, fontWeight: 800, fontSize: 140, lineHeight: 1, color: A, textShadow: `0 0 40px ${A}66` }}>{sc.n}</div>
           <div style={{ fontFamily: body, fontWeight: 700, fontSize: 28, color: C.pink, letterSpacing: 3, textTransform: "uppercase", border: `2px solid ${C.pink}55`, borderRadius: 999, padding: "10px 22px" }}>{sc.tag}</div>
         </div>
         <div style={{ marginTop: 30, fontFamily: display, fontWeight: 800, fontSize: sc.title.length > 34 ? 56 : 70, lineHeight: 1.05, color: C.ink, letterSpacing: -1 }}>{sc.title}</div>
         <div style={{ marginTop: 24, fontFamily: body, fontWeight: 600, fontSize: 38, color: C.dim }}>{sc.company} <span style={{ color: "rgba(255,255,255,.35)" }}>·</span> {sc.where}</div>
         {sc.note ? <div style={{ marginTop: 14, fontFamily: body, fontWeight: 600, fontSize: 30, color: "rgba(255,255,255,.5)" }}>{sc.note}</div> : null}
-        <div style={{ marginTop: 44, transform: `scale(${0.7 + 0.3 * s2})`, transformOrigin: "left center", opacity: s2, fontFamily: display, fontWeight: 800, fontSize: fit(sc.salary + " /мес", 880, 96), color: C.acid, letterSpacing: -2, whiteSpace: "nowrap" }}>{sc.salary}<span style={{ fontFamily: body, fontWeight: 600, fontSize: 34, color: C.dim, marginLeft: 18, letterSpacing: 0 }}>/ мес</span></div>
+        <div style={{ marginTop: 44, transform: `scale(${0.7 + 0.3 * s2})`, transformOrigin: "left center", opacity: s2, fontFamily: display, fontWeight: 800, fontSize: fit(sc.salary + " /мес", 880, 96), color: A, letterSpacing: -2, whiteSpace: "nowrap" }}>{sc.salary}<span style={{ fontFamily: body, fontWeight: 600, fontSize: 34, color: C.dim, marginLeft: 18, letterSpacing: 0 }}>/ мес</span></div>
       </div>
     </AbsoluteFill>
   );
@@ -94,6 +146,7 @@ const JobCard: React.FC<{ sc: Scene }> = ({ sc }) => {
 const Bars: React.FC<{ sc: Scene; captions: Caption[] }> = ({ sc, captions }) => {
   const { s, out, local } = useScene(sc);
   const { fps } = useVideoConfig();
+  const A = useTheme().accent;
   // каждая полоса растёт, когда начинается её фраза (фразы сцены идут по порядку полос)
   const phr = captions.filter(c => c.start >= sc.start - 0.3 && c.start < sc.end);
   return (
@@ -111,10 +164,10 @@ const Bars: React.FC<{ sc: Scene; captions: Caption[] }> = ({ sc, captions }) =>
             <div key={i} style={{ opacity: Math.min(1, g * 3) }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 24, marginBottom: 14 }}>
                 <div style={{ fontFamily: body, fontWeight: 600, fontSize: 34, lineHeight: 1.15, color: C.dim, flex: 1 }}>{b.label}</div>
-                <div style={{ fontFamily: display, fontWeight: 800, fontSize: fit(b.text, 560, 52), color: C.acid, letterSpacing: -1, whiteSpace: "nowrap" }}>{b.text}</div>
+                <div style={{ fontFamily: display, fontWeight: 800, fontSize: fit(b.text, 560, 52), color: A, letterSpacing: -1, whiteSpace: "nowrap" }}>{b.text}</div>
               </div>
               <div style={{ height: 34, borderRadius: 17, background: "rgba(255,255,255,.08)", overflow: "hidden" }}>
-                <div style={{ width: `${b.pct * 100 * g}%`, height: "100%", borderRadius: 17, background: `linear-gradient(90deg, ${C.acid}, ${C.acid}99)`, boxShadow: `0 0 30px ${C.acid}66` }} />
+                <div style={{ width: `${b.pct * 100 * g}%`, height: "100%", borderRadius: 17, background: `linear-gradient(90deg, ${A}, ${A}99)`, boxShadow: `0 0 30px ${A}66` }} />
               </div>
             </div>
           );
@@ -126,13 +179,14 @@ const Bars: React.FC<{ sc: Scene; captions: Caption[] }> = ({ sc, captions }) =>
 
 const Big: React.FC<{ sc: Scene; bg: string }> = ({ sc, bg }) => {
   const { s, s2, out } = useScene(sc);
+  const A = useTheme().accent;
   return (
     <AbsoluteFill style={{ opacity: out }}>
       <Bg src={bg} height={1120} dim={0.35} />
       <Top />
       <div style={{ position: "absolute", left: 72, right: 72, top: 1010, opacity: s, transform: `translateY(${(1 - s) * 50}px)` }}>
         <Kicker color={C.gold}>{sc.kicker}</Kicker>
-        <div style={{ marginTop: 30, transform: `scale(${0.8 + 0.2 * s2})`, transformOrigin: "left center", fontFamily: display, fontWeight: 800, fontSize: fit(sc.number, 900, 124), lineHeight: 1, color: C.acid, letterSpacing: -3, textShadow: `0 0 60px ${C.acid}55`, whiteSpace: "nowrap" }}>{sc.number}</div>
+        <div style={{ marginTop: 30, transform: `scale(${0.8 + 0.2 * s2})`, transformOrigin: "left center", fontFamily: display, fontWeight: 800, fontSize: fit(sc.number, 900, 124), lineHeight: 1, color: A, letterSpacing: -3, textShadow: `0 0 60px ${A}55`, whiteSpace: "nowrap" }}>{sc.number}</div>
         <div style={{ marginTop: 24, fontFamily: body, fontWeight: 600, fontSize: 40, color: C.dim }}>{sc.label}</div>
       </div>
     </AbsoluteFill>
@@ -142,6 +196,7 @@ const Big: React.FC<{ sc: Scene; bg: string }> = ({ sc, bg }) => {
 const Bullets: React.FC<{ sc: Scene; captions: Caption[]; bg: string }> = ({ sc, captions, bg }) => {
   const { s, out, local } = useScene(sc);
   const { fps } = useVideoConfig();
+  const A = useTheme().accent;
   const phr = captions.filter(c => c.start >= sc.start - 0.3 && c.start < sc.end);
   return (
     <AbsoluteFill style={{ opacity: out }}>
@@ -156,7 +211,7 @@ const Bullets: React.FC<{ sc: Scene; captions: Caption[]; bg: string }> = ({ sc,
           const g = spring({ frame: local - at, fps, config: { damping: 15, stiffness: 120 } });
           return (
             <div key={i} style={{ display: "flex", gap: 26, alignItems: "flex-start", opacity: g, transform: `translateX(${(1 - g) * 60}px)` }}>
-              <div style={{ flex: "none", width: 64, height: 64, borderRadius: 20, background: C.acid, color: "#06130c", fontFamily: display, fontWeight: 800, fontSize: 36, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</div>
+              <div style={{ flex: "none", width: 64, height: 64, borderRadius: 20, background: A, color: "#06130c", fontFamily: display, fontWeight: 800, fontSize: 36, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</div>
               <div style={{ fontFamily: display, fontWeight: 700, fontSize: 46, lineHeight: 1.18, color: C.ink }}>{it}</div>
             </div>
           );
@@ -168,13 +223,14 @@ const Bullets: React.FC<{ sc: Scene; captions: Caption[]; bg: string }> = ({ sc,
 
 const Quote: React.FC<{ sc: Scene; bg: string }> = ({ sc, bg }) => {
   const { s, out } = useScene(sc);
+  const A = useTheme().accent;
   return (
     <AbsoluteFill style={{ opacity: out, justifyContent: "center", padding: "0 72px" }}>
       <Bg src={bg} height={1920} dim={0.72} />
       <Top />
       <div style={{ opacity: s, transform: `translateY(${(1 - s) * 40}px)`, marginTop: -160 }}>
         {sc.kicker ? <div style={{ marginBottom: 30 }}><Kicker color={C.pink}>{sc.kicker}</Kicker></div> : null}
-        <div style={{ borderLeft: `10px solid ${C.acid}`, paddingLeft: 40, fontFamily: display, fontWeight: 700, fontSize: sc.text.length > 140 ? 44 : 54, lineHeight: 1.22, color: C.ink }}>{sc.text}</div>
+        <div style={{ borderLeft: `10px solid ${A}`, paddingLeft: 40, fontFamily: display, fontWeight: 700, fontSize: sc.text.length > 140 ? 44 : 54, lineHeight: 1.22, color: C.ink }}>{sc.text}</div>
       </div>
     </AbsoluteFill>
   );
@@ -182,6 +238,7 @@ const Quote: React.FC<{ sc: Scene; bg: string }> = ({ sc, bg }) => {
 
 const Cta: React.FC<{ sc: Scene }> = ({ sc }) => {
   const { s, s2, local, p } = useScene(sc);
+  const A = useTheme().accent;
   const pulse = 1 + 0.025 * Math.sin(local / 5);
   const slog = fitCaps("Скучная карьера", 936, 84);            // три строки, ни одна не переносится
   // длинный адрес ломаем по последнему слэшу на две строки, чтобы он не вылезал за поля и остался читаемым
@@ -194,12 +251,12 @@ const Cta: React.FC<{ sc: Scene }> = ({ sc }) => {
       <div style={{ position: "absolute", top: 96, left: 72, opacity: s }}><Logo size={56} /></div>
       <div style={{ position: "absolute", left: 72, right: 72, top: 700, opacity: s, transform: `translateY(${(1 - s) * 50}px)` }}>
         <div style={{ fontFamily: display, fontWeight: 800, fontSize: slog, lineHeight: 1.06, textTransform: "uppercase", color: C.ink, letterSpacing: -1 }}>
-          <div>Скучная карьера</div><div style={{ color: "rgba(242,247,244,.85)" }}>закончилась</div><div style={{ color: C.acid, textShadow: `0 0 40px ${C.acid}55` }}>Иди ва‑банк</div>
+          <div>Скучная карьера</div><div style={{ color: "rgba(242,247,244,.85)" }}>закончилась</div><div style={{ color: A, textShadow: `0 0 40px ${A}55` }}>Иди ва‑банк</div>
         </div>
       </div>
       <div style={{ position: "absolute", left: 72, right: 72, top: 1050, opacity: s2, transform: `translateY(${(1 - s2) * 40}px)` }}>
-        <div style={{ fontFamily: body, fontWeight: 700, fontSize: 32, color: C.acid, letterSpacing: 3, textTransform: "uppercase", marginBottom: 20 }}>{sc.line} →</div>
-        <div style={{ display: "inline-block", transform: `scale(${pulse})`, transformOrigin: "left center", fontFamily: display, fontWeight: 800, fontSize: urlSize, lineHeight: 1.08, color: "#06130c", background: C.acid, padding: urlLines.length > 1 ? "26px 44px" : "22px 44px", borderRadius: urlLines.length > 1 ? 44 : 999, boxShadow: `0 0 80px ${C.acid}77`, whiteSpace: "nowrap" }}>
+        <div style={{ fontFamily: body, fontWeight: 700, fontSize: 32, color: A, letterSpacing: 3, textTransform: "uppercase", marginBottom: 20 }}>{sc.line} →</div>
+        <div style={{ display: "inline-block", transform: `scale(${pulse})`, transformOrigin: "left center", fontFamily: display, fontWeight: 800, fontSize: urlSize, lineHeight: 1.08, color: "#06130c", background: A, padding: urlLines.length > 1 ? "26px 44px" : "22px 44px", borderRadius: urlLines.length > 1 ? 44 : 999, boxShadow: `0 0 80px ${A}77`, whiteSpace: "nowrap" }}>
           {urlLines.map((l, i) => <div key={i}>{l}</div>)}
         </div>
       </div>
@@ -226,15 +283,18 @@ const Captions: React.FC<{ captions: Caption[]; hideOn: Set<string>; scenes: Sce
   );
 };
 
-export const Short: React.FC<ShortProps> = ({ bg, music, voice, duration, scenes, captions }) => {
+export const Short: React.FC<ShortProps> = ({ bg, music, voice, duration, scenes, captions, theme }) => {
   const f = useCurrentFrame(); const { fps } = useVideoConfig();
   const t = f / fps;
   const total = Math.round(duration * fps);
   const musicVol = interpolate(f, [0, 20, total - 45, total], [0, 0.16, 0.16, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const hideCaptionsOn = new Set(["quote", "bullets"]); // там текст уже на экране
+  const th: Theme = { ...DEFAULT_THEME, ...(theme || {}) };
   return (
+    <ThemeCtx.Provider value={th}>
     <AbsoluteFill style={{ fontFamily: body, color: C.ink }}>
       <Grain />
+      <Pattern />
       <Audio src={staticFile(music)} volume={musicVol} />
       <Audio src={staticFile(voice)} volume={1} />
       {scenes.map(sc => {
@@ -253,7 +313,8 @@ export const Short: React.FC<ShortProps> = ({ bg, music, voice, duration, scenes
       })}
       <Captions captions={captions} hideOn={hideCaptionsOn} scenes={scenes} />
       {/* тонкая полоска прогресса сверху */}
-      <div style={{ position: "absolute", top: 0, left: 0, height: 8, width: `${(t / duration) * 100}%`, background: C.acid, opacity: 0.8 }} />
+      <div style={{ position: "absolute", top: 0, left: 0, height: 8, width: `${(t / duration) * 100}%`, background: th.accent, opacity: 0.8 }} />
     </AbsoluteFill>
+    </ThemeCtx.Provider>
   );
 };
