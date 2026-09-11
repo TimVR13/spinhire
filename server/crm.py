@@ -537,8 +537,10 @@ def build_lead_letter(g: dict) -> tuple[str, str, str]:
             f"  {about}" if about else "",
             f"  Anonymous profile: {link}" if link else "  Full profile available on request.",
         ] if x))
+        # вложенная f-строка с экранированием — синтаксис 3.12+, на 3.11 модуль не импортируется
+        code_html = f' <span style="color:#888">({code})</span>' if code else ""
         html_blocks.append(
-            f'<li style="margin-bottom:14px;"><b>{who}</b>{f" <span style=\'color:#888\'>({code})</span>" if code else ""}'
+            f'<li style="margin-bottom:14px;"><b>{who}</b>{code_html}'
             f' → applied to “{it["job"].title}”'
             + (f'<br><span style="color:#555;">{facts}</span>' if facts else "")
             + (f'<br><span style="color:#555;">Skills: {skills}</span>' if skills else "")

@@ -1,0 +1,3 @@
+Loop detection is the feature I'd want first. An agent burning 40 calls to converge on nothing shows up in neither latency nor error rate — it just costs money quietly.
+
+Is a loop caught structurally (same tool, same args) or by similarity of intermediate outputs? The near-repeat case — same tool, slightly different args each round — looks like the hard one.

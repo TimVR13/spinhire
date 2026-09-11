@@ -19,7 +19,7 @@ import urllib.request
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.gzip import GZipMiddleware
@@ -160,6 +160,20 @@ def normalize_fmt(raw: str) -> str:
     value = (raw or "").strip()
     return FMT_ALIASES.get(value.lower(), value)
 
+
+
+# Нормализатор вилок пишет период по-русски («от €2 000 в месяц»), а англоязычному
+# читателю — от карточки в ленте до открытого API — нужен тот же текст по-английски.
+_SALARY_EN = ((" в год", "/year"), (" в час", "/hour"), (" в месяц", "/month"),
+              ("по запросу", "on request"), ("от ", "from "), ("до ", "up to "))
+
+
+def salary_en(text: str) -> str:
+    """«от €2 000 в месяц» → «from €2 000/month»."""
+    out = text or ""
+    for russian, english in _SALARY_EN:
+        out = out.replace(russian, english)
+    return out
 
 
 def script_language(text: str):
@@ -379,10 +393,7 @@ class Job(Base):
         lang, _ = script_language(f"{self.title} {self.description}")
         salary, fmt = self.salary or "", self.fmt or ""
         if lang == "en":
-            for russian, english in ((" в год", "/year"), (" в час", "/hour"),
-                                     (" в месяц", "/month"), ("по запросу", "on request"),
-                                     ("от ", "from ")):
-                salary = salary.replace(russian, english)
+            salary = salary_en(salary)
             fmt = {"удалёнка": "remote", "офис": "on-site",
                    "гибрид": "hybrid"}.get(fmt, fmt)
         return " · ".join(part for part in (salary, self.location, fmt) if part)
@@ -1427,6 +1438,9 @@ def _public_openapi():
                     {"name": "fmt", "in": "query", "schema": {"type": "string", "enum": ["офис", "удалёнка", "гибрид"]}},
                     {"name": "page", "in": "query", "schema": {"type": "integer", "minimum": 1, "default": 1}},
                     {"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 50}},
+                    {"name": "lang", "in": "query", "schema": {"type": "string", "enum": ["ru", "en"], "default": "ru"},
+                     "description": "Язык значений в ответе: направление, страна, формат и вилка. "
+                                    "lang=en returns English values (office / Casino operations / from €3 000 per month)."},
                 ],
                 "responses": {"200": {"description": "Страница вакансий", "content": {"application/json": {"schema": {
                     "type": "object", "properties": {
@@ -1437,6 +1451,10 @@ def _public_openapi():
                 "operationId": "getMarketStats",
                 "summary": "Рынок труда iGaming в цифрах / iGaming job market stats",
                 "description": "Открытые вакансии, новые за неделю, компании, разбивка по направлениям, странам, языкам и формату. Обновление каждые 6 часов.",
+                "parameters": [
+                    {"name": "lang", "in": "query", "schema": {"type": "string", "enum": ["ru", "en"], "default": "ru"},
+                     "description": "Язык названий направлений и стран / lang=en returns English names."},
+                ],
                 "responses": {"200": {"description": "Статистика", "content": {"application/json": {"schema": {"type": "object"}}}}}}},
             "/api/market-history": {"get": {
                 "operationId": "getMarketHistory",
@@ -1480,14 +1498,32 @@ templates.env.filters["company"] = terms.company_label
 @app.get("/terms")
 @app.get("/game-rules")
 @app.get("/editorial")
+@app.get("/press")
 def clean_static_pages(request: Request):
-    # «Чистые» URL служебных страниц — 301 на канонические .html
-    return RedirectResponse(request.url.path + ".html", status_code=301)
+    # «Чистые» URL служебных страниц — 301 на канонические .html. Языковой
+    # префикс сохраняем: /en/press вёл на русскую страницу и терял читателя.
+    path = (request.scope.get("state") or {}).get("orig_path") or request.url.path
+    return RedirectResponse(path + ".html", status_code=301)
 
 
 def _fmt_stat(n: int, step: int) -> str:
     v = max(step, n // step * step)
     return f"{v:,}".replace(",", " ") + "+"
+
+
+@app.get("/press.html", response_class=HTMLResponse, include_in_schema=False)
+def press_kit(db: Session = Depends(db_session)):
+    # Пресс-кит цитируют каталоги и журналисты: цифры в нём должны быть живыми,
+    # а не «на момент вёрстки». Логика та же, что у hero на главной.
+    html = open(os.path.join(ROOT, "press.html"), encoding="utf-8").read()
+    try:
+        stats = market_stats_data(db)
+        for key, step in (("live_jobs", 100), ("companies", 50), ("new_this_week", 100)):
+            html = re.sub(rf'(data-press-stat="{key}">)[^<]*',
+                          rf'\g<1>{_fmt_stat(stats[key], step)}', html, count=1)
+    except Exception:
+        pass  # при сбое статистики отдаём статический фолбэк
+    return HTMLResponse(html)
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
@@ -1719,6 +1755,33 @@ _SECURITY_HEADERS = {
 }
 
 
+# открытый индекс: читать его из браузерного приложения должно быть можно без прокси.
+# Только эти адреса и только чтение — кабинет и CRM ходят с куками, им чужой origin не нужен.
+PUBLIC_API_PATHS = ("/api/jobs", "/api/market-stats", "/api/market-history",
+                    "/api/featured-jobs", "/api/top-companies", "/openapi.json")
+
+
+def _is_public_api(path: str) -> bool:
+    path = _LANG_PREFIX_RE.sub(lambda m: m.group(2) or "/", path)
+    return path.startswith(PUBLIC_API_PATHS)
+
+
+@app.middleware("http")
+async def public_api_cors(request: Request, call_next):
+    """CC BY 4.0 без CORS — лицензия на бумаге: fetch() из браузера всё равно не пройдёт."""
+    if not _is_public_api(request.url.path):
+        return await call_next(request)
+    if request.method == "OPTIONS":  # префлайт, иначе роут отвечает 405
+        response = Response(status_code=204)
+    else:
+        response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Max-Age"] = "86400"
+    return response
+
+
 @app.middleware("http")
 async def guard(request: Request, call_next):
     path = request.url.path.lower()
@@ -1802,6 +1865,12 @@ for _code, _table in _SERVER_VOCAB.items():
 for _ru, _row in terms.NUMBERED.items():
     for _code, _value in _row.items():
         _I18N_SERVER.setdefault(_code, {})[_ru] = _value
+# В разметке амперсанд экранирован, а ключи словарей записаны обычным текстом:
+# «за P&L канала» в HTML выглядит как «P&amp;L» и проходил мимо словаря как есть.
+for _table in _I18N_SERVER.values():
+    for _key, _value in list(_table.items()):
+        if "&" in _key:
+            _table.setdefault(_key.replace("&", "&amp;"), _value)
 
 # Клиенту нужен интерфейс, а не тексты статей: он переводит то, что дорисовано
 # скриптом уже после ответа сервера. Со статьями словарь весил бы два мегабайта.
@@ -1890,6 +1959,25 @@ def _translate_with_numbers(raw: str, lang: str) -> str:
     return out
 
 
+def _translate_with_date(raw: str, lang: str) -> str:
+    """«По данным…, на 11 сентября 2026 открыто 5240 вакансий» — дата внутри фразы.
+
+    Маска по числам такую строку не ловит: в дате тоже числа, и ключ не совпадёт
+    ни одного дня. В словаре дата стоит как «@», числа — как «#», а сама дата
+    приходит из шаблона уже на языке страницы и переносится как есть.
+    """
+    if not _ANY_DATE_RE.search(raw):
+        return ""
+    dates = iter(m.group(0) for m in _ANY_DATE_RE.finditer(raw))
+    by_date = _ANY_DATE_RE.sub("@", raw)
+    target = _I18N_SERVER.get(lang, {}).get(_NUM_RE.sub("#", by_date))
+    if not target:
+        return ""
+    numbers = iter(_NUM_RE.findall(by_date))
+    return re.sub(r"[@#]", lambda m: next(dates, "@") if m.group(0) == "@"
+                  else next(numbers, "#"), target)
+
+
 _HTML_TEXT_RE = re.compile(r">([^<>]+)<")
 _HTML_ATTR_RE = re.compile(r'((?:placeholder|aria-label|title|content|alt)=")([^"]+)(")')
 _SKIP_BLOCK_RE = re.compile(r"(<script\b.*?</script>|<style\b.*?</style>|<textarea\b.*?</textarea>)",
@@ -1918,6 +2006,191 @@ def host_lang(host: str) -> str:
     return BASE_LANG
 
 
+# ---------- генерируемые строки: счётчики, вилки, даты ----------
+# Словарь ловит только точные фразы, а «17 вакансий», «от €2 000 в месяц» и
+# «9 сентября 2026» собираются из данных: вариантов бесконечно много, и на
+# любом языке, кроме русского, они оставались кириллицей. Разбираем их шаблоном.
+
+PLURAL_WORDS = {
+    "en": {"job": ("job", "jobs"), "company": ("company", "companies")},
+    "de": {"job": ("Stelle", "Stellen"), "company": ("Unternehmen", "Unternehmen")},
+    "pl": {"job": ("oferta", "ofert"), "company": ("firma", "firm")},
+    "fr": {"job": ("offre", "offres"), "company": ("entreprise", "entreprises")},
+    "es": {"job": ("vacante", "vacantes"), "company": ("empresa", "empresas")},
+    "pt": {"job": ("vaga", "vagas"), "company": ("empresa", "empresas")},
+    "it": {"job": ("offerta", "offerte"), "company": ("azienda", "aziende")},
+    "el": {"job": ("θέση", "θέσεις"), "company": ("εταιρεία", "εταιρείες")},
+    "ro": {"job": ("job", "joburi"), "company": ("companie", "companii")},
+    "bg": {"job": ("обява", "обяви"), "company": ("компания", "компании")},
+    "uk": {"job": ("вакансія", "вакансій"), "company": ("компанія", "компаній")},
+}
+
+SALARY_WORDS = {
+    "en": {"от": "from", "до": "up to", "в месяц": "/month", "в год": "/year",
+           "в час": "/hour", "по запросу": "on request", "/ мес": "/mo"},
+    "de": {"от": "ab", "до": "bis", "в месяц": "/Monat", "в год": "/Jahr",
+           "в час": "/Stunde", "по запросу": "auf Anfrage", "/ мес": "/Mon."},
+    "pl": {"от": "od", "до": "do", "в месяц": "/mies.", "в год": "/rok",
+           "в час": "/godz.", "по запросу": "na życzenie", "/ мес": "/mies."},
+    "fr": {"от": "à partir de", "до": "jusqu'à", "в месяц": "/mois", "в год": "/an",
+           "в час": "/heure", "по запросу": "sur demande", "/ мес": "/mois"},
+    "es": {"от": "desde", "до": "hasta", "в месяц": "/mes", "в год": "/año",
+           "в час": "/hora", "по запросу": "a consultar", "/ мес": "/mes"},
+    "pt": {"от": "a partir de", "до": "até", "в месяц": "/mês", "в год": "/ano",
+           "в час": "/hora", "по запросу": "sob consulta", "/ мес": "/mês"},
+    "it": {"от": "da", "до": "fino a", "в месяц": "/mese", "в год": "/anno",
+           "в час": "/ora", "по запросу": "su richiesta", "/ мес": "/mese"},
+    "el": {"от": "από", "до": "έως", "в месяц": "/μήνα", "в год": "/έτος",
+           "в час": "/ώρα", "по запросу": "κατόπιν αιτήματος", "/ мес": "/μήνα"},
+    "ro": {"от": "de la", "до": "până la", "в месяц": "/lună", "в год": "/an",
+           "в час": "/oră", "по запросу": "la cerere", "/ мес": "/lună"},
+    "bg": {"от": "от", "до": "до", "в месяц": "/месец", "в год": "/година",
+           "в час": "/час", "по запросу": "по запитване", "/ мес": "/месец"},
+    "uk": {"от": "від", "до": "до", "в месяц": "/міс", "в год": "/рік",
+           "в час": "/год", "по запросу": "за запитом", "/ мес": "/міс"},
+}
+
+MONTH_NAMES = {
+    "en": ["January", "February", "March", "April", "May", "June", "July",
+           "August", "September", "October", "November", "December"],
+    "de": ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
+           "August", "September", "Oktober", "November", "Dezember"],
+    "pl": ["styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec", "lipiec",
+           "sierpień", "wrzesień", "październik", "listopad", "grudzień"],
+    "fr": ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+           "août", "septembre", "octobre", "novembre", "décembre"],
+    "es": ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+           "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
+    "pt": ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
+           "agosto", "setembro", "outubro", "novembro", "dezembro"],
+    "it": ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio",
+           "agosto", "settembre", "ottobre", "novembre", "dicembre"],
+    "el": ["Ιανουαρίου", "Φεβρουαρίου", "Μαρτίου", "Απριλίου", "Μαΐου", "Ιουνίου",
+           "Ιουλίου", "Αυγούστου", "Σεπτεμβρίου", "Οκτωβρίου", "Νοεμβρίου", "Δεκεμβρίου"],
+    "ro": ["ianuarie", "februarie", "martie", "aprilie", "mai", "iunie", "iulie",
+           "august", "septembrie", "octombrie", "noiembrie", "decembrie"],
+    "bg": ["януари", "февруари", "март", "април", "май", "юни", "юли",
+           "август", "септември", "октомври", "ноември", "декември"],
+    "uk": ["січня", "лютого", "березня", "квітня", "травня", "червня", "липня",
+           "серпня", "вересня", "жовтня", "листопада", "грудня"],
+}
+
+MONTHS_NOM = {  # именительный падеж — заголовки архива рынка «Сентябрь 2026»
+    "el": ["Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος", "Μάιος", "Ιούνιος",
+           "Ιούλιος", "Αύγουστος", "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"],
+    "uk": ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень",
+           "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"],
+}
+
+LOGO_WORD = {"en": "Logo", "de": "Logo", "pl": "Logo", "fr": "Logo", "es": "Logo",
+             "pt": "Logótipo", "it": "Logo", "el": "Λογότυπο", "ro": "Logo",
+             "bg": "Лого", "uk": "Логотип"}
+
+# польский и украинский различают форму для 2–4: «2 ofert» вместо «2 oferty» режет глаз
+PLURAL_FEW = {
+    "pl": {"job": "oferty", "company": "firmy"},
+    "uk": {"job": "вакансії", "company": "компанії"},
+}
+
+_RU_MONTHS_GEN = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля",
+                  "августа", "сентября", "октября", "ноября", "декабря"]
+_RU_MONTHS_NOM = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль",
+                  "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
+
+MONTHS_SHORT = {
+    "en": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    "de": ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"],
+    "pl": ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"],
+    "fr": ["janv", "févr", "mars", "avr", "mai", "juin", "juil", "août", "sept", "oct", "nov", "déc"],
+    "es": ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"],
+    "pt": ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"],
+    "it": ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"],
+    "el": ["Ιαν", "Φεβ", "Μαρ", "Απρ", "Μαΐ", "Ιουν", "Ιουλ", "Αυγ", "Σεπ", "Οκτ", "Νοε", "Δεκ"],
+    "ro": ["ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sep", "oct", "noi", "dec"],
+    "bg": ["яну", "фев", "мар", "апр", "май", "юни", "юли", "авг", "сеп", "окт", "ное", "дек"],
+    "uk": ["січ", "лют", "бер", "кві", "тра", "чер", "лип", "сер", "вер", "жов", "лис", "гру"],
+}
+
+MINUTES_WORD = {"en": "min", "de": "Min.", "pl": "min", "fr": "min", "es": "min", "pt": "min",
+                "it": "min", "el": "λεπτά", "ro": "min", "bg": "мин", "uk": "хв"}
+
+_RU_MONTHS_SHORT = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
+_SHORT_DATE_RE = re.compile(r"(?<![А-Яа-яЁё])(" + "|".join(_RU_MONTHS_SHORT) + r")(?![А-Яа-яЁё])", re.I)
+_MONTH_ONLY_RE = re.compile(r"^(" + "|".join(_RU_MONTHS_NOM) + r")$")
+_MINUTES_RE = re.compile(r"(\d+)\s+мин(?:\.|ут[аы]?)?\b")
+
+_NUMBER_RE = re.compile(r"\d[\d\s\u00a0]*\d|\d")
+# дата «10 сентября 2026» на любом языке — в шаблоне словаря она стоит как @
+_ANY_DATE_RE = re.compile(r"\b\d{1,2}\.?\s+[^\W\d_]{3,}\.?\s+\d{4}\b")
+_COUNT_RE = re.compile(r"^(\d[\d\s ]*)\s+(вакансия|вакансии|вакансий|компания|компании|компаний)$")
+_DATE_RE = re.compile(r"\b(\d{1,2})\s+(" + "|".join(_RU_MONTHS_GEN) + r")\s+(\d{4})")
+_MONTH_YEAR_RE = re.compile(r"^(" + "|".join(_RU_MONTHS_NOM) + r")\s+(\d{4})$")
+_LOGO_RE = re.compile(r"^Логотип\s+(.+)$")
+_SALARY_HINT = re.compile(r"[€$£\d]|по запросу")
+
+
+def translate_generated(raw: str, lang: str) -> str:
+    """Перевести строку, собранную из данных: счётчик, вилку, дату, alt логотипа."""
+    words = SALARY_WORDS.get(lang)
+    if not words:
+        return raw
+    text = raw.strip()
+
+    count = _COUNT_RE.match(text)
+    if count:
+        number, noun = count.group(1).strip(), count.group(2)
+        kind = "company" if noun.startswith("компан") else "job"
+        one, many = PLURAL_WORDS[lang][kind]
+        digits = re.sub(r"[\s\u00a0]", "", number)
+        value = int(digits) if digits.isdigit() else 0
+        few = PLURAL_FEW.get(lang, {}).get(kind)
+        if value % 10 == 1 and value % 100 != 11:
+            word = one
+        elif few and 2 <= value % 10 <= 4 and not 12 <= value % 100 <= 14:
+            word = few
+        else:
+            word = many
+        return f"{number} {word}"
+
+    month_year = _MONTH_YEAR_RE.match(text)
+    if month_year:
+        index = _RU_MONTHS_NOM.index(month_year.group(1))
+        names = MONTHS_NOM.get(lang) or MONTH_NAMES[lang]
+        name = names[index]
+        return f"{name[0].upper() + name[1:]} {month_year.group(2)}"
+
+    logo = _LOGO_RE.match(text)
+    if logo:
+        return f"{LOGO_WORD[lang]} {logo.group(1)}"
+
+    month_only = _MONTH_ONLY_RE.match(text)
+    if month_only:
+        index = _RU_MONTHS_NOM.index(month_only.group(1))
+        names = MONTHS_NOM.get(lang) or MONTH_NAMES[lang]
+        return names[index][0].upper() + names[index][1:]
+
+    out = text
+    if _MINUTES_RE.search(out):
+        out = _MINUTES_RE.sub(lambda m: f"{m.group(1)} {MINUTES_WORD[lang]}", out)
+    if _SHORT_DATE_RE.search(out) and MONTHS_SHORT.get(lang):
+        out = _SHORT_DATE_RE.sub(
+            lambda m: MONTHS_SHORT[lang][_RU_MONTHS_SHORT.index(m.group(1).lower())]
+            if m.group(1)[0].islower() else MONTHS_SHORT[lang][_RU_MONTHS_SHORT.index(m.group(1).lower())].upper(),
+            out)
+    if _DATE_RE.search(out):
+        out = _DATE_RE.sub(lambda m: human_date(
+            date(int(m.group(3)), _RU_MONTHS_GEN.index(m.group(2)) + 1, int(m.group(1))), lang), out)
+    if _SALARY_HINT.search(out):
+        for russian, local in sorted(words.items(), key=lambda kv: -len(kv[0])):
+            if russian in ("от", "до"):
+                out = re.sub(r"(?<![А-Яа-яЁё])" + russian + r"(?![А-Яа-яЁё])", local, out)
+            elif local.startswith("/"):
+                out = out.replace(" " + russian, local).replace(russian, local)
+            else:
+                out = out.replace(russian, local)
+    return out if out != text else raw
+
+
 def translate_html(html_text: str, lang: str, prefix_urls: bool = False) -> str:
     """Перевести готовый HTML: точные узлы по словарю, служебные слова подстрочно.
 
@@ -1943,6 +2216,7 @@ def translate_html(html_text: str, lang: str, prefix_urls: bool = False) -> str:
         if key in full:
             return lead + full[key] + trail
         numbered = (_translate_with_numbers(key, lang)
+                    or _translate_with_date(key, lang)
                     or _translate_with_slot(key, lang, slot=translate_slot))
         if numbered:
             return lead + numbered + trail
@@ -2044,6 +2318,14 @@ def _prefix_links(text: str, lang: str) -> str:
     return _HREF_RE.sub(repl, text)
 
 
+LANG_SWITCH_LABEL = {
+    "ru": "Язык сайта", "en": "Site language", "de": "Sprache der Website",
+    "pl": "Język strony", "fr": "Langue du site", "es": "Idioma del sitio",
+    "pt": "Idioma do site", "it": "Lingua del sito", "el": "Γλώσσα του ιστότοπου",
+    "ro": "Limba site-ului", "bg": "Език на сайта", "uk": "Мова сайту",
+}
+
+
 def _lang_links(path: str, current: str) -> str:
     """Видимые ссылки на переводы: их обходит поисковик и видит человек без JS.
 
@@ -2064,6 +2346,24 @@ def _lang_links(path: str, current: str) -> str:
             + "".join(links) + "</nav>")
 
 
+def _ph_badge() -> str:
+    """Бейдж Product Hunt в подвале — появляется, когда задан SPINHIRE_PH_POST_ID.
+
+    Ставить его до запуска нечем: id поста выдаёт PH только после публикации. Поэтому
+    вёрстка уже готова, а включается одной переменной окружения без правки страниц.
+    """
+    post_id = os.environ.get("SPINHIRE_PH_POST_ID", "").strip()
+    if not post_id.isdigit():
+        return ""
+    slug = os.environ.get("SPINHIRE_PH_SLUG", "spinhire").strip() or "spinhire"
+    return (f'<a class="ph-badge" href="https://www.producthunt.com/posts/{slug}'
+            '?utm_source=badge-featured&amp;utm_medium=badge" target="_blank" rel="noopener"'
+            ' aria-label="SpinHire on Product Hunt">'
+            f'<img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id={post_id}'
+            '&amp;theme=dark" alt="SpinHire — open-data job board for iGaming | Product Hunt"'
+            ' width="250" height="54" loading="lazy"></a>')
+
+
 def _hreflang_block(path: str, canonical_lang: str) -> str:
     """hreflang по всем языкам: базовый на корне, остальные в поддиректориях."""
     site = "https://spinhire.io"
@@ -2074,6 +2374,31 @@ def _hreflang_block(path: str, canonical_lang: str) -> str:
     canonical = f"{site}/{canonical_lang}{path}" if canonical_lang != "ru" else f"{site}{path}"
     links.append(f'<link rel="canonical" href="{canonical}">')
     return "".join(links)
+
+
+OG_LOCALES = {"en": "en_US", "de": "de_DE", "pl": "pl_PL", "fr": "fr_FR", "es": "es_ES",
+              "pt": "pt_PT", "it": "it_IT", "el": "el_GR", "ro": "ro_RO", "bg": "bg_BG",
+              "uk": "uk_UA", "ru": "ru_RU"}
+_OG_URL_RE = re.compile(r'(<meta property="og:url" content="https://spinhire\.io)(/[^"]*|)(")')
+
+
+def _localize_og(text: str, lang: str) -> str:
+    """og:locale и og:url под язык страницы.
+
+    Карточку ссылки рисует робот соцсети — без JS и без нашего переключателя.
+    С ru_RU и русским адресом в og:url английская ссылка в ленте Product Hunt,
+    LinkedIn или X выглядит чужой и уводит читателя на русскую версию.
+    """
+    text = text.replace('<meta property="og:locale" content="ru_RU">',
+                        f'<meta property="og:locale" content="{OG_LOCALES.get(lang, "en_US")}">', 1)
+
+    def repl(m):
+        path = m.group(2)
+        if _NO_PREFIX_RE.match(path) or _LANG_PREFIX_RE.match(path):
+            return m.group(0)
+        return f"{m.group(1)}/{lang}{path}{m.group(3)}"
+
+    return _OG_URL_RE.sub(repl, text, count=1)
 
 
 @app.middleware("http")
@@ -2106,6 +2431,7 @@ async def language_layer(request: Request, call_next):
         text = text.replace('<html lang="ru">', f'<html lang="{lang}">', 1)
         if prefix_lang:
             text = _prefix_links(text, lang)
+            text = _localize_og(text, lang)
     live_count = getattr(request.state, "landing_count", None)
     if live_count:
         token, live = live_count
@@ -2125,6 +2451,9 @@ async def language_layer(request: Request, call_next):
     if "lang-links" not in text:
         text = text.replace('<div class="footer-bottom">',
                             '<div class="footer-bottom">' + _lang_links(inner_path, lang), 1)
+    if "ph-badge" not in text:
+        text = text.replace('<div class="footer-bottom">',
+                            '<div class="footer-bottom">' + _ph_badge(), 1)
     headers = dict(response.headers)
     headers.pop("content-length", None)
     return HTMLResponse(text, status_code=response.status_code, headers=headers)
@@ -2564,17 +2893,38 @@ def jobs_list(request: Request, q: str = "", fmt: str = "", cat: str = "",
 
 
 @app.get("/api/featured-jobs")
-def api_featured(db: Session = Depends(db_session)):
-    """Реальные вакансии для блока «Вакансии дня» на главной (внутренние ссылки /job/{id})."""
+def api_featured(request: Request, db: Session = Depends(db_session), lang: str = ""):
+    """Реальные вакансии для блока «Вакансии дня» на главной (внутренние ссылки /job/{id}).
+
+    Карточки рисует JS, поэтому языковой слой их уже не увидит: локаль берём
+    из ?lang= — иначе на /de/ в карточках оставались «офис» и «Мальта».
+    """
     from fastapi.responses import JSONResponse
     jobs = (db.query(Job).filter(Job.status == "approved")
             .order_by(Job.featured.desc(), Job.created_at.desc()).limit(30).all())
     # приоритет — с зарплатой, потом свежие; берём 5
     jobs.sort(key=lambda j: (not j.has_salary,))
+    out_lang = (lang or "ru").strip().lower()
+    if out_lang not in PATH_LANGS:
+        out_lang = "ru"
+    local = (lambda value: value) if out_lang == "ru" else (
+        lambda value: translate_generated(value, out_lang) if value else value)
+    words = SERVER_VOCAB_FOR(out_lang)
+    pattern = _VOCAB_RE.get(out_lang)
+
+    def term(value):
+        if out_lang == "ru" or not value:
+            return value
+        if value in words:
+            return words[value]
+        # «Valletta, Мальта» — страну внутри строки ловит подстрочник
+        if pattern and _CYR_RE.search(value):
+            return pattern.sub(lambda m: words[m.group(0)], value)
+        return local(value)
     out = [{"id": j.id, "title": j.title, "company": j.company_name,
-            "location": j.location or "—", "fmt": j.fmt,
-            "salary": j.salary if j.has_salary else "по запросу",
-            "cat": j.category, "initials": j.initials,
+            "location": term(j.location) or "—", "fmt": term(j.fmt),
+            "salary": local(j.salary) if j.has_salary else term("по запросу"),
+            "cat": term(j.category), "initials": j.initials,
             "logo_url": j.logo_url} for j in jobs[:5]]
     return JSONResponse(out)
 
@@ -2676,6 +3026,7 @@ def _llms_text_ru(ctx: dict) -> str:
         "- [Профессии](https://spinhire.io/professions) — что делает каждая роль и что требуют",
         "- [Рынок труда](https://spinhire.io/market) — сколько вакансий открыто и где",
         "- [Блог](https://spinhire.io/blog) — зарплаты, релокация, карьерные разборы",
+        "- [Пресс-кит](https://spinhire.io/press.html) — цифры, готовые описания, логотипы и правила цитирования",
         "- [Работодателям](https://spinhire.io/post-job) — размещение вакансий и тарифы",
         "- [Срезы по странам, направлениям и языкам](https://spinhire.io/jobs/browse) — например, "
         "https://spinhire.io/jobs/malta, https://spinhire.io/jobs/malta/compliance-aml, "
@@ -2701,7 +3052,8 @@ def _llms_text_ru(ctx: dict) -> str:
         "CC BY 4.0 (свободно со ссылкой на spinhire.io).",
         "",
         "Параметры: `page` (с 1), `limit` (до 100), `q` (поиск по названию, "
-        "компании и тегам), `category`, `country`, `fmt`.",
+        "компании и тегам), `category`, `country`, `fmt`, `lang` (`en` — английские названия "
+        "направлений, стран и форматов; то же самое отдаёт https://spinhire.io/en/api/jobs).",
         "",
         "В ответе: `total`, `page`, `pages`, `limit` и массив `jobs`; у вакансии — "
         "`title`, `company`, `location`, `country`, `format`, `category`, `salary` "
@@ -2761,6 +3113,7 @@ def _llms_text_en(ctx: dict, lang: str = "en") -> str:
         f"- [Careers]({base}/professions) — what each role does and what employers require",
         f"- [Job market]({base}/market) — how many jobs are open and where",
         f"- [Blog]({base}/blog) — salaries, relocation, career guides",
+        f"- [Press kit]({base}/press.html) — numbers, ready-made descriptions, logos and citation rules",
         f"- [For employers]({base}/post-job) — job posting and pricing",
         f"- [Jobs by country, department and language]({base}/jobs/browse) — e.g. {base}/jobs/malta, "
         f"{base}/jobs/malta/compliance-aml, {base}/jobs/remote, {base}/jobs/german-speaking, each with live counts and salary benchmarks",
@@ -2784,7 +3137,8 @@ def _llms_text_en(ctx: dict, lang: str = "en") -> str:
         "(free to use with attribution to spinhire.io).",
         "",
         "Parameters: `page` (from 1), `limit` (up to 100), `q` (search in title, company and tags), "
-        "`category`, `country`, `fmt`.",
+        "`category`, `country`, `fmt`, `lang` (`en` returns English department, country and format "
+        "names and English salary wording; the same is served from https://spinhire.io/en/api/jobs).",
         "",
         "Response: `total`, `page`, `pages`, `limit` and a `jobs` array; each job has `title`, `company`, "
         "`location`, `country`, `format`, `category`, `salary` with parsed `salary_min`/`salary_max`/"
@@ -6310,8 +6664,10 @@ ARTICLE_FILES = {
 
 
 @app.get("/blog")
-def blog_short():
-    return RedirectResponse("/blog.html", status_code=301)
+def blog_short(request: Request):
+    # префикс языка не теряем: /de/blog вёл на русский блог
+    prefix = ((request.scope.get("state") or {}).get("orig_path") or "/blog")[:-len("/blog")]
+    return RedirectResponse(prefix + "/blog.html", status_code=301)
 
 
 @app.get("/blog/{slug}")
@@ -6323,12 +6679,14 @@ def article_page(slug: str):
 
 
 @app.get("/post-{slug}.html")
-def legacy_article(slug: str):
+def legacy_article(request: Request, slug: str):
     canonical_slug = next((key for key, filename in ARTICLE_FILES.items()
                            if filename == f"post-{slug}.html"), None)
     if not canonical_slug:
         raise HTTPException(404)
-    return RedirectResponse(f"/blog/{canonical_slug}", status_code=301)
+    orig = (request.scope.get("state") or {}).get("orig_path") or ""
+    prefix = orig[:-len(f"/post-{slug}.html")] if orig.endswith(f"/post-{slug}.html") else ""
+    return RedirectResponse(f"{prefix}/blog/{canonical_slug}", status_code=301)
 
 
 @app.get("/indexnow-key.txt")
@@ -6584,9 +6942,10 @@ EN_MONTHS = ("January", "February", "March", "April", "May", "June", "July",
 
 def human_date(value: date, lang: str = "ru") -> str:
     """«19 августа 2026» / «19 August 2026» — для текста страницы; в разметку идёт ISO."""
-    if lang != "ru":
-        return f"{value.day} {EN_MONTHS[value.month - 1]} {value.year}"
-    return f"{value.day} {RU_MONTHS[value.month - 1]} {value.year}"
+    if lang == "ru":
+        return f"{value.day} {RU_MONTHS[value.month - 1]} {value.year}"
+    months = MONTH_NAMES.get(lang) or EN_MONTHS
+    return f"{value.day} {months[value.month - 1]} {value.year}"
 
 
 # Английские имена и ISO — те же, что во всех остальных языках: из terms.py.
@@ -6656,6 +7015,21 @@ def job_location_schema(job) -> dict:
 def loc_name(name: str, lang: str = "ru") -> str:
     """Страна / формат / направление на языке страницы (для .md и llms.txt)."""
     return terms.country_name(name, lang)
+
+
+def SERVER_VOCAB_FOR(lang: str) -> dict:
+    """Словарь коротких терминов языка: формат, страна, направление."""
+    return _SERVER_VOCAB.get(lang, {})
+
+
+def api_lang(request: Request, explicit: str = "") -> str:
+    """Язык значений в открытом API: ?lang=en или языковой префикс пути (/en/api/…).
+
+    Переводим только справочники, и словарь значений у нас один — английский,
+    поэтому любой не-русский язык страницы отдаёт английские значения.
+    """
+    value = (explicit or (request.scope.get("state") or {}).get("lang") or "ru").strip().lower()
+    return "ru" if value == "ru" else "en"
 
 
 _market_stats_cache = {"at": 0.0, "data": None}
@@ -6770,18 +7144,31 @@ def _market_stats_compute(db: Session) -> dict:
 
 
 @app.get("/api/market-stats")
-def api_market_stats(db: Session = Depends(db_session)):
-    return JSONResponse(market_stats_data(db))
+def api_market_stats(request: Request, db: Session = Depends(db_session), lang: str = ""):
+    """Статистика рынка. Названия направлений и стран — по-английски под /en/ и ?lang=en."""
+    data = market_stats_data(db)
+    if api_lang(request, lang) == "ru":
+        return JSONResponse(data)
+    localized = dict(data)
+    for key in ("directions", "countries"):
+        localized[key] = [{**row, "name": loc_name(row.get("name", ""), "en")}
+                          for row in data.get(key, [])]
+    return JSONResponse(localized)
 
 
 @app.get("/api/jobs")
-def api_jobs(db: Session = Depends(db_session),
+def api_jobs(request: Request, db: Session = Depends(db_session),
              page: int = 1, limit: int = 50, q: str = "",
-             category: str = "", country: str = "", fmt: str = ""):
+             category: str = "", country: str = "", fmt: str = "", lang: str = ""):
     """Открытый список вакансий — без ключа и регистрации.
 
     Открытый он намеренно: агрегаторы и ИИ-агенты забирают то, что могут
     прочитать без договорённостей, и вместе с данными уносят ссылку на нас.
+
+    Значения справочников отдаются по-русски, как в базе. Англоязычному
+    потребителю (а он основной: каталоги открытых API, агенты, зарубежные
+    агрегаторы) нужен ответ без кириллицы — за это отвечает `?lang=en`
+    и тот же ответ по адресу /en/api/jobs.
     """
     limit = max(1, min(100, limit))
     page = max(1, page)
@@ -6806,22 +7193,27 @@ def api_jobs(db: Session = Depends(db_session),
 
     total = len(rows)
     window = rows[(page - 1) * limit: page * limit]
+    out_lang = api_lang(request, lang)
+    localize = (lambda value: loc_name(value, "en")) if out_lang == "en" else (lambda value: value)
+    money = salary_en if out_lang == "en" else (lambda value: value)
     return JSONResponse({
         "total": total,
         "page": page,
         "pages": (total + limit - 1) // limit,
         "limit": limit,
-        "license": "CC BY 4.0 — использование свободно со ссылкой на spinhire.io",
+        "lang": out_lang,
+        "license": ("CC BY 4.0 — free to use with attribution to spinhire.io" if out_lang == "en"
+                    else "CC BY 4.0 — использование свободно со ссылкой на spinhire.io"),
         "jobs": [{
             "id": j.id,
             "title": j.title,
             "company": j.company_name,
             "company_slug": j.company_slug,
             "location": j.location,
-            "country": country_of(j.location),
-            "format": j.fmt,
-            "category": j.category,
-            "salary": j.salary,
+            "country": localize(country_of(j.location)),
+            "format": localize(j.fmt),
+            "category": localize(j.category),
+            "salary": money(j.salary),
             "salary_min": j.sal_min,
             "salary_max": j.sal_max,
             "salary_currency": j.sal_currency if j.has_salary else None,
@@ -7014,6 +7406,7 @@ def sitemap(db: Session = Depends(db_session)):
               *[(f"blog/{slug}", "0.7") for slug in ARTICLE_FILES],
               ("privacy.html", "0.3"), ("terms.html", "0.3"), ("game-rules.html", "0.3")]
     static.append(("editorial.html", "0.5"))
+    static.append(("press.html", "0.5"))
     static.append(("professions", "0.9"))
     static.append(("market", "0.9"))
     for m in market_archive(db):
@@ -7144,16 +7537,32 @@ try:
             manager._has_started = False
         app.state.mcp_session_cm = manager.run()
         await app.state.mcp_session_cm.__aenter__()
+        app.state.mcp_started = True
 
     @app.on_event("shutdown")
     async def _mcp_stop():
         cm = getattr(app.state, "mcp_session_cm", None)
         if cm:
             await cm.__aexit__(None, None, None)
+            app.state.mcp_session_cm = None
 except ImportError as _mcp_exc:  # пакет mcp не установлен — сайт работает без него
     print(f"[mcp] сервер не поднят: {_mcp_exc}")
 
 # ---------- static site (последним — перекрывается роутами выше) ----------
+@app.get("/js/i18n-{lang}.js", include_in_schema=False)
+def client_dictionary(lang: str):
+    """Словарь для клиентского переводчика (js/app.js).
+
+    Раньше рядом с фронтом лежали только i18n-en.js и i18n-uk.js: на немецкой
+    или греческой версии fetch отдавал 404, и всё, что рисует JS — шапка,
+    карточки вакансий, фильтры — оставалось русским.
+    """
+    data = _I18N_CLIENT.get(lang)
+    if not data:
+        raise HTTPException(status_code=404)
+    return JSONResponse(data, headers={"Cache-Control": "public, max-age=3600"})
+
+
 app.mount("/", StaticFiles(directory=ROOT, html=True), name="site")
 
 # Сжатие — ПОСЛЕДНИМ add_middleware: так gzip становится внешним слоем и жмёт

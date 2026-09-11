@@ -1,0 +1,3 @@
+The folder-scoped tokens for agents are the part most docs tools get wrong — an agent is usually treated as just another reader. On the denied-folder problem raised above: that distinction barely exists in the formats we serve models today. We publish markdown mirrors of every page for exactly that audience, and there's no way to say "something is here and you can't see it" versus "nothing is here."
+
+Do you return an explicit forbidden marker in the tree, so the agent knows a gap exists?

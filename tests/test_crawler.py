@@ -1,10 +1,32 @@
 import json
 import unittest
+from contextlib import ExitStack
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from server import crawler
+
+# Источники, которые collect() обходит помимо проверяемого: словари обнуляем,
+# отдельные краулеры глушим — иначе тест полезет в сеть, а список источников
+# растёт быстрее тестов (JSONLD_LISTINGS уже переименовали в DJINNI_LISTINGS).
+EMPTY_SOURCE_DICTS = ("GREENHOUSE_BOARDS", "DJINNI_LISTINGS", "LEVER_SITES", "BAMBOO_ACCOUNTS",
+                      "SMARTRECRUITERS_COMPANIES", "PARTNER_FEEDS", "TELEGRAM_CHANNELS")
+SILENCED_CRAWLERS = ("crawl_vendor_seeds", "crawl_igamingcareers", "crawl_rabota_ua",
+                     "crawl_work_ua", "crawl_justjoin", "crawl_arbeitnow", "crawl_devbg",
+                     "crawl_jobsinmalta", "crawl_affjobs", "crawl_bettingjobs",
+                     "crawl_casino_seed_registry")
+
+
+def only_softswiss():
+    """Контекст, в котором collect() ходит ровно в один источник — softswiss."""
+    stack = ExitStack()
+    for name in EMPTY_SOURCE_DICTS:
+        stack.enter_context(patch.object(crawler, name, {}))
+    for name in SILENCED_CRAWLERS:
+        stack.enter_context(patch.object(crawler, name, lambda *a, **kw: []))
+    stack.enter_context(patch.object(crawler, "HH_TOKEN", ""))
+    return stack
 
 
 class CrawlerTests(unittest.TestCase):
@@ -91,13 +113,9 @@ class CrawlerTests(unittest.TestCase):
         self.assertTrue(row.closed_at)
 
     def test_collect_retries_failed_source_and_reports_health(self):
-        with patch.object(crawler, "crawl_softswiss", side_effect=[RuntimeError("temporary"), []]), \
-             patch.object(crawler, "GREENHOUSE_BOARDS", {}), \
-             patch.object(crawler, "JSONLD_LISTINGS", {}), \
-             patch.object(crawler, "LEVER_SITES", {}), \
-             patch.object(crawler, "SMARTRECRUITERS_COMPANIES", {}), \
-             patch.object(crawler, "PARTNER_FEEDS", {}), \
-             patch.object(crawler, "crawl_casino_seed_registry", return_value=[]):
+        with only_softswiss() as sources:
+            sources.enter_context(patch.object(
+                crawler, "crawl_softswiss", side_effect=[RuntimeError("temporary"), []]))
             items, complete, health = crawler.collect(with_metadata=True)
         self.assertEqual(items, [])
         softswiss = next(row for row in health if row["key"] == "softswiss")
@@ -106,13 +124,9 @@ class CrawlerTests(unittest.TestCase):
         self.assertIn("softswiss", complete)
 
     def test_collect_keeps_failed_source_out_of_complete_set(self):
-        with patch.object(crawler, "crawl_softswiss", side_effect=RuntimeError("offline")), \
-             patch.object(crawler, "GREENHOUSE_BOARDS", {}), \
-             patch.object(crawler, "JSONLD_LISTINGS", {}), \
-             patch.object(crawler, "LEVER_SITES", {}), \
-             patch.object(crawler, "SMARTRECRUITERS_COMPANIES", {}), \
-             patch.object(crawler, "PARTNER_FEEDS", {}), \
-             patch.object(crawler, "crawl_casino_seed_registry", return_value=[]):
+        with only_softswiss() as sources:
+            sources.enter_context(patch.object(
+                crawler, "crawl_softswiss", side_effect=RuntimeError("offline")))
             _, complete, health = crawler.collect(with_metadata=True)
         self.assertNotIn("softswiss", complete)
         self.assertFalse(next(row for row in health if row["key"] == "softswiss")["ok"])

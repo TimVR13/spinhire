@@ -19,6 +19,21 @@ video/public/renders/
 video/out/*.mp4
 video/out/frames/
 
+# локальный прогон: снимки рынка и хвосты sqlite
+data/market-snapshots.json
+data/spinhire.db-shm
+data/spinhire.db-wal
+data/cv_uploads/
+
+# кадры галереи для каталогов пересобираются скриптом с прода
+img/press/launch/*.png
+
+# выгрузка датасета под каталоги данных: собирается скриптом перед подачей
+data/launch-dataset/
+
+# лог отправленных комментариев PH — локальная история оператора
+data/ph-comments.json
+
 # контакты людей из TG-каналов: персональные данные, в репозиторий и на прод не едут
 data/tg-contacts.jsonl
 data/tg-contacts.csv

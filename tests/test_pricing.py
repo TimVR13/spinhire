@@ -42,6 +42,7 @@ class PricingTests(unittest.TestCase):
         self.assertEqual(PLANS["cv1"][1], 5)
         self.assertEqual(PLANS["cv10"][1], 45)
         self.assertEqual(PLANS["cv30"][1], 120)
+        self.assertNotIn("cv40", PLANS)   # пакет cv40 заменили на cv30
 
     def test_contact_packs_get_cheaper_per_opening(self):
         """Чем больше пакет, тем дешевле одно открытие — и для обычных, и для C-level."""
