@@ -1,0 +1,38 @@
+[
+ {
+  "id": "prof-vip-manager",
+  "format": "profession",
+  "slug": "vip-manager",
+  "title": "Кто такой VIP-менеджер в iGaming: обязанности, зарплата, как стать | профессии гемблинга",
+  "duration": 73.822,
+  "voice": "Chirp3-HD-Charon",
+  "theme": "emerald",
+  "mp4": "out/prof-vip-manager.mp4",
+  "built_at": "2026-09-11T09:28:03Z",
+  "status": "ready"
+ },
+ {
+  "id": "prof-game-developer",
+  "format": "profession",
+  "slug": "game-developer",
+  "title": "Профессия разработчик игр в гемблинге: задачи, зарплаты по грейдам и старт карьеры",
+  "duration": 73.837,
+  "voice": "Chirp3-HD-Leda",
+  "theme": "violet",
+  "mp4": "out/prof-game-developer.mp4",
+  "built_at": "2026-09-11T09:31:32Z",
+  "status": "ready"
+ },
+ {
+  "id": "prof-head-of-marketing-igaming",
+  "format": "profession",
+  "slug": "head-of-marketing-igaming",
+  "title": "Head of Marketing в iGaming: чем занимается, сколько зарабатывает и как войти в профессию",
+  "duration": 67.837,
+  "voice": "Chirp3-HD-Puck",
+  "theme": "pink",
+  "mp4": "out/prof-head-of-marketing-igaming.mp4",
+  "built_at": "2026-09-11T09:37:19Z",
+  "status": "ready"
+ }
+]
