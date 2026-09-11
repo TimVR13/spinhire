@@ -28,8 +28,12 @@ SHOTS = [
     {
         "key": "hero",
         "path": "/en/",
-        "scroll": 130,  # чтобы живые счётчики попали в кадр целиком
-        "caption": "6,000+ live iGaming jobs, refreshed every 6 hours",
+        "scroll": 75,   # счётчики в кадре целиком (кикер снят — макет выше на ~55 px)
+        # кикер на этой прокрутке наполовину уезжает под липкую шапку и двоится
+        "hide": ".kicker",
+        # число подставляется живое: подпись «6,000+» над страницей с «5 582» —
+        # первое, что заметят в ленте, и заметят не в нашу пользу
+        "caption": "{jobs} live iGaming jobs, refreshed every 6 hours",
     },
     {
         "key": "jobs",
@@ -50,7 +54,10 @@ SHOTS = [
     },
     {
         "key": "api",
-        "path": "/api/jobs?limit=3",
+        # именно английская выдача: кадр показывают англоязычной аудитории,
+        # а по умолчанию API отвечает по-русски («Операции казино», «гибрид»)
+        "path": "/en/api/jobs?limit=3",
+        "pretty_json": True,
         "caption": "The whole index as an open API — no key, CC BY 4.0",
     },
     {
@@ -81,9 +88,29 @@ CAPTION_JS = """
 }
 """
 
+# Сырой JSON Chromium показывает простынёй в одну строку: для кадра
+# раскладываем его с отступами — данные те же, читаемость другая.
+PRETTY_JSON_JS = """
+() => {
+  let data;
+  try { data = JSON.parse(document.body.innerText); } catch (e) { return false; }
+  const pre = document.createElement('pre');
+  pre.textContent = JSON.stringify(data, null, 2);
+  Object.assign(pre.style, {
+    margin: '0', padding: '28px 34px 90px',
+    font: '15px/1.55 "SFMono-Regular", Menlo, Consolas, monospace',
+    color: '#D6F5E6', background: '#060C09', whiteSpace: 'pre',
+  });
+  document.body.replaceChildren(pre);
+  document.documentElement.style.background = '#060C09';
+  return true;
+}
+"""
+
 # Мелочи, которые портят кадр: баннер согласия, фокус в поле поиска, прокрутка.
 CLEANUP_JS = """
-(scroll) => {
+([scroll, hide]) => {
+  if (hide) document.querySelectorAll(hide).forEach((n) => n.remove());
   document.querySelectorAll('.consent-banner, [data-cookie-banner], .cookie-banner, #cookie')
     .forEach((n) => n.remove());
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -114,6 +141,21 @@ def chromium_path(explicit: str = "") -> str:
 PROXY_SAFE_ARGS = ["--disable-features=EncryptedClientHello,AsyncDns", "--ssl-version-max=tls1.2"]
 
 
+def fetch_live_jobs(base: str) -> str:
+    """Столько вакансий сейчас в индексе — подпись первого кадра не должна расходиться
+    с числом на самой странице: их видно в одном кадре."""
+    import json
+    import urllib.request
+    try:
+        with urllib.request.urlopen(f"{base}/api/market-stats", timeout=20) as resp:
+            live = json.loads(resp.read().decode("utf-8"))["live_jobs"]
+        return f"{live:,}".replace(",", ",")
+    except Exception as e:  # noqa: BLE001 — подпись не повод валить съёмку
+        print(f"  ! цифру из /api/market-stats взять не вышло ({type(e).__name__}), "
+              "ставлю «5,500+»", file=sys.stderr)
+        return "5,500+"
+
+
 def build(base: str, out_dir: Path, keys: list[str], caption: bool, scale: int, dark: bool,
           chromium: str = "", use_proxy: bool = True) -> int:
     try:
@@ -129,6 +171,7 @@ def build(base: str, out_dir: Path, keys: list[str], caption: bool, scale: int, 
     out_dir.mkdir(parents=True, exist_ok=True)
     base = base.rstrip("/")
     made = []
+    live_jobs = fetch_live_jobs(base)
     with sync_playwright() as pw:
         exe = chromium_path(chromium)
         proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy") or ""
@@ -158,11 +201,15 @@ def build(base: str, out_dir: Path, keys: list[str], caption: bool, scale: int, 
             except Exception as e:
                 print(f"  ✗ {shot['key']}: не открылось {url} ({type(e).__name__})", file=sys.stderr)
                 continue
-            page.wait_for_timeout(1200)  # ленивые картинки и счётчики
-            page.evaluate(CLEANUP_JS, shot.get("scroll", 0))
-            page.wait_for_timeout(500)  # прокрутка успевает перерисовать липкую шапку
+            # 1.2 с ловили шапку в середине анимации появления — текст двоился
+            page.wait_for_timeout(2500)  # ленивые картинки, счётчики и анимации входа
+            if shot.get("pretty_json") and not page.evaluate(PRETTY_JSON_JS):
+                print(f"  ! {shot['key']}: ответ не разобрался как JSON, снимаю как есть",
+                      file=sys.stderr)
+            page.evaluate(CLEANUP_JS, [shot.get("scroll", 0), shot.get("hide", "")])
+            page.wait_for_timeout(700)  # прокрутка успевает перерисовать липкую шапку
             if caption:
-                page.evaluate(CAPTION_JS, shot["caption"])
+                page.evaluate(CAPTION_JS, shot["caption"].format(jobs=live_jobs))
                 page.wait_for_timeout(150)
             # номер = место кадра в галерее, а не в этом запуске: с --only имена не разъезжаются
             target = out_dir / f"{SHOTS.index(shot) + 1:02d}-{shot['key']}.png"

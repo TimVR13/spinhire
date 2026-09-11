@@ -22,7 +22,7 @@ class LaunchKitTests(unittest.TestCase):
             migrate(db)
             job = Job(title="VIP Manager", company_name="Launch Casino",
                       category="Операции казино", location="Limassol, Кипр", fmt="офис",
-                      salary="от €3 000 в месяц", status="approved",
+                      salary="от €3 000 в месяц", status="approved", tags="беттинг, Unity",
                       source_url="https://example.invalid/vip", description="Launch kit fixture")
             db.add(job)
             db.commit()
@@ -93,6 +93,11 @@ class LaunchKitTests(unittest.TestCase):
         self.assertEqual(job["country"], "Cyprus")
         self.assertEqual(job["salary"], "from €3 000/month")
         self.assertIn("attribution", payload["license"])
+        # теги — наша же лексика: «беттинг» рядом с «Casino operations» читался как недоделка,
+        # а латинские теги словаря не касаются и остаются как есть
+        self.assertIn("betting", job["tags"])
+        self.assertIn("Unity", job["tags"])
+        self.assertNotIn("беттинг", job["tags"])
 
     def test_english_path_prefix_switches_api_language(self):
         payload = client.get("/en/api/jobs?limit=100").json()
