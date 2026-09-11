@@ -96,6 +96,22 @@ $199 сэкономлены.
 
 Не начинать с просьбы о бесплатном кросс-промо: у канала это основной заработок.
 
+## Статус на 11.09.2026, вечер
+
+| Канал | Что сделано | Ждём |
+|---|---|---|
+| JobBoardSearch | Подано бесплатно (лого, RSS, теги Remote/Games industry/Europe/Bilingual). Подтверждения не шлют — проект одного человека (Родриго Рокко), заявки лежат в очереди | Появление в каталоге; повторно не подавать |
+| Jooble | Тикет в Help Center: Web Site/Publisher → Request for job placement → **Request for indexing**, фид `?src=jooble&lang=en`. «Your ticket has been created» | Ответ на hello@spinhire.io, 1–3 рабочих дня; JoobleBot в логах |
+| Adzuna | Форма на /hire/products/job-listings/ («Job Feed — advertise for free»), фид `?src=adzuna&lang=en`. «Thanks for contacting us» | Письмо менеджера на hello@spinhire.io |
+| Careerjet | Не подавали: только PPC $0,10/клик, минимум $100 | — |
+| Directory Submissions $199 | Не покупали — решение отложено | — |
+| Telegram @betting_job | Владелец написал сам. 10 996 подписчиков, прайс: 1000 ₽ пост с их редактурой / 2000 ₽ без правок / 3000 ₽ с картинкой и до 3 вакансий. Оплата картой РФ или USDT/BTC/TON/ETH. Контакт @hatsonsale. Платные посты дублируют на своём борде igaming-job.ru — мы им конкурент | Ответ админа |
+
+Реквизиты для форм: контакт **Anton Kylikov**, почта **hello@spinhire.io**, компания SpinHire, запуск 14.08.2026,
+X @Spinhire_io, LinkedIn linkedin.com/company/spinhirejob. Логотип 512px рендерится из favicon.svg: `rsvg-convert -w 512 -h 512 favicon.svg`.
+
+Кандидат в источники краулера: igaming-job.ru (борд редакции @betting_job).
+
 ## Порядок
 
 1. Задеплоить фиды (автопулл подтянет сам за 2 минуты) и проверить, что открываются.
