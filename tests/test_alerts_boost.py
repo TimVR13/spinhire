@@ -93,6 +93,18 @@ class BoostTests(_Fixture):
             db.commit()
             self.assertEqual(db.get(Resume, self.resume_id).boosted_until, first)
 
+    def test_checkout_page_and_invoice_for_talent(self):
+        c = self.client()
+        order_id = int(c.post("/checkout/boost30").headers["location"].rsplit("/", 1)[1])
+        page = c.get(f"/checkout/order/{order_id}").text
+        self.assertIn("Резюме в топе поиска — 30 дней", page)
+        self.assertIn('href="/profile#cv"', page)          # обратно в кабинет кандидата, не работодателя
+        r = c.post(f"/checkout/order/{order_id}/invoice")   # запрос счёта доступен соискателю
+        self.assertEqual(r.status_code, 303)
+        self.assertIn("sent=1", r.headers["location"])
+        with SessionLocal() as db:
+            self.assertEqual(db.get(Order, order_id).method, "invoice")
+
     def test_profile_renders_boost_card(self):
         page = self.client().get("/profile").text
         self.assertIn("Резюме в топе поиска", page)
@@ -123,7 +135,7 @@ class AlertTests(_Fixture):
                 self.assertTrue(all(percent >= alerts.MIN_SCORE for percent, _ in picks))
                 first_job_id, n_picks = picks[0][1].id, len(picks)
                 self.assertEqual(alerts.send_job_alerts(db), 1)
-                self.assertEqual(alerts.send_job_alerts(db), 0)   # второй раз в тот же день — тишина
+                self.assertEqual(alerts.send_job_alerts(db), 0)   # внутри паузы (3 дня) — тишина
                 self.assertTrue(db.query(alerts.JobAlertSent).filter_by(user_id=self.user_id,
                                                                         job_id=self.job_id).first())
                 self.assertTrue(db.get(User, self.user_id).alerts_last_sent)

@@ -84,7 +84,7 @@
     {% elif order.status == 'paid' %}
       <div class="flash">✓ Оплачено. Услуга активна. Спасибо!</div>
     {% elif order.status == 'cancelled' %}
-      <div class="flash" style="border-color: var(--yellow);">Заказ отменён, платить по нему не нужно. Новый заказ можно создать в <a href="/employer#topup" style="color:inherit;font-weight:800;">кабинете, раздел «Финансы»</a>.</div>
+      <div class="flash" style="border-color: var(--yellow);">Заказ отменён, платить по нему не нужно. Новый заказ можно создать в <a href="{{ '/profile#cv' if order.plan == 'boost30' else '/employer#topup' }}" style="color:inherit;font-weight:800;">{{ 'кабинете' if order.plan == 'boost30' else 'кабинете, раздел «Финансы»' }}</a>.</div>
     {% endif %}
   </div>
 {% endblock %}

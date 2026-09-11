@@ -262,7 +262,7 @@
       <div class="field"><label>Языки</label><input class="input" name="languages" value="{{ user.languages }}" placeholder="английский C1, немецкий B2"></div>
       <div class="field"><label>Статус поиска</label><select class="input" name="job_search_status"><option value="active" {% if user.job_search_status=='active' %}selected{% endif %}>Активно ищу</option><option value="open" {% if user.job_search_status=='open' %}selected{% endif %}>Открыт предложениям</option><option value="paused" {% if user.job_search_status=='paused' %}selected{% endif %}>Сейчас не ищу</option></select></div>
       <label class="check"><input type="checkbox" name="incognito" {% if user.incognito %}checked{% endif %}> 🥷 Инкогнито: скрывать имя от работодателей</label>
-      <label class="check"><input type="checkbox" name="alerts" {% if user.alerts_enabled %}checked{% endif %}> ✉️ Письма о новых вакансиях под резюме — не чаще раза в день</label>
+      <label class="check"><input type="checkbox" name="alerts" {% if user.alerts_enabled %}checked{% endif %}> ✉️ Письма о новых вакансиях под резюме — не чаще раза в три дня</label>
       <button class="btn btn-acid" type="submit">Сохранить</button>
     </form>
 

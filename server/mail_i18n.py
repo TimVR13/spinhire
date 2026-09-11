@@ -24,7 +24,7 @@ _M = {
         "alerts_open_all": "Все вакансии",
         "alerts_unsub": "Отписаться от писем о вакансиях",
         "alerts_unsub_done": "Готово: письма о вакансиях больше не приходят. Включить обратно можно в настройках кабинета.",
-        "alerts_why": "Вы получили письмо, потому что в кабинете SpinHire включены подборки вакансий под резюме — не чаще раза в день.",
+        "alerts_why": "Вы получили письмо, потому что в кабинете SpinHire включены подборки вакансий под резюме — не чаще раза в три дня.",
     },
     "en": {
         "otp_subject": "Your SpinHire verification code: {code}",
@@ -45,7 +45,7 @@ _M = {
         "alerts_open_all": "All jobs",
         "alerts_unsub": "Unsubscribe from job alerts",
         "alerts_unsub_done": "Done: you will no longer receive job alerts. You can turn them back on in your account settings.",
-        "alerts_why": "You received this because job alerts matched to your CV are enabled in your SpinHire account — at most once a day.",
+        "alerts_why": "You received this because job alerts matched to your CV are enabled in your SpinHire account — at most once every three days.",
     },
     "de": {
         "otp_subject": "Ihr SpinHire-Bestätigungscode: {code}",
@@ -66,7 +66,7 @@ _M = {
         "alerts_open_all": "Alle Jobs",
         "alerts_unsub": "Job-Benachrichtigungen abbestellen",
         "alerts_unsub_done": "Erledigt: Sie erhalten keine Job-Benachrichtigungen mehr. In den Kontoeinstellungen können Sie sie wieder aktivieren.",
-        "alerts_why": "Sie erhalten diese E-Mail, weil in Ihrem SpinHire-Konto Job-Benachrichtigungen zu Ihrem Lebenslauf aktiviert sind — höchstens einmal täglich.",
+        "alerts_why": "Sie erhalten diese E-Mail, weil in Ihrem SpinHire-Konto Job-Benachrichtigungen zu Ihrem Lebenslauf aktiviert sind — höchstens alle drei Tage.",
     },
     "pl": {
         "otp_subject": "Twój kod weryfikacyjny SpinHire: {code}",
@@ -87,7 +87,7 @@ _M = {
         "alerts_open_all": "Wszystkie oferty",
         "alerts_unsub": "Wypisz się z powiadomień o ofertach",
         "alerts_unsub_done": "Gotowe: nie będziesz już otrzymywać powiadomień o ofertach. Możesz je włączyć ponownie w ustawieniach konta.",
-        "alerts_why": "Otrzymujesz tę wiadomość, ponieważ w Twoim koncie SpinHire włączone są powiadomienia o ofertach dopasowanych do CV — nie częściej niż raz dziennie.",
+        "alerts_why": "Otrzymujesz tę wiadomość, ponieważ w Twoim koncie SpinHire włączone są powiadomienia o ofertach dopasowanych do CV — nie częściej niż raz na trzy dni.",
     },
     "fr": {
         "otp_subject": "Votre code de vérification SpinHire : {code}",
@@ -108,7 +108,7 @@ _M = {
         "alerts_open_all": "Toutes les offres",
         "alerts_unsub": "Se désabonner des alertes emploi",
         "alerts_unsub_done": "C'est fait : vous ne recevrez plus d'alertes emploi. Vous pouvez les réactiver dans les paramètres de votre compte.",
-        "alerts_why": "Vous recevez cet e-mail car les alertes emploi liées à votre CV sont activées dans votre compte SpinHire — au plus une fois par jour.",
+        "alerts_why": "Vous recevez cet e-mail car les alertes emploi liées à votre CV sont activées dans votre compte SpinHire — au plus une fois tous les trois jours.",
     },
     "es": {
         "otp_subject": "Tu código de verificación de SpinHire: {code}",
@@ -129,7 +129,7 @@ _M = {
         "alerts_open_all": "Todas las ofertas",
         "alerts_unsub": "Darse de baja de las alertas de empleo",
         "alerts_unsub_done": "Listo: ya no recibirás alertas de empleo. Puedes volver a activarlas en los ajustes de tu cuenta.",
-        "alerts_why": "Recibes este correo porque en tu cuenta de SpinHire están activadas las alertas de empleo según tu CV — como máximo una vez al día.",
+        "alerts_why": "Recibes este correo porque en tu cuenta de SpinHire están activadas las alertas de empleo según tu CV — como máximo una vez cada tres días.",
     },
     "pt": {
         "otp_subject": "O seu código de verificação SpinHire: {code}",
@@ -150,7 +150,7 @@ _M = {
         "alerts_open_all": "Todas as vagas",
         "alerts_unsub": "Cancelar alertas de vagas",
         "alerts_unsub_done": "Feito: você não receberá mais alertas de vagas. Pode reativá-los nas configurações da conta.",
-        "alerts_why": "Você recebeu este e-mail porque os alertas de vagas com base no seu CV estão ativados na sua conta SpinHire — no máximo uma vez por dia.",
+        "alerts_why": "Você recebeu este e-mail porque os alertas de vagas com base no seu CV estão ativados na sua conta SpinHire — no máximo uma vez a cada três dias.",
     },
     "it": {
         "otp_subject": "Il tuo codice di verifica SpinHire: {code}",
@@ -171,7 +171,7 @@ _M = {
         "alerts_open_all": "Tutte le offerte",
         "alerts_unsub": "Annulla l'iscrizione agli avvisi di lavoro",
         "alerts_unsub_done": "Fatto: non riceverai più avvisi di lavoro. Puoi riattivarli nelle impostazioni dell'account.",
-        "alerts_why": "Ricevi questa email perché nel tuo account SpinHire sono attivi gli avvisi di lavoro in base al tuo CV — al massimo una volta al giorno.",
+        "alerts_why": "Ricevi questa email perché nel tuo account SpinHire sono attivi gli avvisi di lavoro in base al tuo CV — al massimo una volta ogni tre giorni.",
     },
     "el": {
         "otp_subject": "Ο κωδικός επαλήθευσης SpinHire: {code}",
@@ -192,7 +192,7 @@ _M = {
         "alerts_open_all": "Όλες οι θέσεις",
         "alerts_unsub": "Διαγραφή από τις ειδοποιήσεις θέσεων",
         "alerts_unsub_done": "Έγινε: δεν θα λαμβάνετε πλέον ειδοποιήσεις θέσεων. Μπορείτε να τις ενεργοποιήσετε ξανά στις ρυθμίσεις του λογαριασμού σας.",
-        "alerts_why": "Λάβατε αυτό το email επειδή στον λογαριασμό σας στο SpinHire είναι ενεργές οι ειδοποιήσεις θέσεων βάσει βιογραφικού — το πολύ μία φορά την ημέρα.",
+        "alerts_why": "Λάβατε αυτό το email επειδή στον λογαριασμό σας στο SpinHire είναι ενεργές οι ειδοποιήσεις θέσεων βάσει βιογραφικού — το πολύ μία φορά κάθε τρεις ημέρες.",
     },
     "ro": {
         "otp_subject": "Codul tău de verificare SpinHire: {code}",
@@ -213,7 +213,7 @@ _M = {
         "alerts_open_all": "Toate joburile",
         "alerts_unsub": "Dezabonare de la alertele de joburi",
         "alerts_unsub_done": "Gata: nu vei mai primi alerte de joburi. Le poți reactiva din setările contului.",
-        "alerts_why": "Primești acest e-mail pentru că în contul tău SpinHire sunt activate alertele de joburi potrivite CV-ului — cel mult o dată pe zi.",
+        "alerts_why": "Primești acest e-mail pentru că în contul tău SpinHire sunt activate alertele de joburi potrivite CV-ului — cel mult o dată la trei zile.",
     },
     "bg": {
         "otp_subject": "Вашият код за потвърждение в SpinHire: {code}",
@@ -234,7 +234,7 @@ _M = {
         "alerts_open_all": "Всички обяви",
         "alerts_unsub": "Отписване от известията за обяви",
         "alerts_unsub_done": "Готово: повече няма да получавате известия за обяви. Можете да ги включите отново в настройките на профила.",
-        "alerts_why": "Получавате този имейл, защото в профила ви в SpinHire са включени известия за обяви според автобиографията — не повече от веднъж дневно.",
+        "alerts_why": "Получавате този имейл, защото в профила ви в SpinHire са включени известия за обяви според автобиографията — не повече от веднъж на три дни.",
     },
     "uk": {
         "otp_subject": "Ваш код підтвердження SpinHire: {code}",
@@ -255,7 +255,7 @@ _M = {
         "alerts_open_all": "Усі вакансії",
         "alerts_unsub": "Відписатися від листів про вакансії",
         "alerts_unsub_done": "Готово: листи про вакансії більше не надходитимуть. Увімкнути знову можна в налаштуваннях кабінету.",
-        "alerts_why": "Ви отримали цей лист, бо в кабінеті SpinHire увімкнено добірки вакансій під резюме — не частіше ніж раз на день.",
+        "alerts_why": "Ви отримали цей лист, бо в кабінеті SpinHire увімкнено добірки вакансій під резюме — не частіше ніж раз на три дні.",
     },
 }
 
