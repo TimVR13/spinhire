@@ -18,7 +18,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import vqueue as q  # noqa: E402
-from common import DATA, OUT, RENDERS, VIDEO_DIR, professions  # noqa: E402
+from common import DATA, OUT, RENDERS, SITE, VIDEO_DIR, fetch_json, professions  # noqa: E402
+
+
+def live_jobs(role: dict) -> int:
+    """Сколько живых вакансий по роли — по нему и очередь: первыми снимаем то, что чаще ищут.
+    Поле demand в professions.json — текстовое описание, для сортировки не годится."""
+    import urllib.parse
+    try:
+        q = urllib.parse.quote(role["title_en"])
+        return fetch_json(f"{SITE}/api/jobs?q={q}&limit=1&page=1").get("total", 0)
+    except Exception:
+        return 0
 
 
 def published_slugs() -> set[str]:
@@ -40,7 +51,8 @@ def roles_for(fmt: str, slugs: list[str], take_all: bool, limit: int, force: boo
             raise SystemExit(f"нет таких профессий: {', '.join(missing)}")
         pool = [by_slug[s] for s in slugs]
     elif take_all:
-        pool = sorted(roles, key=lambda r: (-(r.get("demand") or 0), r["slug"]))  # сначала востребованные
+        print("считаю спрос по ролям…", flush=True)
+        pool = sorted(roles, key=lambda r: (-live_jobs(r), r["slug"]))  # сначала те, по кому больше вакансий
     else:
         raise SystemExit("нужен --slugs или --all")
     if not force:
