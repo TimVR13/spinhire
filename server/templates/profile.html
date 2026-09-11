@@ -123,7 +123,7 @@
     </div>
   </div>
 
-  {% if recommendations %}<section><span class="kicker">Под ваш профиль</span><h2 style="font-size:1.25rem;margin:8px 0 16px;">Рекомендованные вакансии</h2><div class="recommend-grid">{% for job in recommendations %}<a class="recommend-job" href="/job/{{ job.id }}"><b>{{ job.title }}</b><p style="color:var(--ink-faint);font-size:.82rem;margin-top:6px;">{{ job.company_name }} · {{ job.location or job.fmt }}</p>{% if job.has_salary %}<span class="salary">{{ job.salary }}</span>{% endif %}</a>{% endfor %}</div></section>{% endif %}
+  {% if recommendations %}<section><span class="kicker">Под ваш профиль</span><h2 style="font-size:1.25rem;margin:8px 0 16px;">Рекомендованные вакансии</h2><div class="recommend-grid">{% for job in recommendations %}<a class="recommend-job" href="/job/{{ job.id }}"><b>{{ job.title }}</b><p style="color:var(--ink-faint);font-size:.82rem;margin-top:6px;">{{ job.company_name|company(page_lang) }} · {{ job.location|place(page_lang) or job.fmt }}</p>{% if job.has_salary %}<span class="salary">{{ job.salary|money(page_lang) }}</span>{% endif %}</a>{% endfor %}</div></section>{% endif %}
   </div><!-- /overview -->
 
   <div class="cab-pane" data-pane="cv">

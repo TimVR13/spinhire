@@ -50,7 +50,7 @@
       {% for c in companies %}
       <a class="co-row" href="/company/{{ c.slug }}" data-name="{{ c.name }}" data-jobs="{{ c.jobs }}">
         <div class="co-row__company"><span class="co-row__logo">{{ c.initials }}{% if c.logo %}<img src="{{ c.logo }}" alt="" loading="lazy" width="42" height="42" onerror="this.remove()">{% endif %}</span><b>{{ c.name }}</b></div>
-        <span class="co-row__hq co-row__muted">{{ c.hq or (c.industry if c.industry != 'iGaming' else '') or 'iGaming' }}</span>
+        <span class="co-row__hq co-row__muted">{{ c.hq or (c.industry|industry(page_lang) if c.industry != 'iGaming' else '') or 'iGaming' }}</span>
         <span class="co-row__jobs">{{ c.jobs }} {{ 'вакансия' if c.jobs % 10 == 1 and c.jobs % 100 != 11 else ('вакансии' if c.jobs % 10 in (2,3,4) and c.jobs % 100 not in (12,13,14) else 'вакансий') }}</span>
         <span>→</span>
       </a>

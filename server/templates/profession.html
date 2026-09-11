@@ -183,8 +183,8 @@
     <div style="display: flex; flex-direction: column; gap: 10px;">
       {% for j in jobs %}
       <a href="/job/{{ j.id }}" class="rel" style="display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
-        <span><b>{{ j.title }}</b><span>{{ j.company_name }}{% if j.location %} · {{ j.location }}{% endif %}</span></span>
-        <span style="color: var(--emerald, var(--acid)); font-weight: 700; font-size: 0.85rem;">{{ j.salary }}</span>
+        <span><b>{{ j.title }}</b><span>{{ j.company_name|company(page_lang) }}{% if j.location %} · {{ j.location|place(page_lang) }}{% endif %}</span></span>
+        <span style="color: var(--emerald, var(--acid)); font-weight: 700; font-size: 0.85rem;">{{ j.salary|money(page_lang) }}</span>
       </a>
       {% endfor %}
     </div>

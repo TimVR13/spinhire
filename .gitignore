@@ -18,3 +18,9 @@ video/public/audio/tracks-full/
 video/public/renders/
 video/out/*.mp4
 video/out/frames/
+
+# контакты людей из TG-каналов: персональные данные, в репозиторий и на прод не едут
+data/tg-contacts.jsonl
+data/tg-contacts.csv
+data/tg-contacts-resolved.json
+data/tg-usernames.txt

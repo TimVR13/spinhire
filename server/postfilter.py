@@ -18,6 +18,8 @@
 import os
 import re
 
+from server import terms as _terms
+
 # ---------- языки ----------
 
 CYRILLIC = re.compile(r"[а-яА-ЯёЁіїєґІЇЄҐ]")
@@ -179,34 +181,10 @@ AMBIGUOUS = US_STATES & (EU_CODES | CIS_CODES | OTHER_CODES)
 
 
 # Имена стран для кодов, которые встречаются в локациях источников:
-# «Sofia, bg» подписчик читать не должен.
-CODE_NAMES = {
-    "mt": ("Мальта", "Malta"), "cy": ("Кипр", "Cyprus"),
-    "gb": ("Великобритания", "United Kingdom"), "uk": ("Великобритания", "United Kingdom"),
-    "ie": ("Ирландия", "Ireland"), "gi": ("Гибралтар", "Gibraltar"),
-    "im": ("Остров Мэн", "Isle of Man"), "pl": ("Польша", "Poland"),
-    "de": ("Германия", "Germany"), "fr": ("Франция", "France"),
-    "es": ("Испания", "Spain"), "pt": ("Португалия", "Portugal"),
-    "it": ("Италия", "Italy"), "nl": ("Нидерланды", "Netherlands"),
-    "be": ("Бельгия", "Belgium"), "at": ("Австрия", "Austria"),
-    "ch": ("Швейцария", "Switzerland"), "se": ("Швеция", "Sweden"),
-    "no": ("Норвегия", "Norway"), "dk": ("Дания", "Denmark"),
-    "fi": ("Финляндия", "Finland"), "is": ("Исландия", "Iceland"),
-    "ee": ("Эстония", "Estonia"), "lv": ("Латвия", "Latvia"),
-    "lt": ("Литва", "Lithuania"), "cz": ("Чехия", "Czechia"),
-    "sk": ("Словакия", "Slovakia"), "hu": ("Венгрия", "Hungary"),
-    "ro": ("Румыния", "Romania"), "bg": ("Болгария", "Bulgaria"),
-    "gr": ("Греция", "Greece"), "hr": ("Хорватия", "Croatia"),
-    "si": ("Словения", "Slovenia"), "rs": ("Сербия", "Serbia"),
-    "me": ("Черногория", "Montenegro"), "ba": ("Босния", "Bosnia"),
-    "mk": ("Северная Македония", "North Macedonia"), "al": ("Албания", "Albania"),
-    "md": ("Молдова", "Moldova"), "ua": ("Украина", "Ukraine"),
-    "lu": ("Люксембург", "Luxembourg"), "mc": ("Монако", "Monaco"),
-    "ge": ("Грузия", "Georgia"), "am": ("Армения", "Armenia"),
-    "kz": ("Казахстан", "Kazakhstan"), "uz": ("Узбекистан", "Uzbekistan"),
-    "kg": ("Киргизия", "Kyrgyzstan"), "az": ("Азербайджан", "Azerbaijan"),
-    "by": ("Беларусь", "Belarus"), "ru": ("Россия", "Russia"),
-}
+# «Sofia, bg» подписчик читать не должен. Таблица общая с сайтом
+# (server/terms.py) — своя копия здесь уже отставала на десяток стран.
+CODE_NAMES = {row["iso"].lower(): ru for ru, row in _terms.COUNTRIES.items()}
+
 PRETTY_RE = re.compile(r"([,(])\s*([A-Za-z]{2})(?=[,)]|$)")
 
 
@@ -216,10 +194,10 @@ def pretty_location(location: str, lang: str = "ru") -> str:
         sep, code = match.group(1), match.group(2)
         if code.isupper() and code.lower() in US_STATES:
             return match.group(0)
-        title = CODE_NAMES.get(code.lower())
-        if not title:
+        country = CODE_NAMES.get(code.lower())
+        if not country:
             return match.group(0)
-        return f"{sep}{'' if sep == '(' else ' '}{title[0 if lang == 'ru' else 1]}"
+        return f"{sep}{'' if sep == '(' else ' '}{_terms.country_name(country, lang)}"
     return PRETTY_RE.sub(name, location or "")
 
 

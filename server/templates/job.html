@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set active = 'jobs' %}
 {% block title %}{{ job.title }} — {{ job.company_name }}{% if is_closed %} — вакансия закрыта{% endif %} | SpinHire{% endblock %}
-{% block desc %}{{ job.title }} в {{ job.company_name }}: {{ job.salary }}, {{ job.location }}, {{ job.fmt }}. iGaming-вакансия на SpinHire.{% endblock %}
+{% block desc %}{{ job.title }} в {{ job.company_name }}: {{ job.salary|money(page_lang) }}, {{ job.location|place(page_lang) }}, {{ job.fmt }}. iGaming-вакансия на SpinHire.{% endblock %}
 {% block robots %}<link rel="canonical" href="https://spinhire.io/job/{{ job.id }}">
 <link rel="alternate" type="text/markdown" href="https://spinhire.io/job/{{ job.id }}.md" title="Текстовая версия для языковых моделей">
 {# закрытая вакансия остаётся в индексе 60 дней без разметки JobPosting: страница честно говорит «закрыта» и ведёт к похожим; дальше сервер отдаёт 410 #}
@@ -102,8 +102,8 @@
         <p class="job-hero__meta" style="color: var(--ink-dim); display: flex; align-items: center; gap: 10px;">
           {% if job.logo_url %}<img src="{{ job.logo_url }}" alt="" width="28" height="28" style="border-radius: 6px; object-fit: contain;" onerror="this.style.display='none'">{% endif %}
           {# название компании и город не переводим, а формат работы — это слово интерфейса #}
-          <a data-no-translate href="/company/{{ job.company_slug }}" style="color: var(--ink); font-weight: 700; text-decoration: none;">{{ job.company_name }}</a>
-          <span data-no-translate>· {{ job.location or '—' }} ·</span> {{ job.fmt }}</p>
+          <a href="/company/{{ job.company_slug }}" style="color: var(--ink); font-weight: 700; text-decoration: none;">{{ job.company_name|company(page_lang) }}</a>
+          <span>· {{ job.location|place(page_lang) or '—' }} ·</span> {{ job.fmt }}</p>
         <h1 data-no-translate>{{ job.title }}</h1>
         <div class="job-card__tags" style="margin-bottom: var(--sp-4);">
           {% if job.featured %}<span class="tag tag-hot">⚡ Featured</span>{% endif %}
@@ -112,7 +112,7 @@
           {% if job.category %}<span class="tag">{{ job.category }}</span>{% endif %}
           {% for t in job.tag_list %}<span class="tag tag-acid" data-no-translate>{{ t }}</span>{% endfor %}
         </div>
-        <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary }}{% else %}<span style="color: var(--ink-faint); font-size: 0.7em; font-weight: 400;">{% if job.source and job.source != 'internal' %}вилка не указана{% else %}зарплата не указана работодателем{% endif %}</span>{% endif %}</p>
+        <p class="salary" style="font-size: 1.5rem;">{% if job.has_salary %}{{ job.salary|money(page_lang) }}{% else %}<span style="color: var(--ink-faint); font-size: 0.7em; font-weight: 400;">{% if job.source and job.source != 'internal' %}вилка не указана{% else %}зарплата не указана работодателем{% endif %}</span>{% endif %}</p>
         <div style="display: flex; flex-direction: column; gap: 12px; margin-top: var(--sp-4);">
           {% if is_closed %}
             <a class="btn btn-acid btn-lg" href="/jobs?cat={{ job.category|urlencode }}">Смотреть актуальные вакансии →</a>
@@ -164,7 +164,7 @@
           <div class="job-card__logo" style="background: var(--surface-2); color: var(--acid);" aria-hidden="true">{{ s.initials }}</div>
           <div>
             <h3 class="job-card__title">{{ s.title }}</h3>
-            <p class="job-card__meta"><b>{{ s.company_name }}</b> · {{ s.location or '—' }} · {{ s.fmt }}</p>
+            <p class="job-card__meta"><b>{{ s.company_name|company(page_lang) }}</b> · {{ s.location|place(page_lang) or '—' }} · {{ s.fmt }}</p>
           </div>
           <div class="job-card__side">
             {% if s.has_salary %}<span class="salary">{{ s.salary }}</span>{% else %}<span class="salary" style="color: var(--ink-faint); font-size: 0.85rem;">по запросу</span>{% endif %}
@@ -197,11 +197,11 @@
       <div class="side-card">
         <h3>О вакансии</h3>
         <dl>
-          <dt>Компания</dt><dd><a href="/company/{{ job.company_slug }}" style="color: var(--acid);">{{ job.company_name }}</a></dd>
+          <dt>Компания</dt><dd><a href="/company/{{ job.company_slug }}" style="color: var(--acid);">{{ job.company_name|company(page_lang) }}</a></dd>
           {% if job.category %}<dt>Направление</dt><dd>{{ job.category }}</dd>{% endif %}
           <dt>Формат</dt><dd>{{ job.fmt }}</dd>
-          {% if job.location %}<dt>Локация</dt><dd>{{ job.location }}</dd>{% endif %}
-          <dt>Зарплата</dt><dd>{% if job.has_salary %}{{ job.salary }}{% else %}не указана{% endif %}</dd>
+          {% if job.location %}<dt>Локация</dt><dd>{{ job.location|place(page_lang) }}</dd>{% endif %}
+          <dt>Зарплата</dt><dd>{% if job.has_salary %}{{ job.salary|money(page_lang) }}{% else %}не указана{% endif %}</dd>
           {% if not job.has_salary and job.salary_estimate %}<dt>Рынок по роли</dt><dd title="Ориентир из картотеки профессий SpinHire для похожих ролей и региона. Это не условия этого работодателя.">{{ job.salary_estimate }} <a href="/professions" style="color: var(--ink-faint); font-size: .8em;">ориентир картотеки</a></dd>{% endif %}
           <dt>Размещена</dt><dd>{% if job.posted_at %}{{ job.posted_at }}{% else %}{{ job.created_at.strftime('%d.%m.%Y') }}{% endif %}</dd>
           {% if job.deadline %}<dt>Дедлайн</dt><dd>{{ job.deadline }}</dd>{% endif %}

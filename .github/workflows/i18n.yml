@@ -1,0 +1,36 @@
+name: i18n
+
+# Языковые версии ломались молча: краулер приносил новую страну, словарь про неё
+# не знал, и «Nairobi, Кения» месяцами висела на /en/. Эти проверки офлайновые и
+# быстрые — они падают на пуше, до того как это увидит посетитель.
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'server/**'
+      - 'js/**'
+      - 'scripts/build_geo_terms.py'
+      - 'scripts/i18n_audit.py'
+      - 'tests/**'
+      - '.github/workflows/i18n.yml'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  dictionaries:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Зависимости
+        run: pip install -q -r requirements.txt pytest
+      - name: Словари покрывают все языки сайта
+        run: python -m pytest tests/test_i18n_terms.py -q
+      - name: Таблица стран собирается из CLDR без правок руками
+        run: |
+          pip install -q babel
+          python scripts/build_geo_terms.py
+          git diff --exit-code server/i18n/terms.auto.json \
+            || (echo '::error::server/i18n/terms.auto.json устарел — пересоберите scripts/build_geo_terms.py'; exit 1)

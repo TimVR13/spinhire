@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set active = 'jobs' %}
 {% block title %}{{ company }} — вакансии компании | SpinHire{% endblock %}
-{% block desc %}{% if public and (public.description_ru or public.description) %}{{ (public.description_ru or public.description)[:150] }}{% else %}{{ company }}: {{ jobs|length }} открытых iGaming-вакансий на SpinHire. {{ locations|join(', ') }}.{% endif %}{% endblock %}
+{% block desc %}{% if public and (public.description_ru or public.description) %}{{ (public.description if lang != 'ru' and public.description else (public.description_ru or public.description))[:150] }}{% else %}{{ company }}: {{ jobs|length }} открытых iGaming-вакансий на SpinHire. {{ locations|join(', ') }}.{% endif %}{% endblock %}
 {% block robots %}<link rel="canonical" href="https://spinhire.io/company/{{ jobs[0].company_slug }}">
 <link rel="alternate" type="text/markdown" href="https://spinhire.io/company/{{ jobs[0].company_slug }}.md" title="Текстовая версия для языковых моделей">
 <meta property="og:type" content="website"><meta property="og:title" content="{{ company }} — вакансии iGaming">
@@ -44,7 +44,9 @@
     <div style="flex: 1; min-width: 200px;">
       <h1>{{ company }}</h1>
       {% if public and public.tagline %}<p class="tagline">{{ public.tagline }}</p>{% endif %}
-      <p class="meta">{{ jobs|length }} открытых вакансий{% if company_profile and company_profile.company_location %} · {{ company_profile.company_location }}{% elif public and public.headquarters %} · {{ public.headquarters }}{% elif locations %} · {{ locations|join(' · ') }}{% endif %}{% if company_profile and company_profile.company_size %} · команда {{ company_profile.company_size }}{% elif public and public.size %} · команда {{ public.size }}{% endif %}{% if public and public.founded_year %} · с {{ public.founded_year }} года{% endif %}</p>
+      {# каждый кусок — отдельный узел: иначе счётчик и локация склеиваются в
+         одну строку, которой нет ни в одном словаре, и она остаётся русской #}
+      <p class="meta"><span>{{ jobs|length }} открытых вакансий</span>{% if company_profile and company_profile.company_location %} · <span>{{ company_profile.company_location }}</span>{% elif public and public.headquarters %} · <span>{{ public.headquarters }}</span>{% elif locations %} · <span>{{ locations|join(' · ') }}</span>{% endif %}{% if company_profile and company_profile.company_size %} · <span>команда {{ company_profile.company_size }}</span>{% elif public and public.size %} · <span>команда {{ public.size }}</span>{% endif %}{% if public and public.founded_year %} · <span>с {{ public.founded_year }} года</span>{% endif %}</p>
     </div>
     <div class="co-links">
       {% if domain %}<a class="btn btn-ghost btn-sm" href="https://{{ domain }}" target="_blank" rel="nofollow noopener external">Сайт компании ↗</a>{% endif %}
@@ -52,7 +54,10 @@
     </div>
   </div>
 
-  {% set about = (company_profile.company_description if company_profile and company_profile.company_description else ((public.description_ru or public.description) if public else '')) %}
+  {# На языковой версии оригинал описания (обычно английский) лучше машинного
+   перевода на русский: раньше /en/ показывала русский текст даже там, где
+   английский оригинал лежал рядом в той же строке. #}
+{% set about = (company_profile.company_description if company_profile and company_profile.company_description else ((public.description if lang != 'ru' and public.description else (public.description_ru or public.description)) if public else '')) %}
   {% if about %}
   <section class="co-about">
     <h2>О компании</h2>
@@ -73,11 +78,11 @@
       </div>
       <div>
         <h3 class="job-card__title">{{ j.title }}</h3>
-        <p class="job-card__meta">{{ j.location or '—' }} · {{ j.fmt }}{% if j.posted_at %} · {{ j.posted_at }}{% endif %}</p>
+        <p class="job-card__meta">{{ j.location|place(page_lang) or '—' }} · {{ j.fmt }}{% if j.posted_at %} · {{ j.posted_at }}{% endif %}</p>
         <div class="job-card__tags">{% if j.category %}<span class="tag">{{ j.category }}</span>{% endif %}{% for t in j.tag_list %}<span class="tag">{{ t }}</span>{% endfor %}</div>
       </div>
       <div class="job-card__side">
-        {% if j.has_salary %}<span class="salary">{{ j.salary }}</span>{% else %}<span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>{% endif %}
+        {% if j.has_salary %}<span class="salary">{{ j.salary|money(page_lang) }}</span>{% else %}<span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>{% endif %}
       </div>
     </a>
     {% endfor %}

@@ -28,6 +28,7 @@ import bcrypt as _bcrypt
 from itsdangerous import BadSignature, URLSafeSerializer
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from server import terms
 from server.mail_i18n import mail_t
 
 
@@ -62,6 +63,9 @@ GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 RESEND_FROM = os.environ.get("RESEND_FROM", "")
 BASE_URL = os.environ.get("BASE_URL", "https://spinhire.io").rstrip("/")
+# Аккаунты из Telegram-бота заводятся без почты: контакт у них — @username.
+# Домен служебный и несуществующий, письма туда не уходят (см. resend_send).
+TG_ACCOUNT_DOMAIN = "telegram.spinhire.io"
 CV_UPLOAD_DIR = os.environ.get("CV_UPLOAD_DIR", os.path.join(ROOT, "data", "cv_uploads"))
 CV_MAX_BYTES = 5 * 1024 * 1024
 AVATAR_UPLOAD_DIR = os.environ.get("AVATAR_UPLOAD_DIR", os.path.join(ROOT, "data", "avatars"))
@@ -1457,6 +1461,18 @@ def _ru_plural(n, one: str, few: str, many: str) -> str:
 
 
 templates.env.filters["ru_plural"] = _ru_plural
+# «Canada, Remote, Канада» — источник назвал страну сам, краулер дописал её ещё
+# раз по-русски. Схлопываем повтор в одном месте, а не в семи шаблонах.
+templates.env.filters["place"] = terms.location_label
+# «от £13 в час» → «from £13/hour». Приставки вилки переводим только здесь:
+# в общем подстрочном словаре короткие предлоги ломали русские фразы целиком.
+templates.env.filters["money"] = terms.salary_label
+# «Агрегатор + платформа» — наш справочник вертикалей из data/vendor-seeds.json,
+# а не текст работодателя: переводим, но только в этом поле.
+templates.env.filters["industry"] = terms.industry_label
+# «FinTech-компанию», «крупное digital-издательство спортивных медиа» — это не
+# имена работодателей, а обрывки объявления, которые схватил парсер.
+templates.env.filters["company"] = terms.company_label
 
 
 @app.get("/about")
@@ -1736,43 +1752,24 @@ async def guard(request: Request, call_next):
 
 
 # ---------- серверный перевод страниц (языки по хостам) ----------
-# Словари — те же, что использует клиентский переводчик (js/i18n-*.js — это JSON).
-# Логика зеркалит клиент: точное совпадение текстового узла — по полному словарю,
-# служебная лексика (категории, форматы, «по запросу», гео) — подстрочно везде.
+# Работают два разных механизма, и путать их нельзя.
+#
+# 1. Полный словарь (_I18N_SERVER) — точное совпадение текстового узла целиком.
+#    Сюда попадают интерфейсные строки и переводы статей: server/i18n/<код>*.json
+#    плюс исторические js/i18n-<код>.js.
+# 2. Подстрочный словарь (server/terms.py) — служебная лексика площадки: страны,
+#    форматы, направления, теги, языки, периоды вилки. Только он заменяется
+#    ВНУТРИ строки, потому что «Nairobi, Кения» целиком в словарь не занести.
+#
+# Раньше в подстрочный словарь сваливались и словари статей. Там есть ячейки
+# таблиц из одного слова — «в»: «to», «и»: «and», «из»: «of», — и они
+# заменялись на каждой странице: «Работа в iGaming» превращалась в «Работа to
+# iGaming», «команда из 7400» в «команда of 7400». Подстрочно теперь работает
+# только закрытый список из terms.py.
+_SERVER_VOCAB = terms.TERMS
+_VOCAB_RE = terms.TERM_RE
 
-_SERVER_VOCAB = {
-    "en": {
-        "Операции казино": "Casino operations", "Беттинг и трейдинг": "Betting & trading",
-        "Разработка игр": "Game development", "Аффилейты и медиабаинг": "Affiliates & media buying",
-        "Комплаенс и AML": "Compliance & AML", "Платежи и антифрод": "Payments & antifraud",
-        "Поддержка игроков": "Player support", "Маркетинг и CRM": "Marketing & CRM",
-        "Данные и BI": "Data & BI", "Топ-менеджмент": "Executive",
-        "удалёнка": "remote", "Удалёнка": "Remote", "гибрид": "hybrid", "офис": "office",
-        "по запросу": "on request", "Не указана": "Not specified", "вакансий": "jobs",
-        "вакансии": "jobs", "вакансия": "job", "Обновлено": "Updated",
-        "лет опыта": "years of experience", "активность сегодня": "active today",
-        "активность вчера": "active yesterday", "активность на этой неделе": "active this week",
-        "хочет": "expects", "Мальта": "Malta", "США": "USA", "Великобритания": "United Kingdom",
-        "Греция": "Greece", "Польша": "Poland", "Бразилия": "Brazil", "Германия": "Germany",
-        "Кипр": "Cyprus", "Украина": "Ukraine", "Испания": "Spain", "Румыния": "Romania",
-        "Грузия": "Georgia", "Сербия": "Serbia", "Армения": "Armenia", "Чехия": "Czechia",
-        "Нидерланды": "Netherlands", "Филиппины": "Philippines", "Болгария": "Bulgaria",
-        "Швеция": "Sweden", "Гибралтар": "Gibraltar",
-    },
-    "uk": {
-        "Операции казино": "Операції казино", "Беттинг и трейдинг": "Бетинг і трейдинг",
-        "Разработка игр": "Розробка ігор", "Аффилейты и медиабаинг": "Афілейти та медіабаїнг",
-        "Комплаенс и AML": "Комплаєнс і AML", "Платежи и антифрод": "Платежі та антифрод",
-        "Поддержка игроков": "Підтримка гравців", "Маркетинг и CRM": "Маркетинг і CRM",
-        "Данные и BI": "Дані та BI", "Топ-менеджмент": "Топменеджмент",
-        "удалёнка": "віддалено", "Удалёнка": "Віддалено", "гибрид": "гібрид", "офис": "офіс",
-        "по запросу": "за запитом", "Не указана": "Не вказана", "вакансий": "вакансій",
-        "вакансии": "вакансії", "вакансия": "вакансія", "Обновлено": "Оновлено",
-        "лет опыта": "років досвіду", "хочет": "хоче",
-    },
-}
-
-_I18N_SERVER, _VOCAB_RE = {}, {}
+_I18N_SERVER = {}
 # полные машинные словари прежних языков (en/uk) — большие JSON рядом с фронтом
 for _code in ("en", "uk"):
     try:
@@ -1780,13 +1777,15 @@ for _code in ("en", "uk"):
             _I18N_SERVER[_code] = json.load(_fh)
     except Exception:
         _I18N_SERVER[_code] = {}
-# ключевые словари европейских языков: server/i18n/<code>.json
+# словари языков сайта: server/i18n/<code>.json — интерфейс, <code>.ui.json —
+# собранный из шаблонов интерфейс, <code>.articles.json — переводы статей
 _I18N_DIR = os.path.join(ROOT, "server", "i18n")
 if os.path.isdir(_I18N_DIR):
-    for _file in sorted(os.listdir(_I18N_DIR)):
-        if not _file.endswith(".json"):
+    # машинный <code>.ui.json грузим первым, чтобы выправленные руками
+    # <code>.json и <code>.pages.json его перекрывали, а не наоборот
+    for _file in sorted(os.listdir(_I18N_DIR), key=lambda n: (".ui." not in n, n)):
+        if not _file.endswith(".json") or _file.startswith("terms."):
             continue
-        # de.json — интерфейс, de.articles.json — переводы статей блога
         _code = _file.split(".")[0]
         try:
             with open(os.path.join(_I18N_DIR, _file), encoding="utf-8") as _fh:
@@ -1794,14 +1793,102 @@ if os.path.isdir(_I18N_DIR):
         except Exception:
             continue
         _I18N_SERVER.setdefault(_code, {}).update(_data)
-        # эти же строки работают подстрочно внутри карточек и динамики
-        _SERVER_VOCAB.setdefault(_code, {}).update(_data)
-for _code in set(_SERVER_VOCAB) | set(_I18N_SERVER):
-    _keys = sorted(_SERVER_VOCAB.get(_code, {}), key=len, reverse=True)
-    # границы по кириллице: иначе короткие ключи («в», «и») подменялись внутри слов —
-    # «Дизайн» превращался в «Дvonайн», «игроков» в «игрокоto»
-    _VOCAB_RE[_code] = (re.compile(r"(?<![А-Яа-яЁёІіЇїЄєҐґ])(?:" + "|".join(re.escape(k) for k in _keys)
-                                   + r")(?![А-Яа-яЁёІіЇїЄєҐґ])") if _keys else None)
+# служебная лексика важнее машинного перевода той же строки целиком: «удалёнка»
+# как отдельный узел должна совпасть с «удалёнка» внутри строки
+for _code, _table in _SERVER_VOCAB.items():
+    _I18N_SERVER.setdefault(_code, {}).update(_table)
+# фразы с числом внутри («обновлено 20 дн. назад») собираются в коде, а не в
+# шаблоне — в словарь они попадают из terms.NUMBERED с «#» вместо числа
+for _ru, _row in terms.NUMBERED.items():
+    for _code, _value in _row.items():
+        _I18N_SERVER.setdefault(_code, {})[_ru] = _value
+
+# Клиенту нужен интерфейс, а не тексты статей: он переводит то, что дорисовано
+# скриптом уже после ответа сервера. Со статьями словарь весил бы два мегабайта.
+_I18N_CLIENT = {}
+for _code in PATH_LANGS:
+    _client = {}
+    for _name in (f"{_code}.ui.json", f"{_code}.json", f"{_code}.pages.json"):
+        try:
+            with open(os.path.join(_I18N_DIR, _name), encoding="utf-8") as _fh:
+                _client.update(json.load(_fh))
+        except Exception:
+            continue
+    _client.update(_SERVER_VOCAB.get(_code, {}))
+    _I18N_CLIENT[_code] = _client
+
+# Заголовки и счётчики собираются с числом внутри («Вакансии iGaming — 5240
+# живых вакансий»), и словарь целых строк их не ловит: число меняется каждый
+# час. Держим второй индекс, где число заменено на «#», и подставляем живые
+# числа обратно. Ключи с «#» приходят из шаблонов (scripts/build_i18n.py), а
+# разряды пишут через пробел («5 240») — пробел внутри числа берём, хвостовой нет.
+_NUM_RE = re.compile(r"\d+(?:[ \u00a0\u202f]\d+)*")
+_HAS_DIGIT_RE = re.compile(r"\d")
+_I18N_NUM = {}
+for _code, _table in _I18N_SERVER.items():
+    _index = {}
+    for _key, _value in _table.items():
+        if not _NUM_RE.search(_key) and "#" not in _key:
+            continue
+        _pattern = _NUM_RE.sub("#", _key)
+        _target = _NUM_RE.sub("#", _value)
+        if _pattern.count("#") == _target.count("#") and _pattern.count("#"):
+            _index.setdefault(_pattern, _target)
+    _I18N_NUM[_code] = _index
+
+
+# Кроме чисел в шаблонную строку подставляются имена: «Cobalt — вакансии
+# компании | SpinHire», «Ещё в направлении «Операции казино»». Ключи с одним
+# «#» держим разобранными на «до» и «после»: если текст начинается и
+# заканчивается так же, серединой считаем подставленное значение.
+_I18N_PARTS = {}
+for _code, _table in _I18N_SERVER.items():
+    _parts = []
+    for _key, _value in _table.items():
+        if _key.count("#") != 1 or _value.count("#") != 1:
+            continue
+        _head, _tail = _key.split("#")
+        _t_head, _t_tail = _value.split("#")
+        # слишком короткая опора поймала бы что угодно
+        if len(_head) + len(_tail) >= 8:
+            _parts.append((_head, _tail, _t_head, _t_tail))
+    # длинная опора должна проверяться первой, иначе её перехватит короткая
+    _parts.sort(key=lambda row: len(row[0]) + len(row[1]), reverse=True)
+    _I18N_PARTS[_code] = _parts
+
+
+def _translate_with_slot(raw: str, lang: str, slot=None) -> str:
+    """«Cobalt — вакансии компании» → «Cobalt — jobs at this company».
+
+    slot — чем перевести саму подставленную часть: направление «Операции казино»
+    внутри шаблона тоже наше слово, а название компании трогать нельзя.
+    """
+    for head, tail, target_head, target_tail in _I18N_PARTS.get(lang, ()):
+        if len(raw) <= len(head) + len(tail):
+            continue
+        if raw.startswith(head) and raw.endswith(tail):
+            middle = raw[len(head):len(raw) - len(tail)]
+            return target_head + (slot(middle) if slot else middle) + target_tail
+    return ""
+
+
+def _translate_with_numbers(raw: str, lang: str) -> str:
+    """«Вакансии iGaming — 4987 живых вакансий» → «iGaming jobs — 4987 live jobs»."""
+    index = _I18N_NUM.get(lang)
+    if not index or not _HAS_DIGIT_RE.search(raw):
+        return ""
+    numbers = _NUM_RE.findall(raw)
+    target = index.get(_NUM_RE.sub("#", raw))
+    if not target:
+        return ""
+    parts = target.split("#")
+    if len(parts) - 1 != len(numbers):
+        return ""
+    out = parts[0]
+    for number, tail in zip(numbers, parts[1:]):
+        out += number + tail
+    return out
+
 
 _HTML_TEXT_RE = re.compile(r">([^<>]+)<")
 _HTML_ATTR_RE = re.compile(r'((?:placeholder|aria-label|title|content|alt)=")([^"]+)(")')
@@ -1841,12 +1928,24 @@ def translate_html(html_text: str, lang: str, prefix_urls: bool = False) -> str:
     vocab = _SERVER_VOCAB.get(lang, {})
     vocab_re = _VOCAB_RE.get(lang)
 
+    def translate_slot(value: str) -> str:
+        """Подставленное значение: словарь целиком, иначе служебная лексика."""
+        if value in full:
+            return full[value]
+        if vocab_re and _CYR_RE.search(value):
+            return vocab_re.sub(lambda m: vocab[m.group(0)], value)
+        return value
+
     def translate_text(raw: str) -> str:
         key = " ".join(raw.split())
+        lead = raw[:len(raw) - len(raw.lstrip())]
+        trail = raw[len(raw.rstrip()):]
         if key in full:
-            lead = raw[:len(raw) - len(raw.lstrip())]
-            trail = raw[len(raw.rstrip()):]
             return lead + full[key] + trail
+        numbered = (_translate_with_numbers(key, lang)
+                    or _translate_with_slot(key, lang, slot=translate_slot))
+        if numbered:
+            return lead + numbered + trail
         if vocab_re and _CYR_RE.search(raw):
             return vocab_re.sub(lambda m: vocab[m.group(0)], raw)
         return raw
@@ -1903,6 +2002,31 @@ def translate_html(html_text: str, lang: str, prefix_urls: bool = False) -> str:
     return "".join(out)
 
 
+@app.get("/js/i18n-terms-{lang}.js")
+def i18n_terms(lang: str):
+    """Служебная лексика площадки: её клиент подставляет внутри строк."""
+    if lang not in PATH_LANGS:
+        raise HTTPException(404)
+    return JSONResponse(terms.TERMS.get(lang, {}),
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/js/i18n-{lang}.js")
+def i18n_dictionary(lang: str):
+    """Словарь для клиента — подмножество серверного, без текстов статей.
+
+    Раньше клиент вёз свою копию словаря прямо в js/app.js, и копии разъезжались:
+    у сервера в регулярке стояли границы слова, у клиента нет, и «вакансиям»
+    превращалось в «jobм». Теперь источник один — server/terms.py и server/i18n.
+    Статьи клиенту не нужны: их страницы сервер отдаёт уже переведёнными, а
+    вес словаря вырос бы с 250 КБ до двух мегабайт.
+    """
+    if lang not in PATH_LANGS:
+        raise HTTPException(404)
+    return JSONResponse(_I18N_CLIENT.get(lang, {}),
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+
 _LANG_PREFIX_RE = re.compile(r"^/(" + "|".join(PATH_LANGS) + r")(/.*)?$")
 # ссылки, которые не должны получать языковой префикс
 _NO_PREFIX_RE = re.compile(r"^(?:https?:|mailto:|tel:|#|/(?:css|js|img|assets|api|static|"
@@ -1921,7 +2045,12 @@ def _prefix_links(text: str, lang: str) -> str:
 
 
 def _lang_links(path: str, current: str) -> str:
-    """Видимые ссылки на переводы: их обходит поисковик и видит человек без JS."""
+    """Видимые ссылки на переводы: их обходит поисковик и видит человек без JS.
+
+    Названия языков остаются на своём языке (Deutsch, Ελληνικά) — так переключатель
+    и должен выглядеть. А вот подпись самого блока переводится: она вставляется
+    после translate_html и раньше висела по-русски на всех одиннадцати версиях.
+    """
     items = [("ru", "Русский")] + list(PATH_LANGS.items())
     links = []
     for code, label in items:
@@ -1930,7 +2059,8 @@ def _lang_links(path: str, current: str) -> str:
             links.append(f'<b lang="{code}">{label}</b>')
         else:
             links.append(f'<a lang="{code}" hreflang="{code}" href="{href}">{label}</a>')
-    return ('<nav class="lang-links" aria-label="Язык сайта">'
+    caption = _I18N_SERVER.get(current, {}).get("Язык сайта", "Язык сайта")
+    return (f'<nav class="lang-links" aria-label="{html.escape(caption, quote=True)}">'
             + "".join(links) + "</nav>")
 
 
@@ -2088,6 +2218,9 @@ def request_lang(request: Request) -> str:
 def render(request, db, name, **ctx):
     ctx.setdefault("user", get_user(request, db))
     ctx.setdefault("lang", request_lang(request))
+    # На /jobs «lang» — это фильтр по языку вакансии, а не язык страницы.
+    # Фильтрам шаблона нужен именно язык страницы, поэтому он живёт отдельно.
+    ctx["page_lang"] = request_lang(request)
     u = ctx["user"]
     if u and (u.role == "admin" or session_admin_uid(request)):
         ctx.setdefault("view_as", u.role if u.role in VIEW_AS_ROLES else "admin")
@@ -2219,6 +2352,8 @@ def resend_send(to: str, subject: str, html: str) -> bool:
     """Отправка письма через Resend. True при 2xx, иначе False. Никогда не бросает."""
     if not RESEND_API_KEY:
         return False
+    if (to or "").lower().endswith("@" + TG_ACCOUNT_DOMAIN):
+        return False           # кандидату из бота пишет сам бот
     try:
         body = json.dumps({"from": RESEND_FROM, "to": [to],
                            "subject": subject, "html": html}).encode("utf-8")
@@ -2789,6 +2924,10 @@ def companies_page(request: Request, db: Session = Depends(db_session)):
     profiles = {p.slug: p for p in db.query(CompanyProfile).all()}
     companies = []
     for slug, row in by_slug.items():
+        if terms.looks_anonymous(row["job"].company_name):
+            # каталог работодателей: «iGaming-проект» и «платный Telegram-чат» —
+            # это анонимные объявления, а не компании со страницей
+            continue
         profile = profiles.get(slug)
         companies.append({
             "slug": slug, "name": row["job"].company_name, "jobs": row["count"],
@@ -2814,7 +2953,8 @@ def company_page(slug: str, request: Request, db: Session = Depends(db_session))
     company = matched[0].company_name
     dom = company_domain(company)
     matched.sort(key=lambda j: j.created_at, reverse=True)
-    locs = sorted({j.location for j in matched if j.location})
+    locs = sorted({terms.location_label(j.location, request_lang(request))
+                   for j in matched if j.location} - {""})
     company_profile = next((j.owner for j in matched if j.owner_id), None)
     public = db.query(CompanyProfile).filter_by(slug=slug).first()
     if public and public.website and not dom:
@@ -4916,6 +5056,12 @@ def app_status(app_id: int, request: Request, status: str = Form(...),
             resend_send(a.user.email, f"SpinHire — {label}",
                         f"<p><b>{html.escape(label)}</b></p><p>{safe_company}: {safe_title}</p>"
                         f'<p><a href="{BASE_URL or "https://spinhire.io"}/profile">{mail_t(tl, "open_cabinet")}</a></p>')
+            try:
+                from server import jobbot
+                jobbot.notify_user(db, a.user_id,
+                                   f"<b>{html.escape(label)}</b>\n{safe_company}: {safe_title}")
+            except Exception:  # noqa: BLE001 — бот не поднят или чат закрыт
+                pass
     return RedirectResponse("/employer", status_code=303)
 
 
@@ -6403,46 +6549,31 @@ def profession_page(slug: str, request: Request, db: Session = Depends(db_sessio
                   salary_headline=role_salary_headline(role))
 
 
-COUNTRY_ALIASES = {
-    "malta": "Мальта", "мальта": "Мальта", "sliema": "Мальта", "st julian": "Мальта",
-    "cyprus": "Кипр", "кипр": "Кипр", "limassol": "Кипр", "nicosia": "Кипр",
-    "poland": "Польша", "польша": "Польша", "warsaw": "Польша", "krakow": "Польша", "poznan": "Польша",
-    "ukraine": "Украина", "украина": "Украина", "kyiv": "Украина", "kiev": "Украина", "київ": "Украина",
-    "united kingdom": "Великобритания", "uk": "Великобритания", "london": "Великобритания",
-    "gibraltar": "Гибралтар", "romania": "Румыния", "bucharest": "Румыния",
-    "bulgaria": "Болгария", "sofia": "Болгария", "greece": "Греция", "athens": "Греция",
-    "spain": "Испания", "madrid": "Испания", "barcelona": "Испания",
-    "portugal": "Португалия", "lisbon": "Португалия", "germany": "Германия", "berlin": "Германия",
-    "brazil": "Бразилия", "sao paulo": "Бразилия", "são paulo": "Бразилия",
-    "united states": "США", "usa": "США", "new jersey": "США", "las vegas": "США",
-    "canada": "Канада", "toronto": "Канада", "georgia": "Грузия", "tbilisi": "Грузия",
-    "armenia": "Армения", "yerevan": "Армения", "serbia": "Сербия", "belgrade": "Сербия",
-    "philippines": "Филиппины", "manila": "Филиппины", "india": "Индия",
-    "south africa": "ЮАР", "uae": "ОАЭ", "dubai": "ОАЭ", "sweden": "Швеция", "stockholm": "Швеция",
-    "latvia": "Латвия", "riga": "Латвия", "estonia": "Эстония", "lithuania": "Литва",
-    "netherlands": "Нидерланды", "amsterdam": "Нидерланды", "ireland": "Ирландия", "dublin": "Ирландия",
-    "italy": "Италия", "milan": "Италия", "mexico": "Мексика", "colombia": "Колумбия",
-    "peru": "Перу", "chile": "Чили", "argentina": "Аргентина", "turkey": "Турция",
-    "australia": "Австралия", "china": "Китай", "japan": "Япония", "kazakhstan": "Казахстан",
-}
+# Алиасы («toronto», «uae», «Kenya», «KE») и таблица стран живут в server/terms.py:
+# один список на краулер, витрину, переводы и скрипты соцсетей.
+COUNTRY_ALIASES = terms.COUNTRY_ALIASES
 
 
 def country_of(location: str) -> str:
     """Свести свободный текст локации к стране. Удалёнку считаем отдельной «страной»."""
     low = (location or "").lower()
     if not low.strip():
-        return "Не указана"
+        return terms.UNKNOWN_COUNTRY
     if "remote" in low or "удал" in low or "віддал" in low:
-        return "Удалёнка"
-    for alias, name in COUNTRY_ALIASES.items():
-        if alias in low:
+        return terms.REMOTE_COUNTRY
+    # сначала целые куски через запятую: «Georgia» в «Atlanta, Georgia, US» это штат,
+    # а не Грузия, поэтому хвост важнее начала строки
+    parts = [p.strip() for p in low.split(",") if p.strip()]
+    for part in reversed(parts):
+        name = COUNTRY_ALIASES.get(part)
+        if name:
             return name
-    tail = low.split(",")[-1].strip()
-    # «2 Locations», «3 offices» — у источника вместо города счётчик,
-    # страну из этого не вывести, а в статистике такое выглядит как страна
-    if not tail or any(ch.isdigit() for ch in tail):
-        return "Не указана"
-    return tail.title()[:24]
+    for alias, name in COUNTRY_ALIASES.items():
+        if len(alias) > 3 and alias in low:
+            return name
+    # «2 Locations», «в USDT», «Проект под NDA» — у источника вместо страны мусор.
+    # Раньше он через tail.title() попадал в фильтры отдельной «страной».
+    return terms.UNKNOWN_COUNTRY
 
 
 RU_MONTHS = ("января", "февраля", "марта", "апреля", "мая", "июня", "июля",
@@ -6458,21 +6589,11 @@ def human_date(value: date, lang: str = "ru") -> str:
     return f"{value.day} {RU_MONTHS[value.month - 1]} {value.year}"
 
 
-COUNTRY_EN = {
-    "Мальта": "Malta", "Кипр": "Cyprus", "Польша": "Poland", "Украина": "Ukraine",
-    "Великобритания": "United Kingdom", "Гибралтар": "Gibraltar", "Румыния": "Romania",
-    "Болгария": "Bulgaria", "Греция": "Greece", "Испания": "Spain", "Португалия": "Portugal",
-    "Германия": "Germany", "Бразилия": "Brazil", "США": "USA", "Канада": "Canada",
-    "Грузия": "Georgia", "Армения": "Armenia", "Сербия": "Serbia", "Филиппины": "Philippines",
-    "Индия": "India", "ЮАР": "South Africa", "ОАЭ": "UAE", "Швеция": "Sweden", "Латвия": "Latvia",
-    "Эстония": "Estonia", "Литва": "Lithuania", "Нидерланды": "Netherlands", "Ирландия": "Ireland",
-    "Италия": "Italy", "Мексика": "Mexico", "Колумбия": "Colombia", "Перу": "Peru", "Чили": "Chile",
-    "Аргентина": "Argentina", "Турция": "Turkey", "Австралия": "Australia", "Китай": "China",
-    "Япония": "Japan", "Казахстан": "Kazakhstan", "Удалёнка": "Remote", "Не указана": "Not specified",
-    "офис": "office", "удалёнка": "remote", "гибрид": "hybrid", "не указан": "not specified",
-    "Другое": "Other",
-}
-
+# Английские имена и ISO — те же, что во всех остальных языках: из terms.py.
+# Из имени собран слаг кластерной страницы (/jobs/usa), поэтому менять их нельзя.
+COUNTRY_EN = {ru: row["en"] for ru, row in terms.COUNTRIES.items()}
+COUNTRY_EN.update({name: terms.TERMS["en"][name] for name in
+                   ("Удалёнка", "Не указана", "не указан", "офис", "удалёнка", "гибрид", "Другое")})
 
 _COUNTRY_RU_BY_EN = {v.lower(): k for k, v in COUNTRY_EN.items()}
 
@@ -6493,15 +6614,7 @@ def category_ru(name: str) -> str:
     return value
 
 
-COUNTRY_ISO = {
-    "Мальта": "MT", "Кипр": "CY", "Польша": "PL", "Украина": "UA", "Великобритания": "GB",
-    "Гибралтар": "GI", "Румыния": "RO", "Болгария": "BG", "Греция": "GR", "Испания": "ES",
-    "Португалия": "PT", "Германия": "DE", "Бразилия": "BR", "США": "US", "Канада": "CA",
-    "Грузия": "GE", "Армения": "AM", "Сербия": "RS", "Филиппины": "PH", "Индия": "IN", "ЮАР": "ZA",
-    "ОАЭ": "AE", "Швеция": "SE", "Латвия": "LV", "Эстония": "EE", "Литва": "LT", "Нидерланды": "NL",
-    "Ирландия": "IE", "Италия": "IT", "Мексика": "MX", "Колумбия": "CO", "Перу": "PE", "Чили": "CL",
-    "Аргентина": "AR", "Турция": "TR", "Австралия": "AU", "Китай": "CN", "Япония": "JP", "Казахстан": "KZ",
-}
+COUNTRY_ISO = terms.COUNTRY_ISO
 
 
 def job_location_schema(job) -> dict:
@@ -6542,9 +6655,7 @@ def job_location_schema(job) -> dict:
 
 def loc_name(name: str, lang: str = "ru") -> str:
     """Страна / формат / направление на языке страницы (для .md и llms.txt)."""
-    if lang == "ru":
-        return name
-    return COUNTRY_EN.get(name) or _SERVER_VOCAB.get("en", {}).get(name) or name
+    return terms.country_name(name, lang)
 
 
 _market_stats_cache = {"at": 0.0, "data": None}
@@ -6992,6 +7103,11 @@ app.include_router(claim.router)
 from server import leadbot  # noqa: E402  (после claim — берёт из него ссылку регистрации)
 app.include_router(leadbot.router)
 leadbot.start_scheduler()  # молчит, пока не задан SPINHIRE_TG_LEAD_CHAT
+
+# ---------- бот подбора вакансий: поиск, резюме и отклик прямо в Telegram ----------
+from server import jobbot  # noqa: E402  (после claim/leadbot — тот же конвейер лидов)
+app.include_router(jobbot.router)
+jobbot.start_scheduler()  # молчит, пока не задан SPINHIRE_JOBBOT_TOKEN
 
 # ---------- программные кластеры вакансий: страна × направление × язык ----------
 from server import clusters  # noqa: E402

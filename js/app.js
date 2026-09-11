@@ -71,65 +71,9 @@ document.addEventListener('DOMContentLoaded', () => {
     try { localStorage.setItem('langChosen', '1'); } catch (e) {}
     location.href = langUrl(wanted);
   })();
-  const UI_COPY = {
-    uk: {
-      'Вакансии':'Вакансії','Резюме':'Резюме','Компании':'Компанії','Блог':'Блог','Работодателям':'Роботодавцям',
-      'Войти':'Увійти','Выйти':'Вийти','Показать календарь →':'Показати календар →','Фильтры':'Фільтри','Показать ещё':'Показати ще','из':'з','Читать дальше ↓':'Читати далі ↓','Свернуть ↑':'Згорнути ↑','Добавить CV':'Додати CV','+ Добавить CV':'+ Додати CV','Мой профиль':'Мій профіль',
-      'Кандидатам':'Кандидатам','Анонимные резюме':'Анонімні резюме','Гид по зарплатам':'Гід із зарплат','Игровая зона':'Ігрова зона','🎡 Игровая зона':'🎡 Ігрова зона','Карьерный блог':'Кар’єрний блог',
-      'Игровая зона SpinHire':'Ігрова зона SpinHire','Крути, копи SC и забирай призы':'Крути, накопичуй SC та забирай призи','ВСЕ ИГРЫ →':'УСІ ІГРИ →','ПРАВИЛА':'ПРАВИЛА','Своя ставка':'Своя ставка','Своя ставка в SC':'Своя ставка в SC','Выбрать':'Обрати',
-      'Разместить вакансию':'Розмістити вакансію','Кабинет работодателя':'Кабінет роботодавця','Тарифы':'Тарифи','База резюме':'База резюме','О проекте':'Про проєкт','О нас':'Про нас','Методология':'Методологія','Контакты':'Контакти','Конфиденциальность':'Конфіденційність','Условия':'Умови','Правила игр':'Правила ігор',
-      'К содержимому':'До змісту','Основная навигация':'Основна навігація','Меню':'Меню','Язык':'Мова','Язык сайта':'Мова сайту','Русский':'Російська','Самый громкий джоб-борд в iGaming.':'Найгучніший джоб-борд в iGaming.','© 2026 SpinHire — играй ответственно, работай громко':'© 2026 SpinHire — грай відповідально, працюй гучно','Индустрия 18+ · лицензии проверяем':'Індустрія 18+ · ліцензії перевіряємо',
-      'Главная':'Головна','Живая база':'Жива база','Онлайн / офис — любой':'Онлайн / офіс — будь-який','Любая страна / город':'Будь-яка країна / місто','Все направления':'Усі напрями','Любой язык':'Будь-яка мова','с вилкой':'із зарплатною вилкою','Найти':'Знайти','Сбросить':'Скинути',
-      'по запросу':'за запитом','Пусто по этим фильтрам':'За цими фільтрами порожньо','Назад':'Назад','Вперёд':'Далі','Описание':'Опис','Похожие вакансии':'Схожі вакансії','О вакансии':'Про вакансію','Компания':'Компанія','Направление':'Напрям','Формат':'Формат','Локация':'Локація','Зарплата':'Зарплата','Размещена':'Розміщена','Дедлайн':'Дедлайн','Статус':'Статус','Откликнуться':'Відгукнутися','Язык работы':'Мова роботи','Выберите язык':'Оберіть мову','Не указан':'Не вказано',
-      '▮ Описание':'▮ Опис','▮ Похожие вакансии':'▮ Схожі вакансії','Отклик на вакансию':'Відгук на вакансію','Откликнуться →':'Відгукнутися →','Войти и откликнуться →':'Увійти та відгукнутися →','Откликнуться через SpinHire →':'Відгукнутися через SpinHire →','Откликнуться у работодателя ↗':'Відгукнутися у роботодавця ↗','Войти как соискатель':'Увійти як кандидат','Смотреть актуальные вакансии →':'Дивитися актуальні вакансії →','Должность, компания, тег…':'Посада, компанія, тег…','Поиск вакансий':'Пошук вакансій','Страна и город':'Країна та місто',
-      'удалёнка':'віддалено','гибрид':'гібрид','офис':'офіс','Топ-менеджмент':'Топменеджмент','Разработка игр':'Розробка ігор','Маркетинг и CRM':'Маркетинг і CRM','Поддержка игроков':'Підтримка гравців'
-    },
-    en: {
-      'Вакансии':'Jobs','Резюме':'Resumes','Компании':'Companies','Блог':'Blog','Работодателям':'For employers',
-      'Войти':'Log in','Выйти':'Log out','Показать календарь →':'Show calendar →','Фильтры':'Filters','Показать ещё':'Show more','из':'of','Читать дальше ↓':'Read more ↓','Свернуть ↑':'Collapse ↑','Добавить CV':'Add CV','+ Добавить CV':'+ Add CV','Мой профиль':'My profile',
-      'Кандидатам':'For candidates','Анонимные резюме':'Anonymous resumes','Гид по зарплатам':'Salary guide','Игровая зона':'Game zone','🎡 Игровая зона':'🎡 Game zone','Карьерный блог':'Career blog',
-      'Игровая зона SpinHire':'SpinHire game zone','Крути, копи SC и забирай призы':'Spin, collect SC and claim rewards','ВСЕ ИГРЫ →':'ALL GAMES →','ПРАВИЛА':'RULES','Своя ставка':'Custom bet','Своя ставка в SC':'Custom bet in SC','Выбрать':'Set bet',
-      'Разместить вакансию':'Post a job','Кабинет работодателя':'Employer dashboard','Тарифы':'Pricing','База резюме':'Resume database','О проекте':'About','О нас':'About us','Методология':'Methodology','Контакты':'Contacts','Конфиденциальность':'Privacy','Условия':'Terms','Правила игр':'Game rules',
-      'К содержимому':'Skip to content','Основная навигация':'Main navigation','Меню':'Menu','Язык':'Language','Язык сайта':'Site language','Русский':'Russian','Самый громкий джоб-борд в iGaming.':'The loudest job board in iGaming.','© 2026 SpinHire — играй ответственно, работай громко':'© 2026 SpinHire — play responsibly, work boldly','Индустрия 18+ · лицензии проверяем':'18+ industry · licences verified',
-      'Главная':'Home','Живая база':'Live database','Онлайн / офис — любой':'Remote / office — any','Любая страна / город':'Any country / city','Все направления':'All categories','Любой язык':'Any language','с вилкой':'salary shown','Найти':'Search','Сбросить':'Reset',
-      'по запросу':'on request','Пусто по этим фильтрам':'No jobs match these filters','Назад':'Back','Вперёд':'Next','Описание':'Description','Похожие вакансии':'Similar jobs','О вакансии':'About this job','Компания':'Company','Направление':'Category','Формат':'Work format','Локация':'Location','Зарплата':'Salary','Размещена':'Posted','Дедлайн':'Deadline','Статус':'Status','Откликнуться':'Apply','Язык работы':'Working language','Выберите язык':'Select a language','Не указан':'Not specified',
-      '▮ Описание':'▮ Description','▮ Похожие вакансии':'▮ Similar jobs','Отклик на вакансию':'Apply for this job','Откликнуться →':'Apply →','Войти и откликнуться →':'Log in and apply →','Откликнуться через SpinHire →':'Apply via SpinHire →','Откликнуться у работодателя ↗':'Apply on employer site ↗','Войти как соискатель':'Log in as candidate','Смотреть актуальные вакансии →':'View open jobs →','Должность, компания, тег…':'Job title, company, tag…','Поиск вакансий':'Search jobs','Страна и город':'Country and city',
-      'удалёнка':'remote','гибрид':'hybrid','офис':'office','Топ-менеджмент':'Executive','Разработка игр':'Game development','Маркетинг и CRM':'Marketing & CRM','Поддержка игроков':'Player support'
-    }
-  };
-  // Служебная лексика площадки: категории, форматы, гео, «по запросу» и т.п.
-  // Переводится ВЕЗДЕ, включая карточки вакансий и любой динамический рендер, —
-  // это наши слова, а не текст работодателя.
-  const VOCAB = {
-    en: {
-      'Операции казино':'Casino operations','Беттинг и трейдинг':'Betting & trading','Разработка игр':'Game development',
-      'Аффилейты и медиабаинг':'Affiliates & media buying','Комплаенс и AML':'Compliance & AML','Платежи и антифрод':'Payments & antifraud',
-      'Поддержка игроков':'Player support','Маркетинг и CRM':'Marketing & CRM','Данные и BI':'Data & BI','Топ-менеджмент':'Executive',
-      'удалёнка':'remote','Удалёнка':'Remote','гибрид':'hybrid','офис':'office','по запросу':'on request',
-      'Не указана':'Not specified','вакансий':'jobs','вакансии':'jobs','вакансия':'job','Обновлено':'Updated',
-      'Избранные':'Starred','Скрытые':'Hidden','Сохранить поиск':'Save search','активность сегодня':'active today',
-      'активность вчера':'active yesterday','активность на этой неделе':'active this week','хочет':'expects',
-      'Баланс кабинета':'Account balance','размещений':'postings','контактов':'contacts','промокод':'promo code','активен':'active',
-      'Саппорт (языки)':'Support (languages)','Мальта':'Malta','США':'USA','Великобритания':'United Kingdom','Греция':'Greece',
-      'Польша':'Poland','Бразилия':'Brazil','Германия':'Germany','Кипр':'Cyprus','Украина':'Ukraine','Испания':'Spain',
-      'Румыния':'Romania','Грузия':'Georgia','Сербия':'Serbia','Армения':'Armenia','Чехия':'Czechia','Нидерланды':'Netherlands',
-      'Филиппины':'Philippines','Болгария':'Bulgaria','Швеция':'Sweden','Гибралтар':'Gibraltar'
-    },
-    uk: {
-      'Операции казино':'Операції казино','Беттинг и трейдинг':'Бетинг і трейдинг','Разработка игр':'Розробка ігор',
-      'Аффилейты и медиабаинг':'Афілейти та медіабаїнг','Комплаенс и AML':'Комплаєнс і AML','Платежи и антифрод':'Платежі та антифрод',
-      'Поддержка игроков':'Підтримка гравців','Маркетинг и CRM':'Маркетинг і CRM','Данные и BI':'Дані та BI','Топ-менеджмент':'Топменеджмент',
-      'удалёнка':'віддалено','Удалёнка':'Віддалено','гибрид':'гібрид','офис':'офіс','по запросу':'за запитом',
-      'Не указана':'Не вказана','вакансий':'вакансій','вакансии':'вакансії','вакансия':'вакансія','Обновлено':'Оновлено',
-      'Избранные':'Обрані','Скрытые':'Приховані','Сохранить поиск':'Зберегти пошук','активность сегодня':'активність сьогодні',
-      'активность вчера':'активність вчора','активность на этой неделе':'активність цього тижня','хочет':'хоче',
-      'Баланс кабинета':'Баланс кабінету','размещений':'розміщень','контактов':'контактів','промокод':'промокод','активен':'активний',
-      'Саппорт (языки)':'Сапорт (мови)','Мальта':'Мальта','США':'США','Великобритания':'Велика Британія','Греция':'Греція',
-      'Польша':'Польща','Бразилия':'Бразилія','Германия':'Німеччина','Кипр':'Кіпр','Украина':'Україна','Испания':'Іспанія',
-      'Румыния':'Румунія','Грузия':'Грузія','Сербия':'Сербія','Армения':'Вірменія','Чехия':'Чехія','Нидерланды':'Нідерланди',
-      'Филиппины':'Філіппіни','Болгария':'Болгарія','Швеция':'Швеція','Гибралтар':'Гібралтар'
-    }
-  };
+  // Словари приходят с сервера: server/terms.py + server/i18n. Своей копии у
+  // клиента больше нет — именно из-за копии «вакансиям» превращалось в «jobм»
+  // (у сервера в регулярке стояли границы слова, у клиента нет).
   let translating = false;   // защита от зацикливания MutationObserver на своих же правках
   const translateInterface = async lang => {
     document.documentElement.lang = lang;
@@ -137,23 +81,45 @@ document.addEventListener('DOMContentLoaded', () => {
     // кабинеты и админка (body.workspace) живут на русском: подстрочный словарь
     // превращал «Вакансии» в «Вакансії» и ломал подписи таблиц
     if (document.body && document.body.classList.contains('workspace')) return;
-    let complete = {};
+    let dict = {}, vocab = {};
     try {
-      const response = await fetch(`/js/i18n-${lang}.js?v=20260819d`, { credentials: 'same-origin' });
-      if (response.ok) complete = await response.json();
+      const [full, service] = await Promise.all([
+        fetch(`/js/i18n-${lang}.js?v=20260910`, { credentials: 'same-origin' }),
+        fetch(`/js/i18n-terms-${lang}.js?v=20260910`, { credentials: 'same-origin' })
+      ]);
+      if (full.ok) dict = await full.json();
+      if (service.ok) vocab = await service.json();
     } catch (_) {}
-    const dict = Object.assign({}, complete, UI_COPY[lang]);
-    // Периоды в вилке приходят из базы вместе с числом («$350 000 в год»),
-    // поэтому словарь их не ловит — переводим подписью к сумме
-    const PERIODS = {
-      en: [[' в год', '/year'], [' в час', '/hour'], [' в месяц', '/month']],
-      uk: [[' в год', ' на рік'], [' в час', ' на годину'], [' в месяц', ' на місяць']]
-    }[lang] || [];
-    const vocab = VOCAB[lang] || {};
+    // Границы по кириллице — те же, что на сервере: без них «вакансиям»
+    // превращалось в «jobм», а «Дизайн» в «Дvonайн».
     const vocabKeys = Object.keys(vocab).sort((a, b) => b.length - a.length);
     const vocabRe = vocabKeys.length
-      ? new RegExp(vocabKeys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g')
+      ? new RegExp('(?<![А-Яа-яЁёІіЇїЄєҐґ])(?:'
+          + vocabKeys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+          + ')(?![А-Яа-яЁёІіЇїЄєҐґ])', 'g')
       : null;
+
+    // Тот же второй индекс, что на сервере: «Вакансии iGaming — 5240 живых
+    // вакансий» словарь целых строк не ловит, потому что число живое.
+    const NUM = /\d+(?:[ \u00a0\u202f]\d+)*/g, HAS_NUM = /\d/;
+    const numbered = {};
+    Object.keys(dict).forEach(key => {
+      if (!HAS_NUM.test(key) && key.indexOf('#') < 0) return;
+      const pattern = key.replace(NUM, '#'), target = dict[key].replace(NUM, '#');
+      const holes = (pattern.match(/#/g) || []).length;
+      if (holes && holes === (target.match(/#/g) || []).length && !(pattern in numbered)) {
+        numbered[pattern] = target;
+      }
+    });
+    const withNumbers = value => {
+      const numbers = value.match(NUM);
+      if (!numbers) return '';
+      const target = numbered[value.replace(NUM, '#')];
+      if (!target) return '';
+      const parts = target.split('#');
+      if (parts.length - 1 !== numbers.length) return '';
+      return parts.reduce((acc, part, i) => acc + (i ? numbers[i - 1] : '') + part, '');
+    };
 
     const translateWithin = root => {
       if (!root || !(root instanceof Element || root === document.body)) return;
@@ -169,16 +135,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const insideJob = parent && parent.closest('.job-card, .job-body');
         const raw = node.nodeValue, key = raw.trim().replace(/\s+/g, ' ');
         // полный словарь — только вне карточек вакансий: текст работодателя не трогаем
-        if (!insideJob && dict[key]) {
-          const leading = (raw.match(/^\s*/) || [''])[0];
-          const trailing = (raw.match(/\s*$/) || [''])[0];
-          node.nodeValue = leading + dict[key] + trailing;
-          return;
+        if (!insideJob) {
+          const exact = dict[key] || withNumbers(key);
+          if (exact) {
+            const leading = (raw.match(/^\s*/) || [''])[0];
+            const trailing = (raw.match(/\s*$/) || [''])[0];
+            node.nodeValue = leading + exact + trailing;
+            return;
+          }
         }
         let value = node.nodeValue;
-        const period = PERIODS.find(([russian]) => value.includes(russian));
-        if (period) value = value.replace(period[0], period[1]);
-        // служебная лексика — везде, в том числе внутри карточек
+        // служебная лексика — везде, в том числе внутри карточек и в вилке
+        // («$350 000 в год» словарь целых строк не ловит)
         if (vocabRe && /[А-Яа-яЁёІіЇїЄє]/.test(value)) value = value.replace(vocabRe, m => vocab[m] || m);
         if (value !== node.nodeValue) node.nodeValue = value;
       });
@@ -207,10 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const value = meta.getAttribute('content');
       if (value && dict[value]) meta.setAttribute('content', dict[value]);
     });
-    document.querySelectorAll('[data-i18n-prefix="jobsCount"]').forEach(el => {
-      const count = (el.textContent.match(/\d+/) || ['0'])[0];
-      el.textContent = lang === 'uk' ? `Вакансії iGaming — ${count}` : `iGaming jobs — ${count}`;
-    });
+
   };
   const languageHost = document.querySelector('.footer-bottom');
   // Если сервер уже отдал видимый список языков (.lang-links), дублирующий

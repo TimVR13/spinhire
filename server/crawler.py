@@ -651,8 +651,10 @@ def crawl_casino_seed_registry():
 
 try:  # как часть пакета: from server import crawler
     from .salary import format_salary, parse_salary
+    from . import terms as _terms
 except ImportError:  # как скрипт: python server/crawler.py
     from salary import format_salary, parse_salary
+    import terms as _terms
 
 
 def _clean_text(raw):
@@ -1820,29 +1822,12 @@ def crawl_jobsinmalta(max_details: int = 80):
 
 
 # ---------- общие помощники для JSON-LD-карточек ----------
-_COUNTRY_RU = {
-    "united kingdom": "Великобритания", "uk": "Великобритания", "england": "Великобритания",
-    "malta": "Мальта", "cyprus": "Кипр", "gibraltar": "Гибралтар", "isle of man": "Остров Мэн",
-    "spain": "Испания", "portugal": "Португалия", "germany": "Германия", "poland": "Польша",
-    "bulgaria": "Болгария", "romania": "Румыния", "serbia": "Сербия", "ukraine": "Украина",
-    "georgia": "Грузия", "armenia": "Армения", "estonia": "Эстония", "latvia": "Латвия",
-    "lithuania": "Литва", "netherlands": "Нидерланды", "ireland": "Ирландия", "italy": "Италия",
-    "greece": "Греция", "sweden": "Швеция", "denmark": "Дания", "france": "Франция",
-    "belgium": "Бельгия", "austria": "Австрия", "switzerland": "Швейцария", "hungary": "Венгрия",
-    "czech republic": "Чехия", "croatia": "Хорватия", "montenegro": "Черногория",
-    "moldova": "Молдова", "turkey": "Турция", "israel": "Израиль", "kazakhstan": "Казахстан",
-    "uzbekistan": "Узбекистан", "united arab emirates": "ОАЭ", "uae": "ОАЭ",
-    "united states": "США", "usa": "США", "canada": "Канада", "mexico": "Мексика",
-    "brazil": "Бразилия", "colombia": "Колумбия", "peru": "Перу", "argentina": "Аргентина",
-    "chile": "Чили", "australia": "Австралия", "south africa": "ЮАР", "nigeria": "Нигерия",
-    "kenya": "Кения", "philippines": "Филиппины", "india": "Индия", "thailand": "Таиланд",
-    "singapore": "Сингапур", "hong kong": "Гонконг", "vietnam": "Вьетнам",
-    "sri lanka": "Шри-Ланка", "malaysia": "Малайзия", "indonesia": "Индонезия",
-    "egypt": "Египет", "morocco": "Марокко", "ghana": "Гана", "tanzania": "Танзания",
-    "uganda": "Уганда", "north macedonia": "Северная Македония", "bosnia and herzegovina": "Босния",
-    "slovakia": "Словакия", "slovenia": "Словения", "norway": "Норвегия", "finland": "Финляндия",
-    "curacao": "Кюрасао", "curaçao": "Кюрасао", "costa rica": "Коста-Рика", "panama": "Панама",
-}
+# Страны краулер и витрина берут из одной таблицы (server/terms.py). Раньше у
+# краулера был свой список на 70 стран, а у переводчика витрины — свой на 20:
+# всё, что попадало в разрыв (Кения, ОАЭ, Канада, Шри-Ланка), навсегда
+# оставалось русским на всех языковых версиях.
+_COUNTRY_RU = _terms.COUNTRY_NAMES
+
 _CURRENCY_SIGN = {"USD": "$", "EUR": "€", "GBP": "£"}
 
 

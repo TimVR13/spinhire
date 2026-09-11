@@ -5,7 +5,7 @@
   </div>
   <div>
     <h3 class="job-card__title">{{ j.title }}</h3>
-    <p class="job-card__meta"><b>{{ j.company_name }}</b> · {{ j.location or '—' }} · {{ j.fmt }}</p>
+    <p class="job-card__meta"><b>{{ j.company_name|company(page_lang) }}</b> · {{ j.location|place(page_lang) or '—' }} · {{ j.fmt }}</p>
     <div class="job-card__tags">
       {% if j.category %}<span class="tag">{{ j.category }}</span>{% endif %}
       {% for t in j.tag_list[:3] %}<span class="tag">{{ t }}</span>{% endfor %}
@@ -13,7 +13,7 @@
     </div>
   </div>
   <div class="job-card__side">
-    {% if j.has_salary %}<span class="salary">{{ j.salary }}</span>
+    {% if j.has_salary %}<span class="salary">{{ j.salary|money(page_lang) }}</span>
         {% else %}<span class="salary" style="color: var(--ink-faint); font-size: 0.9rem;">по запросу</span>{% endif %}
     <span class="job-card__age">{{ j.created_at.strftime('%d.%m') }}</span>
   </div>
