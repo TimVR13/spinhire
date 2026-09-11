@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.spinhire/jobs",
+  "title": "SpinHire iGaming Jobs",
+  "description": "Live iGaming jobs — casino, betting, studios, affiliates — plus market data. No auth.",
+  "version": "1.0.0",
+  "websiteUrl": "https://spinhire.io/en/",
+  "repository": {
+    "url": "https://github.com/TimVR13/spinhire",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://spinhire.io/mcp"
+    }
+  ]
+}

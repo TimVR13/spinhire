@@ -19,7 +19,7 @@ import urllib.request
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.gzip import GZipMiddleware
@@ -1434,6 +1434,9 @@ def _public_openapi():
                     {"name": "fmt", "in": "query", "schema": {"type": "string", "enum": ["офис", "удалёнка", "гибрид"]}},
                     {"name": "page", "in": "query", "schema": {"type": "integer", "minimum": 1, "default": 1}},
                     {"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 50}},
+                    {"name": "lang", "in": "query", "schema": {"type": "string", "enum": ["ru", "en"], "default": "ru"},
+                     "description": "Язык значений в ответе: направление, страна, формат и вилка. "
+                                    "lang=en returns English values (office / Casino operations / from €3 000 per month)."},
                 ],
                 "responses": {"200": {"description": "Страница вакансий", "content": {"application/json": {"schema": {
                     "type": "object", "properties": {
@@ -1444,6 +1447,10 @@ def _public_openapi():
                 "operationId": "getMarketStats",
                 "summary": "Рынок труда iGaming в цифрах / iGaming job market stats",
                 "description": "Открытые вакансии, новые за неделю, компании, разбивка по направлениям, странам, языкам и формату. Обновление каждые 6 часов.",
+                "parameters": [
+                    {"name": "lang", "in": "query", "schema": {"type": "string", "enum": ["ru", "en"], "default": "ru"},
+                     "description": "Язык названий направлений и стран / lang=en returns English names."},
+                ],
                 "responses": {"200": {"description": "Статистика", "content": {"application/json": {"schema": {"type": "object"}}}}}}},
             "/api/market-history": {"get": {
                 "operationId": "getMarketHistory",
@@ -1730,6 +1737,33 @@ _SECURITY_HEADERS = {
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     "Referrer-Policy": "strict-origin-when-cross-origin",
 }
+
+
+# открытый индекс: читать его из браузерного приложения должно быть можно без прокси.
+# Только эти адреса и только чтение — кабинет и CRM ходят с куками, им чужой origin не нужен.
+PUBLIC_API_PATHS = ("/api/jobs", "/api/market-stats", "/api/market-history",
+                    "/api/featured-jobs", "/api/top-companies", "/openapi.json")
+
+
+def _is_public_api(path: str) -> bool:
+    path = _LANG_PREFIX_RE.sub(lambda m: m.group(2) or "/", path)
+    return path.startswith(PUBLIC_API_PATHS)
+
+
+@app.middleware("http")
+async def public_api_cors(request: Request, call_next):
+    """CC BY 4.0 без CORS — лицензия на бумаге: fetch() из браузера всё равно не пройдёт."""
+    if not _is_public_api(request.url.path):
+        return await call_next(request)
+    if request.method == "OPTIONS":  # префлайт, иначе роут отвечает 405
+        response = Response(status_code=204)
+    else:
+        response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Max-Age"] = "86400"
+    return response
 
 
 @app.middleware("http")

@@ -353,14 +353,29 @@ FastAPI + SQLAlchemy + SQLite, server-rendered. Happy to answer anything about t
 инструменты `search_jobs`, `get_job`, `market_stats`, `market_history`, `list_professions`,
 `get_profession`, `get_company`). Это готовый повод для отдельной волны подач.
 
+**Первым делом — официальный реестр, остальные каталоги тянут из него.** PulseMCP приём
+заявок остановил и прямо пишет: публикуйтесь в Official MCP Registry, оттуда подхватим сами.
+
+В корне репозитория лежит готовый `server.json` — проверен по схеме реестра
+(`2025-12-11`, поля и длина описания валидируются, 100 символов максимум). Публикация:
+
+```bash
+# CLI из репозитория modelcontextprotocol/registry
+mcp-publisher login dns --domain spinhire.io --private-key <ключ>   # или: login github
+mcp-publisher publish                                               # берёт ./server.json
+```
+
+Имя `io.spinhire/jobs` — обратный DNS домена, поэтому владение подтверждается TXT-записью;
+альтернатива без DNS — `login github` и имя вида `io.github.timvr13/spinhire`.
+
 | Каталог | Как подаём |
 |---|---|
-| mcp.so | Форма добавления сервера |
-| PulseMCP | pulsemcp.com — форма «submit a server» |
-| Glama MCP directory | glama.ai/mcp/servers — берёт из репозитория или по URL |
-| Smithery | smithery.ai — публикация remote-сервера |
+| **Official MCP Registry** | `server.json` + `mcp-publisher publish` — делать первым |
+| PulseMCP | приём заявок приостановлен; подхватит из официального реестра |
+| mcp.so | mcp.so/submit — форма, нужен вход |
+| Glama MCP directory | glama.ai/mcp/servers → «Add Server»; remote-серверы поддерживает |
+| Smithery | smithery.ai — публикация remote-сервера, вход через GitHub |
 | awesome-mcp-servers (GitHub) | PR в список, категория Jobs / Data |
-| Модельные каталоги коннекторов | Пока сервер без авторизации — годится для ручного добавления в клиентах |
 
 Описание для каталогов MCP:
 
@@ -376,11 +391,20 @@ URL: https://spinhire.io/mcp
 
 | Каталог | Как подаём |
 |---|---|
-| public-apis (GitHub, 300k★) | PR в раздел Jobs: `SpinHire | iGaming industry job listings | No auth | CC BY 4.0` |
-| APIs.guru | PR с нашим `openapi.json` |
+| public-apis (GitHub) | PR в раздел **Jobs**, одна строка на PR, алфавитный порядок (см. ниже) |
+| APIs.guru | **не PR**, а форма https://apis.guru/add-api/ — они сами тянут `openapi.json` |
 | RapidAPI Hub | Публикация как free API |
-| API Tracker / ProgrammableWeb-подобные | Ручная анкета |
 | Postman Public API Network | Коллекция из `openapi.json` |
+
+Строка для public-apis (их формат: имя без «API» и без домена, описание до 100 символов,
+`Auth` только из списка `OAuth / apiKey / X-Mashape-Key / No / User-Agent`):
+
+```
+| [SpinHire](https://spinhire.io/en/api/jobs) | iGaming job listings and labour-market data, CC BY 4.0 | No | Yes | Yes |
+```
+
+`CORS: Yes` — это правда с сентября 2026: открытые адреса отдают `Access-Control-Allow-Origin: *`
+и отвечают на префлайт. До этого `fetch()` из браузера в них не проходил, и строка была бы «No».
 
 ### 4.3 Каталоги данных
 

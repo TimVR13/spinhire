@@ -116,6 +116,26 @@ class LaunchKitTests(unittest.TestCase):
             self.assertIn("Вакансии", payload, lang)
         self.assertEqual(client.get("/js/i18n-xx.js").status_code, 404)
 
+    def test_public_api_is_readable_from_a_browser(self):
+        # CC BY 4.0 без CORS — лицензия на бумаге: fetch() из чужого origin не пройдёт
+        for path in ("/api/jobs?limit=1", "/en/api/jobs?limit=1", "/api/market-stats",
+                     "/api/market-history", "/api/featured-jobs", "/openapi.json"):
+            response = client.get(path, headers={"Origin": "https://example.com"})
+            self.assertEqual(response.headers.get("access-control-allow-origin"), "*", path)
+        preflight = client.options("/api/jobs", headers={"Origin": "https://example.com"})
+        self.assertEqual(preflight.status_code, 204)
+        self.assertEqual(preflight.headers.get("access-control-allow-methods"), "GET, OPTIONS")
+        # кабинетные ответы ходят с куками — их чужому origin отдавать нельзя
+        for path in ("/api/me", "/api/wallet"):
+            private = client.get(path, headers={"Origin": "https://example.com"})
+            self.assertIsNone(private.headers.get("access-control-allow-origin"), path)
+
+    def test_openapi_documents_the_language_parameter(self):
+        spec = client.get("/openapi.json").json()
+        for path in ("/api/jobs", "/api/market-stats"):
+            names = [p["name"] for p in spec["paths"][path]["get"].get("parameters", [])]
+            self.assertIn("lang", names, path)
+
     def test_product_hunt_badge_appears_only_when_configured(self):
         # до запуска id поста не существует: без переменной в разметке не должно быть
         # ни ссылки на PH, ни запроса к api.producthunt.com
