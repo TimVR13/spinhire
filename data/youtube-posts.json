@@ -226,5 +226,23 @@
   "slug": null,
   "featured": [],
   "uploaded_at": "2026-09-12T04:21:00Z"
+ },
+ {
+  "id": "2026-09-13-morning",
+  "batch_id": null,
+  "video_id": "dXodHUsAv90",
+  "url": "https://youtube.com/shorts/dXodHUsAv90",
+  "format": "hot_jobs",
+  "playlist": "jobs",
+  "title": "Работа в iGaming: 4 вакансии дня с зарплатой до $17 900 — 13 сентября 2026",
+  "publish_at": "2026-09-13T07:00:00Z",
+  "slug": null,
+  "featured": [
+   "https://spinhire.io/job/10358",
+   "https://spinhire.io/job/10473",
+   "https://spinhire.io/job/10463",
+   "https://spinhire.io/job/10477"
+  ],
+  "uploaded_at": "2026-09-12T09:23:16Z"
  }
 ]
