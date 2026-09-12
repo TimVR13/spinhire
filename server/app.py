@@ -6765,6 +6765,7 @@ ARTICLE_FILES = {
     "aml-officer-career": "post-aml-officer-career.html",
     "head-of-affiliates-career": "post-head-of-affiliates-career.html",
     "data-engineer-igaming": "post-data-engineer-igaming.html",
+    "indeks-rabotodatelej-igaming-2026-09": "post-indeks-rabotodatelej-igaming-2026-09.html",
 }
 
 
