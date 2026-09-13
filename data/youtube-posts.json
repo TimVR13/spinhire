@@ -257,5 +257,23 @@
   "slug": "compliance-manager",
   "featured": [],
   "uploaded_at": "2026-09-12T14:24:28Z"
+ },
+ {
+  "id": "2026-09-14-morning",
+  "batch_id": null,
+  "video_id": "gF6ZRYCGtzs",
+  "url": "https://youtube.com/shorts/gF6ZRYCGtzs",
+  "format": "hot_jobs",
+  "playlist": "jobs",
+  "title": "Вакансии iGaming до $15 400 в месяц: топ-4 за 14 сентября | работа в гемблинге",
+  "publish_at": "2026-09-14T07:00:00Z",
+  "slug": null,
+  "featured": [
+   "https://spinhire.io/job/10475",
+   "https://spinhire.io/job/10372",
+   "https://spinhire.io/job/10465",
+   "https://spinhire.io/job/9363"
+  ],
+  "uploaded_at": "2026-09-13T04:24:22Z"
  }
 ]
