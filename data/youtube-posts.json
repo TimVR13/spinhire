@@ -288,5 +288,21 @@
   "slug": "content-manager-igaming",
   "featured": [],
   "uploaded_at": "2026-09-13T09:23:42Z"
+ },
+ {
+  "id": "2026-09-15-morning",
+  "batch_id": null,
+  "video_id": "Q_Twgp3SL_4",
+  "url": "https://youtube.com/shorts/Q_Twgp3SL_4",
+  "format": "hot_jobs",
+  "playlist": "jobs",
+  "title": "Вакансии в iGaming: до $15 400 в месяц — топ-2 за 15 сентября",
+  "publish_at": "2026-09-15T07:00:00Z",
+  "slug": null,
+  "featured": [
+   "https://spinhire.io/job/10474",
+   "https://spinhire.io/job/9360"
+  ],
+  "uploaded_at": "2026-09-13T14:22:16Z"
  }
 ]
