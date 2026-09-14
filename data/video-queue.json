@@ -114,7 +114,10 @@
   "theme": "pink",
   "mp4": "out/prof-support-team-lead.mp4",
   "built_at": "2026-09-11T11:45:58Z",
-  "status": "ready"
+  "status": "used",
+  "published_as": "2026-09-19-evening",
+  "video_id": "NrJPDFANhGA",
+  "used_at": "2026-09-14T10:28:57Z"
  },
  {
   "id": "prof-payments-manager",
