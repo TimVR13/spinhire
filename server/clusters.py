@@ -20,7 +20,9 @@ from server import app as core
 router = APIRouter()
 
 MIN_JOBS = 3
-CACHE_SECONDS = 600
+# Час, а не 10 минут: каждая пересборка грузит 5–6 тыс. ORM-объектов, и на дроплете с 1 vCPU/4 ГБ
+# частые пересборки раздували RSS uvicorn до 800+ МБ (фрагментация кучи), сервер уходил в swap.
+CACHE_SECONDS = 3600
 
 FAMILY_SLUGS = {
     "Операции казино": "casino-operations", "Беттинг и трейдинг": "betting-trading",
@@ -88,18 +90,32 @@ def _build_index(db: Session) -> dict:
     return {"jobs": jobs, "by_country": by_country, "by_lang": by_lang}
 
 
+def _release_memory() -> None:
+    """После пересборки индекса вернуть память ОС: gc для циклов Job↔User, malloc_trim для glibc."""
+    import gc
+    gc.collect()
+    try:
+        import ctypes
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:  # noqa: BLE001 — не Linux/glibc, ничего страшного
+        pass
+
+
 def index(db: Session, force: bool = False) -> dict:
     now = time.time()
     if force or _index["data"] is None or now - _index["at"] > CACHE_SECONDS:
+        _index["data"] = None          # старый индекс отпускаем до сборки нового, чтобы не держать два
+        _release_memory()
         _index["data"] = _build_index(db)
         _index["at"] = now
+        _release_memory()
     return _index["data"]
 
 
 def warm(session_factory, interval: float | None = None) -> None:
     """Фоновый прогрев: пересобирает индекс до истечения кэша, чтобы холодный запрос
     (11 с на /jobs/<страна>) никогда не доставался ни пользователю, ни Googlebot."""
-    interval = interval or max(60.0, CACHE_SECONDS - 60)
+    interval = interval or max(60.0, CACHE_SECONDS - 120)
     time.sleep(3)
     while True:
         try:
