@@ -7,7 +7,7 @@
 <meta property="og:type" content="website"><meta property="og:title" content="{{ company }} — вакансии iGaming">
 <meta property="og:description" content="{{ jobs|length }} открытых вакансий {{ company }} на SpinHire.">
 <meta property="og:url" content="https://spinhire.io/company/{{ jobs[0].company_slug }}">
-<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
+<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg?v=2">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":{{ company|tojson }},"url":"https://spinhire.io/company/{{ jobs[0].company_slug }}"{% if public and public.description %},"description":{{ public.description|tojson }}{% endif %}{% if public and public.headquarters %},"address":{{ public.headquarters|tojson }}{% endif %}{% if public and public.founded_year %},"foundingDate":"{{ public.founded_year }}"{% endif %}{% if logo %},"logo":{{ logo|tojson }}{% endif %}{% if domain %},"sameAs":"https://{{ domain }}"{% endif %}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Главная","item":"https://spinhire.io/"},{"@type":"ListItem","position":2,"name":"Компании","item":"https://spinhire.io/companies.html"},{"@type":"ListItem","position":3,"name":{{ company|tojson }} }]}</script>{% endblock %}
 {% block style %}

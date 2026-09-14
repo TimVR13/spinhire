@@ -8,7 +8,7 @@
 <meta property="og:title" content="Вакансии iGaming — {{ found }} живых | SpinHire">
 <meta property="og:description" content="Живые вакансии iGaming: казино, беттинг, аффилейты. Фильтры по гео, формату и зарплате.">
 <meta property="og:url" content="https://spinhire.io/jobs{% if page > 1 %}?page={{ page }}{% endif %}">
-<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
+<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg?v=2">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"ItemList","name":"Вакансии iGaming","itemListElement":[{% for j in jobs %}{"@type":"ListItem","position":{{ ((page - 1) * 30) + loop.index }},"url":"https://spinhire.io/job/{{ j.id }}","name":{{ j.title|tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]}
 </script>{% endblock %}

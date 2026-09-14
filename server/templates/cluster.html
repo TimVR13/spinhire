@@ -9,7 +9,7 @@
 <meta property="og:title" content="{{ names.title }} — {{ total }} {% if en %}jobs{% else %}вакансий{% endif %}">
 <meta property="og:description" content="{% if en %}{{ s.companies | length }} companies hiring, {{ s.fresh }} new this week. Live index by SpinHire.{% else %}{{ s.companies | length }} компаний нанимают, {{ s.fresh }} новых за неделю. Живой индекс SpinHire.{% endif %}">
 <meta property="og:url" content="https://spinhire.io{{ path }}">
-<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg">
+<meta property="og:image" content="https://spinhire.io/img/og-cover.jpg?v=2">
 <script type="application/ld+json">{{ schema_collection | tojson }}</script>
 <script type="application/ld+json">{{ schema_breadcrumbs | tojson }}</script>
 <script type="application/ld+json">{{ schema_faq | tojson }}</script>{% endblock %}
