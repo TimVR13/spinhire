@@ -317,5 +317,21 @@
   "slug": null,
   "featured": [],
   "uploaded_at": "2026-09-14T04:21:36Z"
+ },
+ {
+  "id": "2026-09-16-morning",
+  "batch_id": null,
+  "video_id": "4UGORPd9mCU",
+  "url": "https://youtube.com/shorts/4UGORPd9mCU",
+  "format": "hot_jobs",
+  "playlist": "jobs",
+  "title": "Работа в iGaming: 2 вакансии дня — до $6 250, удалёнка и Мальта",
+  "publish_at": "2026-09-16T07:00:00Z",
+  "slug": null,
+  "featured": [
+   "https://spinhire.io/job/10476",
+   "https://spinhire.io/job/9289"
+  ],
+  "uploaded_at": "2026-09-14T09:22:42Z"
  }
 ]
