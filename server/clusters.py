@@ -8,6 +8,7 @@
 не существуют: отдают 404 и не попадают в sitemap.
 """
 import re
+import threading
 import time
 from datetime import datetime, timedelta
 
@@ -100,14 +101,24 @@ def _release_memory() -> None:
         pass
 
 
+_lock = threading.Lock()
+
+
 def index(db: Session, force: bool = False) -> dict:
+    """Индекс с кэшем. Пересборка — строго один поток: без блокировки каждый параллельный запрос
+    к кластерам при протухшем кэше грузил 5–6 тыс. объектов сам, и на 1 vCPU процесс вставал
+    (14.09.2026, 0 запросов в логе за 5 минут при 50% CPU). Пока идёт сборка, остальные ждут её,
+    а не запускают свою; старый индекс остаётся на месте до готовности нового."""
     now = time.time()
-    if force or _index["data"] is None or now - _index["at"] > CACHE_SECONDS:
-        _index["data"] = None          # старый индекс отпускаем до сборки нового, чтобы не держать два
-        _release_memory()
-        _index["data"] = _build_index(db)
-        _index["at"] = now
-        _release_memory()
+    if not force and _index["data"] is not None and now - _index["at"] <= CACHE_SECONDS:
+        return _index["data"]
+    with _lock:
+        now = time.time()
+        if force or _index["data"] is None or now - _index["at"] > CACHE_SECONDS:
+            _index["data"] = _build_index(db)
+            _index["at"] = now
+            if force:                 # gc/malloc_trim — только из фонового прогрева, не в потоке запроса
+                _release_memory()
     return _index["data"]
 
 
