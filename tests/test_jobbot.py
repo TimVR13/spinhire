@@ -186,6 +186,15 @@ class JobbotTests(unittest.TestCase):
         actions = {b.get("callback_data") for b in sent.buttons()}
         self.assertTrue({"cats", "geos", "top", "fresh", "cv"} <= actions)
 
+    def test_menu_explains_what_the_bot_is(self):
+        """Главное меню — не голое «Что показать?», а кто мы и как пользоваться."""
+        self._run(self._update("/start"))
+        text = " ".join(self._run(self._update("/menu")).texts())
+        self.assertIn("SpinHire", text)
+        self.assertIn("Как пользоваться", text)
+        self.assertRegex(text, r"<b>\d[\d ]*</b> открытых вакансий")
+        self.assertIn("резюме", text)
+
     def test_linkedin_link_builds_the_profile(self):
         """Ссылка на публичный профиль вместо файла — резюме собирается само."""
         fields = {"title": "Head of CRM", "about": "a" * 200, "skills": "CRM, Retention",

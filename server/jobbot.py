@@ -126,8 +126,24 @@ T = {
          "Send your CV as a file or just drop a LinkedIn link — we'll build the profile."),
  },
  "menu": {
-  "ru": "Что показать?",
-  "en": "What should I show?",
+  "ru": ("<b>SpinHire</b> — бот с вакансиями в iGaming: казино, беттинг, партнёрские "
+         "программы, студии игр. В базе <b>{n}</b> открытых вакансий, пополняется каждый день.\n\n"
+         "Как пользоваться:\n"
+         "• кнопки ниже — вакансии по направлению, стране, зарплате или самые свежие;\n"
+         "• или просто напиши должность: «саппорт», «аффилейт», «head of CRM»;\n"
+         "• пришли резюме файлом, текстом или ссылкой на LinkedIn — покажу, куда подходишь, "
+         "откликнуться можно прямо здесь;\n"
+         "• «Присылать новые» — напишу, когда появится вакансия по твоему запросу.\n\n"
+         "/lang — English"),
+  "en": ("<b>SpinHire</b> — iGaming jobs bot: casino, betting, affiliate programmes, "
+         "game studios. <b>{n}</b> open roles in the base, refreshed every day.\n\n"
+         "How it works:\n"
+         "• buttons below — roles by area, country, salary or the newest ones;\n"
+         "• or just type a role: \"support\", \"affiliate\", \"head of CRM\";\n"
+         "• send your CV as a file, text or a LinkedIn link — I'll show where you fit, "
+         "and you can apply right here;\n"
+         "• \"Alert me\" — I'll message you when a matching role shows up.\n\n"
+         "/lang — по-русски"),
  },
  "pick_cat": {
   "ru": "Направления — в скобках сколько открыто:",
@@ -1082,8 +1098,19 @@ def show_job(db: Session, chat: BotChat, job_id: int) -> None:
     track(db, "bot_job_view", chat.user_id, "job", job.id)
 
 
+def jobs_total(db: Session) -> str:
+    """Сколько вакансий видит бот, с пробелом-разделителем тысяч: «1 234»."""
+    total = len([r for r in job_index(db) if geo_ok(r)])
+    return f"{total:,}".replace(",", " ")
+
+
 def show_menu(db: Session, chat: BotChat) -> None:
-    send(chat.chat_id, t("menu", chat.lang), menu_keyboard(chat))
+    """Главное меню: что это за бот и как с ним работать, ниже — кнопки.
+
+    Сюда попадают по /menu, /help и кнопке «☰ Всё меню» — часто это первое
+    сообщение, которое человек читает целиком, поэтому здесь и объяснение.
+    """
+    send(chat.chat_id, t("menu", chat.lang, n=jobs_total(db)), menu_keyboard(chat))
 
 
 def show_welcome(db: Session, chat: BotChat) -> None:
@@ -1092,8 +1119,7 @@ def show_welcome(db: Session, chat: BotChat) -> None:
     Меню отдельным сообщением не шлём — человек, пришедший из канала, должен
     увидеть вакансию в первые три секунды, а не список разделов.
     """
-    total = len([r for r in job_index(db) if geo_ok(r)])
-    caption = t("start", chat.lang, n=f"{total:,}".replace(",", " "))
+    caption = t("start", chat.lang, n=jobs_total(db))
     if not send_photo(chat.chat_id, BANNER, caption).get("ok"):
         send(chat.chat_id, caption)          # картинка не отдалась — не молчим
     show_jobs(db, chat, "cis", 0, START_CARDS)
