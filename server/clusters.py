@@ -83,7 +83,6 @@ def _build_index(db: Session) -> dict:
     by_country: dict[str, list] = {}
     by_lang: dict[str, list] = {}
     for job in jobs:
-        _ = job.logo_url, job.initials, job.language_list, job.has_salary  # прогрев свойств в сессии
         by_country.setdefault(core.country_of(job.location), []).append(job)
         for code, _label in job.language_list:
             by_lang.setdefault(code, []).append(job)

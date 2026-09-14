@@ -2524,10 +2524,12 @@ def _startup():
                 print(f"[startup] первичный crawl не удался: {str(e)[:120]}")
     if os.environ.get("CRAWLER_DAILY_ENABLED", "1").lower() not in ("0", "false", "no"):
         threading.Thread(target=_crawler_scheduler, name="daily-crawler", daemon=True).start()
-    # индекс кластеров /jobs/{страна}/{направление} собирается в фоне и обновляется до
-    # истечения кэша — холодный запрос в 11 с не достаётся ни людям, ни Googlebot
-    from server import clusters as _clusters
-    threading.Thread(target=_clusters.warm, args=(SessionLocal,), name="clusters-warm", daemon=True).start()
+    # Фоновый прогрев индекса кластеров — только по флагу: на дроплете с 1 vCPU пересборка
+    # 5–6 тыс. ORM-объектов держит GIL и уводит процесс в swap (14.09.2026 сайт не отвечал
+    # 15 минут). Без флага индекс собирается лениво при первом запросе и живёт CACHE_SECONDS.
+    if os.environ.get("SPINHIRE_CLUSTER_WARM", "0").lower() in ("1", "true", "yes"):
+        from server import clusters as _clusters
+        threading.Thread(target=_clusters.warm, args=(SessionLocal,), name="clusters-warm", daemon=True).start()
 
 
 def _crawler_scheduler():
