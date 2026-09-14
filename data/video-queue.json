@@ -99,7 +99,10 @@
   "theme": "pink",
   "mp4": "out/prof-head-of-affiliates.mp4",
   "built_at": "2026-09-11T11:42:25Z",
-  "status": "ready"
+  "status": "used",
+  "published_as": "2026-09-18-evening",
+  "video_id": "s-gZKYwvjjA",
+  "used_at": "2026-09-14T09:32:50Z"
  },
  {
   "id": "prof-support-team-lead",

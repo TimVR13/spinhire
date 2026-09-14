@@ -37,6 +37,24 @@
   "uploaded_at": "2026-09-08T22:35:01Z"
  },
  {
+  "id": "2026-09-10-morning",
+  "video_id": "eCxLoHk3ifQ",
+  "url": "https://youtube.com/shorts/eCxLoHk3ifQ",
+  "format": "hot_jobs",
+  "playlist": "jobs",
+  "title": "Вакансии iGaming: топ-5 за 10 сентября, зарплаты до $16 950 в месяц",
+  "publish_at": "2026-09-10T07:00:00Z",
+  "slug": null,
+  "featured": [
+   "https://spinhire.io/job/10029",
+   "https://spinhire.io/job/9869",
+   "https://spinhire.io/job/9952",
+   "https://spinhire.io/job/9749",
+   "https://spinhire.io/job/9606"
+  ],
+  "uploaded_at": "2026-09-10T04:38:12Z"
+ },
+ {
   "id": "2026-09-10-day",
   "video_id": "ET3kRzyCBGE",
   "url": "https://youtube.com/shorts/ET3kRzyCBGE",
@@ -57,24 +75,6 @@
   "publish_at": "2026-09-10T17:00:00Z",
   "slug": "casino-operations-manager",
   "uploaded_at": "2026-09-08T22:48:26Z"
- },
- {
-  "id": "2026-09-10-morning",
-  "video_id": "eCxLoHk3ifQ",
-  "url": "https://youtube.com/shorts/eCxLoHk3ifQ",
-  "format": "hot_jobs",
-  "playlist": "jobs",
-  "title": "Вакансии iGaming: топ-5 за 10 сентября, зарплаты до $16 950 в месяц",
-  "publish_at": "2026-09-10T07:00:00Z",
-  "slug": null,
-  "featured": [
-   "https://spinhire.io/job/10029",
-   "https://spinhire.io/job/9869",
-   "https://spinhire.io/job/9952",
-   "https://spinhire.io/job/9749",
-   "https://spinhire.io/job/9606"
-  ],
-  "uploaded_at": "2026-09-10T04:38:12Z"
  },
  {
   "id": "2026-09-11-morning",
@@ -137,84 +137,6 @@
   "uploaded_at": "2026-09-11T09:24:23Z"
  },
  {
-  "id": "2026-09-12-evening",
-  "batch_id": "prof-vip-manager",
-  "video_id": "KiJGK7OxC7I",
-  "url": "https://youtube.com/shorts/KiJGK7OxC7I",
-  "format": "profession",
-  "playlist": "profession",
-  "title": "Кто такой VIP-менеджер в iGaming: обязанности, зарплата, как стать | профессии гемблинга",
-  "publish_at": "2026-09-12T17:00:00Z",
-  "slug": "vip-manager",
-  "featured": [],
-  "uploaded_at": "2026-09-11T13:55:31Z"
- },
- {
-  "id": "2026-09-13-evening",
-  "batch_id": "prof-game-developer",
-  "video_id": "DRoRE141Npc",
-  "url": "https://youtube.com/shorts/DRoRE141Npc",
-  "format": "profession",
-  "playlist": "profession",
-  "title": "Профессия разработчик игр в гемблинге: задачи, зарплаты по грейдам и старт карьеры",
-  "publish_at": "2026-09-13T17:00:00Z",
-  "slug": "game-developer",
-  "featured": [],
-  "uploaded_at": "2026-09-11T13:55:39Z"
- },
- {
-  "id": "2026-09-14-evening",
-  "batch_id": "prof-head-of-marketing-igaming",
-  "video_id": "E4QlgF_5Tyw",
-  "url": "https://youtube.com/shorts/E4QlgF_5Tyw",
-  "format": "profession",
-  "playlist": "profession",
-  "title": "Head of Marketing в iGaming: чем занимается, сколько зарабатывает и как войти в профессию",
-  "publish_at": "2026-09-14T17:00:00Z",
-  "slug": "head-of-marketing-igaming",
-  "featured": [],
-  "uploaded_at": "2026-09-11T13:55:46Z"
- },
- {
-  "id": "2026-09-15-evening",
-  "batch_id": "prof-affiliate-manager",
-  "video_id": "DX9DD3mRiMU",
-  "url": "https://youtube.com/shorts/DX9DD3mRiMU",
-  "format": "profession",
-  "playlist": "profession",
-  "title": "Профессия аффилейт-менеджер в гемблинге: задачи, зарплаты по грейдам и старт карьеры",
-  "publish_at": "2026-09-15T17:00:00Z",
-  "slug": "affiliate-manager",
-  "featured": [],
-  "uploaded_at": "2026-09-11T13:55:52Z"
- },
- {
-  "id": "2026-09-16-evening",
-  "batch_id": "prof-retention-manager",
-  "video_id": "hDKdtQuTo88",
-  "url": "https://youtube.com/shorts/hDKdtQuTo88",
-  "format": "profession",
-  "playlist": "profession",
-  "title": "Кто такой Retention-менеджер в iGaming: обязанности, зарплата, как стать | профессии гемблинга",
-  "publish_at": "2026-09-16T17:00:00Z",
-  "slug": "retention-manager",
-  "featured": [],
-  "uploaded_at": "2026-09-11T13:55:58Z"
- },
- {
-  "id": "2026-09-17-evening",
-  "batch_id": "prof-game-mathematician",
-  "video_id": "b91hFsvkoWE",
-  "url": "https://youtube.com/shorts/b91hFsvkoWE",
-  "format": "profession",
-  "playlist": "profession",
-  "title": "Кто такой математик игр в iGaming: обязанности, зарплата, как стать | профессии гемблинга",
-  "publish_at": "2026-09-17T17:00:00Z",
-  "slug": "game-mathematician",
-  "featured": [],
-  "uploaded_at": "2026-09-11T13:56:05Z"
- },
- {
   "id": "2026-09-12-day",
   "batch_id": null,
   "video_id": "xO2nbMNG9kc",
@@ -226,6 +148,19 @@
   "slug": null,
   "featured": [],
   "uploaded_at": "2026-09-12T04:21:00Z"
+ },
+ {
+  "id": "2026-09-12-evening",
+  "batch_id": "prof-vip-manager",
+  "video_id": "KiJGK7OxC7I",
+  "url": "https://youtube.com/shorts/KiJGK7OxC7I",
+  "format": "profession",
+  "playlist": "profession",
+  "title": "Кто такой VIP-менеджер в iGaming: обязанности, зарплата, как стать | профессии гемблинга",
+  "publish_at": "2026-09-12T17:00:00Z",
+  "slug": "vip-manager",
+  "featured": [],
+  "uploaded_at": "2026-09-11T13:55:31Z"
  },
  {
   "id": "2026-09-13-morning",
@@ -259,6 +194,19 @@
   "uploaded_at": "2026-09-12T14:24:28Z"
  },
  {
+  "id": "2026-09-13-evening",
+  "batch_id": "prof-game-developer",
+  "video_id": "DRoRE141Npc",
+  "url": "https://youtube.com/shorts/DRoRE141Npc",
+  "format": "profession",
+  "playlist": "profession",
+  "title": "Профессия разработчик игр в гемблинге: задачи, зарплаты по грейдам и старт карьеры",
+  "publish_at": "2026-09-13T17:00:00Z",
+  "slug": "game-developer",
+  "featured": [],
+  "uploaded_at": "2026-09-11T13:55:39Z"
+ },
+ {
   "id": "2026-09-14-morning",
   "batch_id": null,
   "video_id": "gF6ZRYCGtzs",
@@ -290,6 +238,19 @@
   "uploaded_at": "2026-09-13T09:23:42Z"
  },
  {
+  "id": "2026-09-14-evening",
+  "batch_id": "prof-head-of-marketing-igaming",
+  "video_id": "E4QlgF_5Tyw",
+  "url": "https://youtube.com/shorts/E4QlgF_5Tyw",
+  "format": "profession",
+  "playlist": "profession",
+  "title": "Head of Marketing в iGaming: чем занимается, сколько зарабатывает и как войти в профессию",
+  "publish_at": "2026-09-14T17:00:00Z",
+  "slug": "head-of-marketing-igaming",
+  "featured": [],
+  "uploaded_at": "2026-09-11T13:55:46Z"
+ },
+ {
   "id": "2026-09-15-morning",
   "batch_id": null,
   "video_id": "Q_Twgp3SL_4",
@@ -319,6 +280,19 @@
   "uploaded_at": "2026-09-14T04:21:36Z"
  },
  {
+  "id": "2026-09-15-evening",
+  "batch_id": "prof-affiliate-manager",
+  "video_id": "DX9DD3mRiMU",
+  "url": "https://youtube.com/shorts/DX9DD3mRiMU",
+  "format": "profession",
+  "playlist": "profession",
+  "title": "Профессия аффилейт-менеджер в гемблинге: задачи, зарплаты по грейдам и старт карьеры",
+  "publish_at": "2026-09-15T17:00:00Z",
+  "slug": "affiliate-manager",
+  "featured": [],
+  "uploaded_at": "2026-09-11T13:55:52Z"
+ },
+ {
   "id": "2026-09-16-morning",
   "batch_id": null,
   "video_id": "4UGORPd9mCU",
@@ -333,5 +307,44 @@
    "https://spinhire.io/job/9289"
   ],
   "uploaded_at": "2026-09-14T09:22:42Z"
+ },
+ {
+  "id": "2026-09-16-evening",
+  "batch_id": "prof-retention-manager",
+  "video_id": "hDKdtQuTo88",
+  "url": "https://youtube.com/shorts/hDKdtQuTo88",
+  "format": "profession",
+  "playlist": "profession",
+  "title": "Кто такой Retention-менеджер в iGaming: обязанности, зарплата, как стать | профессии гемблинга",
+  "publish_at": "2026-09-16T17:00:00Z",
+  "slug": "retention-manager",
+  "featured": [],
+  "uploaded_at": "2026-09-11T13:55:58Z"
+ },
+ {
+  "id": "2026-09-17-evening",
+  "batch_id": "prof-game-mathematician",
+  "video_id": "b91hFsvkoWE",
+  "url": "https://youtube.com/shorts/b91hFsvkoWE",
+  "format": "profession",
+  "playlist": "profession",
+  "title": "Кто такой математик игр в iGaming: обязанности, зарплата, как стать | профессии гемблинга",
+  "publish_at": "2026-09-17T17:00:00Z",
+  "slug": "game-mathematician",
+  "featured": [],
+  "uploaded_at": "2026-09-11T13:56:05Z"
+ },
+ {
+  "id": "2026-09-18-evening",
+  "batch_id": "prof-head-of-affiliates",
+  "video_id": "s-gZKYwvjjA",
+  "url": "https://youtube.com/shorts/s-gZKYwvjjA",
+  "format": "profession",
+  "playlist": "profession",
+  "title": "Head of Affiliates в iGaming: чем занимается, сколько зарабатывает и как войти в профессию",
+  "publish_at": "2026-09-18T17:00:00Z",
+  "slug": "head-of-affiliates",
+  "featured": [],
+  "uploaded_at": "2026-09-14T09:32:49Z"
  }
 ]
