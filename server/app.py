@@ -6767,6 +6767,7 @@ ARTICLE_FILES = {
     "data-engineer-igaming": "post-data-engineer-igaming.html",
     "country-manager-igaming": "post-country-manager-igaming.html",
     "indeks-rabotodatelej-igaming-2026-09": "post-indeks-rabotodatelej-igaming-2026-09.html",
+    "backend-developer-igaming": "post-backend-developer-igaming.html",
 }
 
 
