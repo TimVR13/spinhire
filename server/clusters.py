@@ -72,22 +72,42 @@ _index = {"at": 0.0, "data": None}
 
 
 def _build_index(db: Session) -> dict:
-    jobs = db.query(core.Job).filter(core.Job.status == "approved").all()
+    # Кэш живёт дольше сессии запроса, поэтому владельца грузим сразу (joinedload):
+    # иначе `job.logo_url` на странице кластера лениво лезет в `owner` у отвязанного
+    # объекта и роняет страницу в 500 (DetachedInstanceError).
+    from sqlalchemy.orm import joinedload
+    jobs = (db.query(core.Job).options(joinedload(core.Job.owner))
+            .filter(core.Job.status == "approved").all())
     by_country: dict[str, list] = {}
     by_lang: dict[str, list] = {}
     for job in jobs:
+        _ = job.logo_url, job.initials, job.language_list, job.has_salary  # прогрев свойств в сессии
         by_country.setdefault(core.country_of(job.location), []).append(job)
         for code, _label in job.language_list:
             by_lang.setdefault(code, []).append(job)
     return {"jobs": jobs, "by_country": by_country, "by_lang": by_lang}
 
 
-def index(db: Session) -> dict:
+def index(db: Session, force: bool = False) -> dict:
     now = time.time()
-    if _index["data"] is None or now - _index["at"] > CACHE_SECONDS:
+    if force or _index["data"] is None or now - _index["at"] > CACHE_SECONDS:
         _index["data"] = _build_index(db)
         _index["at"] = now
     return _index["data"]
+
+
+def warm(session_factory, interval: float | None = None) -> None:
+    """Фоновый прогрев: пересобирает индекс до истечения кэша, чтобы холодный запрос
+    (11 с на /jobs/<страна>) никогда не доставался ни пользователю, ни Googlebot."""
+    interval = interval or max(60.0, CACHE_SECONDS - 60)
+    time.sleep(3)
+    while True:
+        try:
+            with session_factory() as db:
+                index(db, force=True)
+        except Exception as e:  # noqa: BLE001 — прогрев не должен ронять процесс
+            print(f"[clusters] warm failed: {str(e)[:160]}")
+        time.sleep(interval)
 
 
 def _cluster_jobs(db: Session, country: str = "", family: str = "", lang_code: str = ""):

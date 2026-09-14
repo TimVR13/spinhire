@@ -2389,12 +2389,23 @@ def _ph_badge() -> str:
             ' width="250" height="54" loading="lazy"></a>')
 
 
+def _translated_path(path: str) -> bool:
+    """Страницы, у которых языковая версия — настоящий перевод, а не словарь поверх списка.
+
+    Только такие версии индексируются на десяти «малых» языках и попадают в sitemap и
+    hreflang: главная, статьи блога, картотека профессий, рынок труда. Списки вакансий,
+    кластеры, компании и резюме на этих языках — noindex (английская версия остаётся).
+    """
+    return path in ("", "/") or path.startswith(("/blog/", "/profession", "/market"))
+
+
 def _hreflang_block(path: str, canonical_lang: str) -> str:
-    """hreflang по всем языкам: базовый на корне, остальные в поддиректориях."""
+    """hreflang по индексируемым языкам: базовый на корне, остальные в поддиректориях."""
     site = "https://spinhire.io"
+    codes = list(PATH_LANGS) if _translated_path(path) else ["en"]
     links = [f'<link rel="alternate" hreflang="ru" href="{site}{path}">']
     links += [f'<link rel="alternate" hreflang="{code}" href="{site}/{code}{path}">'
-              for code in PATH_LANGS]
+              for code in codes]
     links.append(f'<link rel="alternate" hreflang="x-default" href="{site}/en{path}">')
     canonical = f"{site}/{canonical_lang}{path}" if canonical_lang != "ru" else f"{site}{path}"
     links.append(f'<link rel="canonical" href="{canonical}">')
@@ -2473,6 +2484,9 @@ async def language_layer(request: Request, call_next):
     else:
         marker = (f'<meta name="sh-lang" content="{lang}" data-mode="{"path" if prefix_lang else "host"}">'
                   + _hreflang_block(inner_path, lang))
+        if lang not in ("ru", "en") and not _translated_path(inner_path):
+            # словарный перевод интерфейса вокруг списка вакансий — не для индекса
+            marker += '<meta name="robots" content="noindex,follow">'
     # свой canonical у страницы теперь лишний — язык задаёт его сам
     text = re.sub(r'<link rel="canonical"[^>]*>', "", text, count=1)
     text = text.replace("</head>", marker + "</head>", 1)
@@ -2510,6 +2524,10 @@ def _startup():
                 print(f"[startup] первичный crawl не удался: {str(e)[:120]}")
     if os.environ.get("CRAWLER_DAILY_ENABLED", "1").lower() not in ("0", "false", "no"):
         threading.Thread(target=_crawler_scheduler, name="daily-crawler", daemon=True).start()
+    # индекс кластеров /jobs/{страна}/{направление} собирается в фоне и обновляется до
+    # истечения кэша — холодный запрос в 11 с не достаётся ни людям, ни Googlebot
+    from server import clusters as _clusters
+    threading.Thread(target=_clusters.warm, args=(SessionLocal,), name="clusters-warm", daemon=True).start()
 
 
 def _crawler_scheduler():
@@ -3356,9 +3374,14 @@ def company_page(slug: str, request: Request, db: Session = Depends(db_session))
     public = db.query(CompanyProfile).filter_by(slug=slug).first()
     if public and public.website and not dom:
         dom = (urllib.parse.urlparse(public.website).hostname or "").removeprefix("www.")
+    # Страница компании с одной агрегированной вакансией и без профиля — это карточка
+    # без собственного текста; таких сотни, и в поиске они висели на 40–70 позициях по
+    # брендовым запросам, размывая оценку сайта. Индексируем только содержательные.
+    thin = len(matched) < 2 and not (public and (public.description or "").strip()) \
+        and not (company_profile and (company_profile.company_description or "").strip())
     return render(request, db, "company.html", company=company, jobs=matched,
                   domain=dom, logo=matched[0].logo_url, locations=locs[:6],
-                  company_profile=company_profile, public=public)
+                  company_profile=company_profile, public=public, noindex=thin)
 
 
 
@@ -7529,13 +7552,18 @@ def sitemap(db: Session = Depends(db_session)):
         static.append((path_, "0.8" if path_.count("/") == 1 else "0.7"))
     for role in professions_data()["roles"]:
         static.append((f"profession/{role['slug']}", "0.8"))
-    # каждая статическая страница отдаётся со списком языковых версий:
-    # так поисковик находит /de/jobs, /pl/jobs и понимает, что это переводы
+    # Языковые версии. Английская — полностью. Остальные десять языков — только страницы
+    # с настоящим переводом (главная, статьи, картотека профессий, рынок): у списков
+    # вакансий, кластеров и компаний на этих языках переведён лишь интерфейс вокруг того же
+    # контента. 03.09.2026 ~3 900 таких URL ушли в sitemap одним пакетом, и на следующий
+    # день показы в Google упали в 20 раз. Страницы остаются доступными, но с noindex
+    # (см. language_layer) и без sitemap; hreflang перечисляет только индексируемые версии.
     def _alts(path: str) -> str:
         clean = f"/{path}" if path else ""
+        codes = list(PATH_LANGS) if _translated_path(clean or "/") else ["en"]
         out = [f'<xhtml:link rel="alternate" hreflang="ru" href="{base}{clean}"/>']
         out += [f'<xhtml:link rel="alternate" hreflang="{code}" href="{base}/{code}{clean}"/>'
-                for code in PATH_LANGS]
+                for code in codes]
         out.append(f'<xhtml:link rel="alternate" hreflang="x-default" href="{base}/en{clean}"/>')
         return "".join(out)
 
@@ -7543,7 +7571,8 @@ def sitemap(db: Session = Depends(db_session)):
             for p, pr in static]
     for code in PATH_LANGS:
         rows += [f"  <url><loc>{base}/{code}/{p}</loc><priority>{max(float(pr) - 0.1, 0.1):.1f}</priority>"
-                 f"{_alts(p)}</url>" for p, pr in static]
+                 f"{_alts(p)}</url>" for p, pr in static
+                 if code == "en" or _translated_path(f"/{p}" if p else "/")]
     for j in db.query(Job).filter(Job.status == "approved").all():
         lastmod = j.posted_at if re.match(r"^\d{4}-\d{2}-\d{2}$", j.posted_at or "") else j.created_at.strftime("%Y-%m-%d")
         rows.append(f'  <url><loc>{base}/job/{j.id}</loc>'
