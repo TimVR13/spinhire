@@ -162,7 +162,7 @@ class JobbotTests(unittest.TestCase):
             jobbot.handle_update(db, update)
         return sent
 
-    def test_start_shows_banner_and_five_cis_jobs(self):
+    def test_start_shows_banner_and_seven_cis_jobs(self):
         """Первое касание: баннер, сразу пятёрка вакансий по СНГ и кнопки — без ввода."""
         sent = self._run(self._update("/start igc-channel"))
         methods = [m for m, _p in sent]
@@ -173,7 +173,7 @@ class JobbotTests(unittest.TestCase):
         cards = " ".join(sent.texts())
         self.assertIn("СНГ", cards)
         applies = [b for b in sent.buttons() if b.get("callback_data", "").startswith("a:")]
-        self.assertTrue(1 <= len(applies) <= 5)
+        self.assertTrue(1 <= len(applies) <= 7)
         self.assertTrue(any(b.get("callback_data") == "menu" for b in sent.buttons()))
         with SessionLocal() as db:
             chat = db.query(jobbot.BotChat).filter_by(chat_id=self.chat_id).first()

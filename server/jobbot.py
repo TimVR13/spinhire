@@ -63,8 +63,8 @@ TOKEN = os.environ.get("SPINHIRE_JOBBOT_TOKEN", "")
 SECRET = (os.environ.get("SPINHIRE_JOBBOT_SECRET", "")
           or (hashlib.sha256(TOKEN.encode()).hexdigest()[:32] if TOKEN else ""))
 SITE = (BASE_URL or "https://spinhire.io").rstrip("/")
-CARDS = 3                       # вакансий в одном сообщении
-START_CARDS = 5                 # на первом экране показываем пятёрку сразу
+CARDS = 7                       # вакансий в одном сообщении
+START_CARDS = 7                 # на первом экране показываем семёрку сразу
 BANNER = f"{(BASE_URL or 'https://spinhire.io').rstrip('/')}/img/bot-welcome.jpg"
 MAX_CARDS = 30                  # дальше «Ещё» не листаем — человеку пора на сайт
 INDEX_TTL = 300                 # кэш поискового индекса, секунд
@@ -117,11 +117,11 @@ class BotLogin(Base):
 T = {
  "start": {
   "ru": ("<b>SpinHire</b> — работа в казино, беттинге и партнёрских программах.\n\n"
-         "В базе <b>{n}</b> вакансий. Ниже — пять самых денежных по СНГ прямо сейчас, "
+         "В базе <b>{n}</b> вакансий. Ниже — семь самых денежных по СНГ прямо сейчас, "
          "дальше смотри кнопками.\n\n"
          "Резюме можно прислать файлом или просто ссылкой на LinkedIn — соберём сами."),
   "en": ("<b>SpinHire</b> — jobs in casino, betting and affiliate programmes.\n\n"
-         "<b>{n}</b> openings in the base. Below are the five best paying right now, "
+         "<b>{n}</b> openings in the base. Below are the seven best paying right now, "
          "the rest is behind the buttons.\n\n"
          "Send your CV as a file or just drop a LinkedIn link — we'll build the profile."),
  },
@@ -1114,7 +1114,7 @@ def show_menu(db: Session, chat: BotChat) -> None:
 
 
 def show_welcome(db: Session, chat: BotChat) -> None:
-    """Первое касание: баннер, сразу пятёрка вакансий по СНГ и кнопки.
+    """Первое касание: баннер, сразу семёрка вакансий по СНГ и кнопки.
 
     Меню отдельным сообщением не шлём — человек, пришедший из канала, должен
     увидеть вакансию в первые три секунды, а не список разделов.
