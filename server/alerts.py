@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
-"""Письма о вакансиях под резюме: раз в день подборка того, что появилось и подходит.
+"""Письма о вакансиях под резюме: раз в неделю, по понедельникам, подборка за неделю.
 
 Матчинг тот же, что кандидат видит на странице вакансии (match_score), поэтому в
-письме стоит та же цифра «совпадение N%», что и на сайте. Шлём не чаще раза в
-три дня на человека (SPINHIRE_ALERTS_GAP_HOURS), только новое (JobAlertSent помнит, что уже уходило), только
-подтверждённым и не поставившим поиск на паузу. Отписка — по подписанной ссылке
-из письма, без входа.
+письме стоит та же цифра «совпадение N%», что и на сайте. Окно отправки — понедельник
+с 9 до 20 по местному времени сайта (SPINHIRE_ALERTS_WEEKDAY/FROM/TO, SPINHIRE_TG_TZ_OFFSET);
+внутри окна проход раз в час, но каждому человеку не чаще раза в 6 дней
+(SPINHIRE_ALERTS_GAP_HOURS), только новое за 7 дней (SPINHIRE_ALERTS_LOOKBACK_DAYS; JobAlertSent
+помнит, что уже уходило), только подтверждённым и не поставившим поиск на паузу.
+Решение владельца 15.09.2026: вместо писем каждые три дня — одна подборка в понедельник.
+Отписка — по подписанной ссылке из письма, без входа.
 
 Подключается в конце app.py:
     from server import alerts; app.include_router(alerts.router); alerts.start_scheduler()
@@ -32,8 +35,13 @@ router = APIRouter()
 SITE = "https://spinhire.io"
 MIN_SCORE = int(os.environ.get("SPINHIRE_ALERTS_MIN_SCORE", "60"))   # порог «стоит написать»
 MAX_JOBS = 5
-MIN_GAP_HOURS = int(os.environ.get("SPINHIRE_ALERTS_GAP_HOURS", "72"))   # не чаще раза в три дня
-LOOKBACK_DAYS = MIN_GAP_HOURS // 24 + 1   # окно чуть шире паузы, чтобы ничего не проскочило
+MIN_GAP_HOURS = int(os.environ.get("SPINHIRE_ALERTS_GAP_HOURS", "144"))   # раз в неделю: 6 дней с запасом
+LOOKBACK_DAYS = int(os.environ.get("SPINHIRE_ALERTS_LOOKBACK_DAYS", "7"))   # подборка за неделю
+# Окно отправки: день недели (0 = понедельник) и часы по местному времени сайта.
+SEND_WEEKDAY = int(os.environ.get("SPINHIRE_ALERTS_WEEKDAY", "0"))
+SEND_FROM = int(os.environ.get("SPINHIRE_ALERTS_FROM", "9"))
+SEND_TO = int(os.environ.get("SPINHIRE_ALERTS_TO", "20"))
+TZ_OFFSET = int(os.environ.get("SPINHIRE_TG_TZ_OFFSET", "3"))   # тот же сдвиг, что у ботов
 CHECK_SECONDS = int(os.environ.get("SPINHIRE_ALERTS_CHECK_SECONDS", "3600"))
 # Когда был последний проход — переживает рестарт. Без метки каждый рестарт деплоя (их до
 # десятка в день) через 3 минуты запускал полный перебор резюме × вакансий.
@@ -50,6 +58,12 @@ class JobAlertSent(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
     sent_at = Column(DateTime, default=datetime.utcnow)
+
+
+def in_send_window(now: datetime = None) -> bool:
+    """Понедельник, рабочие часы по местному времени сайта — только тогда шлём."""
+    local = (now or datetime.utcnow()) + timedelta(hours=TZ_OFFSET)
+    return local.weekday() == SEND_WEEKDAY and SEND_FROM <= local.hour < SEND_TO
 
 
 def _lang_prefix(lang: str) -> str:
@@ -194,6 +208,9 @@ def start_scheduler() -> None:
         # не мешать старту, и не раньше чем через CHECK_SECONDS после прошлого прохода
         time.sleep(max(180.0, last_pass() + CHECK_SECONDS - time.time()))
         while True:
+            if not in_send_window():
+                time.sleep(CHECK_SECONDS)
+                continue
             started = time.time()
             try:
                 with SessionLocal() as db:
@@ -206,3 +223,5 @@ def start_scheduler() -> None:
             time.sleep(CHECK_SECONDS)
 
     threading.Thread(target=loop, name="job-alerts", daemon=True).start()
+    print(f"[alerts] подборка раз в неделю: день {SEND_WEEKDAY} (0=пн), {SEND_FROM}:00–{SEND_TO}:00 (+{TZ_OFFSET}), "
+          f"окно вакансий {LOOKBACK_DAYS} дн., пауза {MIN_GAP_HOURS} ч")

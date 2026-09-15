@@ -123,8 +123,11 @@ class AlertTests(_Fixture):
 
     def test_digest_goes_once_a_day_with_matching_jobs(self):
         outbox = []
-        real = alerts.resend_send
+        real, real_max = alerts.resend_send, alerts.MAX_JOBS
         alerts.resend_send = lambda to, subject, body: outbox.append((to, subject, body)) or True
+        # база общая с dev-данными: в недельном окне рядом могут оказаться настоящие вакансии
+        # с бо́льшим совпадением — не режем подборку, чтобы тестовая вакансия точно попала в письмо
+        alerts.MAX_JOBS = 500
         try:
             with SessionLocal() as db:
                 user, cv = db.get(User, self.user_id), db.get(Resume, self.resume_id)
@@ -140,7 +143,7 @@ class AlertTests(_Fixture):
                                                                         job_id=self.job_id).first())
                 self.assertTrue(db.get(User, self.user_id).alerts_last_sent)
         finally:
-            alerts.resend_send = real
+            alerts.resend_send, alerts.MAX_JOBS = real, real_max
         to, subject, body = outbox[0]
         self.assertEqual(to, "boost-candidate@test.invalid")
         self.assertIn(str(n_picks), subject)   # «N new jobs…» — на языке пользователя (пусто → en)

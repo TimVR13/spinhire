@@ -68,6 +68,10 @@ BASE_URL = os.environ.get("BASE_URL", "https://spinhire.io").rstrip("/")
 # Аккаунты из Telegram-бота заводятся без почты: контакт у них — @username.
 # Домен служебный и несуществующий, письма туда не уходят (см. resend_send).
 TG_ACCOUNT_DOMAIN = "telegram.spinhire.io"
+# Аккаунты из Telegram-бота живут на служебной почте tg<chat_id>@telegram.spinhire.io.
+# В админке это «ТГ-пользователи», а не пользователи сайта — пока человек не подтвердит
+# рабочую почту кодом в боте (решение владельца 15.09.2026). Фильтр: ~User.email.like(TG_EMAIL_LIKE).
+TG_EMAIL_LIKE = f"%@{TG_ACCOUNT_DOMAIN}"
 CV_UPLOAD_DIR = os.environ.get("CV_UPLOAD_DIR", os.path.join(ROOT, "data", "cv_uploads"))
 CV_MAX_BYTES = 5 * 1024 * 1024
 AVATAR_UPLOAD_DIR = os.environ.get("AVATAR_UPLOAD_DIR", os.path.join(ROOT, "data", "avatars"))
@@ -1240,6 +1244,9 @@ def migrate(db: Session):
     for name in ("source", "ext_id", "posted_at", "deadline", "closed_at"):
         if name not in cols:
             db.execute(text(f"ALTER TABLE jobs ADD COLUMN {name} VARCHAR DEFAULT ''"))
+    bcols = {r[1] for r in db.execute(text("PRAGMA table_info(bot_chats)")).fetchall()}
+    if bcols and "pending_email" not in bcols:
+        db.execute(text("ALTER TABLE bot_chats ADD COLUMN pending_email VARCHAR DEFAULT ''"))
     ucols = {r[1] for r in db.execute(text("PRAGMA table_info(users)")).fetchall()}
     if "coins" not in ucols:
         db.execute(text("ALTER TABLE users ADD COLUMN coins INTEGER DEFAULT 0"))
@@ -2845,7 +2852,8 @@ def user_lang(user, request: Request = None) -> str:
     return (getattr(user, "lang", "") or (request_lang(request) if request else "") or "en")
 
 
-def send_otp(user: User, code: str, lang: str = "") -> bool:
+def send_otp(user: User, code: str, lang: str = "", to: str = "") -> bool:
+    """Код на почту. `to` — когда подтверждаем новый адрес (бот привязывает рабочую почту)."""
     lang = lang or user_lang(user)
     html = (
         '<div style="font-family:Arial,Helvetica,sans-serif;color:#111">'
@@ -2855,7 +2863,7 @@ def send_otp(user: User, code: str, lang: str = "") -> bool:
         f'<p style="color:#666">{mail_t(lang, "otp_ttl", n=_OTP_TTL_MIN)}</p>'
         '</div>'
     )
-    return resend_send(user.email, mail_t(lang, "otp_subject", code=code), html)
+    return resend_send(to or user.email, mail_t(lang, "otp_subject", code=code), html)
 
 
 # ---------- redirects from static pages ----------
@@ -6128,8 +6136,10 @@ def dash_charts(db: Session, days: int) -> dict:
                                [AnalyticsEvent.name == "job_view"]),
         "apps": _daily_counts(db, Application.created_at, prev_since),
         "jobs": _daily_counts(db, Job.created_at, prev_since),
-        "talents": _daily_counts(db, User.created_at, prev_since, [User.role == "talent"]),
-        "employers": _daily_counts(db, User.created_at, prev_since, [User.role == "employer"]),
+        "talents": _daily_counts(db, User.created_at, prev_since,
+                                 [User.role == "talent", ~User.email.like(TG_EMAIL_LIKE)]),
+        "employers": _daily_counts(db, User.created_at, prev_since,
+                                   [User.role == "employer", ~User.email.like(TG_EMAIL_LIKE)]),
         "orders": _daily_counts(db, Order.created_at, prev_since,
                                 [Order.status == "paid"] + ([Order.user_id.notin_(test_ids)] if test_ids else [])),
         "revenue": _daily_counts(db, Order.created_at, prev_since,
@@ -6183,9 +6193,11 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         "jobs_total": db.query(Job).count(),
         "jobs_pending": db.query(Job).filter(Job.status == "pending").count(),
         "jobs_approved": db.query(Job).filter(Job.status == "approved").count(),
-        "users": db.query(User).count(),
-        "employers": db.query(User).filter(User.role == "employer").count(),
-        "talents": db.query(User).filter(User.role == "talent").count(),
+        # пользователи сайта — без служебных аккаунтов бота (они во вкладке «ТГ пользователи»)
+        "users": db.query(User).filter(~User.email.like(TG_EMAIL_LIKE)).count(),
+        "employers": db.query(User).filter(User.role == "employer", ~User.email.like(TG_EMAIL_LIKE)).count(),
+        "talents": db.query(User).filter(User.role == "talent", ~User.email.like(TG_EMAIL_LIKE)).count(),
+        "tg_users": db.query(User).filter(User.email.like(TG_EMAIL_LIKE)).count(),
         "apps": db.query(Application).count(),
         # счётчик Job.views до 3 сентября копил заходы краулеров (390 тысяч) —
         # честная цифра: просмотры людьми из событий аналитики после фильтра ботов
@@ -6224,7 +6236,7 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         ctx["q"], ctx["st"] = q, st
     elif tab == "users":
         role = request.query_params.get("role") or ""
-        users_q = db.query(User)
+        users_q = db.query(User).filter(~User.email.like(TG_EMAIL_LIKE))
         if role in ("employer", "talent", "admin"):
             users_q = users_q.filter(User.role == role)
         pr = parse_period(request)  # регистрация: по умолчанию «сегодня»
@@ -6241,6 +6253,22 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
                                 .filter(Application.user_id.in_(uids)).group_by(Application.user_id).all()) if uids else {}
         ctx["role"] = role
         ctx.update(pr)
+    elif tab == "tg":
+        # аккаунты из бота: чат, резюме, отклики, ждёт ли код на рабочую почту
+        from server import jobbot as _jb
+        tg_users = (db.query(User).filter(User.email.like(TG_EMAIL_LIKE))
+                    .order_by(User.created_at.desc()).limit(300).all())
+        uids = [u.id for u in tg_users]
+        ctx["tg_users"] = tg_users
+        ctx["tg_chats"] = ({c.user_id: c for c in db.query(_jb.BotChat).filter(_jb.BotChat.user_id.in_(uids)).all()}
+                           if uids else {})
+        ctx["tg_cv"] = ({r.user_id: resume_is_ready(r) for r in db.query(Resume).filter(Resume.user_id.in_(uids)).all()}
+                        if uids else {})
+        ctx["tg_apps"] = dict(db.query(Application.user_id, func.count(Application.id))
+                              .filter(Application.user_id.in_(uids)).group_by(Application.user_id).all()) if uids else {}
+        ctx["tg_pending"] = db.query(_jb.BotChat).filter(_jb.BotChat.pending_email != "",
+                                                          _jb.BotChat.pending_email != "ok").count()
+        ctx["tg_confirmed"] = db.query(_jb.BotChat).filter(_jb.BotChat.pending_email == "ok").count()
     elif tab == "apps":
         from sqlalchemy.orm import joinedload
         ctx["apps"] = (db.query(Application)
@@ -6285,7 +6313,7 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
             "jobs_connected": sum(s["status"] in ("работает", "подключён") for s in crawler.SOURCE_REGISTRY),
             "jobs_total": len(crawler.SOURCE_REGISTRY),
             "resume_connected": sum(s["status"] in ("работает", "подключён") for s in crawler.RESUME_SOURCE_REGISTRY),
-            "talent_profiles": db.query(User).filter(User.role == "talent").count(),
+            "talent_profiles": db.query(User).filter(User.role == "talent", ~User.email.like(TG_EMAIL_LIKE)).count(),
         }
         status_path = os.path.join(ROOT, "data", "crawler-status.json")
         try:

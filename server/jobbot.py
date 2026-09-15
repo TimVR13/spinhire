@@ -98,6 +98,10 @@ class BotChat(Base):
     sub_query = Column(String, default="")
     sub_last = Column(String, default="")        # ISO последней рассылки
     source = Column(String, default="")          # payload из /start?start=…
+    # Рабочая почта: "" — не спрашивали, адрес — ждём код подтверждения, "ok" — подтверждена.
+    # Пока не подтверждена, аккаунт tg…@telegram.spinhire.io в админке считается ТГ-пользователем,
+    # а не пользователем сайта (решение владельца 15.09.2026).
+    pending_email = Column(String, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
     last_seen = Column(DateTime, default=datetime.utcnow)
 
@@ -261,6 +265,54 @@ T = {
   "ru": "На эту вакансию ты уже откликался.",
   "en": "You've already applied to this one.",
  },
+ "email_hint": {
+  "ru": "\n\nЧтобы работодатель мог ответить и на почту, а кабинет на spinhire.io стал полноценным — укажи рабочую почту.",
+  "en": "\n\nAdd your work email so employers can reply there too and your spinhire.io account becomes a full one.",
+ },
+ "email_ask": {
+  "ru": ("Напиши рабочую почту — пришлём на неё код подтверждения.\n\n"
+         "После этого аккаунт на spinhire.io станет полноценным: вход по почте, письма о подходящих "
+         "вакансиях и ответы работодателей."),
+  "en": ("Type your work email — we'll send a confirmation code.\n\n"
+         "Your spinhire.io account then becomes a full one: email sign-in, matching-job digests "
+         "and employer replies."),
+ },
+ "email_bad": {
+  "ru": "Это не похоже на адрес почты. Пример: name@company.com",
+  "en": "That doesn't look like an email address. Example: name@company.com",
+ },
+ "email_taken": {
+  "ru": "Эта почта уже зарегистрирована на spinhire.io. Войди на сайте с ней или укажи другую.",
+  "en": "This email is already registered on spinhire.io. Sign in on the site with it or use another one.",
+ },
+ "email_sent": {
+  "ru": "Код отправлен на <b>{email}</b>. Введи 6 цифр из письма. Не пришло за минуту — проверь «Спам».",
+  "en": "Code sent to <b>{email}</b>. Type the 6 digits from the email. Nothing within a minute — check Spam.",
+ },
+ "email_send_failed": {
+  "ru": "Не получилось отправить письмо на {email}. Проверь адрес и напиши его ещё раз.",
+  "en": "Couldn't deliver to {email}. Check the address and type it again.",
+ },
+ "email_code_format": {
+  "ru": "Нужны 6 цифр из письма. Или напиши другую почту.",
+  "en": "Type the 6 digits from the email. Or type another email address.",
+ },
+ "email_code_bad": {
+  "ru": "Неверный код. Осталось попыток: {n}.",
+  "en": "Wrong code. Attempts left: {n}.",
+ },
+ "email_code_expired": {
+  "ru": "Код истёк. Напиши почту ещё раз — пришлём новый.",
+  "en": "The code has expired. Type your email again — we'll send a new one.",
+ },
+ "email_done": {
+  "ru": "Готово: почта <b>{email}</b> подтверждена, аккаунт на spinhire.io полноценный. Пароль можно задать в кабинете.",
+  "en": "Done: <b>{email}</b> is confirmed and your spinhire.io account is a full one. You can set a password in the cabinet.",
+ },
+ "email_linked": {
+  "ru": "К аккаунту уже привязана почта <b>{email}</b>.",
+  "en": "Your account already has the email <b>{email}</b>.",
+ },
  "limit": {
   "ru": "На сегодня лимит откликов ({n}) исчерпан — так борд защищает работодателей от веерной рассылки. Завтра снова.",
   "en": "Daily application limit ({n}) reached — that's how the board keeps employers from mass-blasting. Try tomorrow.",
@@ -310,6 +362,7 @@ MENU = {
     "top": {"ru": "💰 Топ зарплат", "en": "💰 Top paying"},
     "fresh": {"ru": "🆕 Свежие", "en": "🆕 Newest"},
     "cv": {"ru": "📄 Загрузить резюме", "en": "📄 Upload CV"},
+    "email": {"ru": "✉️ Указать рабочую почту", "en": "✉️ Add work email"},
     "sub_on": {"ru": "🔔 Присылать новые", "en": "🔔 Alert me"},
     "sub_off": {"ru": "🔕 Отключить рассылку", "en": "🔕 Stop alerts"},
     "back": {"ru": "← Меню", "en": "← Menu"},
@@ -324,18 +377,20 @@ def t(key: str, lang: str, **kw) -> str:
 # Подписи кнопок и исходов для админки — по-русски, как их видит человек в чате.
 BTN_LABELS = {
     "cats": MENU["cats"]["ru"], "geos": MENU["geos"]["ru"], "top": MENU["top"]["ru"],
-    "fresh": MENU["fresh"]["ru"], "cv": MENU["cv"]["ru"], "sub_on": MENU["sub_on"]["ru"],
+    "fresh": MENU["fresh"]["ru"], "cv": MENU["cv"]["ru"], "email": MENU["email"]["ru"],
+    "sub_on": MENU["sub_on"]["ru"],
     "sub_off": MENU["sub_off"]["ru"], "menu": MENU["menu_btn"]["ru"],
     "apply": "Откликнуться", "details": "Подробнее", "more": "Ещё", "back": "← К списку",
     "cat": "выбор направления", "geo": "выбор страны",
 }
 KIND_LABELS = {"start": "/start", "cmd": "команда", "btn": "кнопка", "search": "поиск текстом",
-               "cv": "резюме", "apply": "отклик", "site": "переход на сайт", "push": "рассылка"}
+               "cv": "резюме", "apply": "отклик", "site": "переход на сайт", "push": "рассылка",
+               "email": "почта"}
 APPLY_LABELS = {"done": "отклик отправлен", "need_cv": "нужно резюме", "dup": "уже откликался",
                 "too_fast": "слишком часто", "limit": "дневной лимит"}
 # Действия самого человека: по ним считаем активность. apply — исход нажатия или резюме,
 # push — наша рассылка; ни то, ни другое активностью не считается.
-ACTIVE_KINDS = ("start", "cmd", "btn", "search", "cv", "site")
+ACTIVE_KINDS = ("start", "cmd", "btn", "search", "cv", "site", "email")
 
 
 def log(db: Session, chat: BotChat, kind: str, name: str = "", value=None) -> None:
@@ -1055,8 +1110,103 @@ def do_apply(db: Session, chat: BotChat, job_id: int) -> None:
     crm.note_application(db, job, user, application)
     chat.state, chat.pending_job = "", None
     keyboard = [[{"text": t("cabinet", lang), "url": login_link(db, user)}]]
-    send(chat.chat_id, t("applied", lang, title=esc(job.title), company=esc(job.company_name)),
-         keyboard)
+    text = t("applied", lang, title=esc(job.title), company=esc(job.company_name))
+    if is_tg_account(user):
+        text += t("email_hint", lang)
+        keyboard.append([{"text": MENU["email"][lang], "callback_data": "email"}])
+    send(chat.chat_id, text, keyboard)
+
+
+# ---------- рабочая почта: из ТГ-аккаунта в полноценный ----------
+# Аккаунт из бота живёт на tg<chat_id>@telegram.spinhire.io и в админке считается
+# «ТГ-пользователем». Подтвердил рабочую почту кодом — почта заменяет служебную,
+# и это обычный пользователь сайта: вход по почте, письма о вакансиях, ответы работодателей.
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[a-z]{2,}$", re.I)
+
+
+def is_tg_account(user: User) -> bool:
+    return (user.email or "").lower().endswith("@" + TG_ACCOUNT_DOMAIN)
+
+
+def start_email_link(db: Session, chat: BotChat) -> None:
+    user = ensure_account(db, chat)
+    if not is_tg_account(user):
+        chat.pending_email, chat.state = "ok", ""
+        send(chat.chat_id, t("email_linked", chat.lang, email=esc(user.email)), menu_keyboard(chat))
+        return
+    chat.state = "email"
+    log(db, chat, "email", "ask")
+    send(chat.chat_id, t("email_ask", chat.lang))
+
+
+def _send_email_code(db: Session, chat: BotChat, em: str) -> None:
+    from sqlalchemy import func
+    from server.app import _hash_otp, _OTP_TTL_MIN, send_otp
+    lang = chat.lang
+    other = db.query(User).filter(func.lower(User.email) == em).first()
+    if other and other.id != chat.user_id:
+        send(chat.chat_id, t("email_taken", lang))
+        log(db, chat, "email", "taken")
+        return
+    user = ensure_account(db, chat)
+    code = f"{secrets.randbelow(1000000):06d}"
+    user.otp_hash = _hash_otp(em, code)
+    user.otp_expires = (datetime.utcnow() + timedelta(minutes=_OTP_TTL_MIN)).isoformat()
+    user.otp_attempts = 0
+    if not send_otp(user, code, lang, to=em):
+        user.otp_hash = ""
+        send(chat.chat_id, t("email_send_failed", lang, email=esc(em)))
+        log(db, chat, "email", "send_failed")
+        return
+    chat.pending_email, chat.state = em, "email_code"
+    log(db, chat, "email", "sent")
+    send(chat.chat_id, t("email_sent", lang, email=esc(em)))
+
+
+def handle_email_step(db: Session, chat: BotChat, body: str) -> bool:
+    """Текст в состоянии email/email_code. True — обработали, дальше не разбирать."""
+    from server.app import _hash_otp, _OTP_MAX_ATTEMPTS
+    lang = chat.lang
+    raw = body.strip().lower()
+    if "@" in raw or chat.state == "email":
+        if not EMAIL_RE.match(raw) or raw.endswith("@" + TG_ACCOUNT_DOMAIN):
+            send(chat.chat_id, t("email_bad", lang))
+            return True
+        _send_email_code(db, chat, raw)
+        return True
+    digits = re.sub(r"\D", "", raw)
+    if len(digits) != 6:
+        send(chat.chat_id, t("email_code_format", lang))
+        return True
+    user = ensure_account(db, chat)
+    em = chat.pending_email or ""
+    try:
+        expired = not user.otp_expires or datetime.utcnow() > datetime.fromisoformat(user.otp_expires)
+    except (ValueError, TypeError):
+        expired = True
+    if expired or not user.otp_hash or (user.otp_attempts or 0) >= _OTP_MAX_ATTEMPTS or not em:
+        chat.state, user.otp_hash = "email", ""
+        send(chat.chat_id, t("email_code_expired", lang))
+        return True
+    user.otp_attempts = (user.otp_attempts or 0) + 1
+    if not secrets.compare_digest(user.otp_hash, _hash_otp(em, digits)):
+        left = _OTP_MAX_ATTEMPTS - user.otp_attempts
+        if left <= 0:
+            chat.state, user.otp_hash = "email", ""
+            send(chat.chat_id, t("email_code_expired", lang))
+        else:
+            send(chat.chat_id, t("email_code_bad", lang, n=left))
+        log(db, chat, "email", "code_bad")
+        return True
+    user.email, user.verified = em, 1
+    user.otp_hash, user.otp_expires, user.otp_attempts = "", "", 0
+    chat.pending_email, chat.state = "ok", ""
+    log(db, chat, "email", "done", em)
+    track(db, "tg_email_confirmed", user.id, "user", user.id)
+    keyboard = [[{"text": t("cabinet", lang), "url": login_link(db, user)}]]
+    send(chat.chat_id, t("email_done", lang, email=esc(em)), keyboard)
+    return True
 
 
 # ---------- разбор апдейтов ----------
@@ -1087,6 +1237,7 @@ def menu_keyboard(chat: BotChat) -> list:
         [{"text": MENU["top"][lang], "callback_data": "top"},
          {"text": MENU["fresh"][lang], "callback_data": "fresh"}],
         [{"text": MENU["cv"][lang], "callback_data": "cv"}],
+        *([] if chat.pending_email == "ok" else [[{"text": MENU["email"][lang], "callback_data": "email"}]]),
         [{"text": MENU[sub[0]][lang], "callback_data": sub[1]}],
     ]
 
@@ -1305,6 +1456,8 @@ def handle_text(db: Session, chat: BotChat, text: str) -> None:
         else:
             send(chat.chat_id, t("help", lang), menu_keyboard(chat))
         return
+    if chat.state in ("email", "email_code") and handle_email_step(db, chat, body):
+        return
     link = LINKEDIN_RE.search(body)
     if link:
         handle_linkedin(db, chat, link.group(0))
@@ -1362,7 +1515,11 @@ def handle_callback(db: Session, chat: BotChat, data: str) -> None:
     elif kind == "m" and value.isdigit():
         show_jobs(db, chat, chat.query, int(value))
     elif data == "menu":
+        if (chat.state or "").startswith("email"):
+            chat.state = ""
         show_menu(db, chat)
+    elif data == "email":
+        start_email_link(db, chat)
     elif data == "cats":
         send(chat.chat_id, t("pick_cat", lang), cats_keyboard(db, lang))
     elif data == "geos":

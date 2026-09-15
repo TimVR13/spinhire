@@ -160,6 +160,7 @@
     <a href="/admin?tab=analytics" class="{% if tab == 'analytics' %}on{% endif %}">📈 Аналитика и SEO</a>
     <a href="/admin?tab=ai" class="{% if tab == 'ai' %}on{% endif %}">🤖 ИИ-видимость</a>
     <a href="/admin?tab=bot" class="{% if tab == 'bot' %}on{% endif %}">✈ Бот</a>
+    <a href="/admin?tab=tg" class="{% if tab == 'tg' %}on{% endif %}">✈ ТГ пользователи</a>
     <a href="/admin/crm">🤝 CRM</a>
     <a href="/admin/publications">📣 Публикации</a>
   </nav>
@@ -201,6 +202,7 @@
       <a class="stat-card" href="/admin?tab=users&period=all"><div class="n">{{ stats.users }}</div><div class="l">Пользователей&nbsp;→</div></a>
       <a class="stat-card" href="/admin?tab=users&role=employer&period=all"><div class="n">{{ stats.employers }}</div><div class="l">Работодателей&nbsp;→</div></a>
       <a class="stat-card" href="/admin?tab=users&role=talent&period=all"><div class="n">{{ stats.talents }}</div><div class="l">Соискателей&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=tg" title="Аккаунты из Telegram-бота без подтверждённой рабочей почты — в пользователях сайта не считаются"><div class="n">{{ stats.tg_users }}</div><div class="l">ТГ-аккаунтов · вне пользователей&nbsp;→</div></a>
       <a class="stat-card" href="/admin?tab=apps"><div class="n">{{ stats.apps }}</div><div class="l">Откликов&nbsp;→</div></a>
       <a class="stat-card" href="/admin?tab=jobs&sort=views"><div class="n">{{ stats.views }}</div><div class="l">Просмотров людьми · с 3.09&nbsp;→</div></a>
       <a class="stat-card" href="/admin?tab=resumes&st=live"><div class="n">{{ stats.resumes_live }}</div><div class="l">CV опубликовано&nbsp;→</div></a>
@@ -352,6 +354,29 @@
         </td>
       </tr>
       {% endfor %}
+    </table></div>
+
+  {% elif tab == 'tg' %}
+    <div class="card" style="margin-bottom: var(--sp-4); color: var(--ink-dim);">
+      Аккаунты, которые завёл бот. В «Пользователях» и на дашборде их нет: пользователем сайта человек становится,
+      когда подтвердит рабочую почту кодом — кнопка «✉️ Указать рабочую почту» в боте (и подсказка после каждого отклика).
+      После подтверждения аккаунт уходит из этого списка в обычные. Подтвердили почту: <b>{{ tg_confirmed }}</b> · ждут код: <b>{{ tg_pending }}</b>.
+    </div>
+    <div class="table-wrap"><table class="adm">
+      <tr><th>Telegram</th><th>Имя</th><th>Резюме</th><th>Откликов</th><th>Рабочая почта</th><th>Источник</th><th>Пришёл</th><th>Был</th><th></th></tr>
+      {% for u in tg_users %}{% set c = tg_chats.get(u.id) %}
+      <tr>
+        <td>{% if c and c.username %}<a href="https://t.me/{{ c.username }}" target="_blank" rel="noopener" style="color: inherit; font-weight: 700;">@{{ c.username }}</a>{% else %}<span style="color: var(--ink-faint);">id {{ c.chat_id if c else '—' }}</span>{% endif %}</td>
+        <td><a href="/admin/user/{{ u.id }}" style="color: inherit;">{{ u.name or (c.first_name if c else '') or '—' }}</a></td>
+        <td>{% if tg_cv.get(u.id) %}<span class="status viewed">готово</span>{% elif u.id in tg_cv %}<span class="status new">черновик</span>{% else %}<span style="color: var(--ink-faint);">нет</span>{% endif %}</td>
+        <td>{{ tg_apps.get(u.id, 0) }}</td>
+        <td>{% if c and c.pending_email and c.pending_email != 'ok' %}<span title="код отправлен, ждём подтверждения">⏳ {{ c.pending_email }}</span>{% else %}<span style="color: var(--ink-faint);">не указана</span>{% endif %}</td>
+        <td style="color: var(--ink-dim);">{{ ((c.source if c else '') or (u.signup_source or ''))|replace('telegram-bot', 'бот') }}</td>
+        <td class="nowrap">{{ u.created_at.strftime('%d.%m.%y') }}</td>
+        <td class="nowrap">{{ c.last_seen.strftime('%d.%m %H:%M') if c and c.last_seen else '—' }}</td>
+        <td><form method="post" action="/admin/user/{{ u.id }}/delete" data-confirm="Удалить ТГ-аккаунт и его отклики?" data-confirm-ok="Удалить" data-confirm-cancel="Не удалять"><button class="btn btn-ghost" style="color: var(--pink);">✕</button></form></td>
+      </tr>
+      {% else %}<tr><td colspan="9" style="color: var(--ink-dim);">Из бота пока никто не заводился.</td></tr>{% endfor %}
     </table></div>
 
   {% elif tab == 'apps' %}
