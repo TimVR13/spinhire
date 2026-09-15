@@ -23,7 +23,7 @@
   {% for key, value in loc_schema.items() %}{{ key|tojson }}: {{ value|tojson }},
   {% endfor %}
   {% if job.has_salary and job.sal_min and job.sal_unit %}"baseSalary": { "@type": "MonetaryAmount", "currency": "{{ job.sal_currency }}", "value": { "@type": "QuantitativeValue", "minValue": {{ job.sal_min }}, "maxValue": {{ job.sal_max }}, "unitText": "{{ job.sal_unit }}" } },{% endif %}
-  "directApply": true,
+  "directApply": {{ 'false' if apply_url else 'true' }},
   "identifier": { "@type": "PropertyValue", "name": "SpinHire", "value": "{{ job.id }}" }
 }
 </script>{% endif %}{% endblock %}
@@ -118,6 +118,9 @@
             <a class="btn btn-acid btn-lg" href="/jobs?cat={{ job.category|urlencode }}">Смотреть актуальные вакансии →</a>
           {% elif applied %}
             <span class="status invited" style="align-self: flex-start;">✓ Вы уже откликнулись{% if job.source_url %} — мы передадим отклик работодателю{% endif %}</span>
+          {% elif apply_url %}
+            <a class="btn btn-acid btn-lg" href="/job/{{ job.id }}/go" target="_blank" rel="nofollow noopener" style="align-self: flex-start;">Откликнуться на сайте источника →</a>
+            <span style="color: var(--ink-faint); font-size: 0.82rem;">Отклик уйдёт работодателю напрямую — на сайте, где опубликована вакансия: <span data-no-translate>{{ source_host }}</span></span>
           {% elif user and user.role == 'talent' %}
             {% if match %}
             <div class="match match--{{ match.tone }}">
@@ -181,6 +184,9 @@
         <h3>Отклик на вакансию</h3>
         {% if applied %}
           <span class="status invited">✓ Отклик отправлен</span>
+        {% elif apply_url %}
+          <a class="btn btn-acid" href="/job/{{ job.id }}/go" target="_blank" rel="nofollow noopener">Откликнуться на сайте источника →</a>
+          <p>Отклик уйдёт работодателю напрямую — на сайте, где опубликована вакансия: <span data-no-translate>{{ source_host }}</span></p>
         {% elif user and user.role == 'talent' %}
           {% if match %}<p style="margin:0 0 10px;color:var(--ink);"><b style="font-size:1.2rem;">{{ match.percent }}%</b> — {{ match.label }}</p>{% endif %}
           <a class="btn btn-acid" href="#apply">Откликнуться →</a>

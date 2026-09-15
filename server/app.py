@@ -700,6 +700,19 @@ def is_real_company(name: str) -> bool:
     return bool(name) and slugify_company(name) != "company" and not NONAME_RE.search(name)
 
 
+# Отклик на агрегированную вакансию ведёт на площадку-первоисточник: лиды «передадим
+# работодателю» не продавались, пока кандидатов мало (решение владельца 15.09.2026).
+# SPINHIRE_EXTERNAL_APPLY=0 — снова принимать такие отклики на SpinHire.
+EXTERNAL_APPLY = os.environ.get("SPINHIRE_EXTERNAL_APPLY", "1") != "0"
+
+
+def external_apply_url(job) -> str:
+    """Куда вести отклик на чужую вакансию; пусто — отклик принимаем у себя."""
+    url = (job.source_url or "").strip()
+    if not EXTERNAL_APPLY or job.owner_id or not url.startswith(("http://", "https://")):
+        return ""
+    return url
+
 
 def source_label(url: str) -> str:
     """Как назвать первоисточник в сообщении Алине: у телеграма важен канал, не домен."""
@@ -4422,7 +4435,23 @@ def job_detail(job_id: str, request: Request, db: Session = Depends(db_session))
             match = match_score(cv, job)
     return render(request, db, "job.html", job=job, applied=applied,
                   applies=len(job.applications), similar=similar, match=match,
-                  is_closed=job.status == "archived", loc_schema=job_location_schema(job))
+                  is_closed=job.status == "archived", loc_schema=job_location_schema(job),
+                  apply_url=external_apply_url(job), source_host=host_of(job.source_url or ""))
+
+
+@app.get("/job/{job_id}/go")
+def job_go(job_id: int, request: Request, via: str = "", db: Session = Depends(db_session)):
+    """Переход на первоисточник: считаем, сколько людей ушли откликаться (с сайта и из бота)."""
+    job = db.get(Job, job_id)
+    url = external_apply_url(job) if job else ""
+    if not url:
+        return RedirectResponse(f"/job/{job_id}", status_code=302)
+    if not is_bot(request.headers.get("user-agent", "")):
+        viewer = get_user(request, db)
+        track(db, "job_source_click", viewer.id if viewer else None, "job", job.id,
+              via=(via or "site")[:20], host=host_of(url))
+        db.commit()
+    return RedirectResponse(url, status_code=302)
 
 
 @app.post("/job/{job_id}/apply")
@@ -4437,6 +4466,9 @@ def job_apply(job_id: int, request: Request, cover: str = Form(""),
     job = db.get(Job, job_id)
     if not job or job.status != "approved":
         raise HTTPException(404)
+    if external_apply_url(job):
+        # на агрегированную вакансию откликаются у первоисточника — форма у нас не показывается
+        return RedirectResponse(f"/job/{job_id}/go", status_code=303)
     # Без заполненного резюме отклика нет: работодателю мы отправляем анонимную
     # карточку кандидата, а собирать её не из чего (решение владельца 09.09.2026).
     cv = db.query(Resume).filter_by(user_id=user.id).first()
@@ -6788,13 +6820,14 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         ctx["role"] = role
         ctx.update(pr)
     elif tab == "tg":
-        # аккаунты из бота: чат, резюме, отклики, ждёт ли код на рабочую почту
+        # все, кто запускал бота: аккаунт заводится только на отклик/резюме/почту,
+        # поэтому список строим по чатам, а не по аккаунтам — иначе «просто смотрел» не видно
         from server import jobbot as _jb
-        tg_users = (db.query(User).filter(User.email.like(TG_EMAIL_LIKE))
-                    .order_by(User.created_at.desc()).limit(300).all())
-        uids = [u.id for u in tg_users]
-        ctx["tg_users"] = tg_users
-        ctx["tg_chats"] = ({c.user_id: c for c in db.query(_jb.BotChat).filter(_jb.BotChat.user_id.in_(uids)).all()}
+        tg_chats = db.query(_jb.BotChat).order_by(_jb.BotChat.created_at.desc()).limit(500).all()
+        uids = [c.user_id for c in tg_chats if c.user_id]
+        ctx["tg_list"] = tg_chats
+        ctx["tg_accounts"] = sum(1 for c in tg_chats if c.user_id)
+        ctx["tg_users"] = ({u.id: u for u in db.query(User).filter(User.id.in_(uids)).all()}
                            if uids else {})
         ctx["tg_cv"] = ({r.user_id: resume_is_ready(r) for r in db.query(Resume).filter(Resume.user_id.in_(uids)).all()}
                         if uids else {})
@@ -6803,6 +6836,7 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         ctx["tg_pending"] = db.query(_jb.BotChat).filter(_jb.BotChat.pending_email != "",
                                                           _jb.BotChat.pending_email != "ok").count()
         ctx["tg_confirmed"] = db.query(_jb.BotChat).filter(_jb.BotChat.pending_email == "ok").count()
+        ctx["tg_domain"] = TG_ACCOUNT_DOMAIN
     elif tab == "apps":
         from sqlalchemy.orm import joinedload
         ctx["apps"] = (db.query(Application)

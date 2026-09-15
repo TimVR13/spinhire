@@ -289,6 +289,32 @@ class JobbotTests(unittest.TestCase):
             self.assertEqual(chat.pending_job, self.bd_id)
             self.assertEqual(db.query(Application).filter_by(job_id=self.bd_id).count(), 0)
 
+    def test_aggregated_job_sends_candidate_to_the_source(self):
+        """Чужая вакансия с первоисточником: ссылка через /job/<id>/go, аккаунт и отклик не заводим."""
+        from fastapi.testclient import TestClient
+        from server.app import app
+        with SessionLocal() as db:
+            db.get(Job, self.bd_id).source_url = "https://jobs.example.com/bd-42"
+            db.commit()
+        self._run(self._update("биздев"))
+        sent = self._run(self._update(data=f"a:{self.bd_id}"))
+        links = [b["url"] for b in sent.buttons() if b.get("url")]
+        self.assertEqual(links, [f"{jobbot.SITE}/job/{self.bd_id}/go?via=tgbot"])
+        self.assertIn("jobs.example.com", " ".join(sent.texts()))
+        self.assertIn(("apply", "external", str(self.bd_id)), self._events())
+        with SessionLocal() as db:
+            chat = db.query(jobbot.BotChat).filter_by(chat_id=self.chat_id).first()
+            self.assertIsNone(chat.user_id)
+            self.assertEqual(db.query(Application).filter_by(job_id=self.bd_id).count(), 0)
+        with TestClient(app) as client:
+            go = client.get(f"/job/{self.bd_id}/go?via=tgbot", follow_redirects=False)
+            page = client.get(f"/job/{self.bd_id}")
+            own = client.get(f"/job/{self.head_id}/go", follow_redirects=False)
+        self.assertEqual(go.status_code, 302)
+        self.assertEqual(go.headers["location"], "https://jobs.example.com/bd-42")
+        self.assertIn(f'href="/job/{self.bd_id}/go"', page.text)
+        self.assertEqual(own.headers["location"], f"/job/{self.head_id}")
+
     def test_cv_text_completes_the_pending_application(self):
         """Резюме текстом → аккаунт, профиль и отклик без единого перехода на сайт."""
         self._run(self._update("биздев"))
@@ -479,6 +505,9 @@ class JobbotTests(unittest.TestCase):
                 client.cookies.set("sh_session", signer.dumps({"uid": admin_id}))
                 page = client.get("/admin?tab=bot")
                 today = client.get("/admin?tab=bot&period=today")
+                tg = client.get("/admin?tab=tg")
+            self.assertEqual(tg.status_code, 200)
+            self.assertIn("без аккаунта", tg.text)  # запустил бота, но ничего не нажимал
             self.assertEqual(page.status_code, 200)
             self.assertIn("Бот @newjob4you_bot", page.text)
             self.assertIn(jobbot.BTN_LABELS["fresh"], page.text)

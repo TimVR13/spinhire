@@ -358,25 +358,26 @@
 
   {% elif tab == 'tg' %}
     <div class="card" style="margin-bottom: var(--sp-4); color: var(--ink-dim);">
-      Аккаунты, которые завёл бот. В «Пользователях» и на дашборде их нет: пользователем сайта человек становится,
-      когда подтвердит рабочую почту кодом — кнопка «✉️ Указать рабочую почту» в боте (и подсказка после каждого отклика).
-      После подтверждения аккаунт уходит из этого списка в обычные. Подтвердили почту: <b>{{ tg_confirmed }}</b> · ждут код: <b>{{ tg_pending }}</b>.
+      Все, кто запускал бота: <b>{{ tg_list|length }}</b>, из них с аккаунтом — <b>{{ tg_accounts }}</b>. Аккаунт бот заводит,
+      только когда человек жмёт «Откликнуться», присылает резюме или почту; кто просто смотрел вакансии — в списке с пометкой «без аккаунта».
+      В «Пользователях» и на дашборде ТГ-аккаунтов нет: пользователем сайта человек становится, когда подтвердит рабочую почту кодом.
+      Подтвердили почту: <b>{{ tg_confirmed }}</b> · ждут код: <b>{{ tg_pending }}</b>.
     </div>
     <div class="table-wrap"><table class="adm">
       <tr><th>Telegram</th><th>Имя</th><th>Резюме</th><th>Откликов</th><th>Рабочая почта</th><th>Источник</th><th>Пришёл</th><th>Был</th><th></th></tr>
-      {% for u in tg_users %}{% set c = tg_chats.get(u.id) %}
+      {% for c in tg_list %}{% set u = tg_users.get(c.user_id) %}
       <tr>
-        <td>{% if c and c.username %}<a href="https://t.me/{{ c.username }}" target="_blank" rel="noopener" style="color: inherit; font-weight: 700;">@{{ c.username }}</a>{% else %}<span style="color: var(--ink-faint);">id {{ c.chat_id if c else '—' }}</span>{% endif %}</td>
-        <td><a href="/admin/user/{{ u.id }}" style="color: inherit;">{{ u.name or (c.first_name if c else '') or '—' }}</a></td>
-        <td>{% if tg_cv.get(u.id) %}<span class="status viewed">готово</span>{% elif u.id in tg_cv %}<span class="status new">черновик</span>{% else %}<span style="color: var(--ink-faint);">нет</span>{% endif %}</td>
-        <td>{{ tg_apps.get(u.id, 0) }}</td>
-        <td>{% if c and c.pending_email and c.pending_email != 'ok' %}<span title="код отправлен, ждём подтверждения">⏳ {{ c.pending_email }}</span>{% else %}<span style="color: var(--ink-faint);">не указана</span>{% endif %}</td>
-        <td style="color: var(--ink-dim);">{{ ((c.source if c else '') or (u.signup_source or ''))|replace('telegram-bot', 'бот') }}</td>
-        <td class="nowrap">{{ u.created_at.strftime('%d.%m.%y') }}</td>
-        <td class="nowrap">{{ c.last_seen.strftime('%d.%m %H:%M') if c and c.last_seen else '—' }}</td>
-        <td><form method="post" action="/admin/user/{{ u.id }}/delete" data-confirm="Удалить ТГ-аккаунт и его отклики?" data-confirm-ok="Удалить" data-confirm-cancel="Не удалять"><button class="btn btn-ghost" style="color: var(--pink);">✕</button></form></td>
+        <td>{% if c.username %}<a href="https://t.me/{{ c.username }}" target="_blank" rel="noopener" style="color: inherit; font-weight: 700;">@{{ c.username }}</a>{% else %}<span style="color: var(--ink-faint);">id {{ c.chat_id }}</span>{% endif %}</td>
+        <td>{% if u %}<a href="/admin/user/{{ u.id }}" style="color: inherit;">{{ u.name or c.first_name or '—' }}</a>{% else %}{{ c.first_name or '—' }}{% endif %}</td>
+        <td>{% if not u %}<span style="color: var(--ink-faint);">без аккаунта</span>{% elif tg_cv.get(u.id) %}<span class="status viewed">готово</span>{% elif u.id in tg_cv %}<span class="status new">черновик</span>{% else %}<span style="color: var(--ink-faint);">нет</span>{% endif %}</td>
+        <td>{{ tg_apps.get(u.id, 0) if u else '—' }}</td>
+        <td>{% if c.pending_email == 'ok' and u %}{{ u.email }}{% elif c.pending_email %}<span title="код отправлен, ждём подтверждения">⏳ {{ c.pending_email }}</span>{% else %}<span style="color: var(--ink-faint);">не указана</span>{% endif %}</td>
+        <td style="color: var(--ink-dim);">{{ (c.source or (u.signup_source if u else '') or 'бот')|replace('telegram-bot', 'бот') }}</td>
+        <td class="nowrap">{{ c.created_at.strftime('%d.%m.%y') if c.created_at else '—' }}</td>
+        <td class="nowrap">{{ c.last_seen.strftime('%d.%m %H:%M') if c.last_seen else '—' }}</td>
+        <td>{% if u and u.email.endswith('@' ~ tg_domain) %}<form method="post" action="/admin/user/{{ u.id }}/delete" data-confirm="Удалить ТГ-аккаунт и его отклики?" data-confirm-ok="Удалить" data-confirm-cancel="Не удалять"><button class="btn btn-ghost" style="color: var(--pink);">✕</button></form>{% endif %}</td>
       </tr>
-      {% else %}<tr><td colspan="9" style="color: var(--ink-dim);">Из бота пока никто не заводился.</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="9" style="color: var(--ink-dim);">Бота пока никто не запускал.</td></tr>{% endfor %}
     </table></div>
 
   {% elif tab == 'apps' %}

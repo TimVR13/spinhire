@@ -52,7 +52,8 @@ from server.app import (APPLY_DAILY_LIMIT, APPLY_EXTRA_COST, APPLY_MIN_INTERVAL,
                         Job, Resume, SIGNUP_COIN_BONUS, SessionLocal, User,
                         add_notification, anonymize_resume_text, db_session,
                         hash_pw, heuristic_cv_fields, match_score, need_admin,
-                        CATEGORIES, TG_ACCOUNT_DOMAIN, country_of, resume_is_ready,
+                        CATEGORIES, TG_ACCOUNT_DOMAIN, country_of, external_apply_url,
+                        host_of, resume_is_ready,
                         salary_usd, set_session, track)
 from server.terms import REMOTE_COUNTRY, TERMS, UNKNOWN_COUNTRY
 from server import postfilter
@@ -261,6 +262,13 @@ T = {
   "en": ("Application sent: <b>{title}</b> — {company}.\n\n"
          "We pass it to the employer directly. Their answer lands here, in this chat."),
  },
+ "apply_ext": {
+  "ru": ("<b>{title}</b> — {company}.\n\n"
+         "Откликнуться можно прямо у работодателя — на площадке, где опубликована вакансия ({host})."),
+  "en": ("<b>{title}</b> — {company}.\n\n"
+         "Apply directly with the employer on the site where this opening is posted ({host})."),
+ },
+ "btn_apply_ext": {"ru": "Откликнуться на сайте →", "en": "Apply on the site →"},
  "applied_already": {
   "ru": "На эту вакансию ты уже откликался.",
   "en": "You've already applied to this one.",
@@ -387,7 +395,8 @@ KIND_LABELS = {"start": "/start", "cmd": "команда", "btn": "кнопка"
                "cv": "резюме", "apply": "отклик", "site": "переход на сайт", "push": "рассылка",
                "email": "почта"}
 APPLY_LABELS = {"done": "отклик отправлен", "need_cv": "нужно резюме", "dup": "уже откликался",
-                "too_fast": "слишком часто", "limit": "дневной лимит"}
+                "too_fast": "слишком часто", "limit": "дневной лимит",
+                "external": "ссылка на первоисточник"}
 # Действия самого человека: по ним считаем активность. apply — исход нажатия или резюме,
 # push — наша рассылка; ни то, ни другое активностью не считается.
 ACTIVE_KINDS = ("start", "cmd", "btn", "search", "cv", "site", "email")
@@ -1072,6 +1081,14 @@ def do_apply(db: Session, chat: BotChat, job_id: int) -> None:
     job = db.get(Job, job_id)
     if not job or job.status != "approved":
         send(chat.chat_id, t("gone", lang))
+        return
+    if external_apply_url(job):
+        # агрегированная вакансия: отклик у первоисточника, переход считаем через /job/<id>/go
+        keyboard = [[{"text": t("btn_apply_ext", lang), "url": f"{SITE}/job/{job.id}/go?via=tgbot"}],
+                    [{"text": MENU["menu_btn"][lang], "callback_data": "menu"}]]
+        send(chat.chat_id, t("apply_ext", lang, title=esc(job.title), company=esc(job.company_name),
+                             host=esc(host_of(job.source_url))), keyboard)
+        log(db, chat, "apply", "external", job_id)
         return
     user = ensure_account(db, chat)
     cv = db.query(Resume).filter_by(user_id=user.id).first()
