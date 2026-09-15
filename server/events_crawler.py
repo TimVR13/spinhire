@@ -441,6 +441,42 @@ def parse_event_page(html_text: str, source_url: str) -> dict | None:
 # ---------- перевод описания ----------
 
 _SPLIT = "\n__SH_SPLIT__\n"
+# С дроплета translate.googleapis отвечает 429, поэтому русские описания ездят в репозитории:
+# data/events-ru.json собирается локально (python3 -m server.events_crawler --translate-cache),
+# прод берёт перевод из кэша, а чего нет — пробует перевести сам понемногу (housekeeping).
+TRANSLATIONS_FILE = os.path.join(ROOT, "data", "events-ru.json")
+_translations_cache: dict | None = None
+
+
+def _desc_hash(text: str) -> str:
+    import hashlib
+    return hashlib.sha1(" ".join((text or "").split()).encode("utf-8")).hexdigest()[:12]
+
+
+def load_translations() -> dict:
+    global _translations_cache
+    if _translations_cache is None:
+        try:
+            with open(TRANSLATIONS_FILE, encoding="utf-8") as fh:
+                _translations_cache = json.load(fh)
+        except Exception:  # noqa: BLE001
+            _translations_cache = {}
+    return _translations_cache
+
+
+def save_translations(data: dict) -> None:
+    global _translations_cache
+    os.makedirs(os.path.dirname(TRANSLATIONS_FILE), exist_ok=True)
+    with open(TRANSLATIONS_FILE, "w", encoding="utf-8") as fh:
+        json.dump(dict(sorted(data.items())), fh, ensure_ascii=False, indent=1)
+    _translations_cache = data
+
+
+def cached_ru(slug: str, description_en: str) -> str:
+    row = load_translations().get(slug or "")
+    if row and row.get("hash") == _desc_hash(description_en) and row.get("ru"):
+        return row["ru"]
+    return ""
 
 
 def translate_ru(text: str) -> str:
@@ -610,9 +646,9 @@ def upsert(db, Event, data: dict, status: dict, *, translate=translate_ru, make_
     ev.category = data["category"] or ev.category or ""
     if data["description_en"] != (ev.description_en or ""):
         ev.description_en = data["description_en"]
-        ev.description = translate(data["description_en"]) if translate else ""
-    elif not (ev.description or "").strip() and translate:
-        ev.description = translate(ev.description_en)
+        ev.description = cached_ru(slug, ev.description_en) or (translate(ev.description_en) if translate else "")
+    elif not (ev.description or "").strip():
+        ev.description = cached_ru(slug, ev.description_en) or (translate(ev.description_en) if translate else "")
     ev.updated_at = datetime.utcnow()
     if not ev.image:
         ev.image = ensure_city_photo(data["city_en"], data["country_en"], status)
@@ -718,13 +754,58 @@ def run(SessionLocal, Event, *, force: bool = False, limit: int | None = None, m
     return summary
 
 
-def housekeeping(SessionLocal, Event) -> dict:
-    """Дёшево и без сети: дубли, невозможные даты, прошедшие — на каждом тике планировщика."""
+def fill_translations(db, Event, translate=None, limit: int = 3) -> int:
+    """Русские описания там, где их нет: сначала из кэша (бесплатно), потом переводчиком —
+    не больше limit запросов за раз; первая же неудача (429) останавливает до следующего тика."""
+    n = 0
+    calls = 0
+    for ev in (db.query(Event).filter(Event.description_en != "", Event.description == "")
+               .order_by(Event.active.desc(), Event.date_from).all()):
+        ru = cached_ru(ev.slug, ev.description_en)
+        if not ru and translate and calls < limit:
+            calls += 1
+            ru = translate(ev.description_en)
+            if not ru:
+                break
+        if ru:
+            ev.description = ru
+            n += 1
+    return n
+
+
+def housekeeping(SessionLocal, Event, translate=None) -> dict:
+    """Дубли, невозможные даты, прошедшие, недостающие переводы — на каждом тике планировщика.
+    Без translate — совсем без сети (тесты, локальные прогоны)."""
     with SessionLocal() as db:
         out = {"deduped": dedupe_slugs(db, Event), "normalized": normalize_dates(db, Event),
-               "deactivated": deactivate_past(db, Event)}
+               "deactivated": deactivate_past(db, Event),
+               "translated": fill_translations(db, Event, translate=translate)}
         db.commit()
     return out
+
+
+def build_translation_cache(SessionLocal, Event, translate=translate_ru, log=print) -> int:
+    """Локально: собрать data/events-ru.json из базы (готовые переводы + перевести недостающие)."""
+    cache = dict(load_translations())
+    added = 0
+    with SessionLocal() as db:
+        for ev in db.query(Event).filter(Event.slug != "", Event.description_en != "").all():
+            h = _desc_hash(ev.description_en)
+            row = cache.get(ev.slug)
+            if row and row.get("hash") == h and row.get("ru"):
+                continue
+            ru = (ev.description or "").strip() or (translate(ev.description_en) if translate else "")
+            if not ru:
+                log(f"[events] без перевода: {ev.slug}")
+                continue
+            cache[ev.slug] = {"hash": h, "ru": ru}
+            if not (ev.description or "").strip():
+                ev.description = ru
+            added += 1
+        db.commit()
+    save_translations(cache)
+    log(f"[events] кэш переводов: {len(cache)} записей, новых {added}")
+    return added
 
 
 def rebake_covers(SessionLocal, Event, make_og, log=print) -> int:
@@ -754,10 +835,14 @@ if __name__ == "__main__":  # pragma: no cover — ручной прогон
     parser.add_argument("--no-translate", action="store_true")
     parser.add_argument("--og-only", action="store_true",
                         help="не ходить в источник: обновить фото городов и перепечь OG-карточки всех событий")
+    parser.add_argument("--translate-cache", action="store_true",
+                        help="собрать data/events-ru.json из базы (перевести недостающие описания локально)")
     args = parser.parse_args()
     from server import app as web
     from server import event_covers
-    if args.og_only:
+    if args.translate_cache:
+        build_translation_cache(web.SessionLocal, web.Event)
+    elif args.og_only:
         rebake_covers(web.SessionLocal, web.Event, event_covers.make_og_for_event)
     else:
         run(web.SessionLocal, web.Event, force=args.force, limit=args.limit,

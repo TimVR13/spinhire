@@ -2682,7 +2682,7 @@ def _events_scheduler():
     while True:
         try:
             from server import event_covers, events_crawler
-            events_crawler.housekeeping(SessionLocal, Event)
+            events_crawler.housekeeping(SessionLocal, Event, translate=events_crawler.translate_ru)
             if events_crawler.crawl_is_due(interval_hours) and not _events_crawl_lock.locked():
                 with _events_crawl_lock:  # не пересекаться с кнопкой «Обновить сейчас» в админке
                     events_crawler.run(SessionLocal, Event, make_og=event_covers.make_og_for_event)

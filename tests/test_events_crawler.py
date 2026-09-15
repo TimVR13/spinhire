@@ -128,10 +128,12 @@ class DbTests(unittest.TestCase):
         self.Session = sessionmaker(bind=engine)
         with open(FIXTURE, encoding="utf-8") as fh:
             self.data = ec.parse_event_page(fh.read(), SOURCE_URL)
-        # фото города — сеть (Википедия); в тестах не ходим
-        patcher = unittest.mock.patch.object(ec, "ensure_city_photo", lambda *a, **k: "")
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        # фото города — сеть (Википедия); в тестах не ходим. Кэш переводов — пустой, чтобы
+        # проверять сам перевод, а не data/events-ru.json из репозитория.
+        for patcher in (unittest.mock.patch.object(ec, "ensure_city_photo", lambda *a, **k: ""),
+                        unittest.mock.patch.object(ec, "_translations_cache", {})):
+            patcher.start()
+            self.addCleanup(patcher.stop)
 
     def test_upsert_adopts_manual_row_and_updates_in_place(self):
         with self.Session() as db:
@@ -154,6 +156,23 @@ class DbTests(unittest.TestCase):
             db.commit()
             self.assertEqual((action2, ev2.id), ("updated", ev.id))
             self.assertTrue(ev2.description.startswith("перевод: "))
+
+    def test_translation_cache_and_gradual_fill(self):
+        with unittest.mock.patch.object(ec, "_translations_cache", {"sbc-summit-lisbon-2026": {"hash": ec._desc_hash(self.data["description_en"]), "ru": "Из кэша"}}):
+            with self.Session() as db:
+                ev, _ = ec.upsert(db, self.Event, self.data, {}, translate=lambda t: "НЕ ДОЛЖНО ВЫЗВАТЬСЯ")
+                self.assertEqual(ev.description, "Из кэша")
+                db.add(self.Event(title="No cache", slug="no-cache-2027", date_from="2027-01-01", description_en="Hello", description=""))
+                db.add(self.Event(title="No cache 2", slug="no-cache-2-2027", date_from="2027-02-01", description_en="World", description=""))
+                db.commit()
+                calls = []
+                def flaky(text):
+                    calls.append(text)
+                    return "Привет" if text == "Hello" else ""   # вторая попытка — 429
+                self.assertEqual(ec.fill_translations(db, self.Event, translate=flaky), 1)
+                self.assertEqual(calls, ["Hello", "World"])
+                self.assertEqual(db.query(self.Event).filter_by(slug="no-cache-2027").first().description, "Привет")
+                self.assertEqual(ec.fill_translations(db, self.Event, translate=None), 0)  # без сети — только кэш
 
     def test_deactivate_past_keeps_admin_hidden_hidden(self):
         with self.Session() as db:
