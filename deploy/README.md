@@ -35,3 +35,15 @@ ssh -i ~/.ssh/coex root@165.232.79.152 '
 ```
 Отключить: `systemctl disable --now spinhire-autopull.timer`.
 Посмотреть журнал: `journalctl -u spinhire-autopull.service -n 30 --no-pager`.
+
+## После 15.09.2026 — поставить руками (root на дроплете)
+
+```bash
+cp /opt/spinhire/deploy/deploy.sh /opt/spinhire/deploy.sh && chmod +x /opt/spinhire/deploy.sh
+cp /opt/spinhire/deploy/limits.conf /etc/systemd/system/spinhire.service.d/limits.conf && systemctl daemon-reload
+```
+
+- `deploy.sh`: бэкап БД через sqlite backup API вместо cp живого WAL-файла и без обратной
+  перезаписи поверх открытой базы (давала «database disk image is malformed» на каждом деплое).
+- `limits.conf`: MemoryMax=1500M и TimeoutStopSec=20 — раздувшийся процесс убивается и
+  поднимается за 3 секунды вместо 20 минут мёртвого сайта.
