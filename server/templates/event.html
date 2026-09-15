@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% set active = 'events' %}
+{% set place = event_place(ev) %}
+{% set dates = fmt_dates(ev.date_from, ev.date_to) %}
+{% block title %}{{ ev.title }} — {{ dates }}, {{ place }} | SpinHire{% endblock %}
+{% block desc %}{% if content_lang == 'en' %}{{ ev.title }}: {{ dates }}, {{ place }}{% if ev.venue %}, {{ ev.venue }}{% endif %}. Programme and side events, venue map, tickets and iGaming jobs nearby.{% else %}{{ ev.title }}: {{ dates }}, {{ place }}{% if ev.venue %}, {{ ev.venue }}{% endif %}. Программа и сайд-ивенты, площадка на карте, билеты и вакансии iGaming рядом.{% endif %}{% endblock %}
+{% block robots %}<link rel="canonical" href="https://spinhire.io/event/{{ ev.slug }}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ ev.title }} — {{ dates }}, {{ place }}">
+<meta property="og:description" content="{% if content_lang == 'en' %}Dates, venue, side events and tickets — iGaming events calendar on SpinHire.{% else %}Даты, площадка, сайд-ивенты и билеты — календарь событий iGaming на SpinHire.{% endif %}">
+<meta property="og:url" content="https://spinhire.io/event/{{ ev.slug }}">
+<meta property="og:image" content="https://spinhire.io{{ ev.og_image or '/img/og-cover.jpg?v=2' }}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<script type="application/ld+json">{{ event_ld|replace('<', '\\u003c')|safe }}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Главная","item":"https://spinhire.io/"},{"@type":"ListItem","position":2,"name":"События iGaming","item":"https://spinhire.io/events"},{"@type":"ListItem","position":3,"name":{{ ev.title|tojson }} }]}</script>{% endblock %}
+{% block style %}
+  /* ==== страница события: обложка-город + информация, как афиша ==== */
+  .evp { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--sp-6); align-items: start; }
+  .evp__side { position: sticky; top: 92px; display: flex; flex-direction: column; gap: var(--sp-4); }
+  .evh { position: relative; overflow: hidden; border-radius: 22px; border: 1px solid var(--line); min-height: 420px;
+         display: flex; flex-direction: column; justify-content: flex-end; padding: clamp(20px, 4vw, 44px); color: #f4f4f6;
+         background: linear-gradient(145deg, oklch(0.22 0.03 285), oklch(0.12 0.02 285)); isolation: isolate; margin-bottom: var(--sp-6); }
+  .evh__photo { position: absolute; inset: 0; z-index: -2; background-size: cover; background-position: center; transform: scale(1.02); }
+  .evh__shade { position: absolute; inset: 0; z-index: -1;
+                background: linear-gradient(180deg, oklch(0 0 0 / .18) 0%, oklch(0 0 0 / .32) 40%, oklch(0.08 0.01 285 / .92) 100%),
+                            linear-gradient(90deg, oklch(0 0 0 / .45), transparent 60%); }
+  .evh__edge { position: absolute; left: 0; right: 0; top: 0; height: 6px; background: linear-gradient(90deg, var(--acid), var(--pink)); }
+  .evh__top { position: absolute; top: 22px; left: clamp(20px, 4vw, 44px); right: clamp(20px, 4vw, 44px); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .evh__dates { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 800; font-size: .82rem; letter-spacing: .08em; text-transform: uppercase;
+                color: var(--on-acid); background: var(--acid); border-radius: 999px; padding: 7px 14px; }
+  .evh__cat { font-size: .7rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #fff; background: oklch(0 0 0 / .45); border: 1px solid oklch(1 0 0 / .25); border-radius: 999px; padding: 6px 12px; backdrop-filter: blur(6px); }
+  .evh__past { background: var(--pink); color: #fff; }
+  .evh h1 { font-size: clamp(1.8rem, 4.6vw, 3.6rem); line-height: 1.02; letter-spacing: -.02em; color: #fff; text-shadow: 0 2px 18px oklch(0 0 0 / .55); max-width: 22ch; }
+  .evh__city { margin-top: 12px; font-family: var(--font-display); font-weight: 800; font-size: clamp(1rem, 2.2vw, 1.5rem); letter-spacing: .12em; text-transform: uppercase; color: #fff; text-shadow: 0 1px 10px oklch(0 0 0 / .6); }
+  .evh__city .fl { margin-right: 8px; }
+  .evh__venue { margin-top: 6px; color: oklch(0.88 0.01 285); font-size: .92rem; text-shadow: 0 1px 8px oklch(0 0 0 / .7); }
+  .evh__org { position: absolute; right: clamp(20px, 4vw, 44px); bottom: clamp(20px, 4vw, 44px); display: inline-flex; align-items: center; gap: 8px; font-size: .78rem; font-weight: 700; color: #fff;
+              background: oklch(0 0 0 / .45); border: 1px solid oklch(1 0 0 / .2); border-radius: 999px; padding: 6px 12px 6px 6px; backdrop-filter: blur(6px); }
+  .evh__org img { width: 26px; height: 26px; border-radius: 50%; background: #fff; object-fit: contain; }
+  .evh__credit { position: absolute; right: 12px; top: 64px; font-size: .62rem; color: oklch(1 0 0 / .55); }
+
+  .evcard { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: var(--sp-5); }
+  .evcard h2 { font-size: 1.15rem; margin-bottom: var(--sp-4); display: flex; align-items: center; gap: 10px; }
+  .evcard h2 .n { font-size: .72rem; font-weight: 800; color: var(--on-acid); background: var(--acid); border-radius: 999px; padding: 2px 9px; }
+  .ev-about p { color: var(--ink-dim); line-height: 1.7; margin-bottom: 12px; max-width: 78ch; }
+  .ev-about p:first-child { color: var(--ink); font-weight: 600; font-size: 1.04rem; }
+  .ev-about p:last-child { margin-bottom: 0; }
+
+  .ev-facts { display: grid; gap: 12px; }
+  .ev-fact { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; font-size: .92rem; color: var(--ink); }
+  .ev-fact .ico { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; background: color-mix(in oklch, var(--acid) 16%, transparent); color: var(--acid); font-size: .8rem; font-weight: 800; }
+  .ev-fact .lbl { display: block; font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint); font-weight: 700; margin-bottom: 2px; }
+  .ev-fact a { color: var(--ink); }
+  .ev-side-actions { display: flex; flex-direction: column; gap: 8px; margin-top: var(--sp-4); }
+  .ev-side-actions .btn { width: 100%; justify-content: center; }
+  .ev-links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ev-links a { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--ink-dim); font-size: .78rem; font-weight: 700; text-decoration: none; }
+  .ev-links a:hover { border-color: var(--acid); color: var(--acid); }
+  .ev-jobs { border: 1px dashed color-mix(in oklch, var(--acid) 60%, var(--line-strong)); border-radius: var(--radius); background: color-mix(in oklch, var(--acid) 7%, transparent); padding: var(--sp-4); }
+  .ev-jobs b { color: var(--acid); }
+
+  /* расписание: день → строки */
+  .ev-day { margin-bottom: var(--sp-5); }
+  .ev-day:last-child { margin-bottom: 0; }
+  .ev-day__head { font-family: var(--font-display); font-weight: 800; font-size: .95rem; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); padding-bottom: 8px; margin-bottom: 10px; border-bottom: 2px solid var(--line); display: flex; align-items: baseline; gap: 10px; }
+  .ev-day__head .wd { font-size: .72rem; color: var(--ink-faint); font-weight: 700; letter-spacing: .1em; }
+  .ev-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-deep); margin-bottom: 8px; }
+  .ev-row.is-rec { border-color: color-mix(in oklch, var(--acid) 55%, var(--line)); box-shadow: 0 0 0 1px color-mix(in oklch, var(--acid) 30%, transparent) inset; }
+  .ev-row__time { font-family: var(--font-display); font-weight: 800; font-size: 1rem; color: var(--acid); font-variant-numeric: tabular-nums; }
+  .ev-row__time.none { color: var(--ink-faint); font-size: .8rem; }
+  .ev-row__name { font-weight: 700; color: var(--ink); }
+  .ev-row__name a { color: inherit; text-decoration: none; }
+  .ev-row__name a:hover { color: var(--acid); }
+  .ev-row__venue { display: block; font-size: .82rem; color: var(--ink-dim); margin-top: 2px; }
+  .ev-row__rec { display: inline-block; margin-left: 8px; font-size: .62rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--acid); }
+  .ev-badge { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
+  .ev-badge.public { color: var(--on-acid); background: var(--acid); }
+  .ev-badge.invite { color: #fff; background: var(--pink); }
+
+  /* карта: грузим по клику */
+  .ev-map { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--bg-deep); min-height: 260px; display: grid; place-items: center; }
+  .ev-map iframe { width: 100%; height: 340px; border: 0; display: block; }
+  .ev-map__btn { position: relative; z-index: 1; display: grid; gap: 8px; place-items: center; text-align: center; padding: var(--sp-5) var(--sp-6); color: var(--ink-dim);
+                 background: color-mix(in oklch, var(--surface) 85%, transparent); border: 1px solid var(--line-strong); border-radius: 14px; font: inherit; cursor: pointer; backdrop-filter: blur(4px); transition: border-color .15s, color .15s; }
+  .ev-map__btn:hover { border-color: var(--acid); color: var(--acid); }
+  .ev-map__btn b { color: var(--ink); }
+  .ev-map__grid { position: absolute; inset: 0; background-image: linear-gradient(oklch(1 0 0 / .05) 1px, transparent 1px), linear-gradient(90deg, oklch(1 0 0 / .05) 1px, transparent 1px); background-size: 28px 28px; pointer-events: none; }
+  .ev-address { margin-top: 10px; color: var(--ink-dim); font-size: .9rem; }
+
+  /* соседние события */
+  .ev-rel { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-3); }
+  .ev-rel a { display: flex; flex-direction: column; text-decoration: none; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface); color: var(--ink); transition: border-color .15s, transform .15s; }
+  .ev-rel a:hover { border-color: var(--acid); transform: translateY(-2px); }
+  .ev-rel__cover { position: relative; height: 120px; background-size: cover; background-position: center; background-color: oklch(0.18 0.02 285); display: flex; align-items: flex-end; padding: 10px 12px; }
+  .ev-rel__cover::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 20%, oklch(0 0 0 / .78)); }
+  .ev-rel__cover span { position: relative; font-family: var(--font-display); font-weight: 800; font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: #fff; }
+  .ev-rel__body { padding: 12px 14px 14px; display: grid; gap: 4px; }
+  .ev-rel__dates { font-size: .74rem; font-weight: 800; color: var(--acid); text-transform: uppercase; letter-spacing: .06em; }
+  .ev-rel__title { font-weight: 700; font-size: .95rem; line-height: 1.25; }
+  .ev-rel__place { font-size: .8rem; color: var(--ink-dim); }
+
+  .ev-cta { border: 1px solid var(--line-strong); border-radius: var(--radius); background: linear-gradient(135deg, oklch(0.2 0.05 350), oklch(0.16 0.02 285)); padding: var(--sp-6); display: grid; grid-template-columns: 1.5fr auto; gap: var(--sp-5); align-items: center; color: var(--island-ink); margin-top: var(--sp-6); }
+  .ev-cta h2 { color: var(--island-ink); font-size: 1.35rem; }
+  .ev-cta h2 em { font-style: normal; color: var(--pink); }
+  .ev-cta p { color: oklch(0.82 0.01 285); margin-top: var(--sp-2); max-width: 52ch; }
+  .ev-stack { display: grid; gap: var(--sp-5); }
+  @media (max-width: 900px) {
+    .evp { grid-template-columns: 1fr; }
+    .evp__side { position: static; }
+    .evh { min-height: 340px; }
+    .evh__org { position: static; margin-top: 14px; align-self: flex-start; }
+    .ev-row { grid-template-columns: 1fr; gap: 6px; }
+    .ev-row__time { font-size: .9rem; }
+    .ev-cta { grid-template-columns: 1fr; }
+  }
+{% endblock %}
+{% block content %}
+  <nav class="crumbs"><a href="/">Главная</a> / <a href="/events">События iGaming</a> / <span data-no-translate>{{ ev.title }}</span></nav>
+
+  <header class="evh">
+    <div class="evh__edge"></div>
+    {% set cover = event_cover(ev) %}
+    {% if cover %}<div class="evh__photo" style="background-image:url('{{ cover }}')" role="img" aria-label="{{ place }}"></div>{% endif %}
+    <div class="evh__shade"></div>
+    <div class="evh__top">
+      <span class="evh__dates"><span aria-hidden="true">📅</span> {{ dates }}</span>
+      {% if is_past %}<span class="evh__cat evh__past">Событие прошло</span>{% elif ev.category %}<span class="evh__cat">{{ cat_label(ev.category) }}</span>{% endif %}
+    </div>
+    {% if photo_credit and photo_credit.get('source') == 'wikipedia' %}<a class="evh__credit" href="{{ photo_credit.get('page') or photo_credit.get('url') }}" rel="nofollow noopener" target="_blank" data-no-translate>Фото: Wikimedia</a>{% endif %}
+    <h1 data-no-translate>{{ ev.title }}</h1>
+    <div class="evh__city"><span class="fl" aria-hidden="true">{{ event_flag(ev) }}</span><span data-no-translate>{{ place }}</span></div>
+    {% if ev.venue %}<div class="evh__venue" data-no-translate>{{ ev.venue }}</div>{% endif %}
+    {% if ev.organizer %}
+      <span class="evh__org" data-no-translate>{% if organizer_host %}<img src="https://www.google.com/s2/favicons?domain={{ organizer_host }}&sz=64" alt="" width="26" height="26" loading="lazy" onerror="this.remove()">{% endif %}{{ ev.organizer }}</span>
+    {% endif %}
+  </header>
+
+  <div class="evp">
+    <div class="ev-stack">
+      {% if is_past and next_edition %}
+        <div class="ev-jobs">
+          Это прошедший выпуск. Следующий — <a href="/event/{{ next_edition.slug }}"><b data-no-translate>{{ next_edition.title }}</b></a>, <span data-no-translate>{{ fmt_dates(next_edition.date_from, next_edition.date_to) }}</span>.
+        </div>
+      {% endif %}
+
+      {% if paragraphs %}
+      <section class="evcard ev-about">
+        <h2>О событии</h2>
+        {% for p in paragraphs %}<p{% if content_lang != 'ru' %} data-no-translate{% endif %}>{{ p }}</p>{% endfor %}
+      </section>
+      {% endif %}
+
+      {% if days %}
+      <section class="evcard" id="schedule">
+        <h2>Программа и сайд-ивенты <span class="n">{{ subs|length }}</span></h2>
+        {% for day in days %}
+          <div class="ev-day">
+            <div class="ev-day__head">{% if day.date %}<span data-no-translate>{{ day_title(day.date) }}</span>{% else %}<span>Дата уточняется</span>{% endif %}</div>
+            {% for s in day['items'] %}
+              <div class="ev-row{% if s.recommended %} is-rec{% endif %}">
+                <div class="ev-row__time{% if not s.time %} none{% endif %}" data-no-translate>{{ s.time or '—' }}</div>
+                <div>
+                  <div class="ev-row__name" data-no-translate>{% if s.url %}<a href="{{ s.url }}" target="_blank" rel="nofollow noopener">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %}{% if s.recommended %}<span class="ev-row__rec">★ рекомендуем</span>{% endif %}</div>
+                  {% if s.venue %}<span class="ev-row__venue" data-no-translate>📍 {{ s.venue }}</span>{% endif %}
+                </div>
+                {% if s.access == 'invite' %}<span class="ev-badge invite">Только по приглашению</span>{% else %}<span class="ev-badge public">Открытый вход</span>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      {% if map_url %}
+      <section class="evcard" id="venue">
+        <h2>Площадка</h2>
+        <div class="ev-map" id="ev-map" data-src="{{ map_url }}">
+          <div class="ev-map__grid"></div>
+          <button type="button" class="ev-map__btn" id="ev-map-load"><b data-no-translate>{{ ev.venue or place }}</b><span>Показать карту Google</span></button>
+        </div>
+        <p class="ev-address"><span data-no-translate>📍 {{ ev.venue }}{% if ev.venue %}, {% endif %}{{ place }}</span> · <a href="{{ map_link }}" target="_blank" rel="nofollow noopener">Открыть в Google Maps ↗</a></p>
+      </section>
+      {% endif %}
+
+      {% if related %}
+      <section>
+        <h2 style="font-size:1.15rem;margin-bottom:var(--sp-4);">Другие события календаря</h2>
+        <div class="ev-rel">
+          {% for r in related %}
+            <a href="/event/{{ r.slug }}">
+              <div class="ev-rel__cover" style="background-image:url('{{ event_cover(r) }}')"><span data-no-translate>{{ event_flag(r) }} {{ r.city_en or event_place(r) }}</span></div>
+              <div class="ev-rel__body">
+                <span class="ev-rel__dates" data-no-translate>{{ fmt_dates(r.date_from, r.date_to) }}</span>
+                <span class="ev-rel__title" data-no-translate>{{ r.title }}</span>
+                <span class="ev-rel__place" data-no-translate>{{ event_place(r) }}</span>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+    </div>
+
+    <aside class="evp__side">
+      <div class="evcard">
+        <div class="ev-facts">
+          <div class="ev-fact"><span class="ico">📅</span><div><span class="lbl">Даты</span><span data-no-translate>{{ dates }}</span></div></div>
+          <div class="ev-fact"><span class="ico">📍</span><div><span class="lbl">Город</span><span data-no-translate>{{ event_flag(ev) }} {{ place }}</span></div></div>
+          {% if ev.venue %}<div class="ev-fact"><span class="ico">🏛</span><div><span class="lbl">Площадка</span><span data-no-translate>{{ ev.venue }}</span></div></div>{% endif %}
+          {% if ev.organizer %}<div class="ev-fact"><span class="ico">★</span><div><span class="lbl">Организатор</span><span data-no-translate>{% if ev.organizer_url %}<a href="{{ ev.organizer_url }}" target="_blank" rel="nofollow noopener">{{ ev.organizer }}</a>{% else %}{{ ev.organizer }}{% endif %}</span></div></div>{% endif %}
+          {% if ev.attendees %}<div class="ev-fact"><span class="ico">👥</span><div><span class="lbl">Кто будет</span><span>{{ ev.attendees }}</span></div></div>{% endif %}
+          {% if ev.promo %}<div class="ev-fact"><span class="ico">🎟</span><div><span class="lbl">Промокод</span><span data-no-translate>{{ ev.promo }}</span></div></div>{% endif %}
+        </div>
+        <div class="ev-side-actions">
+          {% if ev.url %}<a class="btn btn-acid" href="{{ ev.url }}" target="_blank" rel="nofollow noopener">{% if is_past %}Сайт события ↗{% else %}Регистрация и билеты ↗{% endif %}</a>{% endif %}
+          <a class="btn btn-ghost" href="{{ gcal }}" target="_blank" rel="nofollow noopener">+ Google Календарь</a>
+          <a class="btn btn-ghost" href="/event/{{ ev.slug }}.ics">Скачать .ics</a>
+          <button type="button" class="btn btn-ghost" id="ev-share" data-title="{{ ev.title }}" data-text="{{ ev.title }} — {{ dates }}, {{ place }}">↗ Поделиться</button>
+        </div>
+        {% if socials %}
+          <p class="lbl" style="font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-faint);font-weight:700;margin:var(--sp-4) 0 8px;">Соцсети организатора</p>
+          <div class="ev-links" data-no-translate>{% for s in socials %}<a href="{{ s.url }}" target="_blank" rel="nofollow noopener">{{ s.name }}</a>{% endfor %}</div>
+        {% endif %}
+      </div>
+      {% if jobs_near %}
+        <div class="ev-jobs">
+          <b>{{ jobs_near }}</b> {% if content_lang == 'en' %}open iGaming jobs in{% else %}открытых вакансий iGaming —{% endif %} <span data-no-translate>{{ ev.country_en or place }}</span>.
+          <div style="margin-top:10px;"><a class="btn btn-pink btn-sm" href="{{ jobs_link }}">Смотреть вакансии →</a></div>
+        </div>
+      {% endif %}
+      {% if ev.source_url %}<p style="font-size:.72rem;color:var(--ink-faint);">Данные календаря: <a href="{{ ev.source_url }}" rel="nofollow noopener" target="_blank" style="color:var(--ink-faint);" data-no-translate>TheGamblest</a>{% if ev.updated_at %} · <span data-no-translate>{{ ev.updated_at.strftime('%d.%m.%Y') }}</span>{% endif %}</p>{% endif %}
+    </aside>
+  </div>
+
+  <section class="ev-cta">
+    <div>
+      <h2>Едешь на конференцию? <em>Найди там работу</em></h2>
+      <p>Половина стендов ищет людей на месте. Резюме на SpinHire видят работодатели из iGaming — оставьте его до поездки.</p>
+    </div>
+    <a href="/jobs" class="btn btn-pink">Смотреть вакансии</a>
+  </section>
+
+<script>
+(function () {
+  var map = document.getElementById('ev-map'), btn = document.getElementById('ev-map-load');
+  if (map && btn) btn.addEventListener('click', function () {
+    var f = document.createElement('iframe'); f.src = map.dataset.src; f.loading = 'lazy'; f.title = 'Google Maps';
+    f.referrerPolicy = 'no-referrer-when-downgrade'; map.replaceChildren(f);
+  });
+  var share = document.getElementById('ev-share');
+  if (share) share.addEventListener('click', function () {
+    var url = location.href.split('#')[0], text = share.dataset.text + ' · SpinHire';
+    if (navigator.share) { navigator.share({ title: share.dataset.title, text: text, url: url }).catch(function () {}); return; }
+    if (navigator.clipboard) navigator.clipboard.writeText(text + ' — ' + url).then(function () { if (window.toast) toast('Ссылка скопирована'); });
+  });
+})();
+</script>
+{% endblock %}

@@ -767,6 +767,23 @@ class Event(Base):
     category = Column(String, default="")     # конференция / выставка / аффилейт-встреча
     promo = Column(String, default="")        # промокод или условие скидки на билет
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Своя страница у каждого выпуска (/event/<slug>) и поля, которые ведёт краулер
+    # календаря (server/events_crawler.py); ручные события — source == "".
+    slug = Column(String, default="", index=True)
+    source = Column(String, default="")        # "thegamblest" | "" (добавлено руками)
+    source_url = Column(String, default="")
+    city_en = Column(String, default="")       # Lisbon — для английской версии и фото города
+    country_en = Column(String, default="")    # Portugal
+    country_iso = Column(String, default="")   # PT
+    venue = Column(String, default="")         # адрес площадки для карты
+    organizer = Column(String, default="")
+    organizer_url = Column(String, default="")
+    socials = Column(Text, default="")         # JSON: ссылки на соцсети организатора
+    cover_src = Column(String, default="")     # афиша у источника (для справки в админке)
+    sub_events = Column(Text, default="")      # JSON: сайд-ивенты по дням
+    description_en = Column(Text, default="")  # оригинал описания; description — русский перевод
+    og_image = Column(String, default="")      # /img/events/og/<slug>.jpg — печёт event_covers
+    updated_at = Column(DateTime, default=datetime.utcnow)
 
 
 # Тарифы. Базовая цена одной вакансии выровнена по рынку iGaming-джоб-бордов
@@ -1283,6 +1300,22 @@ def migrate(db: Session):
         "ALTER TABLE events ADD COLUMN attendees VARCHAR DEFAULT ''",
         "ALTER TABLE events ADD COLUMN category VARCHAR DEFAULT ''",
         "ALTER TABLE events ADD COLUMN promo VARCHAR DEFAULT ''",
+        # страницы событий и поля краулера календаря (15.09.2026)
+        "ALTER TABLE events ADD COLUMN slug VARCHAR DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN source VARCHAR DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN source_url VARCHAR DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN city_en VARCHAR DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN country_en VARCHAR DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN country_iso VARCHAR DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN venue VARCHAR DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN organizer VARCHAR DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN organizer_url VARCHAR DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN socials TEXT DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN cover_src VARCHAR DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN sub_events TEXT DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN description_en TEXT DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN og_image VARCHAR DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN updated_at DATETIME",
     ):
         col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
         if ecols and col not in ecols:
@@ -2599,6 +2632,8 @@ def start_background_threads() -> None:
     """
     if os.environ.get("CRAWLER_DAILY_ENABLED", "1").lower() not in ("0", "false", "no"):
         threading.Thread(target=_crawler_scheduler, name="daily-crawler", daemon=True).start()
+    if os.environ.get("EVENTS_CRAWLER_ENABLED", "1").lower() not in ("0", "false", "no"):
+        threading.Thread(target=_events_scheduler, name="events-crawler", daemon=True).start()
     # Фоновый прогрев индекса кластеров — только по флагу: на дроплете с 1 vCPU пересборка
     # 5–6 тыс. ORM-объектов держит GIL и уводит процесс в swap (14.09.2026 сайт не отвечал
     # 15 минут). Без флага индекс собирается лениво при первом запросе и живёт CACHE_SECONDS.
@@ -2622,6 +2657,21 @@ def _crawler_scheduler():
         except Exception as e:
             print(f"[scheduler] crawl failed: {str(e)[:160]}")
         time.sleep(check_seconds)
+
+
+def _events_scheduler():
+    """Календарь событий: раз в EVENTS_CRAWL_INTERVAL_HOURS (12) сверяем sitemap TheGamblest,
+    перекачиваем изменившиеся страницы, гасим прошедшие, печём OG-обложки."""
+    interval_hours = max(1, int(os.environ.get("EVENTS_CRAWL_INTERVAL_HOURS", "12")))
+    time.sleep(max(30, int(os.environ.get("EVENTS_CRAWL_START_DELAY_SECONDS", "180"))))
+    while True:
+        try:
+            from server import event_covers, events_crawler
+            if events_crawler.crawl_is_due(interval_hours):
+                events_crawler.run(SessionLocal, Event, make_og=event_covers.make_og_for_event)
+        except Exception as e:  # noqa: BLE001
+            print(f"[events] прогон не удался: {str(e)[:160]}")
+        time.sleep(1800)
 
 
 # ---------- auth helpers ----------
@@ -3466,7 +3516,14 @@ def company_page(slug: str, request: Request, db: Session = Depends(db_session))
 
 
 
-# Обложки событий: если админ не загрузил свою, подставляем фирменную по названию.
+# ---------- события: календарь (/events) и страница выпуска (/event/<slug>) ----------
+# Данные ведёт краулер календаря TheGamblest (server/events_crawler.py, воркер раз в 12 ч),
+# ручные события добавляет админка. Обложка — фото города + текст (server/event_covers.py).
+
+from server import event_covers as _covers
+from server import events_crawler as _events_src
+
+# Обложки событий: если админ не загрузил свою, подставляем фото города, затем фирменную по названию.
 EVENT_COVERS = (
     (("sbc", "lisbon"), "/img/events/sbc-summit-lisbon.jpg"),
     (("sigma", "rome"), "/img/events/sigma-world-rome.jpg"),
@@ -3478,11 +3535,22 @@ EVENT_COVERS = (
     (("sbc",), "/img/events/sbc-summit-lisbon.jpg"),
 )
 EVENT_COVER_DEFAULT = "/img/events/default.jpg"
+EVENT_CATEGORY_EN = {"Конференция": "Conference", "Выставка": "Expo", "Аффилейт": "Affiliate",
+                     "Награды": "Awards", "Нетворкинг": "Networking"}
+# лендинги вакансий по странам событий — ссылка «вакансии рядом с событием»
+EVENT_JOB_LANDINGS = {"MT": "/jobs-malta.html", "CY": "/jobs-cyprus.html", "PL": "/jobs-warsaw.html",
+                      "GE": "/jobs-tbilisi.html"}
+_SOCIAL_HOSTS = (("linkedin.", "LinkedIn"), ("facebook.", "Facebook"), ("instagram.", "Instagram"),
+                 ("twitter.", "X"), ("x.com", "X"), ("youtube.", "YouTube"), ("t.me", "Telegram"),
+                 ("telegram.", "Telegram"), ("tiktok.", "TikTok"))
 
 
 def event_cover(event) -> str:
     if (event.image or "").strip():
         return event.image.strip()
+    photo = _events_src.city_photo_url(getattr(event, "city_en", "") or "")
+    if photo:
+        return photo
     haystack = f"{event.title} {event.city}".lower()
     for words, cover in EVENT_COVERS:
         if all(word in haystack for word in words):
@@ -3490,24 +3558,260 @@ def event_cover(event) -> str:
     return EVENT_COVER_DEFAULT
 
 
-@app.get("/api/events")
-def api_events(db: Session = Depends(db_session)):
-    from fastapi.responses import JSONResponse
-    evs = db.query(Event).filter(Event.active == True).order_by(Event.date_from).all()  # noqa: E712
-    mon = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
+def event_href(event) -> str:
+    return f"/event/{event.slug}" if (getattr(event, "slug", "") or "") else ""
+
+
+def event_place(event, lang: str) -> str:
+    """«Лиссабон, Португалия» / «Lisbon, Portugal» без флага."""
+    if lang == "en" and (event.city_en or event.country_en):
+        parts = [p for p in (event.city_en, event.country_en) if p]
+        if len(parts) == 2 and parts[0].lower() == parts[1].lower():
+            parts = parts[:1]
+        return ", ".join(parts)
+    return re.sub(r"^[^\w(]+", "", event.city or "").strip()
+
+
+def event_flag(event) -> str:
+    m = re.match(r"^((?:[\U0001F1E6-\U0001F1FF]{2}))", event.city or "")
+    if m:
+        return m.group(1)
+    return _events_src.flag(event.country_iso or "")
+
+
+def event_sub_events(event) -> list:
+    try:
+        subs = json.loads(event.sub_events or "[]")
+    except ValueError:
+        subs = []
+    return [s for s in subs if isinstance(s, dict) and s.get("name")]
+
+
+def event_socials(event) -> list:
+    try:
+        links = json.loads(event.socials or "[]")
+    except ValueError:
+        links = []
     out = []
-    for e in evs:
+    for link in links:
+        if not isinstance(link, str) or not link.startswith("http"):
+            continue
+        host = urllib.parse.urlparse(link).hostname or ""
+        name = next((label for key, label in _SOCIAL_HOSTS if key in host), host.replace("www.", ""))
+        out.append({"url": link, "name": name})
+    return out
+
+
+def event_google_calendar(event, lang: str) -> str:
+    try:
+        end = (date.fromisoformat(event.date_to or event.date_from) + timedelta(days=1)).strftime("%Y%m%d")
+    except ValueError:
+        end = (event.date_from or "").replace("-", "")
+    text = event.title
+    details = f"https://spinhire.io/event/{event.slug}" if event.slug else "https://spinhire.io/events"
+    return "https://calendar.google.com/calendar/render?" + urllib.parse.urlencode({
+        "action": "TEMPLATE", "text": text, "dates": f"{(event.date_from or '').replace('-', '')}/{end}",
+        "details": details, "location": ", ".join(p for p in (event.venue, event_place(event, lang)) if p)})
+
+
+def event_public(e, lang: str = "ru") -> dict:
+    """Карточка события для /api/events и главной."""
+    mon = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
+    try:
+        y, m, d = e.date_from.split("-")
+        dd, mm, yy = str(int(d)), mon[int(m) - 1], y
+    except Exception:
+        dd, mm, yy = "", "", ""
+    return {"t": e.title, "city": e.city, "d": dd, "mon": mm, "y": yy,
+            "dt": e.date_from, "end": e.date_to or e.date_from, "url": e.url,
+            "image": event_cover(e), "desc": (e.description or e.description_en or "").split("\n\n")[0],
+            "attendees": e.attendees or "", "cat": e.category or "",
+            "promo": e.promo or "", "slug": e.slug or "", "href": event_href(e),
+            "og": e.og_image or "", "city_en": e.city_en or "", "country_en": e.country_en or "",
+            "venue": e.venue or "", "organizer": e.organizer or "",
+            "dates": _covers.format_dates(e.date_from, e.date_to, lang),
+            "side_events": len(event_sub_events(e))}
+
+
+@app.get("/api/events")
+def api_events(request: Request, db: Session = Depends(db_session)):
+    from fastapi.responses import JSONResponse
+    lang = request_lang(request)
+    today = date.today().isoformat()
+    evs = db.query(Event).filter(Event.active == True).order_by(Event.date_from).all()  # noqa: E712
+    return JSONResponse([event_public(e, lang) for e in evs if (e.date_to or e.date_from or today) >= today])
+
+
+def _event_ctx(lang: str) -> dict:
+    """Общие помощники для шаблонов событий."""
+    content_lang = "ru" if lang == "ru" else "en"
+    return {"content_lang": content_lang,
+            "fmt_dates": lambda a, b="", with_year=True: _covers.format_dates(a, b, content_lang, with_year),
+            "month_title": lambda ym: _covers.month_title(ym, content_lang),
+            "day_title": lambda d: _covers.day_title(d, content_lang),
+            "event_cover": event_cover, "event_place": lambda e: event_place(e, content_lang),
+            "event_flag": event_flag, "event_href": event_href,
+            "cat_label": lambda c: EVENT_CATEGORY_EN.get(c, c) if content_lang == "en" else c}
+
+
+@app.get("/events.html")
+def events_html_redirect():
+    return RedirectResponse("/events", status_code=301)
+
+
+@app.get("/events", response_class=HTMLResponse)
+def events_calendar(request: Request, db: Session = Depends(db_session)):
+    lang = request_lang(request)
+    today = date.today()
+    cutoff = (today - timedelta(days=1)).isoformat()
+    evs = (db.query(Event).filter(Event.active == True)  # noqa: E712
+           .order_by(Event.date_from, Event.title).all())
+    upcoming = [e for e in evs if (e.date_to or e.date_from or "") >= cutoff]
+    months = []
+    for e in upcoming:
+        key = (e.date_from or "")[:7]
+        if not months or months[-1]["ym"] != key:
+            months.append({"ym": key, "year": key[:4], "items": []})
+        months[-1]["items"].append(e)
+    past = (db.query(Event).filter(Event.active == False, Event.slug != "",  # noqa: E712
+                                   Event.date_from >= (today - timedelta(days=400)).isoformat())
+            .order_by(Event.date_from.desc()).limit(40).all())
+    categories = {}
+    for e in upcoming:
+        categories[e.category or "Конференция"] = categories.get(e.category or "Конференция", 0) + 1
+    stats = {"events": len(upcoming),
+             "countries": len({(e.country_iso or e.country_en or e.city or "").lower() for e in upcoming if (e.country_iso or e.country_en or e.city)}),
+             "cities": len({(e.city_en or e.city or "").lower() for e in upcoming if (e.city_en or e.city)})}
+    from server import events_crawler as _ec
+    status = _ec.load_status()
+    list_ld = json.dumps({
+        "@context": "https://schema.org", "@type": "ItemList",
+        "name": "iGaming events calendar" if lang != "ru" else "Календарь событий iGaming",
+        "itemListOrder": "https://schema.org/ItemListOrderAscending",
+        "itemListElement": [{"@type": "ListItem", "position": i + 1, "url": f"https://spinhire.io/event/{e.slug}", "name": e.title}
+                            for i, e in enumerate(e for e in upcoming if e.slug)]}, ensure_ascii=False)
+    return render(request, db, "events.html", months=months, upcoming=upcoming, past=past,
+                  categories=categories, stats=stats, today=today.isoformat(), list_ld=list_ld,
+                  updated_at=(status.get("last_run") or "")[:10], **_event_ctx(lang))
+
+
+@app.get("/event/{slug}.ics")
+def event_ics(slug: str, db: Session = Depends(db_session)):
+    ev = db.query(Event).filter(Event.slug == slug).first() if re.fullmatch(r"[a-z0-9-]{3,120}", slug) else None
+    if not ev:
+        raise HTTPException(404)
+    try:
+        end = (date.fromisoformat(ev.date_to or ev.date_from) + timedelta(days=1)).strftime("%Y%m%d")
+    except ValueError:
+        raise HTTPException(404)
+
+    def esc(value: str) -> str:
+        return (value or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+    body = "\r\n".join([
+        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//SpinHire//iGaming events//RU", "CALSCALE:GREGORIAN",
+        "BEGIN:VEVENT", f"UID:{ev.slug}@spinhire.io",
+        f"DTSTAMP:{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}",
+        f"DTSTART;VALUE=DATE:{(ev.date_from or '').replace('-', '')}", f"DTEND;VALUE=DATE:{end}",
+        f"SUMMARY:{esc(ev.title)}",
+        f"LOCATION:{esc(', '.join(p for p in (ev.venue, event_place(ev, 'en')) if p))}",
+        f"URL:https://spinhire.io/event/{ev.slug}",
+        f"DESCRIPTION:{esc(((ev.description_en or ev.description or '').split(chr(10))[0])[:400])}"
+        f"\\nhttps://spinhire.io/event/{ev.slug}",
+        "END:VEVENT", "END:VCALENDAR", ""])
+    return Response(body, media_type="text/calendar; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{ev.slug}.ics"'})
+
+
+@app.get("/event/{slug}", response_class=HTMLResponse)
+def event_page(slug: str, request: Request, db: Session = Depends(db_session)):
+    if not re.fullmatch(r"[a-z0-9-]{3,120}", slug):
+        raise HTTPException(404)
+    ev = db.query(Event).filter(Event.slug == slug).first()
+    if not ev:
+        raise HTTPException(404)
+    lang = request_lang(request)
+    content_lang = "ru" if lang == "ru" else "en"
+    if not ev.og_image or not os.path.exists(os.path.join(ROOT, ev.og_image.lstrip("/"))):
         try:
-            y, m, d = e.date_from.split("-")
-            dd, mm, yy = str(int(d)), mon[int(m) - 1], y
-        except Exception:
-            dd, mm, yy = "", "", ""
-        out.append({"t": e.title, "city": e.city, "d": dd, "mon": mm, "y": yy,
-                    "dt": e.date_from, "end": e.date_to or e.date_from, "url": e.url,
-                    "image": event_cover(e), "desc": e.description or "",
-                    "attendees": e.attendees or "", "cat": e.category or "",
-                    "promo": e.promo or ""})
-    return JSONResponse(out)
+            ev.og_image = _covers.make_og_for_event(ev) or ""
+            db.commit()
+        except Exception:  # noqa: BLE001 — страница важнее картинки для соцсетей
+            db.rollback()
+    today = date.today().isoformat()
+    is_past = (ev.date_to or ev.date_from or today) < today
+    subs = event_sub_events(ev)
+    days = []
+    for s in subs:
+        key = s.get("date") or ""
+        if not days or days[-1]["date"] != key:
+            days.append({"date": key, "items": []})
+        days[-1]["items"].append(s)
+    # следующий выпуск того же события (slug без года) и соседи по календарю
+    base_slug = re.sub(r"-20\d\d$", "", ev.slug or "")
+    next_edition = None
+    if base_slug:
+        next_edition = (db.query(Event).filter(Event.slug.like(f"{base_slug}-20%"), Event.id != ev.id,
+                                               Event.date_from > (ev.date_from or ""))
+                        .order_by(Event.date_from).first())
+    related = (db.query(Event).filter(Event.active == True, Event.id != ev.id, Event.slug != "",  # noqa: E712
+                                      Event.date_from >= min(ev.date_from or today, today))
+               .order_by(Event.date_from).limit(4).all())
+    if len(related) < 4:
+        related += (db.query(Event).filter(Event.active == True, Event.id != ev.id, Event.slug != "",  # noqa: E712
+                                           Event.date_from >= today)
+                    .order_by(Event.date_from).limit(4 - len(related)).all())
+    seen, uniq = set(), []
+    for r in related:
+        if r.id not in seen:
+            seen.add(r.id)
+            uniq.append(r)
+    # вакансии в стране события — ссылка на лендинг или поиск
+    jobs_near, jobs_link = 0, ""
+    needle = (ev.country_en or ev.city_en or "").strip()
+    if needle and needle.lower() != "online":
+        jobs_near = db.query(Job).filter(Job.status == "approved", Job.location.ilike(f"%{needle}%")).count()
+        if not jobs_near and ev.city_en:
+            needle = ev.city_en
+            jobs_near = db.query(Job).filter(Job.status == "approved", Job.location.ilike(f"%{needle}%")).count()
+        jobs_link = EVENT_JOB_LANDINGS.get(ev.country_iso or "") or f"/jobs?q={urllib.parse.quote(needle)}"
+    description = (ev.description if content_lang == "ru" and (ev.description or "").strip()
+                   else (ev.description_en or ev.description or ""))
+    paragraphs = [p.strip() for p in description.split("\n\n") if p.strip()]
+    venue_query = ", ".join(p for p in (ev.venue, event_place(ev, "en")) if p)
+    map_url = ("https://maps.google.com/maps?" + urllib.parse.urlencode({"q": venue_query, "z": "14", "output": "embed"})
+               if venue_query and (ev.city_en or "").lower() != "online" else "")
+    map_link = "https://www.google.com/maps/search/?" + urllib.parse.urlencode({"api": "1", "query": venue_query}) if venue_query else ""
+    credits = _events_src.load_status().get("city_photos", {}).get(os.path.basename(event_cover(ev)), {})
+    ld = {
+        "@context": "https://schema.org", "@type": "Event", "name": ev.title,
+        "startDate": ev.date_from, "endDate": ev.date_to or ev.date_from,
+        "eventStatus": "https://schema.org/EventScheduled",
+        "eventAttendanceMode": ("https://schema.org/OnlineEventAttendanceMode" if (ev.city_en or "").lower() == "online"
+                                else "https://schema.org/OfflineEventAttendanceMode"),
+        "description": (paragraphs[0] if paragraphs else ev.title)[:500],
+        "url": f"https://spinhire.io/event/{ev.slug}",
+        "image": [f"https://spinhire.io{ev.og_image}"] if ev.og_image else [],
+        "location": {"@type": "Place", "name": ev.venue or ev.city_en or ev.city,
+                     "address": {"@type": "PostalAddress", "addressLocality": ev.city_en or ev.city,
+                                 "addressCountry": ev.country_iso or ev.country_en or "",
+                                 **({"streetAddress": ev.venue} if ev.venue else {})}},
+    }
+    if ev.organizer:
+        ld["organizer"] = {"@type": "Organization", "name": ev.organizer, **({"url": ev.organizer_url} if ev.organizer_url else {})}
+    if ev.url:
+        ld["offers"] = {"@type": "Offer", "url": ev.url, "availability": "https://schema.org/InStock"}
+    if subs:
+        ld["subEvent"] = [{"@type": "Event", "name": s["name"], "startDate": s.get("date") or ev.date_from,
+                           "endDate": s.get("date") or ev.date_from,
+                           **({"location": {"@type": "Place", "name": s["venue"]}} if s.get("venue") else {}),
+                           **({"url": s["url"]} if s.get("url") else {}),
+                           **({"doorTime": s["time"]} if s.get("time") else {})} for s in subs]
+    return render(request, db, "event.html", ev=ev, is_past=is_past, days=days, subs=subs,
+                  socials=event_socials(ev), gcal=event_google_calendar(ev, content_lang),
+                  next_edition=next_edition, related=uniq, jobs_near=jobs_near, jobs_link=jobs_link,
+                  paragraphs=paragraphs, map_url=map_url, map_link=map_link, photo_credit=credits,
+                  event_ld=json.dumps(ld, ensure_ascii=False), organizer_host=(urllib.parse.urlparse(ev.organizer_url or ev.url or "").hostname or "").replace("www.", ""),
+                  **_event_ctx(lang))
 
 
 # ---------- billing / оплата ----------
@@ -6528,7 +6832,10 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         ctx.update(jobbot.bot_dashboard(db, pr["since_dt"], pr["until_dt"]))
         ctx["bot_ready"] = bool(jobbot.TOKEN)
     elif tab == "events":
-        ctx["events"] = db.query(Event).order_by(Event.date_from).all()
+        ctx["events"] = db.query(Event).order_by(Event.date_from.desc()).all()
+        from server import events_crawler as _ec
+        ctx["events_crawler"] = _ec.load_status()
+        ctx["events_crawl_running"] = _events_crawl_lock.locked()
     elif tab == "orders":
         pr = parse_period(request)
         test_ids = test_account_ids(db)
@@ -6647,6 +6954,43 @@ def admin_event_action(ev_id: int, action: str, request: Request, db: Session = 
             e.active = not e.active
         elif action == "delete":
             db.delete(e)
+        db.commit()
+    return RedirectResponse("/admin?tab=events", status_code=303)
+
+
+_events_crawl_lock = threading.Lock()
+
+
+def _events_crawl_job(force: bool) -> None:
+    from server import event_covers, events_crawler
+    with _events_crawl_lock:
+        try:
+            events_crawler.run(SessionLocal, Event, force=force, make_og=event_covers.make_og_for_event)
+        except Exception as e:  # noqa: BLE001
+            print(f"[events] ручной прогон не удался: {str(e)[:160]}")
+
+
+@app.post("/admin/events/crawl")
+def admin_events_crawl(request: Request, force: int = Form(0), db: Session = Depends(db_session)):
+    """Кнопка в админке: обойти календарь TheGamblest сейчас (в фоне, не дожидаясь воркера)."""
+    need_admin(request, db)
+    if not _events_crawl_lock.locked():
+        threading.Thread(target=_events_crawl_job, args=(bool(force),), name="events-crawl-manual", daemon=True).start()
+    return RedirectResponse("/admin?tab=events", status_code=303)
+
+
+@app.post("/admin/event/{ev_id}/cover")
+def admin_event_cover(ev_id: int, request: Request, image: str = Form(""), db: Session = Depends(db_session)):
+    """Своя обложка (путь /img/… или URL) и перепечь OG-карточку."""
+    need_admin(request, db)
+    e = db.get(Event, ev_id)
+    if e:
+        e.image = image.strip()
+        try:
+            from server import event_covers
+            e.og_image = event_covers.make_og_for_event(e) or ""
+        except Exception:  # noqa: BLE001
+            pass
         db.commit()
     return RedirectResponse("/admin?tab=events", status_code=303)
 
@@ -7874,6 +8218,7 @@ def sitemap(db: Session = Depends(db_session)):
               ("privacy.html", "0.3"), ("terms.html", "0.3"), ("game-rules.html", "0.3")]
     static.append(("editorial.html", "0.5"))
     static.append(("press.html", "0.5"))
+    static.append(("events", "0.8"))
     static.append(("professions", "0.9"))
     static.append(("market", "0.9"))
     for m in market_archive(db):
@@ -7912,6 +8257,12 @@ def sitemap(db: Session = Depends(db_session)):
                     f'<lastmod>{lastmod}</lastmod>'
                     f'<priority>0.6</priority></url>')
     company_slugs = sorted({company_slug_of(j.company_name) for j in job_rows})
+    for ev in db.query(Event.slug, Event.updated_at).filter(Event.active == True, Event.slug != "").all():  # noqa: E712
+        lastmod = (ev.updated_at or datetime.utcnow()).strftime("%Y-%m-%d")
+        rows.append(f'  <url><loc>{base}/event/{ev.slug}</loc><lastmod>{lastmod}</lastmod><priority>0.6</priority>'
+                    f'<xhtml:link rel="alternate" hreflang="ru" href="{base}/event/{ev.slug}"/>'
+                    f'<xhtml:link rel="alternate" hreflang="en" href="{base}/en/event/{ev.slug}"/>'
+                    f'<xhtml:link rel="alternate" hreflang="x-default" href="{base}/en/event/{ev.slug}"/></url>')
     rows.extend(f'  <url><loc>{base}/company/{slug}</loc><priority>0.6</priority></url>'
                 for slug in company_slugs)
     xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'

@@ -834,7 +834,7 @@
     <div class="container">
       <div class="section-head">
         <div><span class="kicker">Куда идти нетворкать</span><h2>Календарь событий iGaming</h2></div>
-        <a class="link-more link-more--desktop" href="/events.html">Весь календарь →</a>
+        <a class="link-more link-more--desktop" href="/events">Весь календарь →</a>
       </div>
       <article class="event-hero" id="event-hero" hidden>
         <div class="event-hero__media"><img id="eventHeroImg" alt="" loading="lazy"></div>
@@ -846,8 +846,8 @@
           <p class="event-hero__who" id="eventHeroWho" hidden></p>
           <p class="event-hero__promo" id="eventHeroPromo" hidden></p>
           <div class="event-hero__actions">
-            <a class="btn btn-acid btn-sm" id="eventHeroLink" href="/events.html" target="_blank" rel="nofollow noopener external">Сайт события ↗</a>
-            <a class="btn btn-ghost btn-sm" href="/events.html">Показать календарь →</a>
+            <a class="btn btn-acid btn-sm" id="eventHeroLink" href="/events" target="_blank" rel="nofollow noopener external">Сайт события ↗</a>
+            <a class="btn btn-ghost btn-sm" href="/events">Показать календарь →</a>
           </div>
         </div>
       </article>
@@ -1042,7 +1042,7 @@
           <li><a href="/jobs.html">Вакансии</a></li>
           <li><a href="/profile.html">Мой профиль</a></li>
           <li><a href="/professions">Профессии и зарплаты</a></li>
-          <li><a href="/events.html">Календарь событий</a></li>
+          <li><a href="/events">Календарь событий</a></li>
           <li><a href="/games.html">🎡 Игровая зона</a></li>
           <li><a href="/blog.html">Карьерный блог</a></li>
         </ul>
@@ -1179,6 +1179,13 @@
     promo.hidden = false; promo.textContent = '🎟 ' + code;
     const link = document.getElementById('eventHeroLink');
     if (event.url) { link.href = event.url; } else { link.hidden = true; }
+    if (event.href) {
+      // у события есть своя страница — ведём на неё: программа, площадка, билеты
+      const more = hero.querySelector('a[href="/events"]:not(#eventHeroLink)');
+      if (more) { more.href = event.href; more.textContent = 'Программа и площадка →'; }
+      const title = document.getElementById('eventHeroTitle');
+      if (title && !title.querySelector('a')) title.innerHTML = `<a href="${event.href}" style="color:inherit;text-decoration:none;">${title.textContent}</a>`;
+    }
     hero.hidden = false;
     return event;
   }
@@ -1192,8 +1199,8 @@
       <div class="event-card">
         ${orgHTML(e)}
         <span class="ev-date">${e.d} <span class="mon">${e.mon} ${e.y}</span></span>
-        <h3>${e.t}</h3>
-        <p class="ev-place">${e.city || ''}</p>
+        <h3>${e.href ? `<a href="${e.href}" style="color:inherit;text-decoration:none;">${e.t}</a>` : e.t}</h3>
+        <p class="ev-place">${e.city || ''}${e.href ? ` · <a href="${e.href}" style="color:var(--acid);">программа →</a>` : ''}</p>
         <div class="ev-actions">
           <button class="ev-btn promo-ev" data-i="${i}" style="border-color: var(--acid); color: var(--acid);">🎟 Взять промо</button>
           <button class="ev-btn share-ev" data-i="${i}">↗ Поделиться</button>
@@ -1211,7 +1218,7 @@
       const e = events[+b.dataset.i];
       const text = `${e.t} — ${e.city}, ${e.d} ${e.mon} ${e.y}. Событие iGaming на SpinHire`;
       if (navigator.share) { try { await navigator.share({ title: e.t, text }); } catch (_) {} }
-      else { try { await navigator.clipboard.writeText(text + ' — https://spinhire.io/events.html'); if (window.toast) toast('Ссылка скопирована'); } catch (_) {} }
+      else { try { await navigator.clipboard.writeText(text + ' — https://spinhire.io/events'); if (window.toast) toast('Ссылка скопирована'); } catch (_) {} }
     }));
   }
   fetch('/api/events').then(r => r.ok ? r.json() : null).then(ev => render(ev && ev.length ? ev : fallback)).catch(() => render(fallback));

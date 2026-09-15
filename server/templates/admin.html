@@ -461,6 +461,24 @@
     </table></div>
 
   {% elif tab == 'events' %}
+    <div class="card" style="margin-bottom: var(--sp-5);">
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;">
+        <div>
+          <b style="font-family: var(--font-display); text-transform: uppercase;">🌍 Календарь TheGamblest</b>
+          <p class="source-note" style="margin-top:6px;">
+            {% set ec = events_crawler or {} %}{% set sm = ec.get('last_summary') or {} %}
+            {% if ec.get('last_run') %}Последний прогон {{ ec.get('last_run')[:16]|replace('T', ' ') }} UTC · страниц в источнике {{ sm.get('seen', 0) }} · перекачано {{ sm.get('fetched', 0) }} · новых {{ sm.get('created', 0) }} · обновлено {{ sm.get('updated', 0) }} · подхвачено ручных {{ sm.get('adopted', 0) }} · погашено прошедших {{ sm.get('deactivated', 0) }} · ошибок {{ sm.get('failed', 0) }} · {{ ec.get('duration_s', 0) }} c{% else %}Прогонов ещё не было — воркер запустит первый через 3 минуты после старта, дальше раз в 12 часов.{% endif %}
+            {% if events_crawl_running %}<b style="color:var(--yellow)">Идёт прогон…</b>{% endif %}
+            {% for err in (ec.get('errors') or [])[:5] %}<br><span style="color:var(--pink)">{{ err }}</span>{% endfor %}
+          </p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <form method="post" action="/admin/events/crawl"><button class="btn btn-acid btn-sm" {% if events_crawl_running %}disabled{% endif %}>Обновить сейчас</button></form>
+          <form method="post" action="/admin/events/crawl"><input type="hidden" name="force" value="1"><button class="btn btn-ghost btn-sm" {% if events_crawl_running %}disabled{% endif %}>Перекачать всё</button></form>
+          <a class="btn btn-ghost btn-sm" href="/events" target="_blank">Календарь ↗</a>
+        </div>
+      </div>
+    </div>
     <div class="card" style="margin-bottom: var(--sp-5); border-color: var(--acid);">
       <b style="font-family: var(--font-display); text-transform: uppercase;">📅 Добавить событие</b>
       <form method="post" action="/admin/event/add" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,160px),1fr)); gap: 10px; margin-top: 12px; align-items: end;">
@@ -478,12 +496,20 @@
       </form>
     </div>
     <div class="table-wrap"><table class="adm">
-      <tr><th>Событие</th><th>Город</th><th>Даты</th><th>Статус</th><th>Действия</th></tr>
+      <tr><th>Событие</th><th>Город</th><th>Даты</th><th>Источник</th><th>Обложка</th><th>Статус</th><th>Действия</th></tr>
       {% for e in events %}
       <tr>
-        <td><b>{{ e.title }}</b>{% if e.url %} <a href="{{ e.url }}" target="_blank" rel="noopener" style="color: var(--acid);">↗</a>{% endif %}</td>
-        <td>{{ e.city }}</td>
+        <td><b>{{ e.title }}</b>{% if e.slug %} <a href="/event/{{ e.slug }}" target="_blank" style="color: var(--acid);" title="Страница на сайте">📄</a>{% endif %}{% if e.url %} <a href="{{ e.url }}" target="_blank" rel="noopener" style="color: var(--acid);">↗</a>{% endif %}{% if e.sub_events and e.sub_events|length > 2 %}<div style="font-size:.72rem;color:var(--ink-faint);">сайд-ивенты: есть</div>{% endif %}</td>
+        <td>{{ e.city }}{% if e.venue %}<div style="font-size:.72rem;color:var(--ink-faint);">{{ e.venue }}</div>{% endif %}</td>
         <td style="font-size: 0.82rem;">{{ e.date_from }}{% if e.date_to %} — {{ e.date_to }}{% endif %}</td>
+        <td style="font-size:.78rem;">{% if e.source %}<a href="{{ e.source_url }}" target="_blank" rel="noopener" style="color:var(--ink-dim);">{{ e.source }}</a>{% if e.updated_at %}<div style="color:var(--ink-faint);">{{ e.updated_at.strftime('%d.%m %H:%M') }}</div>{% endif %}{% else %}вручную{% endif %}</td>
+        <td>
+          <form method="post" action="/admin/event/{{ e.id }}/cover" style="display:flex;gap:4px;align-items:center;">
+            <input class="input" name="image" value="{{ e.image }}" placeholder="авто: фото города" style="width:150px;font-size:.74rem;padding:4px 8px;" title="Путь /img/… или URL; пусто — фото города">
+            <button class="btn btn-ghost" title="Сохранить и перепечь OG">💾</button>
+          </form>
+          {% if e.og_image %}<a href="{{ e.og_image }}" target="_blank" style="font-size:.7rem;color:var(--ink-faint);">og ↗</a>{% endif %}
+        </td>
         <td><span class="status {% if e.active %}approved{% else %}archived{% endif %}">{{ 'активно' if e.active else 'скрыто' }}</span></td>
         <td style="white-space: nowrap;">
           <form method="post" action="/admin/event/{{ e.id }}/toggle"><button class="btn btn-ghost">{{ 'Скрыть' if e.active else 'Показать' }}</button></form>

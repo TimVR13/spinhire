@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% set active = 'events' %}
+{% block title %}{% if content_lang == 'en' %}iGaming events calendar {{ today[:4] }} — conferences, expos, awards | SpinHire{% else %}Календарь событий iGaming {{ today[:4] }} — конференции, выставки, награды | SpinHire{% endif %}{% endblock %}
+{% block desc %}{% if content_lang == 'en' %}{{ stats.events }} upcoming iGaming events in {{ stats.countries }} countries: SBC Summit, SiGMA, ICE, G2E, iGB and more. Dates, venues, side events, tickets — updated daily.{% else %}{{ stats.events }} ближайших событий iGaming в {{ stats.countries }} странах: SBC Summit, SiGMA, ICE, G2E, iGB и другие. Даты, площадки, сайд-ивенты, билеты — обновляется ежедневно.{% endif %}{% endblock %}
+{% block robots %}<link rel="canonical" href="https://spinhire.io/events">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{% if content_lang == 'en' %}iGaming events calendar {{ today[:4] }}{% else %}Календарь событий iGaming {{ today[:4] }}{% endif %}">
+<meta property="og:description" content="{% if content_lang == 'en' %}Conferences, expos and awards of the gambling industry: dates, cities, side events and tickets.{% else %}Конференции, выставки и награды индустрии: даты, города, сайд-ивенты и билеты.{% endif %}">
+<meta property="og:url" content="https://spinhire.io/events">
+<meta property="og:image" content="https://spinhire.io{{ upcoming[0].og_image if upcoming and upcoming[0].og_image else '/img/og-cover.jpg?v=2' }}">
+<script type="application/ld+json">{{ list_ld|replace('<', '\\u003c')|safe }}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Главная","item":"https://spinhire.io/"},{"@type":"ListItem","position":2,"name":"События iGaming","item":"https://spinhire.io/events"}]}</script>{% endblock %}
+{% block style %}
+  /* ==== календарь событий: маршрут по месяцам, карточки-афиши с фото города ==== */
+  .ev-hero { position: relative; overflow: hidden; border-radius: 22px; border: 1px solid var(--line); color: var(--island-ink); margin-bottom: var(--sp-6);
+    background: radial-gradient(ellipse 60% 80% at 82% 22%, color-mix(in oklch, var(--acid) 22%, transparent), transparent 60%),
+                radial-gradient(ellipse 50% 70% at 12% 90%, color-mix(in oklch, var(--pink) 18%, transparent), transparent 62%),
+                linear-gradient(160deg, oklch(0.14 0.02 285), var(--island)); padding: clamp(24px, 4vw, 48px); }
+  .ev-hero .kicker { color: var(--acid); }
+  .ev-hero h1 { font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.02; max-width: 18ch; margin-block: var(--sp-3) var(--sp-4); color: var(--island-ink); }
+  .ev-hero h1 em { font-style: normal; color: var(--acid); }
+  .ev-hero .lead { color: oklch(0.82 0.01 285); max-width: 60ch; }
+  .ev-stats { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-5); }
+  .ev-stat { border: 1px solid oklch(0.32 0.01 285); border-radius: var(--radius); background: oklch(0.16 0.01 285 / 0.7); backdrop-filter: blur(6px); padding: var(--sp-3) var(--sp-5); min-width: 120px; }
+  .ev-stat .num { font-family: var(--font-display); font-weight: 900; font-size: 1.9rem; color: var(--acid); font-variant-numeric: tabular-nums; }
+  .ev-stat:nth-child(2) .num { color: var(--pink); }
+  .ev-stat .lbl { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: oklch(0.72 0.01 285); }
+  .ev-upd { font-size: .72rem; color: oklch(0.65 0.01 285); margin-top: var(--sp-3); }
+
+  .ev-toolbar { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; margin-bottom: var(--sp-6); }
+  .ev-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--ink-dim); font-weight: 700; font-size: 0.82rem; padding: 6px 14px; cursor: pointer; transition: border-color .15s, color .15s, background .15s; }
+  .ev-chip:hover { border-color: var(--acid); color: var(--acid); }
+  .ev-chip.active { background: var(--acid); color: var(--on-acid); border-color: transparent; }
+  .ev-chip .c { font-variant-numeric: tabular-nums; opacity: .75; }
+
+  #ev-calendar { position: relative; }
+  #ev-calendar::before { content: ''; position: absolute; left: 178px; top: 10px; bottom: 30px; width: 1px; background: linear-gradient(var(--acid), var(--line) 18%, var(--line) 82%, var(--pink)); }
+  .ev-month { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 34px; margin: 0 0 var(--sp-7); position: relative; }
+  .ev-month::before { content: ''; position: absolute; left: 172px; top: 16px; width: 13px; height: 13px; border-radius: 50%; background: var(--bg); border: 3px solid var(--acid); box-shadow: 0 0 18px color-mix(in oklch, var(--acid) 58%, transparent); z-index: 2; }
+  .ev-month:nth-child(even)::before { border-color: var(--pink); box-shadow: 0 0 18px color-mix(in oklch, var(--pink) 55%, transparent); }
+  .ev-month__head { font-family: var(--font-display); font-weight: 800; font-size: 1rem; line-height: 1.2; text-transform: uppercase; letter-spacing: .05em; text-align: right; position: sticky; top: 92px; align-self: start; padding-top: 8px; }
+  .ev-month__head .yr { display: block; margin-top: 5px; font-size: .72rem; color: var(--ink-faint); font-weight: 700; }
+  .ev-list { display: grid; grid-template-columns: 1fr; gap: 14px; }
+
+  .evc { display: grid; grid-template-columns: minmax(270px, .72fr) 1fr; min-height: 220px; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--surface); transition: border-color .15s, transform .15s; position: relative; }
+  .evc:hover { border-color: var(--acid); }
+  .evc__cover { position: relative; min-height: 220px; padding: 22px 24px; display: flex; flex-direction: column; justify-content: flex-end; color: #fff; overflow: hidden; isolation: isolate;
+    background: radial-gradient(circle at 88% 12%, color-mix(in oklch, var(--acid) 42%, transparent), transparent 55%), radial-gradient(circle at 8% 92%, color-mix(in oklch, var(--pink) 40%, transparent), transparent 52%), linear-gradient(145deg, oklch(0.22 0.03 285), oklch(0.12 0.02 285)); text-decoration: none; }
+  .evc__photo { position: absolute; inset: 0; z-index: -2; background-size: cover; background-position: center; transition: transform .5s ease; }
+  .evc:hover .evc__photo { transform: scale(1.04); }
+  .evc__shade { position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, oklch(0 0 0 / .15) 0%, oklch(0 0 0 / .25) 45%, oklch(0.06 0.01 285 / .9) 100%); }
+  .evc__dates { position: absolute; top: 18px; left: 24px; font-family: var(--font-display); font-weight: 800; font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--on-acid); background: var(--acid); border-radius: 999px; padding: 5px 11px; }
+  .evc[data-cat="Выставка"] .evc__dates { color: #fff; background: var(--pink); }
+  .evc__flag { position: absolute; top: 16px; right: 20px; font-size: 1.3rem; line-height: 1; filter: drop-shadow(0 2px 4px oklch(0 0 0 / .5)); }
+  .evc__city { font-family: var(--font-display); font-weight: 900; font-size: clamp(1.5rem, 2.6vw, 2.2rem); line-height: 1; letter-spacing: .02em; text-transform: uppercase; text-shadow: 0 2px 14px oklch(0 0 0 / .65); }
+  .evc__country { margin-top: 6px; font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: oklch(0.9 0.01 285); text-shadow: 0 1px 6px oklch(0 0 0 / .7); }
+  .evc__body { display: flex; flex-direction: column; justify-content: center; padding: clamp(22px, 3vw, 34px); }
+  .evc__title { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.15rem, 2vw, 1.5rem); line-height: 1.12; letter-spacing: -.01em; }
+  .evc__title a { color: var(--ink); text-decoration: none; }
+  .evc__title a::after { content: ''; position: absolute; inset: 0; }
+  .evc__title a:hover { color: var(--acid); }
+  .evc__meta { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 10px; font-size: .82rem; color: var(--ink-dim); }
+  .evc__meta .tag { position: relative; z-index: 1; }
+  .evc__desc { color: var(--ink-dim); font-size: .94rem; line-height: 1.5; margin-top: 12px; max-width: 58ch; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .evc__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; position: relative; z-index: 1; }
+  .evc__btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--bg-deep); color: var(--ink-dim); font-size: .82rem; font-weight: 700; padding: 8px 14px; text-decoration: none; transition: border-color .15s, color .15s, transform .1s; }
+  .evc__btn:hover { border-color: var(--acid); color: var(--acid); }
+  .evc__btn--primary { background: var(--acid); color: var(--on-acid); border-color: transparent; }
+  .evc__btn--primary:hover { color: var(--on-acid); transform: translateY(-1px); box-shadow: 0 6px 18px color-mix(in oklch, var(--acid) 40%, transparent); }
+  .evc__side { font-size: .76rem; color: var(--acid); font-weight: 700; }
+  .ev-empty { display: none; padding: var(--sp-7); text-align: center; color: var(--ink-faint); border: 1px dashed var(--line-strong); border-radius: var(--radius); }
+
+  .ev-past { margin-top: var(--sp-7); }
+  .ev-past h2 { font-size: 1.1rem; margin-bottom: var(--sp-3); color: var(--ink-dim); }
+  .ev-past ul { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: var(--sp-6); }
+  .ev-past li { break-inside: avoid; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .9rem; }
+  .ev-past li a { color: var(--ink-dim); text-decoration: none; }
+  .ev-past li a:hover { color: var(--acid); }
+  .ev-past li span { color: var(--ink-faint); font-size: .78rem; margin-left: 8px; }
+
+  .ev-cta { border: 1px solid var(--line-strong); border-radius: var(--radius); background: linear-gradient(135deg, oklch(0.2 0.05 350), oklch(0.16 0.02 285)); padding: var(--sp-7); display: grid; grid-template-columns: 1.5fr auto; gap: var(--sp-5); align-items: center; color: var(--island-ink); margin-top: var(--sp-7); }
+  .ev-cta h2 { color: var(--island-ink); font-size: 1.5rem; }
+  .ev-cta h2 em { font-style: normal; color: var(--pink); }
+  .ev-cta p { color: oklch(0.82 0.01 285); margin-top: var(--sp-2); max-width: 48ch; }
+  @media (max-width: 760px) {
+    .ev-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .ev-stat { min-width: 0; }
+    #ev-calendar::before { left: 7px; }
+    .ev-month { grid-template-columns: 1fr; gap: 12px; padding-left: 28px; }
+    .ev-month::before { left: 1px; top: 9px; }
+    .ev-month__head { text-align: left; position: static; padding-top: 4px; }
+    .ev-month__head .yr { display: inline; margin-left: 8px; }
+    .evc { grid-template-columns: 1fr; }
+    .evc__cover { min-height: 170px; padding: 16px; }
+    .evc__body { padding: 14px 16px 18px; }
+    .evc__actions .evc__btn { flex: 1; }
+    .ev-past ul { columns: 1; }
+    .ev-cta { grid-template-columns: 1fr; padding: var(--sp-5); }
+  }
+{% endblock %}
+{% block content %}
+  <nav class="crumbs"><a href="/">Главная</a> / События iGaming</nav>
+
+  <section class="ev-hero">
+    <span class="kicker">Календарь индустрии</span>
+    <h1>События <em>iGaming</em> {{ today[:4] }}–{{ today[:4]|int + 1 }}</h1>
+    <p class="lead">Все ключевые конференции, выставки, награды и аффилейт-встречи гемблинга и беттинга. У каждого события — своя страница: даты, площадка на карте, программа сайд-ивентов и билеты.</p>
+    <div class="ev-stats">
+      <div class="ev-stat"><div class="num">{{ stats.events }}</div><div class="lbl">событий</div></div>
+      <div class="ev-stat"><div class="num">{{ stats.countries }}</div><div class="lbl">стран</div></div>
+      <div class="ev-stat"><div class="num">{{ stats.cities }}</div><div class="lbl">городов</div></div>
+    </div>
+    {% if updated_at %}<p class="ev-upd">Календарь сверяется с источниками автоматически · обновлено <span data-no-translate>{{ updated_at }}</span></p>{% endif %}
+  </section>
+
+  {% if categories|length > 1 %}
+  <div class="ev-toolbar" role="group" aria-label="Фильтр по типу">
+    <button type="button" class="ev-chip active" data-filter="all">Все <span class="c">{{ stats.events }}</span></button>
+    {% for cat, n in categories.items()|sort(attribute='1', reverse=true) %}
+      <button type="button" class="ev-chip" data-filter="{{ cat }}">{{ cat_label(cat) }} <span class="c">{{ n }}</span></button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div id="ev-calendar">
+    {% for month in months %}
+    <div class="ev-month" data-month>
+      <div class="ev-month__head">{{ month_title(month.ym) }} <span class="yr">{{ month.year }}</span></div>
+      <div class="ev-list">
+        {% for e in month['items'] %}
+        {% set cover = event_cover(e) %}
+        <article class="evc" data-cat="{{ e.category or 'Конференция' }}">
+          <div class="evc__cover">
+            {% if cover %}<div class="evc__photo" style="background-image:url('{{ cover }}')"></div>{% endif %}
+            <div class="evc__shade"></div>
+            <span class="evc__dates" data-no-translate>{{ fmt_dates(e.date_from, e.date_to, false) }}</span>
+            <span class="evc__flag" aria-hidden="true">{{ event_flag(e) }}</span>
+            <div class="evc__city" data-no-translate>{{ (e.city_en if content_lang == 'en' and e.city_en else event_place(e).split(',')[0]) }}</div>
+            <div class="evc__country" data-no-translate>{{ (e.country_en if content_lang == 'en' else (event_place(e).split(',')[1] if ',' in event_place(e) else '')) }}</div>
+          </div>
+          <div class="evc__body">
+            <h3 class="evc__title">{% if e.slug %}<a href="/event/{{ e.slug }}" data-no-translate>{{ e.title }}</a>{% else %}<span data-no-translate>{{ e.title }}</span>{% endif %}</h3>
+            <div class="evc__meta">
+              {% if e.category %}<span class="tag {% if e.category == 'Выставка' %}tag-pink{% else %}tag-acid{% endif %}">{{ cat_label(e.category) }}</span>{% endif %}
+              <span data-no-translate>{{ fmt_dates(e.date_from, e.date_to) }}</span>
+              {% if e.venue %}<span data-no-translate>· {{ e.venue }}</span>{% endif %}
+            </div>
+            {% set desc = (e.description if content_lang == 'ru' and e.description else (e.description_en or e.description or '')) %}
+            {% if desc %}<p class="evc__desc"{% if content_lang != 'ru' %} data-no-translate{% endif %}>{{ desc.split('\n\n')[0] }}</p>{% endif %}
+            <div class="evc__actions">
+              {% if e.slug %}<a class="evc__btn evc__btn--primary" href="/event/{{ e.slug }}">Подробнее и программа →</a>{% endif %}
+              {% if e.url %}<a class="evc__btn" href="{{ e.url }}" target="_blank" rel="nofollow noopener">Сайт события ↗</a>{% endif %}
+            </div>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="ev-empty" id="ev-empty">В этой категории событий пока нет.</p>
+
+  {% if past %}
+  <section class="ev-past">
+    <h2>Прошедшие события</h2>
+    <ul>
+      {% for e in past %}<li><a href="/event/{{ e.slug }}" data-no-translate>{{ e.title }}</a><span data-no-translate>{{ fmt_dates(e.date_from, e.date_to) }} · {{ event_place(e) }}</span></li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <section class="ev-cta">
+    <div>
+      <h2>Едешь на конференцию? <em>Найди там работу</em></h2>
+      <p>Пока индустрия собирается в Лиссабоне, Барселоне и Лас-Вегасе — свежие вакансии iGaming уже ждут на SpinHire.</p>
+    </div>
+    <a href="/jobs" class="btn btn-pink">Смотреть вакансии</a>
+  </section>
+
+<script>
+(function () {
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.evc'));
+  var emptyEl = document.getElementById('ev-empty');
+  function apply(filter) {
+    var visible = 0;
+    cards.forEach(function (c) { var show = filter === 'all' || c.dataset.cat === filter; c.style.display = show ? '' : 'none'; if (show) visible++; });
+    document.querySelectorAll('[data-month]').forEach(function (m) {
+      var any = Array.prototype.some.call(m.querySelectorAll('.evc'), function (c) { return c.style.display !== 'none'; });
+      m.style.display = any ? '' : 'none';
+    });
+    if (emptyEl) emptyEl.style.display = visible ? 'none' : 'block';
+  }
+  document.querySelectorAll('.ev-chip[data-filter]').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      document.querySelectorAll('.ev-chip[data-filter]').forEach(function (c) { c.classList.remove('active'); });
+      chip.classList.add('active'); apply(chip.dataset.filter);
+    });
+  });
+})();
+</script>
+{% endblock %}
