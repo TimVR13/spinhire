@@ -1,6 +1,6 @@
 """Реестр публикаций: что, где и когда мы публикуем, со статусами.
 
-Площадки: youtube, telegram, reddit, linkedin, blog. Статусы:
+Площадки: youtube, telegram, reddit, linkedin, instagram, threads, x, facebook, blog. Статусы:
   planned   — в плане (есть тема/слот, материала ещё нет)
   created   — материал готов (рендер/текст), ещё не отправлен
   scheduled — отправлен на площадку с отложенной публикацией
@@ -12,6 +12,8 @@
   • Telegram — таблицы tg_channel_posts / tg_digest_posts (sync_telegram)
   • YouTube  — data/youtube-posts.json из репо (sync_youtube; коммитится конвейером) и POST /api/publications/upsert
   • Reddit/LinkedIn — POST /api/publications/upsert из скриптов (ключ SPINHIRE_PUBLISH_KEY)
+  • LinkedIn/Instagram/Threads/X/Facebook — браузерные рутины на Mac пишут журналы data/*.json,
+    scripts/pub_report.py отправляет посты из журналов в тот же upsert (origin=routine)
   • Блог — ARTICLE_FILES + JSON-LD статей (вышедшие) и data/blog-queue.json (план) (sync_blog)
 Страница: /admin/publications.
 """
@@ -33,20 +35,22 @@ from server.tgpost import TgDigestPost, TgHotPost
 log = logging.getLogger("spinhire.publications")
 router = APIRouter()
 
-PLATFORMS = [("youtube", "YouTube"), ("telegram", "Telegram"), ("reddit", "Reddit"), ("linkedin", "LinkedIn"), ("blog", "Блог")]
+PLATFORMS = [("youtube", "YouTube"), ("telegram", "Telegram"), ("reddit", "Reddit"), ("linkedin", "LinkedIn"),
+             ("instagram", "Instagram"), ("threads", "Threads"), ("x", "X"), ("facebook", "Facebook"), ("blog", "Блог")]
 PLATFORM_LABELS = dict(PLATFORMS)
 STATUSES = [("planned", "В плане"), ("created", "Создано"), ("scheduled", "Запланировано"),
             ("published", "Опубликовано"), ("error", "Ошибка"), ("cancelled", "Снято")]
 STATUS_LABELS = dict(STATUSES)
 KINDS = {"short": "Short", "long": "Видео", "hot": "Горячая вакансия", "digest": "Дайджест", "post": "Пост",
-         "article": "Статья", "report": "Отчёт"}
+         "article": "Статья", "report": "Отчёт", "repost": "Репост", "group_post": "Пост в группу",
+         "comment": "Комментарий"}
 PUBLISH_KEY = os.environ.get("SPINHIRE_PUBLISH_KEY", "")
 
 
 class Publication(Base):
     __tablename__ = "publications"
     id = Column(Integer, primary_key=True)
-    platform = Column(String, nullable=False, index=True)     # youtube | telegram | reddit | linkedin | blog
+    platform = Column(String, nullable=False, index=True)     # код из PLATFORMS
     lang = Column(String, default="ru")                       # ru | en
     kind = Column(String, default="post")                     # short | long | hot | digest | post | article | report
     external_id = Column(String, unique=True, nullable=False)  # yt:<video_id>, tg:<lang>:<message_id>, reddit:<id>, plan:<slug>
@@ -57,7 +61,7 @@ class Publication(Base):
     published_at = Column(DateTime, nullable=True)
     error = Column(Text, default="")
     meta = Column(Text, default="{}")                         # JSON: формат, плейлист, вакансии, сабреддит…
-    origin = Column(String, default="pipeline")               # pipeline | cloud | manual
+    origin = Column(String, default="pipeline")               # pipeline | cloud | manual | routine
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
