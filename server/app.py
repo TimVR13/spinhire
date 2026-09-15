@@ -767,23 +767,6 @@ class Event(Base):
     category = Column(String, default="")     # конференция / выставка / аффилейт-встреча
     promo = Column(String, default="")        # промокод или условие скидки на билет
     created_at = Column(DateTime, default=datetime.utcnow)
-    # Своя страница у каждого выпуска (/event/<slug>) и поля, которые ведёт краулер
-    # календаря (server/events_crawler.py); ручные события — source == "".
-    slug = Column(String, default="", index=True)
-    source = Column(String, default="")        # "thegamblest" | "" (добавлено руками)
-    source_url = Column(String, default="")
-    city_en = Column(String, default="")       # Lisbon — для английской версии и фото города
-    country_en = Column(String, default="")    # Portugal
-    country_iso = Column(String, default="")   # PT
-    venue = Column(String, default="")         # адрес площадки для карты
-    organizer = Column(String, default="")
-    organizer_url = Column(String, default="")
-    socials = Column(Text, default="")         # JSON: ссылки на соцсети организатора
-    cover_src = Column(String, default="")     # афиша у источника (для справки в админке)
-    sub_events = Column(Text, default="")      # JSON: сайд-ивенты по дням
-    description_en = Column(Text, default="")  # оригинал описания; description — русский перевод
-    og_image = Column(String, default="")      # /img/events/og/<slug>.jpg — печёт event_covers
-    updated_at = Column(DateTime, default=datetime.utcnow)
 
 
 # Тарифы. Базовая цена одной вакансии выровнена по рынку iGaming-джоб-бордов
