@@ -6751,6 +6751,7 @@ def seo_landing(request: Request, slug: str, db: Session = Depends(db_session)):
 # ---------- sitemap (динамический, включает живые вакансии) ----------
 
 ARTICLE_FILES = {
+    "zarplata-v-vakansiyah-igaming-9-procentov": "post-zarplata-v-vakansiyah-igaming-9-procentov.html",
     "rabota-na-malte-igaming": "post-rabota-na-malte-igaming.html",
     "luchshie-saity-vakansiy-igaming": "post-luchshie-saity-vakansiy-igaming.html",
     "salaries-igaming-2026": "post-salaries-igaming-2026.html",

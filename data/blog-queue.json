@@ -26,7 +26,8 @@
       "kind": "data",
       "not_before": "2026-09-15",
       "angle": "История одной цифры. Данные: https://spinhire.io/api/market-stats (with_salary, with_salary_pct), https://spinhire.io/api/market-history (salary_pct по месяцам: август → сентябрь). Пройди https://spinhire.io/api/jobs постранично (page=1..pages, limit=50) и посчитай долю вакансий с salary_min по направлениям (category), странам (country) и формату (format); назови 5–7 компаний, которые вилки указывают чаще всех. Крючок: Директива ЕС 2023/970 о прозрачности оплаты труда, срок переноса в национальное право — 7 июня 2026; ПЕРЕД публикацией проверь дату через WebFetch на eur-lex.europa.eu, если не подтверждается — формулируй осторожно («вступает в силу в 2026 году»). Мальта, Кипр, Польша — хабы индустрии и страны ЕС. ПРАВИЛА СТАТЬИ-ЦИФРЫ: все числа — только из указанных API на день выпуска, ничего не выдумывать и не округлять до «примерно»; в тексте дата снимка; таблица с цифрами; H2 «Методология и данные» (источник — индекс SpinHire, обновление каждые 6 часов, лицензия CC BY 4.0, ссылки https://spinhire.io/market и https://spinhire.io/market.csv); в конце строка «Как цитировать: «По данным джоб-борда SpinHire, на {дата} …» — https://spinhire.io/market». Ссылки на /company/{slug} и /profession/{slug}, где уместно.",
-      "status": "queued"
+      "status": "published",
+      "date": "2026-09-15"
     },
     {
       "slug": "udalenka-v-igaming-v-cifrah-2026",
