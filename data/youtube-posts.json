@@ -372,5 +372,22 @@
   "slug": "country-manager",
   "featured": [],
   "uploaded_at": "2026-09-14T14:21:51Z"
+ },
+ {
+  "id": "2026-09-17-morning",
+  "batch_id": null,
+  "video_id": "i8ZnHJj2bUg",
+  "url": "https://youtube.com/shorts/i8ZnHJj2bUg",
+  "format": "hot_jobs",
+  "playlist": "jobs",
+  "title": "Работа в iGaming: 3 вакансии с зарплатой до $18 350 — топ за 17 сентября",
+  "publish_at": "2026-09-17T07:00:00Z",
+  "slug": null,
+  "featured": [
+   "https://spinhire.io/job/10738",
+   "https://spinhire.io/job/10689",
+   "https://spinhire.io/job/10721"
+  ],
+  "uploaded_at": "2026-09-15T04:23:15Z"
  }
 ]
