@@ -308,12 +308,59 @@
   .how-col li p { color: var(--ink-dim); font-size: 0.92rem; }
   .how-col .btn { margin-top: var(--sp-5); }
 
-  .salary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-3); }
-  .salary-tile { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-4) var(--sp-5); background: var(--bg-deep); }
-  .salary-tile .role { font-weight: 700; font-size: 0.9rem; display: block; margin-bottom: var(--sp-1); }
-  .salary-tile .range { font-family: var(--font-display); font-weight: 800; color: var(--yellow); font-size: 1.05rem; white-space: nowrap; }
-  .salary-tile .geo { color: var(--ink-faint); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; }
-  .salary-ico { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; float: right; margin: 0 0 6px 10px; box-shadow: 0 6px 16px oklch(0 0 0 / 0.4); }
+  /* Зарплаты: без картинок — цифра как герой, шкала под ней, призрачный номер в углу.
+     --lo/--hi — границы вилки в процентах от общей шкалы €15K, задаются в разметке. */
+  .salary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: var(--sp-3); }
+  .salary-tile {
+    --sal-c: var(--acid);
+    position: relative; isolation: isolate; overflow: hidden;
+    display: flex; flex-direction: column; gap: 5px;
+    border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-deep);
+    padding: 18px 20px 16px;
+  }
+  .salary-tile.top { --sal-c: var(--pink); }
+  .salary-tile::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background: radial-gradient(140% 100% at 0% 100%, color-mix(in oklch, var(--sal-c) 13%, transparent), transparent 58%);
+    opacity: 0; transition: opacity 0.45s var(--ease);
+  }
+  .salary-tile:hover { transform: translateY(-2px); border-color: color-mix(in oklch, var(--sal-c) 38%, var(--line)); box-shadow: var(--bezel), var(--shadow-lift); }
+  .salary-tile:hover::before { opacity: 1; }
+  .sal-idx {
+    position: absolute; right: 14px; top: 9px; pointer-events: none; user-select: none;
+    font-family: var(--font-display); font-weight: 800; font-size: 2.6rem; line-height: 1; letter-spacing: -0.05em;
+    color: transparent; -webkit-text-stroke: 1px color-mix(in oklch, var(--ink) 20%, transparent);
+    transition: -webkit-text-stroke-color 0.35s var(--ease);
+  }
+  .salary-tile:hover .sal-idx { -webkit-text-stroke-color: color-mix(in oklch, var(--sal-c) 60%, transparent); }
+  .salary-tile .role { font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-dim); padding-right: 60px; min-height: 2.4em; }
+  .salary-tile .range {
+    font-family: var(--font-display); font-weight: 800; color: var(--ink);
+    font-size: clamp(1.75rem, 2.2vw, 2.15rem); line-height: 1; letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums; white-space: nowrap; margin-top: 2px;
+  }
+  .salary-tile .range small { font-size: 0.58em; font-weight: 600; color: var(--sal-c); margin-right: 2px; vertical-align: 0.12em; letter-spacing: 0; }
+  .sal-bar {
+    position: relative; display: block; height: 6px; border-radius: 99px; margin: 12px 0 9px;
+    background:
+      linear-gradient(90deg, transparent calc(33.33% - 1px), color-mix(in oklch, var(--ink) 22%, transparent) calc(33.33% - 1px) calc(33.33% + 1px), transparent calc(33.33% + 1px)),
+      linear-gradient(90deg, transparent calc(66.66% - 1px), color-mix(in oklch, var(--ink) 22%, transparent) calc(66.66% - 1px) calc(66.66% + 1px), transparent calc(66.66% + 1px)),
+      color-mix(in oklch, var(--ink) 9%, transparent);
+  }
+  .sal-bar::before, .sal-bar::after {
+    content: ""; position: absolute; top: 0; bottom: 0; border-radius: 99px;
+    left: calc(var(--lo) * 1%); width: calc((var(--hi) - var(--lo)) * 1%);
+    background: linear-gradient(90deg, color-mix(in oklch, var(--sal-c) 55%, transparent), var(--sal-c));
+    transform-origin: left center;
+    transition: transform 0.9s var(--ease-spring) calc(var(--io-i, 0) * 70ms + 0.15s), opacity 0.4s var(--ease);
+  }
+  .sal-bar::after { top: -8px; bottom: -8px; filter: blur(7px); opacity: 0.45; }
+  .salary-tile:hover .sal-bar::after { opacity: 0.9; }
+  .salary-tile.io-reveal:not(.io-in) .sal-bar::before,
+  .salary-tile.io-reveal:not(.io-in) .sal-bar::after { transform: scaleX(0); }
+  .salary-tile .geo { color: var(--ink-faint); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; }
+  :root[data-theme="light"] .sal-bar::after { opacity: 0.22; }   /* на белом размытое свечение читается как грязь */
+  :root[data-theme="light"] .salary-tile:hover .sal-bar::after { opacity: 0.45; }
   .mkt-card__head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
   .mkt-ico { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; }
 
@@ -456,7 +503,7 @@
     .salary-strip { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
       margin-inline: calc(-1 * var(--sp-5)); padding: 2px var(--sp-5) 6px; scrollbar-width: none; }
     .salary-strip::-webkit-scrollbar { display: none; }
-    .salary-tile { flex: 0 0 62%; scroll-snap-align: start; }
+    .salary-tile { flex: 0 0 70%; scroll-snap-align: start; }
     .salary-tile:nth-child(n+7) { display: none; }
 
     /* как это работает: только шаги, без расшифровки */
@@ -740,14 +787,14 @@
         <a class="link-more" href="/jobs.html#salaries">Полный гид по зарплатам →</a>
       </div>
       <div class="salary-strip">
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-crown.webp" alt="" loading="lazy" width="40" height="40"><span class="role">VIP-менеджер</span><span class="range">€3–5K</span><br><span class="geo">Кипр · Мальта</span></div>
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-star.webp" alt="" loading="lazy" width="40" height="40"><span class="role">Аффилейт-менеджер</span><span class="range">€2.5–4.5K</span><br><span class="geo">Удалёнка · ЕС</span></div>
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-bell.webp" alt="" loading="lazy" width="40" height="40"><span class="role">AML / Комплаенс</span><span class="range">€4–6K</span><br><span class="geo">Мальта · Гибралтар</span></div>
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-seven.webp" alt="" loading="lazy" width="40" height="40"><span class="role">Разработчик слотов</span><span class="range">€4–7K</span><br><span class="geo">Удалёнка · Варшава</span></div>
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-horseshoe.webp" alt="" loading="lazy" width="40" height="40"><span class="role">Трейдер спортбука</span><span class="range">€2.5–3.5K</span><br><span class="geo">Лимассол</span></div>
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-cherry.webp" alt="" loading="lazy" width="40" height="40"><span class="role">Медиабайер</span><span class="range">€2.5–5K</span><br><span class="geo">Удалёнка · + %</span></div>
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-diamond.webp" alt="" loading="lazy" width="40" height="40"><span class="role">Продакт-менеджер</span><span class="range">€4.5–7K</span><br><span class="geo">Мальта · Кипр</span></div>
-        <div class="salary-tile"><img class="salary-ico" src="img/sym-bar.webp" alt="" loading="lazy" width="40" height="40"><span class="role">Head of Casino</span><span class="range">€8–15K</span><br><span class="geo">Мальта · Кюрасао</span></div>
+        <div class="salary-tile" style="--lo:20.0;--hi:33.3"><span class="sal-idx" aria-hidden="true">01</span><span class="role">VIP-менеджер</span><span class="range"><small>€</small>3–5K</span><span class="sal-bar" aria-hidden="true"></span><span class="geo">Кипр · Мальта</span></div>
+        <div class="salary-tile" style="--lo:16.7;--hi:30.0"><span class="sal-idx" aria-hidden="true">02</span><span class="role">Аффилейт-менеджер</span><span class="range"><small>€</small>2.5–4.5K</span><span class="sal-bar" aria-hidden="true"></span><span class="geo">Удалёнка · ЕС</span></div>
+        <div class="salary-tile" style="--lo:26.7;--hi:40.0"><span class="sal-idx" aria-hidden="true">03</span><span class="role">AML / Комплаенс</span><span class="range"><small>€</small>4–6K</span><span class="sal-bar" aria-hidden="true"></span><span class="geo">Мальта · Гибралтар</span></div>
+        <div class="salary-tile" style="--lo:26.7;--hi:46.7"><span class="sal-idx" aria-hidden="true">04</span><span class="role">Разработчик слотов</span><span class="range"><small>€</small>4–7K</span><span class="sal-bar" aria-hidden="true"></span><span class="geo">Удалёнка · Варшава</span></div>
+        <div class="salary-tile" style="--lo:16.7;--hi:23.3"><span class="sal-idx" aria-hidden="true">05</span><span class="role">Трейдер спортбука</span><span class="range"><small>€</small>2.5–3.5K</span><span class="sal-bar" aria-hidden="true"></span><span class="geo">Лимассол</span></div>
+        <div class="salary-tile" style="--lo:16.7;--hi:33.3"><span class="sal-idx" aria-hidden="true">06</span><span class="role">Медиабайер</span><span class="range"><small>€</small>2.5–5K</span><span class="sal-bar" aria-hidden="true"></span><span class="geo">Удалёнка · + %</span></div>
+        <div class="salary-tile" style="--lo:30.0;--hi:46.7"><span class="sal-idx" aria-hidden="true">07</span><span class="role">Продакт-менеджер</span><span class="range"><small>€</small>4.5–7K</span><span class="sal-bar" aria-hidden="true"></span><span class="geo">Мальта · Кипр</span></div>
+        <div class="salary-tile top" style="--lo:53.3;--hi:100.0"><span class="sal-idx" aria-hidden="true">08</span><span class="role">Head of Casino</span><span class="range"><small>€</small>8–15K</span><span class="sal-bar" aria-hidden="true"></span><span class="geo">Мальта · Кюрасао</span></div>
       </div>
     </div>
   </section>
