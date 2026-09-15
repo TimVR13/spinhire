@@ -379,7 +379,7 @@
           marks.push(w > 0 ? el('path', { d: d, 'class': cls }, svg) : null);
           var holder = svg;
           if (links && r.href) { holder = el('a', { href: r.href, target: '_blank', rel: 'noopener' }, svg); }
-          text(holder, x0 - 8, y + rh / 2 + 4, trunc(r.label, lw - 4), 'lbl', 'end');
+          text(holder, x0 - 8, y + rh / 2 + 4, trunc(r.label, lw - 14), 'lbl', 'end');
           text(svg, x0 + w + 6, y + rh / 2 + 4, fmt(r.value), 'val', 'start');
           var hit = el('rect', { x: 0, y: y, width: W, height: rh, 'class': 'hit' }, svg);
           hit.addEventListener('pointermove', function (e) { var b = svg.getBoundingClientRect(); focusAt(i, e.clientX - b.left, y + rh / 2); });
@@ -411,6 +411,8 @@
         btn.addEventListener('click', function () { var on = btn.getAttribute('aria-pressed') !== 'true'; btn.setAttribute('aria-pressed', on); plot.hidden = on; tbl.hidden = !on; btn.textContent = on ? 'график' : 'таблица'; });
       });
       var t; window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(function () { figs.forEach(draw); }, 120); });
+      // подписи обрезаются по ширине текста, а Golos догружается позже первого рендера — перемеряем после шрифтов
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { figs.forEach(draw); });
       // смена темы кабинета перерисовывает: цвета легенды и подсказок берутся из CSS-переменных
       new MutationObserver(function () { figs.forEach(function (f) { var lg = f.querySelector('.viz__legend'); if (lg) lg.remove(); draw(f); }); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-ws-theme'] });
     })();
