@@ -402,5 +402,18 @@
   "slug": null,
   "featured": [],
   "uploaded_at": "2026-09-15T09:22:29Z"
+ },
+ {
+  "id": "2026-09-20-evening",
+  "batch_id": "prof-payments-manager",
+  "video_id": "Rz98WBDMR4c",
+  "url": "https://youtube.com/shorts/Rz98WBDMR4c",
+  "format": "profession",
+  "playlist": "profession",
+  "title": "Кто такой менеджер платежей в iGaming: обязанности, зарплата, как стать | профессии гемблинга",
+  "publish_at": "2026-09-20T17:00:00Z",
+  "slug": "payments-manager",
+  "featured": [],
+  "uploaded_at": "2026-09-15T10:28:44Z"
  }
 ]

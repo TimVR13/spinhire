@@ -129,7 +129,10 @@
   "theme": "emerald",
   "mp4": "out/prof-payments-manager.mp4",
   "built_at": "2026-09-11T11:48:41Z",
-  "status": "ready"
+  "status": "used",
+  "published_as": "2026-09-20-evening",
+  "video_id": "Rz98WBDMR4c",
+  "used_at": "2026-09-15T10:28:44Z"
  },
  {
   "id": "prof-responsible-gaming-officer",
