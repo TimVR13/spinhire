@@ -20,6 +20,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Session
 
+from server.langs import lang_slug
 from server.app import (Application, BASE_URL, Base, Job, REQUIRE_VERIFY,
                         Resume, SIGNUP_COIN_BONUS, User, _signup_source,
                         db_session, dest_for, get_user, grant_launch_promo,
@@ -91,10 +92,10 @@ def needs_company_name(row: "CompanyClaim") -> bool:
 
 
 def claim_url(row: "CompanyClaim") -> str:
-    """Ссылка в языке компании: /uk/claim/… отдаёт HR страницу целиком украинской
+    """Ссылка в языке компании: /ua/claim/… отдаёт HR страницу целиком украинской
     (шапка, кнопки, футер), русский — базовый язык сайта и префикса не требует."""
     lang = (row.lang or "ru").lower()
-    prefix = "" if lang == "ru" else f"/{lang}"
+    prefix = "" if lang == "ru" else f"/{lang_slug(lang)}"
     return f"{(BASE_URL or 'https://spinhire.io').rstrip('/')}{prefix}/claim/{row.token}"
 
 

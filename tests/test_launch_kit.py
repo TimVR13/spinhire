@@ -211,8 +211,28 @@ class LanguageCleanlinessTests(unittest.TestCase):
         # /de/blog вёл на русский блог: префикс терялся вместе с читателем
         response = client.get("/de/blog", follow_redirects=False)
         self.assertEqual(response.headers["location"], "/de/blog.html")
-        legacy = client.get("/uk/post-aml-officer-career.html", follow_redirects=False)
-        self.assertEqual(legacy.headers["location"], "/uk/blog/aml-officer-career")
+        legacy = client.get("/ua/post-aml-officer-career.html", follow_redirects=False)
+        self.assertEqual(legacy.headers["location"], "/ua/blog/aml-officer-career")
+
+    def test_ukrainian_lives_under_ua(self):
+        # Владелец 15.09.2026: украинская версия — /ua/, а не /uk/ (код страны, не языка).
+        # Код языка внутри остаётся uk: hreflang и словари принимают только его.
+        page = client.get("/ua/")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn('<html lang="uk">', page.text)
+        self.assertIn('hreflang="uk" href="https://spinhire.io/ua/"', page.text)
+        self.assertIn('<link rel="canonical" href="https://spinhire.io/ua/">', page.text)
+        self.assertNotIn("spinhire.io/uk/", page.text)
+        self.assertIn('href="/ua/jobs"', page.text)          # внутренние ссылки держат язык
+        german = client.get("/de/").text
+        self.assertIn('hreflang="uk" href="/ua/"', german)     # переключатель в подвале
+        legacy = client.get("/uk/jobs?q=aml", follow_redirects=False)
+        self.assertEqual(legacy.status_code, 301)
+        self.assertEqual(legacy.headers["location"], "/ua/jobs?q=aml")
+        self.assertEqual(client.get("/uk", follow_redirects=False).headers["location"], "/ua/")
+        sitemap = client.get("/sitemap.xml").text
+        self.assertIn("https://spinhire.io/ua/", sitemap)
+        self.assertNotIn("spinhire.io/uk/", sitemap)
 
     def test_sentences_with_a_date_are_localized(self):
         # дата внутри фразы каждый день новая — в словаре она стоит как @

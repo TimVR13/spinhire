@@ -652,9 +652,11 @@ def crawl_casino_seed_registry():
 try:  # как часть пакета: from server import crawler
     from .salary import format_salary, parse_salary
     from . import terms as _terms
+    from .langs import lang_slug as _lang_slug
 except ImportError:  # как скрипт: python server/crawler.py
     from salary import format_salary, parse_salary
     import terms as _terms
+    from langs import lang_slug as _lang_slug
 
 
 def _clean_text(raw):
@@ -2357,7 +2359,7 @@ def _with_lang_versions(urls):
         out.append(url)
         if url.startswith("https://spinhire.io/"):
             path = url[len("https://spinhire.io"):]
-            out += [f"https://spinhire.io/{code}{path}" for code in INDEXNOW_LANGS]
+            out += [f"https://spinhire.io/{_lang_slug(code)}{path}" for code in INDEXNOW_LANGS]
     return out
 
 

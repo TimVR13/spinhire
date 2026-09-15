@@ -41,12 +41,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const PATH_LANGS = { en:'English', de:'Deutsch', pl:'Polski', fr:'Français', es:'Español',
                        pt:'Português', it:'Italiano', el:'Ελληνικά', ro:'Română',
                        bg:'Български', uk:'Українська' };
+  // В адресе украинская версия — /ua/ (код страны, так его читает украинец), хотя код
+  // языка остаётся uk: словари, hreflang и мета sh-lang приходят с сервера именно с ним.
+  const LANG_SLUGS = { uk: 'ua' };
+  const langSlug = code => LANG_SLUGS[code] || code;
   const langMeta = document.querySelector('meta[name="sh-lang"]');
   const hostMode = !!(langMeta && langMeta.dataset.mode === 'host');
   const pathMode = !!(langMeta && langMeta.dataset.mode === 'path');
   const LANG_HOSTS = { en: 'spinhire.io', ru: 'ru.spinhire.io', uk: 'ua.spinhire.io' };
-  const stripLang = p => p.replace(new RegExp('^/(' + Object.keys(PATH_LANGS).join('|') + ')(?=/|$)'), '') || '/';
-  const langUrl = code => (code === 'ru' ? '' : '/' + code) + stripLang(location.pathname) + location.search;
+  const stripLang = p => p.replace(new RegExp('^/(' + Object.keys(PATH_LANGS).map(langSlug).join('|') + ')(?=/|$)'), '') || '/';
+  const langUrl = code => (code === 'ru' ? '' : '/' + langSlug(code)) + stripLang(location.pathname) + location.search;
   const savedUiLang = localStorage.getItem('uiLanguage');
   const browserUiLang = (navigator.languages || [navigator.language || 'ru'])
     .map(lang => String(lang).toLowerCase().split('-')[0])

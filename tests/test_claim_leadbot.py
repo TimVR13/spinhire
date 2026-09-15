@@ -93,9 +93,9 @@ class ClaimFlowTests(unittest.TestCase):
             row = claim.get_or_create_claim(db, self.company, "uk")
             db.commit()
             token = row.token
-            self.assertIn(f"/uk/claim/{token}", claim.claim_url(row))
+            self.assertIn(f"/ua/claim/{token}", claim.claim_url(row))
         with TestClient(app) as client:
-            page = client.get(f"/uk/claim/{token}")
+            page = client.get(f"/ua/claim/{token}")
             self.assertEqual(page.status_code, 200)
             self.assertIn("Забрати вакансії", page.text)
 

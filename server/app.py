@@ -31,6 +31,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from server import terms
+from server.langs import LANG_SLUGS, lang_slug, slug_lang
 from server.mail_i18n import mail_t
 
 
@@ -126,6 +127,8 @@ PATH_LANGS = {
     "ro": "Română", "bg": "Български", "uk": "Українська",
 }
 LANG_LABELS = {"ru": "Русский", **PATH_LANGS}
+# Сегмент адреса и код языка — не одно и то же: украинская версия живёт под /ua/,
+# а код языка остаётся uk (словари, hreflang, og:locale) — см. server/langs.py.
 
 engine = create_engine(f"sqlite:///{DB_PATH}",
                        connect_args={"check_same_thread": False, "timeout": 30},
@@ -1745,7 +1748,7 @@ def ai_dashboard(days: int = 14) -> dict:
             return "llms.txt"
         seg = path.split("/")
         first = "/" + (seg[1] if len(seg) > 1 else "")
-        if first.strip("/") in PATH_LANGS:
+        if slug_lang(first.strip("/")) in PATH_LANGS:
             first = "/" + (seg[2] if len(seg) > 2 else "") + " (" + seg[1] + ")"
         return first or "/"
 
@@ -2327,7 +2330,7 @@ def translate_html(html_text: str, lang: str, prefix_urls: bool = False) -> str:
         if key in _LD_URL_KEYS and prefix_urls and node.startswith("https://spinhire.io/"):
             path_part = node[len("https://spinhire.io"):]
             if not _NO_PREFIX_RE.match(path_part) and not _LANG_PREFIX_RE.match(path_part):
-                return f"https://spinhire.io/{lang}{path_part}"
+                return f"https://spinhire.io/{lang_slug(lang)}{path_part}"
             return node
         if not _CYR_RE.search(node):
             return node
@@ -2385,7 +2388,9 @@ def i18n_dictionary(lang: str):
                         headers={"Cache-Control": "public, max-age=3600"})
 
 
-_LANG_PREFIX_RE = re.compile(r"^/(" + "|".join(PATH_LANGS) + r")(/.*)?$")
+# В адресе стоит сегмент языка (у украинского — ua); старый /uk/… ловим ради 301 в language_layer.
+_LANG_SLUG_ALTS = "|".join(sorted({lang_slug(code) for code in PATH_LANGS} | set(LANG_SLUGS)))
+_LANG_PREFIX_RE = re.compile(r"^/(" + _LANG_SLUG_ALTS + r")(/.*)?$")
 # ссылки, которые не должны получать языковой префикс
 _NO_PREFIX_RE = re.compile(r"^(?:https?:|mailto:|tel:|#|/(?:css|js|img|assets|api|static|"
                            r"favicon|robots|sitemap|indexnow|llms)\b|/[^/]+\.(?:xml|txt|md|jpg|png|svg|webp|ico|css|js))")
@@ -2398,7 +2403,7 @@ def _prefix_links(text: str, lang: str) -> str:
         attr, url = m.group(1), m.group(2)
         if _NO_PREFIX_RE.match(url) or _LANG_PREFIX_RE.match(url):
             return m.group(0)
-        return f'{attr}="/{lang}{url}"'
+        return f'{attr}="/{lang_slug(lang)}{url}"'
     return _HREF_RE.sub(repl, text)
 
 
@@ -2420,7 +2425,7 @@ def _lang_links(path: str, current: str) -> str:
     items = [("ru", "Русский")] + list(PATH_LANGS.items())
     links = []
     for code, label in items:
-        href = path if code == "ru" else f"/{code}{path}"
+        href = path if code == "ru" else f"/{lang_slug(code)}{path}"
         if code == current:
             links.append(f'<b lang="{code}">{label}</b>')
         else:
@@ -2463,10 +2468,11 @@ def _hreflang_block(path: str, canonical_lang: str) -> str:
     site = "https://spinhire.io"
     codes = list(PATH_LANGS) if _translated_path(path) else ["en"]
     links = [f'<link rel="alternate" hreflang="ru" href="{site}{path}">']
-    links += [f'<link rel="alternate" hreflang="{code}" href="{site}/{code}{path}">'
+    links += [f'<link rel="alternate" hreflang="{code}" href="{site}/{lang_slug(code)}{path}">'
               for code in codes]
     links.append(f'<link rel="alternate" hreflang="x-default" href="{site}/en{path}">')
-    canonical = f"{site}/{canonical_lang}{path}" if canonical_lang != "ru" else f"{site}{path}"
+    canonical = (f"{site}/{lang_slug(canonical_lang)}{path}" if canonical_lang != "ru"
+                 else f"{site}{path}")
     links.append(f'<link rel="canonical" href="{canonical}">')
     return "".join(links)
 
@@ -2494,7 +2500,7 @@ def _localize_og(text: str, lang: str) -> str:
         path = m.group(2)
         if _NO_PREFIX_RE.match(path) or _LANG_PREFIX_RE.match(path):
             return m.group(0)
-        return f"{m.group(1)}/{lang}{path}{m.group(3)}"
+        return f"{m.group(1)}/{lang_slug(lang)}{path}{m.group(3)}"
 
     return _OG_URL_RE.sub(repl, text, count=1)
 
@@ -2506,8 +2512,15 @@ async def language_layer(request: Request, call_next):
     prefix_lang = ""
     match = _LANG_PREFIX_RE.match(path)
     if match:
-        prefix_lang = match.group(1)
+        slug = match.group(1)
         inner = match.group(2) or "/"
+        if slug in LANG_SLUGS:
+            # старый адрес /uk/… — постоянный редирект на /ua/…, строка запроса сохраняется
+            target = f"/{LANG_SLUGS[slug]}{inner}"
+            if request.url.query:
+                target += "?" + request.url.query
+            return RedirectResponse(target, status_code=301)
+        prefix_lang = slug_lang(slug)
         request.scope["path"] = inner
         request.scope["raw_path"] = inner.encode()
     lang = prefix_lang or host_lang(request.headers.get("host", ""))
@@ -3220,7 +3233,7 @@ def _llms_text_ru(ctx: dict) -> str:
         "- [Срезы по странам, направлениям и языкам](https://spinhire.io/jobs/browse) — например, "
         "https://spinhire.io/jobs/malta, https://spinhire.io/jobs/malta/compliance-aml, "
         "https://spinhire.io/jobs/remote, https://spinhire.io/jobs/german-speaking — с живыми цифрами и вилками",
-        "- Английская версия: https://spinhire.io/en/ (ещё 10 языков: /de/, /pl/, /uk/, /fr/, /es/, /pt/, /it/, /el/, /ro/, /bg/)",
+        "- Английская версия: https://spinhire.io/en/ (ещё 10 языков: /de/, /pl/, /ua/, /fr/, /es/, /pt/, /it/, /el/, /ro/, /bg/)",
         "",
         "## Машиночитаемые форматы",
         "",
@@ -3266,7 +3279,7 @@ def _llms_text_ru(ctx: dict) -> str:
 
 def _llms_text_en(ctx: dict, lang: str = "en") -> str:
     today = human_date(ctx["today"], "en")
-    base = f"https://spinhire.io/{lang}"
+    base = f"https://spinhire.io/{lang_slug(lang)}"
     out = [
         "# SpinHire",
         "",
@@ -3306,7 +3319,7 @@ def _llms_text_en(ctx: dict, lang: str = "en") -> str:
         f"- [For employers]({base}/post-job) — job posting and pricing",
         f"- [Jobs by country, department and language]({base}/jobs/browse) — e.g. {base}/jobs/malta, "
         f"{base}/jobs/malta/compliance-aml, {base}/jobs/remote, {base}/jobs/german-speaking, each with live counts and salary benchmarks",
-        "- Russian original: https://spinhire.io/ ; other languages: /de/, /pl/, /uk/, /fr/, /es/, /pt/, /it/, /el/, /ro/, /bg/",
+        "- Russian original: https://spinhire.io/ ; other languages: /de/, /pl/, /ua/, /fr/, /es/, /pt/, /it/, /el/, /ro/, /bg/",
         "",
         "## Machine-readable formats",
         "",
@@ -3450,7 +3463,7 @@ def profession_markdown(slug: str, request: Request, db: Session = Depends(db_se
         out.append("")
     for item in role.get("faq") or []:
         out += [f"## {item.get('q', '')}", "", str(item.get("a", "")), ""]
-    prefix = "" if lang == "ru" else f"/{lang}"
+    prefix = "" if lang == "ru" else f"/{lang_slug(lang)}"
     out.append(f"{labels['source']}: https://spinhire.io{prefix}/profession/{slug} — {labels['brand']}.")
     out.append("")
     return _md_response("\n".join(out))
@@ -8252,7 +8265,7 @@ def sitemap(db: Session = Depends(db_session)):
         clean = f"/{path}" if path else ""
         codes = list(PATH_LANGS) if _translated_path(clean or "/") else ["en"]
         out = [f'<xhtml:link rel="alternate" hreflang="ru" href="{base}{clean}"/>']
-        out += [f'<xhtml:link rel="alternate" hreflang="{code}" href="{base}/{code}{clean}"/>'
+        out += [f'<xhtml:link rel="alternate" hreflang="{code}" href="{base}/{lang_slug(code)}{clean}"/>'
                 for code in codes]
         out.append(f'<xhtml:link rel="alternate" hreflang="x-default" href="{base}/en{clean}"/>')
         return "".join(out)
@@ -8260,7 +8273,7 @@ def sitemap(db: Session = Depends(db_session)):
     rows = [f"  <url><loc>{base}/{p}</loc><priority>{pr}</priority>{_alts(p)}</url>"
             for p, pr in static]
     for code in PATH_LANGS:
-        rows += [f"  <url><loc>{base}/{code}/{p}</loc><priority>{max(float(pr) - 0.1, 0.1):.1f}</priority>"
+        rows += [f"  <url><loc>{base}/{lang_slug(code)}/{p}</loc><priority>{max(float(pr) - 0.1, 0.1):.1f}</priority>"
                  f"{_alts(p)}</url>" for p, pr in static
                  if code == "en" or _translated_path(f"/{p}" if p else "/")]
     job_rows = (db.query(Job.id, Job.posted_at, Job.created_at, Job.company_name)
