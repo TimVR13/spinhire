@@ -31,6 +31,6 @@ sleep 12
 echo "--- состояние"
 systemctl is-active spinhire.socket spinhire.service spinhire-worker.service spinhire-watchdog.timer | paste -sd' '
 curl -s -m 10 -o /dev/null -w "healthz %{http_code} %{time_total}s\n" http://127.0.0.1:8100/healthz
-systemctl show spinhire.service -p MemoryMax -p MemorySwapMax -p CPUWeight -p OOMScoreAdjust -p TimeoutStopUSec -p Environment | sed 's/SPINHIRE_SECRET=[^ ]*/SPINHIRE_SECRET=…/;s/TOKEN=[^ ]*/TOKEN=…/g;s/KEY=[^ ]*/KEY=…/g;s/PASSWORD=[^ ]*/PASSWORD=…/'
+systemctl show spinhire.service -p MemoryMax -p MemorySwapMax -p CPUWeight -p OOMScoreAdjust -p TimeoutStopUSec -p Environment | sed -E 's/(SECRET|TOKEN|KEY|PASSWORD)=[^ ]*/\1=…/g'
 echo "--- воркер"
 journalctl -u spinhire-worker.service -n 8 --no-pager -o cat
