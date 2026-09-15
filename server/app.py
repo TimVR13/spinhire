@@ -4979,9 +4979,6 @@ RESUME_SEARCH_SYNONYMS = {
     "английский": ("english",), "english": ("английск", "англійськ"),
     "фронтенд": ("frontend", "front-end"), "бэкенд": ("backend", "back-end"),
 }
-# Где совпало — столько и весит: слово из заголовка важнее слова из описания.
-RESUME_SEARCH_WEIGHTS = (("title", 100), ("skills", 40), ("languages", 25),
-                         ("employment_history", 12), ("about", 6))
 
 
 def resume_search_groups(q: str) -> list:
@@ -5038,34 +5035,51 @@ def search_snippet(text: str, pattern, radius: int = 70) -> Markup:
     return lead + highlight_search(piece, [pattern]) + trail
 
 
+def resume_skill_items(cv) -> list:
+    """Все навыки резюме по порядку (skill_list обрезан до 8 — для карточки)."""
+    return [s.strip() for s in (cv.skills or "").split(",") if s.strip()]
+
+
 def resume_search_score(cv, groups: list) -> dict | None:
     """Насколько резюме отвечает запросу. None — не отвечает (какое-то слово не нашлось).
 
-    score складывается из весов полей, где нашлось каждое слово; skills — навыки
-    в порядке «совпавшие первыми»; snippet — фрагмент описания или опыта, если
-    слово нашлось только там и работодатель иначе не поймёт, почему резюме в выдаче.
+    Главное — где нашлось слово: заголовок (100, +20 если с него начинается) >
+    навык (40 в первой четвёрке, 30 глубже) > язык (25) > опыт (12) > описание (6).
+    Сколько раз упомянуто — лишь довесок (+3 за каждое дополнительное поле), иначе
+    резюме с «SEO» в трёх абзацах обгоняло резюме с тегом SEO. skills — навыки
+    в порядке «совпавшие первыми», чтобы совпадение всегда было видно в карточке;
+    snippet — фрагмент опыта или описания, если слово нашлось только там.
     """
     score, snippet, snippet_where = 0, Markup(""), ""
+    items = resume_skill_items(cv)
+    title = (cv.title or "").strip()
     for pattern in groups:
-        gained = 0
-        for field, weight in RESUME_SEARCH_WEIGHTS:
-            if pattern.search(getattr(cv, field, "") or ""):
-                gained += weight
-        if not gained:
+        weights = []
+        if pattern.search(title):
+            weights.append(120 if pattern.match(title) else 100)
+        first_hit = next((i for i, skill in enumerate(items) if pattern.search(skill)), None)
+        if first_hit is not None:
+            weights.append(40 if first_hit < 4 else 30)
+        if pattern.search(cv.languages or ""):
+            weights.append(25)
+        if pattern.search(cv.employment_history or ""):
+            weights.append(12)
+        if pattern.search(cv.about or ""):
+            weights.append(6)
+        if not weights:
             return None
-        score += gained
-        visible = any(pattern.search(getattr(cv, field, "") or "")
-                      for field in ("title", "skills", "languages"))
-        if not visible and not snippet:
+        score += max(weights) + 3 * (len(weights) - 1)
+        # заголовок, навык и язык видны в карточке; опыт и описание — нет
+        if max(weights) < 25 and not snippet:
             for field, label in (("employment_history", "Совпадение в опыте работы"),
                                  ("about", "Совпадение в описании")):
                 snippet = search_snippet(getattr(cv, field, "") or "", pattern)
                 if snippet:
                     snippet_where = label
                     break
-    hits = [s for s in cv.skill_list if any(p.search(s) for p in groups)]
-    rest = [s for s in cv.skill_list if s not in hits]
-    return {"score": score, "skills": hits + rest, "hit": set(hits),
+    hits = [skill for skill in items if any(p.search(skill) for p in groups)]
+    rest = [skill for skill in items if skill not in hits]
+    return {"score": score, "skills": (hits + rest)[:8], "hit": set(hits),
             "snippet": snippet, "snippet_label": snippet_where}
 
 

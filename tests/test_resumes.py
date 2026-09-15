@@ -304,6 +304,10 @@ class ResumeSearchTests(unittest.TestCase):
              about="Sprint closeout and release notes"),
         dict(email="search-crm@test.invalid", title="CRM менеджер", skills="CRM, Customer.io",
              about="Удержание игроков", location="Варшава"),
+        dict(email="search-lead@test.invalid", title="Product Lead",
+             skills="Product, Ops, Launches, P&L, Hiring, Roadmaps, Analytics, Vendors, Localization, SEO",
+             about="On-page SEO for Tier-1 GEOs, SEO audits",
+             employment_history="Affiliate content: SEO for 5 projects"),
     )
 
     @classmethod
@@ -322,6 +326,7 @@ class ResumeSearchTests(unittest.TestCase):
                 db.flush()
                 resume = Resume(user_id=user.id, title=profile["title"], skills=profile["skills"],
                                 about=profile["about"], location=profile.get("location", "Remote"),
+                                employment_history=profile.get("employment_history", ""),
                                 experience_years=3, published=True, status="approved",
                                 consent_at="2026-09-01T00:00:00Z")
                 db.add(resume)
@@ -349,13 +354,19 @@ class ResumeSearchTests(unittest.TestCase):
         self.assertIn("Affiliate Manager", page)
         self.assertNotIn("Front-end Engineer", page)      # «closeout» — не SEO
         self.assertNotIn("CRM менеджер", page)
-        self.assertLess(page.index(f"/resume/{self.resume_ids['SEO Specialist']}"),
-                        page.index(f"/resume/{self.resume_ids['Affiliate Manager']}"))
+        # заголовок > навык (даже десятый по счёту, упомянутый ещё в опыте и описании) > описание
+        order = [page.index(f"/resume/{self.resume_ids[t]}")
+                 for t in ("SEO Specialist", "Product Lead", "Affiliate Manager")]
+        self.assertEqual(order, sorted(order))
         # совпадение только в описании — показываем фрагмент с подсветкой
         self.assertIn("Совпадение в описании", page)
         self.assertIn("<mark>SEO</mark> team", page)
-        self.assertIn('class="cv-skill hit">SEO<', page)
-        self.assertRegex(page, r"Найдено 2 из \d+ резюме")
+        # совпавший навык выносится в первую четвёрку тегов, даже если он десятый
+        lead_card = page[page.index(f"/resume/{self.resume_ids['Product Lead']}"):]
+        lead_card = lead_card[:lead_card.index("cv-arrow")]
+        self.assertIn('class="cv-skill hit">SEO<', lead_card)
+        self.assertNotIn("Совпадение в", lead_card)
+        self.assertRegex(page, r"Найдено 3 из \d+ резюме")
 
     def test_all_words_must_match(self):
         with TestClient(app) as client:
