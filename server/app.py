@@ -26,6 +26,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.templating import Jinja2Templates
 import bcrypt as _bcrypt
 from itsdangerous import BadSignature, URLSafeSerializer
+from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from server import terms
@@ -421,9 +422,7 @@ class Job(Base):
 
     @property
     def company_slug(self):
-        import re as _re
-        s = _re.sub(r"[^a-zа-я0-9]+", "-", (self.company_name or "").lower()).strip("-")
-        return s or "company"
+        return company_slug_of(self.company_name)
 
     @property
     def company_site(self):
@@ -656,6 +655,25 @@ class CompanyProfile(Base):
     size = Column(String, default="")
     source = Column(String, default="")
     updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+def company_slug_of(name: str) -> str:
+    """Слаг страницы /company/… — считается из имени, в базе не хранится."""
+    s = re.sub(r"[^a-zа-я0-9]+", "-", (name or "").lower()).strip("-")
+    return s or "company"
+
+
+def company_names_for_slug(db: Session, slug: str) -> list:
+    """Имена компании по слагу страницы.
+
+    Раньше страница компании грузила ВСЕ одобренные вакансии с описаниями
+    (5,5 тысяч строк, ~100 МБ на запрос) и фильтровала слаг в Python; под
+    нагрузкой 40 таких запросов раздували процесс до гигабайта. Разных имён
+    компаний около тысячи — сравниваем слаг по ним, а вакансии берём точечно.
+    """
+    names = [n for (n,) in db.query(Job.company_name)
+             .filter(Job.status == "approved").distinct()]
+    return [n for n in names if company_slug_of(n) == slug]
 
 
 def slugify_company(name: str) -> str:
@@ -2466,7 +2484,9 @@ async def language_layer(request: Request, call_next):
     text = body.decode("utf-8", "replace")
     inner_path = request.scope.get("path", path)
     if lang != "ru":
-        text = translate_html(text, lang, prefix_urls=bool(prefix_lang))
+        # словарный перевод страницы — секунды процессора на большой выдаче;
+        # на event loop он замораживал весь сервер, включая статику и robots.txt
+        text = await run_in_threadpool(translate_html, text, lang, prefix_urls=bool(prefix_lang))
         text = text.replace('<html lang="ru">', f'<html lang="{lang}">', 1)
         if prefix_lang:
             text = _prefix_links(text, lang)
@@ -2499,6 +2519,20 @@ async def language_layer(request: Request, call_next):
     headers = dict(response.headers)
     headers.pop("content-length", None)
     return HTMLResponse(text, status_code=response.status_code, headers=headers)
+
+
+@app.on_event("startup")
+async def _cap_sync_threads():
+    """Пул потоков для синхронных обработчиков.
+
+    По умолчанию 40; на двух ядрах под GIL это не ускоряет, зато 40 тяжёлых
+    запросов одновременно держат в памяти 40 копий выдачи — 15.09.2026 процесс
+    раздулся до 1 ГБ, утащил сервер в своп и 20 минут не отвечал. Лишние
+    запросы теперь ждут в очереди event loop, а не множат память.
+    """
+    import anyio
+    anyio.to_thread.current_default_thread_limiter().total_tokens = int(
+        os.environ.get("SPINHIRE_SYNC_THREADS", "12"))
 
 
 @app.on_event("startup")
@@ -3043,7 +3077,7 @@ def _job_markdown(job) -> str:
 
 
 def _llms_context(db: Session) -> dict:
-    jobs = db.query(Job).filter(Job.status == "approved").all()
+    jobs = db.query(Job).options(defer(Job.description)).filter(Job.status == "approved").all()
     directions: dict[str, int] = {}
     for job in jobs:
         directions[job.category or "Другое"] = directions.get(job.category or "Другое", 0) + 1
@@ -3258,8 +3292,9 @@ def job_markdown(job_id: str, db: Session = Depends(db_session)):
 
 @app.get("/company/{slug}.md")
 def company_markdown(slug: str, db: Session = Depends(db_session)):
-    jobs = [job for job in db.query(Job).filter(Job.status == "approved").all()
-            if job.company_slug == slug]
+    names = company_names_for_slug(db, slug)
+    jobs = (db.query(Job).filter(Job.status == "approved", Job.company_name.in_(names)).all()
+            if names else [])
     if not jobs:
         raise HTTPException(404)
     name = jobs[0].company_name
@@ -3332,7 +3367,8 @@ def profession_markdown(slug: str, request: Request, db: Session = Depends(db_se
 @app.get("/companies", response_class=HTMLResponse)
 def companies_page(request: Request, db: Session = Depends(db_session)):
     """Каталог работодателей: все компании с живыми вакансиями, счётчики из базы."""
-    jobs = (db.query(Job).filter(Job.status == "approved", Job.company_name != "")
+    jobs = (db.query(Job).options(defer(Job.description))
+            .filter(Job.status == "approved", Job.company_name != "")
             .order_by(Job.created_at.desc()).all())
     by_slug = {}
     for job in jobs:
@@ -3363,8 +3399,9 @@ def companies_html_redirect():
 
 @app.get("/company/{slug}", response_class=HTMLResponse)
 def company_page(slug: str, request: Request, db: Session = Depends(db_session)):
-    jobs = db.query(Job).filter(Job.status == "approved").all()
-    matched = [j for j in jobs if j.company_slug == slug]
+    names = company_names_for_slug(db, slug)
+    matched = (db.query(Job).filter(Job.status == "approved", Job.company_name.in_(names)).all()
+               if names else [])
     if not matched:
         raise HTTPException(404)
     company = matched[0].company_name
@@ -7671,12 +7708,14 @@ def sitemap(db: Session = Depends(db_session)):
         rows += [f"  <url><loc>{base}/{code}/{p}</loc><priority>{max(float(pr) - 0.1, 0.1):.1f}</priority>"
                  f"{_alts(p)}</url>" for p, pr in static
                  if code == "en" or _translated_path(f"/{p}" if p else "/")]
-    for j in db.query(Job).filter(Job.status == "approved").all():
+    job_rows = (db.query(Job.id, Job.posted_at, Job.created_at, Job.company_name)
+                .filter(Job.status == "approved").all())
+    for j in job_rows:
         lastmod = j.posted_at if re.match(r"^\d{4}-\d{2}-\d{2}$", j.posted_at or "") else j.created_at.strftime("%Y-%m-%d")
         rows.append(f'  <url><loc>{base}/job/{j.id}</loc>'
                     f'<lastmod>{lastmod}</lastmod>'
                     f'<priority>0.6</priority></url>')
-    company_slugs = sorted({j.company_slug for j in db.query(Job).filter(Job.status == "approved").all()})
+    company_slugs = sorted({company_slug_of(j.company_name) for j in job_rows})
     rows.extend(f'  <url><loc>{base}/company/{slug}</loc><priority>0.6</priority></url>'
                 for slug in company_slugs)
     xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
