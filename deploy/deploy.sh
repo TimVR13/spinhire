@@ -28,11 +28,13 @@ git merge-base --is-ancestor "$REMOTE" "$LOCAL" 2>/dev/null && exit 0
 if [ -f "$BAD" ] && [ "$(cat "$BAD")" = "$REMOTE" ]; then exit 0; fi   # карантин: ждём следующий коммит
 
 CHANGED=$(git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null)
-[ -f data/spinhire.db ] && cp -f data/spinhire.db /root/spinhire.db.bak 2>/dev/null
+# Бэкап живой БД (WAL) — только через sqlite backup API. Раньше здесь был cp: он снимал файл
+# без WAL и после reset копировал его ОБРАТНО поверх открытой базы — каждый деплой давал
+# «database disk image is malformed» и мог откатить checkpoint (15.09.2026).
+# База в .gitignore, git reset её не трогает; копию возвращаем только если файла вдруг нет.
+/opt/spinhire/venv/bin/python -c "import sqlite3; s=sqlite3.connect('data/spinhire.db'); d=sqlite3.connect('/root/spinhire.db.bak'); s.backup(d); d.close(); s.close()" 2>/dev/null
 git reset --hard origin/main >/dev/null 2>&1
-# БД в .gitignore, reset её не трогает; копию возвращаем только если файла вдруг нет.
-# Раньше копия перезаписывала живую базу при каждом деплое — при открытом WAL это риск порчи.
-[ -f data/spinhire.db ] || cp -f /root/spinhire.db.bak data/spinhire.db 2>/dev/null
+[ -s data/spinhire.db ] || cp -f /root/spinhire.db.bak data/spinhire.db 2>/dev/null
 
 if ! echo "$CHANGED" | grep -qE "^(server/|requirements\.txt|deploy/|server\.json|data/professions\.json)"; then
   echo "$(now) deployed (no restart, content only) -> $REMOTE"; exit 0
