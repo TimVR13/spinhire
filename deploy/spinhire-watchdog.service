@@ -1,0 +1,7 @@
+[Unit]
+Description=SpinHire watchdog: heals the web process, reports memory trouble
+
+[Service]
+Type=oneshot
+ExecStart=/opt/spinhire/deploy/spinhire-watchdog.sh run
+Nice=-5

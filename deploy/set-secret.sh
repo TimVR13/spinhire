@@ -29,5 +29,10 @@ PY
 else
   printf 'Environment=%s=%s\n' "$NAME" "$VALUE" >> "$FILE"
 fi
+# воркер (spinhire-worker.service) читает те же drop-in'ы через симлинки — рестартим оба
+if [ -d /etc/systemd/system/spinhire-worker.service.d ]; then
+  ln -sfn "$FILE" "/etc/systemd/system/spinhire-worker.service.d/$(basename "$FILE")"
+fi
 systemctl daemon-reload && systemctl restart spinhire
-sleep 3 && systemctl is-active spinhire && echo "$NAME сохранён, сервис перезапущен"
+systemctl is-enabled -q spinhire-worker.service 2>/dev/null && systemctl restart spinhire-worker.service
+sleep 3 && systemctl is-active spinhire && echo "$NAME сохранён, сервисы перезапущены"

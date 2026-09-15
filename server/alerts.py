@@ -22,7 +22,7 @@ from itsdangerous import BadSignature, URLSafeSerializer
 from sqlalchemy import Column, DateTime, ForeignKey, Integer
 from sqlalchemy.orm import Session
 
-from server.app import (Application, Base, Job, PATH_LANGS, Resume, SECRET, SessionLocal, User,
+from server.app import (Application, Base, Job, PATH_LANGS, ROOT, Resume, SECRET, SessionLocal, User,
                         add_notification, db_session, match_score, resend_send, resume_is_ready,
                         track, user_lang)
 from server.mail_i18n import mail_t
@@ -34,7 +34,10 @@ MIN_SCORE = int(os.environ.get("SPINHIRE_ALERTS_MIN_SCORE", "60"))   # поро�
 MAX_JOBS = 5
 MIN_GAP_HOURS = int(os.environ.get("SPINHIRE_ALERTS_GAP_HOURS", "72"))   # не чаще раза в три дня
 LOOKBACK_DAYS = MIN_GAP_HOURS // 24 + 1   # окно чуть шире паузы, чтобы ничего не проскочило
-CHECK_SECONDS = 3600
+CHECK_SECONDS = int(os.environ.get("SPINHIRE_ALERTS_CHECK_SECONDS", "3600"))
+# Когда был последний проход — переживает рестарт. Без метки каждый рестарт деплоя (их до
+# десятка в день) через 3 минуты запускал полный перебор резюме × вакансий.
+_STAMP = os.path.join(ROOT, "data", "alerts_last_pass")
 
 # Отдельный подписант: токен отписки не должен годиться в качестве сессионной куки.
 _unsub = URLSafeSerializer(SECRET, salt="alerts-unsubscribe")
@@ -61,13 +64,20 @@ def unsubscribe_token(user) -> str:
     return _unsub.dumps({"uid": user.id})
 
 
-def pick_jobs(db: Session, user, cv) -> list:
+def fresh_jobs(db: Session, now: datetime = None) -> list:
+    """Одобренные вакансии за окно рассылки — одна выборка на проход, а не на каждого подписчика."""
+    since = (now or datetime.utcnow()) - timedelta(days=LOOKBACK_DAYS)
+    return db.query(Job).filter(Job.status == "approved", Job.created_at >= since).order_by(Job.id).all()
+
+
+def pick_jobs(db: Session, user, cv, jobs: list = None) -> list:
     """[(percent, job)] — новые подходящие вакансии, лучшие первыми, не больше MAX_JOBS."""
-    since = datetime.utcnow() - timedelta(days=LOOKBACK_DAYS)
+    if jobs is None:
+        jobs = fresh_jobs(db)
     already = {jid for (jid,) in db.query(JobAlertSent.job_id).filter_by(user_id=user.id)}
     applied = {jid for (jid,) in db.query(Application.job_id).filter_by(user_id=user.id)}
     scored = []
-    for job in db.query(Job).filter(Job.status == "approved", Job.created_at >= since):
+    for job in jobs:
         if job.id in already or job.id in applied:
             continue
         match = match_score(cv, job)
@@ -108,6 +118,10 @@ def send_job_alerts(db: Session, now: datetime = None) -> int:
     """Один проход по всем подписанным. Возвращает число отправленных писем."""
     now = now or datetime.utcnow()
     gap = (now - timedelta(hours=MIN_GAP_HOURS)).isoformat()
+    # commit() по умолчанию сбрасывает загруженные объекты, и общий список вакансий пришлось бы
+    # перечитывать по одной строке после каждого письма — держим его в памяти весь проход
+    db.expire_on_commit = False
+    jobs = fresh_jobs(db, now)
     users = (db.query(User)
              .filter(User.role == "talent", User.alerts_enabled == True,  # noqa: E712
                      User.verified == 1, User.job_search_status != "paused").all())
@@ -118,7 +132,8 @@ def send_job_alerts(db: Session, now: datetime = None) -> int:
         cv = db.query(Resume).filter_by(user_id=user.id).first()
         if not resume_is_ready(cv):
             continue
-        picks = pick_jobs(db, user, cv)
+        picks = pick_jobs(db, user, cv, jobs)
+        time.sleep(0.01)   # отдать GIL веб-потокам, если крутимся с ними в одном процессе
         if not picks:
             continue
         lang = user_lang(user)
@@ -160,16 +175,34 @@ def start_scheduler() -> None:
         print("[alerts] выключено: SPINHIRE_ALERTS_ENABLED=0")
         return
 
+    def last_pass() -> float:
+        try:
+            with open(_STAMP) as fh:
+                return float(fh.read().strip() or 0)
+        except (OSError, ValueError):
+            return 0.0
+
+    def mark_pass() -> None:
+        try:
+            os.makedirs(os.path.dirname(_STAMP), exist_ok=True)
+            with open(_STAMP, "w") as fh:
+                fh.write(f"{time.time():.0f}")
+        except OSError:
+            pass
+
     def loop():
-        time.sleep(180)   # не мешать старту и первому краулу
+        # не мешать старту, и не раньше чем через CHECK_SECONDS после прошлого прохода
+        time.sleep(max(180.0, last_pass() + CHECK_SECONDS - time.time()))
         while True:
+            started = time.time()
             try:
                 with SessionLocal() as db:
                     count = send_job_alerts(db)
                 if count:
-                    print(f"[alerts] отправлено подборок: {count}")
+                    print(f"[alerts] отправлено подборок: {count} за {time.time() - started:.0f} с")
             except Exception as e:
                 print(f"[alerts] сбой: {type(e).__name__}: {str(e)[:160]}")
+            mark_pass()
             time.sleep(CHECK_SECONDS)
 
     threading.Thread(target=loop, name="job-alerts", daemon=True).start()

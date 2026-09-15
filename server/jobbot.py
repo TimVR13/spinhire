@@ -548,10 +548,36 @@ def region_of(location: str, title: str) -> str:
 
 
 def job_index(db: Session) -> list:
-    """Лёгкий индекс одобренных вакансий: в чате нельзя ждать секунду на запрос."""
+    """Лёгкий индекс одобренных вакансий: в чате нельзя ждать секунду на запрос.
+
+    Протухший индекс отдаём сразу, а свежий собираем в соседнем потоке: планировщик,
+    который раньше грел его заранее, с 15.09.2026 живёт в отдельном процессе-воркере
+    (SPINHIRE_ROLE), и веб-процесс не должен блокировать собеседника пересборкой.
+    Блокирует только самая первая сборка после старта.
+    """
     now = time.time()
-    if _index_cache["rows"] and now - _index_cache["at"] < INDEX_TTL:
-        return _index_cache["rows"]
+    rows = _index_cache["rows"]
+    if rows and now - _index_cache["at"] < INDEX_TTL:
+        return rows
+    if rows and not _index_cache.get("refreshing"):
+        _index_cache["refreshing"] = True
+        threading.Thread(target=_refresh_index, name="jobbot-index", daemon=True).start()
+        return rows
+    return _build_index(db)
+
+
+def _refresh_index() -> None:
+    try:
+        with SessionLocal() as db:
+            _build_index(db)
+    except Exception as exc:                                   # noqa: BLE001
+        print(f"[jobbot] индекс не пересобрался: {type(exc).__name__}: {exc}")
+    finally:
+        _index_cache["refreshing"] = False
+
+
+def _build_index(db: Session) -> list:
+    now = time.time()
     rows = (db.query(Job.id, Job.title, Job.company_name, Job.category, Job.location,
                      Job.fmt, Job.salary, Job.tags, Job.created_at)
             .filter(Job.status == "approved").all())

@@ -1,0 +1,29 @@
+# Фоновый воркер SpinHire: рассылки вакансий под резюме, дайджесты Telegram-каналов,
+# лиды и пуши ботов, суточный краулер — всё, что раньше крутилось потоками внутри uvicorn
+# и 15.09.2026 положило сайт. Секреты веб-юнита подключаются симлинками в
+# spinhire-worker.service.d/ (deploy/install-guard.sh), кроме socket.conf и guard.conf.
+# Лимиты нарочно жёсткие: воркер можно убить и перезапустить — сайт этого не заметит.
+[Unit]
+Description=SpinHire background worker (alerts, bots, crawler)
+After=network.target spinhire.service
+
+[Service]
+WorkingDirectory=/opt/spinhire
+Environment=SPINHIRE_ROLE=worker
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/spinhire/venv/bin/python3 -m server.worker
+Restart=always
+RestartSec=30
+Nice=10
+CPUWeight=50
+CPUQuota=60%
+MemoryHigh=550M
+MemoryMax=700M
+MemorySwapMax=200M
+OOMPolicy=kill
+OOMScoreAdjust=500
+TimeoutStopSec=15
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target

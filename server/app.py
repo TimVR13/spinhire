@@ -20,7 +20,8 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse, PlainTextResponse,
+                               RedirectResponse)
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.templating import Jinja2Templates
@@ -44,7 +45,7 @@ def check_pw(pw: str, h: str) -> bool:
         return False
 from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer,
                         String, Text, UniqueConstraint, create_engine, event,
-                        func, or_)
+                        func, or_, text as sa_text)
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import (Session, declarative_base, defer, relationship,
                             sessionmaker)
@@ -2521,6 +2522,29 @@ async def language_layer(request: Request, call_next):
     return HTMLResponse(text, status_code=response.status_code, headers=headers)
 
 
+# ---------- роль процесса: веб и фон живут отдельно ----------
+# SPINHIRE_ROLE=web    — только HTTP: страницы, API, вебхуки ботов. Фоновых потоков нет.
+# SPINHIRE_ROLE=worker — только фон: рассылки, дайджесты ботов, краулер (python -m server.worker).
+# SPINHIRE_ROLE=all    — всё в одном процессе (по умолчанию: локальная разработка и тесты).
+# Разделение введено 15.09.2026: поток job-alerts внутри uvicorn перебирал резюме × вакансии,
+# держал GIL и раздувал память — сайт не отвечал. Теперь фон крутится в spinhire-worker.service
+# со своими лимитами памяти и CPU, а веб-процесс остаётся лёгким (см. deploy/README.md).
+ROLE = (os.environ.get("SPINHIRE_ROLE", "all").strip().lower() or "all")
+RUNS_BACKGROUND = ROLE in ("all", "worker")
+
+
+@app.get("/healthz", include_in_schema=False)
+def healthz(db: Session = Depends(db_session)):
+    """Проба для сторожа (deploy/spinhire-watchdog.sh) и деплоя с откатом (deploy/deploy.sh).
+
+    Синхронный обработчик нарочно: отвечает, только если жив event loop, в пуле синхронных
+    потоков есть свободный и база отдаёт соединение. `select 1` не трогает таблицы и не ждёт
+    блокировок, так что «залоченная» на запись SQLite пробу не валит.
+    """
+    db.execute(sa_text("select 1"))
+    return PlainTextResponse("ok", headers={"Cache-Control": "no-store"})
+
+
 @app.on_event("startup")
 async def _cap_sync_threads():
     """Пул потоков для синхронных обработчиков.
@@ -2556,6 +2580,16 @@ def _startup():
                             upsert_companies=lambda rows: upsert_company_profiles(db, rows))
             except Exception as e:
                 print(f"[startup] первичный crawl не удался: {str(e)[:120]}")
+    if RUNS_BACKGROUND:
+        start_background_threads()
+
+
+def start_background_threads() -> None:
+    """Фоновые потоки: суточный краулер и (по флагу) прогрев кластеров.
+
+    В проде их поднимает воркер (python -m server.worker); веб-процесс с SPINHIRE_ROLE=web
+    сюда не заходит — см. ROLE выше.
+    """
     if os.environ.get("CRAWLER_DAILY_ENABLED", "1").lower() not in ("0", "false", "no"):
         threading.Thread(target=_crawler_scheduler, name="daily-crawler", daemon=True).start()
     # Фоновый прогрев индекса кластеров — только по флагу: на дроплете с 1 vCPU пересборка
@@ -7767,19 +7801,22 @@ from server import publications  # noqa: E402  (реестр публикаци�
 app.include_router(publications.router)
 from server import moderation_api  # noqa: E402
 app.include_router(moderation_api.router)
-tgpost.start_scheduler()  # молчит, пока не заданы SPINHIRE_TG_BOT_TOKEN и каналы
+if RUNS_BACKGROUND:
+    tgpost.start_scheduler()  # молчит, пока не заданы SPINHIRE_TG_BOT_TOKEN и каналы
 
 # ---------- отклики на чужие вакансии: ссылка компании и бот, который шлёт лид ----------
 from server import claim  # noqa: E402
 app.include_router(claim.router)
 from server import leadbot  # noqa: E402  (после claim — берёт из него ссылку регистрации)
 app.include_router(leadbot.router)
-leadbot.start_scheduler()  # молчит, пока не задан SPINHIRE_TG_LEAD_CHAT
+if RUNS_BACKGROUND:
+    leadbot.start_scheduler()  # молчит, пока не задан SPINHIRE_TG_LEAD_CHAT
 
 # ---------- бот подбора вакансий: поиск, резюме и отклик прямо в Telegram ----------
 from server import jobbot  # noqa: E402  (после claim/leadbot — тот же конвейер лидов)
 app.include_router(jobbot.router)
-jobbot.start_scheduler()  # молчит, пока не задан SPINHIRE_JOBBOT_TOKEN
+if RUNS_BACKGROUND:
+    jobbot.start_scheduler()  # молчит, пока не задан SPINHIRE_JOBBOT_TOKEN
 
 # ---------- программные кластеры вакансий: страна × направление × язык ----------
 from server import clusters  # noqa: E402
@@ -7792,7 +7829,8 @@ app.include_router(feeds.router)
 # ---------- письма о вакансиях под резюме ----------
 from server import alerts  # noqa: E402
 app.include_router(alerts.router)
-alerts.start_scheduler()  # выключается SPINHIRE_ALERTS_ENABLED=0
+if RUNS_BACKGROUND:
+    alerts.start_scheduler()  # выключается SPINHIRE_ALERTS_ENABLED=0
 
 # ---------- удалённый MCP-сервер поверх открытого API: https://spinhire.io/mcp ----------
 try:

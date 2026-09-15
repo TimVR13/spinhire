@@ -47,3 +47,23 @@ cp /opt/spinhire/deploy/limits.conf /etc/systemd/system/spinhire.service.d/limit
   перезаписи поверх открытой базы (давала «database disk image is malformed» на каждом деплое).
 - `limits.conf`: MemoryMax=1500M и TimeoutStopSec=20 — раздувшийся процесс убивается и
   поднимается за 3 секунды вместо 20 минут мёртвого сайта.
+
+## Защита от падений (15.09.2026)
+
+Что случилось: фоновый поток рассылки (`server/alerts.py`) внутри uvicorn перебирал резюме × вакансии,
+держал GIL и раздувал память; сосед по дроплету (`wallet-control`, ~900 МБ) утащил сервер в своп;
+graceful stop зависшего процесса ждал 90 с. Сайт молчал, хотя systemd считал сервис «active».
+
+Слои защиты (все файлы в `deploy/`, установка — `bash /opt/spinhire/deploy/install-guard.sh`):
+
+| Слой | Файл | Что делает |
+|---|---|---|
+| Роль процесса | `server/app.py` (`SPINHIRE_ROLE`), `server/worker.py` | `web` — только HTTP, без фоновых потоков; `worker` — рассылки, боты, краулер отдельным процессом; `all` — как раньше (локально, тесты) |
+| Лимиты веба | `spinhire-guard.conf` → `spinhire.service.d/guard.conf` | MemoryMax 1000M (ядро убивает, systemd поднимает за 2 с), своп ≤300M, TimeoutStopSec 12, приоритет CPU/OOM выше соседей |
+| Воркер | `spinhire-worker.service` | Nice 10, CPUQuota 60%, MemoryMax 700M, первый кандидат на OOM. Секреты — симлинки на drop-in'ы веб-юнита |
+| Сторож | `spinhire-watchdog.sh` + `.service`/`.timer` | раз в минуту `/healthz`; два провала подряд → SIGKILL + restart; предупреждения о памяти процесса и сервера; поднимает упавший воркер. Уведомления в Telegram (`SPINHIRE_OPS_TG_CHAT`, иначе `SPINHIRE_TG_LEAD_CHAT`) и на почту (`SPINHIRE_OPS_EMAIL`) |
+| Деплой с откатом | `deploy.sh` → `/opt/spinhire/deploy.sh` | после рестарта ждёт `/healthz` 90 с; нет — откат на прошлый коммит, плохой SHA в карантине (`/var/lib/spinhire/bad-deploy`), уведомление |
+
+Проверка: `bash /opt/spinhire/deploy/spinhire-watchdog.sh status`, журналы `/var/log/spinhire-watchdog.log`,
+`/var/log/spinhire-deploy.log`, `journalctl -u spinhire-worker -n 30`.
+Снять карантин вручную: `rm /var/lib/spinhire/bad-deploy`. Отключить сторож: `systemctl disable --now spinhire-watchdog.timer`.
