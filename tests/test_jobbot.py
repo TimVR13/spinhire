@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 os.environ.setdefault("SPINHIRE_JOBBOT_TOKEN", "test:token")
 
-from server.app import (Application, Base, Job, Resume, SessionLocal, User,  # noqa: E402
+from server.app import (Application, Base, CATEGORIES, Job, Resume, SessionLocal, User,  # noqa: E402
                         engine, migrate, resend_send)
 from server import jobbot  # noqa: E402 — только после server.app (циклический импорт)
 
@@ -75,6 +75,7 @@ class JobbotTests(unittest.TestCase):
                 db.query(User).filter_by(id=chat.user_id).delete()
             if chat:
                 db.delete(chat)
+            db.query(jobbot.BotEvent).filter_by(chat_id=self.chat_id).delete()
             db.query(Application).filter(Application.job_id.in_(self.job_ids)).delete(
                 synchronize_session=False)
             db.query(Job).filter(Job.id.in_(self.job_ids)).delete(synchronize_session=False)
@@ -384,6 +385,109 @@ class JobbotTests(unittest.TestCase):
         with patch.object(jobbot, "api", sent.api), SessionLocal() as db:
             stats = jobbot.push_pending(db)
         self.assertEqual(stats["sent"], 0)
+
+    # ---------- аналитика для админки ----------
+
+    def _events(self):
+        with SessionLocal() as db:
+            rows = (db.query(jobbot.BotEvent).filter_by(chat_id=self.chat_id)
+                    .order_by(jobbot.BotEvent.id).all())
+            return [(r.kind, r.name, r.value) for r in rows]
+
+    def test_every_button_and_command_is_logged(self):
+        """Админке нужна дорожка человека: /start с меткой, каждая кнопка, поиск текстом."""
+        self._run(self._update("/start tg-channel"))
+        self._run(self._update(data="top"))
+        self._run(self._update(data="c:0"))
+        self._run(self._update(data=f"j:{self.bd_id}"))
+        self._run(self._update(data="m:0"))          # «← К списку» из карточки
+        self._run(self._update("биздев"))
+        self._run(self._update("/menu"))
+        seen = self._events()
+        self.assertEqual(seen[0], ("start", "start", "tg-channel"))
+        self.assertIn(("btn", "top", ""), seen)
+        self.assertIn(("btn", "cat", CATEGORIES[0]), seen)
+        self.assertIn(("btn", "details", str(self.bd_id)), seen)
+        self.assertIn(("btn", "back", "0"), seen)
+        self.assertIn(("search", "text", "биздев"), seen)
+        self.assertIn(("cmd", "/menu", ""), seen)
+
+    def test_apply_outcomes_are_logged(self):
+        """Кнопка «Откликнуться» без резюме и отклик после резюме — два разных события."""
+        self._run(self._update("биздев"))
+        self._run(self._update(data=f"a:{self.bd_id}"))
+        self._run(self._update("Business Development Manager. " + "Опыт 7 лет в iGaming: " * 12
+                               + "Sales, Affiliate, CRM, English, Russian."))
+        seen = self._events()
+        self.assertIn(("btn", "apply", str(self.bd_id)), seen)
+        self.assertIn(("apply", "need_cv", str(self.bd_id)), seen)
+        self.assertIn(("cv", "text", ""), seen)
+        self.assertIn(("apply", "done", str(self.bd_id)), seen)
+
+    def test_cabinet_link_visit_is_logged_as_site(self):
+        """Переход по кнопке «Кабинет на сайте» — единственный выход из бота, его считаем."""
+        from fastapi.testclient import TestClient
+        from server.app import app
+        self._run(self._update("/start"))
+        with SessionLocal() as db:
+            chat = db.query(jobbot.BotChat).filter_by(chat_id=self.chat_id).first()
+            link = jobbot.login_link(db, jobbot.ensure_account(db, chat))
+            db.commit()
+        with TestClient(app) as client:
+            resp = client.get(link.replace(jobbot.SITE, ""), follow_redirects=False)
+        self.assertEqual(resp.status_code, 303)
+        self.assertEqual(resp.headers["location"], "/profile")
+        self.assertIn(("site", "cabinet", ""), self._events())
+
+    def test_dashboard_counts_presses_sources_and_funnel(self):
+        self._run(self._update("/start ads-1"))
+        self._run(self._update(data="top"))
+        self._run(self._update(data="top"))
+        self._run(self._update(data=f"a:{self.bd_id}"))
+        with SessionLocal() as db:
+            data = jobbot.bot_dashboard(db)
+        charts = data["charts"]
+        self.assertGreaterEqual(dict(charts["buttons"])[jobbot.BTN_LABELS["top"]], 2)
+        self.assertGreaterEqual(dict(charts["sources"])["ads-1"], 1)
+        self.assertGreaterEqual(dict(charts["funnel"])["нажали «Откликнуться»"], 1)
+        self.assertEqual(len(charts["labels"]), charts["days"])
+        self.assertEqual(charts["totals"]["presses"]["prev"], None)   # у «всего времени» нет прошлого
+        chat = next(c for c in data["bot_chats"] if c["chat_id"] == self.chat_id)
+        self.assertEqual((chat["presses"], chat["actions"], chat["source"]), (3, 4, "ads-1"))
+        self.assertTrue(any(e["chat_id"] == self.chat_id and e["kind"] == "btn"
+                            and "Откликнуться · Business Development Manager" in e["what"]
+                            for e in data["bot_feed"]))
+        since = datetime.utcnow() - timedelta(minutes=5)
+        with SessionLocal() as db:
+            recent = jobbot.bot_dashboard(db, since_dt=since)
+        self.assertIsNotNone(recent["charts"]["totals"]["presses"]["prev"])
+        self.assertEqual(recent["charts"]["days"], 1)
+
+    def test_admin_bot_tab_renders(self):
+        from fastapi.testclient import TestClient
+        from server.app import app, hash_pw, signer
+        self._run(self._update("/start"))
+        self._run(self._update(data="fresh"))
+        with SessionLocal() as db:
+            admin = User(email=f"bot-admin-{self.suffix}@test.invalid", password_hash=hash_pw("x"),
+                         name="Bot Admin", role="admin")
+            db.add(admin)
+            db.commit()
+            admin_id = admin.id
+        try:
+            with TestClient(app) as client:
+                client.cookies.set("sh_session", signer.dumps({"uid": admin_id}))
+                page = client.get("/admin?tab=bot")
+                today = client.get("/admin?tab=bot&period=today")
+            self.assertEqual(page.status_code, 200)
+            self.assertIn("Бот @newjob4you_bot", page.text)
+            self.assertIn(jobbot.BTN_LABELS["fresh"], page.text)
+            self.assertIn(f"user{self.suffix}", page.text)
+            self.assertEqual(today.status_code, 200)
+        finally:
+            with SessionLocal() as db:
+                db.query(User).filter_by(id=admin_id).delete()
+                db.commit()
 
 
 if __name__ == "__main__":

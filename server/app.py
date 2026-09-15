@@ -6288,6 +6288,12 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         }
     elif tab == "ai":
         ctx.update(ai_dashboard())
+    elif tab == "bot":
+        from server import jobbot
+        pr = parse_period(request, default="all")
+        ctx.update(pr)
+        ctx.update(jobbot.bot_dashboard(db, pr["since_dt"], pr["until_dt"]))
+        ctx["bot_ready"] = bool(jobbot.TOKEN)
     elif tab == "events":
         ctx["events"] = db.query(Event).order_by(Event.date_from).all()
     elif tab == "orders":

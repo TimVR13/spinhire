@@ -44,6 +44,8 @@
   .adm--jobs .c-st { width: 104px; } .adm--jobs .c-n { width: 52px; }
   .adm--jobs .c-act { width: 196px; }
   .t-src { font-size: .75rem; color: var(--ink-faint); overflow-wrap: anywhere; }
+  /* бот: числовые колонки вправо, табличные цифры — иначе счётчики пляшут по ширине */
+  .adm--bot td.n, .adm--bot th.n { text-align: right; font-variant-numeric: tabular-nums; }
   /* очередь модерации: текст слева, действия одной несъезжающей строкой справа */
   .mq { display:grid; grid-template-columns: minmax(0,1fr) auto; gap:14px; align-items:center; margin-bottom:10px; border-color:var(--pink); }
   .mq__body { min-width:0; }
@@ -157,26 +159,12 @@
     <a href="/admin?tab=sources" class="{% if tab == 'sources' %}on{% endif %}">🕷 Источники</a>
     <a href="/admin?tab=analytics" class="{% if tab == 'analytics' %}on{% endif %}">📈 Аналитика и SEO</a>
     <a href="/admin?tab=ai" class="{% if tab == 'ai' %}on{% endif %}">🤖 ИИ-видимость</a>
+    <a href="/admin?tab=bot" class="{% if tab == 'bot' %}on{% endif %}">✈ Бот</a>
     <a href="/admin/crm">🤝 CRM</a>
     <a href="/admin/publications">📣 Публикации</a>
   </nav>
 
-  {% if tab == 'dash' %}
-    <div class="stat-grid">
-      <a class="stat-card" href="/admin?tab=jobs&st=approved"><div class="n">{{ stats.jobs_approved }}</div><div class="l">Вакансий live&nbsp;→</div></a>
-      <a class="stat-card" href="/admin?tab=jobs&st=pending" {% if stats.jobs_pending %}style="border-color: var(--pink);"{% endif %}><div class="n" {% if stats.jobs_pending %}style="color: var(--pink);"{% endif %}>{{ stats.jobs_pending }}</div><div class="l">На модерации&nbsp;→</div></a>
-      <a class="stat-card" href="/admin?tab=users&period=all"><div class="n">{{ stats.users }}</div><div class="l">Пользователей&nbsp;→</div></a>
-      <a class="stat-card" href="/admin?tab=users&role=employer&period=all"><div class="n">{{ stats.employers }}</div><div class="l">Работодателей&nbsp;→</div></a>
-      <a class="stat-card" href="/admin?tab=users&role=talent&period=all"><div class="n">{{ stats.talents }}</div><div class="l">Соискателей&nbsp;→</div></a>
-      <a class="stat-card" href="/admin?tab=apps"><div class="n">{{ stats.apps }}</div><div class="l">Откликов&nbsp;→</div></a>
-      <a class="stat-card" href="/admin?tab=jobs&sort=views"><div class="n">{{ stats.views }}</div><div class="l">Просмотров людьми · с 3.09&nbsp;→</div></a>
-      <a class="stat-card" href="/admin?tab=resumes&st=live"><div class="n">{{ stats.resumes_live }}</div><div class="l">CV опубликовано&nbsp;→</div></a>
-      <a class="stat-card" href="/admin?tab=resumes&st=pending" {% if stats.resumes_pending %}style="border-color:var(--pink);"{% endif %}><div class="n">{{ stats.resumes_pending }}</div><div class="l">CV на модерации&nbsp;→</div></a>
-      <a class="stat-card" href="/admin?tab=unlocks"><div class="n">{{ stats.resume_unlocks }}</div><div class="l">Контактов открыто&nbsp;→</div></a>
-    </div>
-
-    {% if request.query_params.get('crawl') %}<div class="flash">🕷 {{ request.query_params.get('crawl') }}</div>{% endif %}
-
+  {# графики: одни и те же макросы и скрипт у дашборда и вкладки бота #}
     {% macro tile(key, title, sub, unit='') %}
       {% set t = charts.totals[key] %}
       <figure class="viz" data-viz="line" data-key="{{ key }}" data-title="{{ title }}" data-unit="{{ unit }}">
@@ -206,6 +194,22 @@
         <div class="viz__table" hidden></div>
       </figure>
     {% endmacro %}
+  {% if tab == 'dash' %}
+    <div class="stat-grid">
+      <a class="stat-card" href="/admin?tab=jobs&st=approved"><div class="n">{{ stats.jobs_approved }}</div><div class="l">Вакансий live&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=jobs&st=pending" {% if stats.jobs_pending %}style="border-color: var(--pink);"{% endif %}><div class="n" {% if stats.jobs_pending %}style="color: var(--pink);"{% endif %}>{{ stats.jobs_pending }}</div><div class="l">На модерации&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=users&period=all"><div class="n">{{ stats.users }}</div><div class="l">Пользователей&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=users&role=employer&period=all"><div class="n">{{ stats.employers }}</div><div class="l">Работодателей&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=users&role=talent&period=all"><div class="n">{{ stats.talents }}</div><div class="l">Соискателей&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=apps"><div class="n">{{ stats.apps }}</div><div class="l">Откликов&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=jobs&sort=views"><div class="n">{{ stats.views }}</div><div class="l">Просмотров людьми · с 3.09&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=resumes&st=live"><div class="n">{{ stats.resumes_live }}</div><div class="l">CV опубликовано&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=resumes&st=pending" {% if stats.resumes_pending %}style="border-color:var(--pink);"{% endif %}><div class="n">{{ stats.resumes_pending }}</div><div class="l">CV на модерации&nbsp;→</div></a>
+      <a class="stat-card" href="/admin?tab=unlocks"><div class="n">{{ stats.resume_unlocks }}</div><div class="l">Контактов открыто&nbsp;→</div></a>
+    </div>
+
+    {% if request.query_params.get('crawl') %}<div class="flash">🕷 {{ request.query_params.get('crawl') }}</div>{% endif %}
+
 
     <div class="viz-filters">
       {% for d, label in [(7, '7 дней'), (14, '14 дней'), (30, '30 дней'), (90, '90 дней')] %}
@@ -247,176 +251,6 @@
     {% else %}
       <p style="color: var(--ink-dim);">Очередь пуста — можно спать спокойно. 🎰</p>
     {% endfor %}
-    <script>
-    (function () {
-      var dataEl = document.getElementById('dash-data');
-      if (!dataEl) return;
-      var D = JSON.parse(dataEl.textContent);
-      var NS = 'http://www.w3.org/2000/svg';
-      var STATUS = { new: 'новый', viewed: 'просмотрен', invited: 'интервью', offer: 'оффер', hired: 'нанят', rejected: 'отказ' };
-      function el(tag, attrs, parent) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
-      function text(parent, x, y, s, cls, anchor) { var t = el('text', { x: x, y: y, 'class': cls, 'text-anchor': anchor || 'start' }, parent); t.textContent = s; return t; }
-      function fmt(n) { return (n || 0).toLocaleString('ru-RU'); }
-      function day(iso) { return iso.slice(8, 10) + '.' + iso.slice(5, 7); }
-      function niceTop(m) { if (m <= 1) return 1; if (m <= 2) return 2; var p = Math.pow(10, Math.floor(Math.log10(m))); var f = m / p; var n = [2, 4, 6, 8, 10].filter(function (c) { return c * p >= m; })[0] || 10; return n * p; }
-      function yTicks(top) { return top <= 1 ? [0, 1] : [0, top / 2, top]; }
-      function xStep(n, pw) { // сколько дней между подписями, чтобы они не слипались (~52px на подпись)
-        var maxLabels = Math.max(2, Math.floor(pw / 52)), need = (n - 1) / (maxLabels - 1);
-        return [1, 2, 3, 5, 7, 10, 14, 15, 30, 45, 60, 90].filter(function (s) { return s >= need; })[0] || n;
-      }
-      function h(tag, cls, parent) { var e = document.createElement(tag); if (cls) e.className = cls; if (parent) parent.appendChild(e); return e; }
-      function cssVar(fig, name) { return getComputedStyle(fig).getPropertyValue(name).trim(); }
-
-      function tipFor(plot) {
-        var tip = plot.querySelector('.viz__tip');
-        if (!tip) { tip = h('div', 'viz__tip', plot); tip.hidden = true; }
-        return tip;
-      }
-      function showTip(plot, tip, x, y, build) {
-        tip.textContent = ''; build(tip); tip.hidden = false;
-        var W = plot.clientWidth, tw = tip.offsetWidth;
-        var left = x + 14; if (left + tw > W) left = Math.max(0, x - tw - 14);
-        tip.style.left = left + 'px'; tip.style.top = Math.max(0, Math.min(y - 10, plot.clientHeight - tip.offsetHeight)) + 'px';
-      }
-      function row(tip, color, label, value) {
-        var r = h('div', 'row', tip); var l = h('span', '', r); var i = h('i', '', l); i.style.background = color; l.appendChild(document.createTextNode(label));
-        var b = h('b', '', r); b.textContent = value;
-      }
-
-      // ---------- линия + подложка (малые кратные: просмотры, отклики, вакансии, выручка)
-      function lineChart(fig) {
-        var key = fig.dataset.key, vals = D.series[key], labels = D.labels, plot = fig.querySelector('.viz__plot');
-        var unit = fig.dataset.unit || '', n = vals.length;
-        var W = Math.max(200, plot.clientWidth), H = 136, pL = 36, pR = 14, pT = 24, pB = 22; // pT с запасом под подпись максимума
-        var top = niceTop(Math.max.apply(null, vals)), pw = W - pL - pR, ph = H - pT - pB;
-        var X = function (i) { return pL + (n > 1 ? i * pw / (n - 1) : pw / 2); }, Y = function (v) { return pT + (1 - v / top) * ph; };
-        plot.querySelectorAll('svg').forEach(function (s) { s.remove(); });
-        var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H }, plot);
-        yTicks(top).forEach(function (t) { el('line', { x1: pL, x2: W - pR, y1: Y(t), y2: Y(t), 'class': t === 0 ? 'axis' : 'grid' }, svg); text(svg, pL - 6, Y(t) + 4, fmt(t), 'tick', 'end'); });
-        var step = xStep(n, pw);
-        for (var i = n - 1; i >= 0; i -= step) text(svg, X(i), H - 6, day(labels[i]), 'tick', i === n - 1 ? 'end' : (i === 0 ? 'start' : 'middle'));
-        var d = '', a = 'M' + X(0) + ',' + Y(0);
-        for (i = 0; i < n; i++) { d += (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Y(vals[i]).toFixed(1); a += 'L' + X(i).toFixed(1) + ',' + Y(vals[i]).toFixed(1); }
-        a += 'L' + X(n - 1) + ',' + Y(0) + 'Z';
-        el('path', { d: a, 'class': 'area s1' }, svg);
-        el('path', { d: d, 'class': 'line s1' }, svg);
-        var maxI = vals.indexOf(Math.max.apply(null, vals));
-        if (vals[maxI] > 0) { el('circle', { cx: X(maxI), cy: Y(vals[maxI]), r: 4, 'class': 'dot s1' }, svg); text(svg, Math.min(Math.max(X(maxI), pL + 20), W - pR - 20), Y(vals[maxI]) - 9, fmt(vals[maxI]) + unit, 'val', 'middle'); }
-        var xh = el('line', { x1: 0, x2: 0, y1: pT, y2: pT + ph, 'class': 'xhair', visibility: 'hidden' }, svg);
-        var hd = el('circle', { r: 4, 'class': 'dot s1', visibility: 'hidden' }, svg);
-        var tip = tipFor(plot), cur = -1;
-        function focusAt(i) {
-          cur = i; xh.setAttribute('x1', X(i)); xh.setAttribute('x2', X(i)); xh.setAttribute('visibility', 'visible');
-          hd.setAttribute('cx', X(i)); hd.setAttribute('cy', Y(vals[i])); hd.setAttribute('visibility', 'visible');
-          showTip(plot, tip, X(i), Y(vals[i]), function (t) { h('div', 'day', t).textContent = labels[i]; row(t, cssVar(fig, '--s1'), fig.dataset.title, fmt(vals[i]) + unit); });
-        }
-        function hide() { cur = -1; xh.setAttribute('visibility', 'hidden'); hd.setAttribute('visibility', 'hidden'); tip.hidden = true; }
-        var hit = el('rect', { x: pL, y: 0, width: pw, height: H, 'class': 'hit' }, svg);
-        hit.addEventListener('pointermove', function (e) { var r = svg.getBoundingClientRect(); var i = Math.round((e.clientX - r.left - pL) / (pw / (n - 1 || 1))); focusAt(Math.max(0, Math.min(n - 1, i))); });
-        hit.addEventListener('pointerleave', hide);
-        plot.addEventListener('focus', function () { focusAt(n - 1); }); plot.addEventListener('blur', hide);
-        plot.addEventListener('keydown', function (e) { if (e.key === 'ArrowLeft') { focusAt(Math.max(0, (cur < 0 ? n - 1 : cur) - 1)); e.preventDefault(); } if (e.key === 'ArrowRight') { focusAt(Math.min(n - 1, cur + 1)); e.preventDefault(); } });
-        return [['День', 'Значение']].concat(labels.map(function (l, i) { return [l, fmt(vals[i]) + unit]; }));
-      }
-
-      // ---------- стек колонок: соискатели + работодатели по дням
-      function stackChart(fig) {
-        var A = D.series.talents, B = D.series.employers, labels = D.labels, n = labels.length, plot = fig.querySelector('.viz__plot');
-        var W = Math.max(240, plot.clientWidth), H = 180, pL = 36, pR = 14, pT = 12, pB = 22;
-        var pw = W - pL - pR, ph = H - pT - pB, slot = pw / n, bw = Math.min(24, Math.max(2, slot - 2));
-        var top = niceTop(Math.max.apply(null, A.map(function (v, i) { return v + B[i]; })));
-        var Y = function (v) { return pT + (1 - v / top) * ph; }, X = function (i) { return pL + slot * i + (slot - bw) / 2; };
-        plot.querySelectorAll('svg').forEach(function (s) { s.remove(); });
-        var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H }, plot);
-        yTicks(top).forEach(function (t) { el('line', { x1: pL, x2: W - pR, y1: Y(t), y2: Y(t), 'class': t === 0 ? 'axis' : 'grid' }, svg); text(svg, pL - 6, Y(t) + 4, fmt(t), 'tick', 'end'); });
-        var step = xStep(n, pw);
-        for (var i = n - 1; i >= 0; i -= step) text(svg, X(i) + bw / 2, H - 6, day(labels[i]), 'tick', i === n - 1 ? 'end' : (i === 0 ? 'start' : 'middle'));
-        function col(x, y0, y1, cls, roundTop) { // 4px скругление только у верха стека, у базовой линии — прямой срез
-          var hgt = y0 - y1; if (hgt <= 0) return null; var r = roundTop ? Math.min(4, hgt, bw / 2) : 0;
-          var d = 'M' + x + ',' + y0 + 'V' + (y1 + r) + (r ? 'a' + r + ',' + r + ' 0 0 1 ' + r + ',-' + r : '') + 'H' + (x + bw - r) + (r ? 'a' + r + ',' + r + ' 0 0 1 ' + r + ',' + r : '') + 'V' + y0 + 'Z';
-          return el('path', { d: d, 'class': 'bar ' + cls }, svg);
-        }
-        var bars = [], tip = tipFor(plot), cur = -1;
-        for (i = 0; i < n; i++) {
-          var a = A[i], b = B[i], ya = Y(a), g = (a && b) ? 2 : 0;
-          var pa = col(X(i), Y(0), ya, 's1', !b), pb = b ? col(X(i), ya - g, ya - g - (Y(0) - Y(b)), 's2', true) : null;
-          bars.push([pa, pb]);
-        }
-        function focusAt(i) {
-          if (cur >= 0) bars[cur].forEach(function (p) { p && p.classList.remove('hot'); });
-          cur = i; bars[i].forEach(function (p) { p && p.classList.add('hot'); });
-          showTip(plot, tip, X(i) + bw / 2, Y(A[i] + B[i]), function (t) { h('div', 'day', t).textContent = labels[i]; row(t, cssVar(fig, '--s1'), 'соискатели', fmt(A[i])); row(t, cssVar(fig, '--s2'), 'работодатели', fmt(B[i])); });
-        }
-        function hide() { if (cur >= 0) bars[cur].forEach(function (p) { p && p.classList.remove('hot'); }); cur = -1; tip.hidden = true; }
-        var hit = el('rect', { x: pL, y: 0, width: pw, height: H, 'class': 'hit' }, svg);
-        hit.addEventListener('pointermove', function (e) { var r = svg.getBoundingClientRect(); focusAt(Math.max(0, Math.min(n - 1, Math.floor((e.clientX - r.left - pL) / slot)))); });
-        hit.addEventListener('pointerleave', hide);
-        plot.addEventListener('focus', function () { focusAt(n - 1); }); plot.addEventListener('blur', hide);
-        plot.addEventListener('keydown', function (e) { if (e.key === 'ArrowLeft') { focusAt(Math.max(0, (cur < 0 ? n - 1 : cur) - 1)); e.preventDefault(); } if (e.key === 'ArrowRight') { focusAt(Math.min(n - 1, cur + 1)); e.preventDefault(); } });
-        if (!fig.querySelector('.viz__legend')) {
-          var lg = h('div', 'viz__legend', fig);
-          [['--s1', 'соискатели'], ['--s2', 'работодатели']].forEach(function (s) { var sp = h('span', '', lg); var i = h('i', '', sp); i.style.background = cssVar(fig, s[0]); sp.appendChild(document.createTextNode(s[1])); });
-        }
-        return [['День', 'Соискатели', 'Работодатели', 'Всего']].concat(labels.map(function (l, i) { return [l, fmt(A[i]), fmt(B[i]), fmt(A[i] + B[i])]; }));
-      }
-
-      // ---------- горизонтальные полосы: источники, топ вакансий, статусы откликов
-      function hbarChart(fig) {
-        var src = fig.dataset.src, plot = fig.querySelector('.viz__plot'), ordinal = !!fig.dataset.ordinal, links = !!fig.dataset.links;
-        var rows = (D[src] || []).map(function (r) { return Array.isArray(r) ? { label: ordinal ? (STATUS[r[0]] || r[0]) : r[0], key: r[0], value: r[1] } : { label: r.title, sub: r.company, value: r.views, href: '/job/' + r.id }; });
-        plot.querySelectorAll('svg, .viz__empty').forEach(function (s) { s.remove(); });
-        if (!rows.length || !rows.some(function (r) { return r.value > 0; })) { h('div', 'viz__empty', plot).textContent = 'Нет данных за период'; return [['Категория', 'Значение']]; }
-        var W = Math.max(240, plot.clientWidth), rh = 26, bh = 14, lw = Math.min(190, Math.round(W * 0.36)), vw = 48, pT = 4;
-        var H = pT + rows.length * rh + 4, x0 = lw + 10, pw = W - x0 - vw, max = Math.max.apply(null, rows.map(function (r) { return r.value; })) || 1;
-        var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H }, plot);
-        el('line', { x1: x0, x2: x0, y1: pT, y2: H - 4, 'class': 'axis' }, svg);
-        var tip = tipFor(plot), cur = -1, marks = [];
-        function trunc(s, maxPx) { var t = el('text', { x: 0, y: -100, 'class': 'lbl' }, svg); t.textContent = s; var out = s; while (out.length > 3 && t.getComputedTextLength() > maxPx) { out = out.slice(0, -2); t.textContent = out + '…'; } var res = t.textContent; t.remove(); return res; }
-        rows.forEach(function (r, i) {
-          var y = pT + i * rh, yb = y + (rh - bh) / 2, w = Math.max(0, pw * r.value / max), rr = Math.min(4, w, bh / 2);
-          var cls = 'bar ' + (ordinal ? (r.key === 'rejected' ? 'gray' : 'o' + Math.min(5, i + 1)) : 's1');
-          var d = 'M' + x0 + ',' + yb + 'H' + (x0 + w - rr) + (rr ? 'a' + rr + ',' + rr + ' 0 0 1 ' + rr + ',' + rr : '') + 'V' + (yb + bh - rr) + (rr ? 'a' + rr + ',' + rr + ' 0 0 1 -' + rr + ',' + rr : '') + 'H' + x0 + 'Z';
-          marks.push(w > 0 ? el('path', { d: d, 'class': cls }, svg) : null);
-          var holder = svg;
-          if (links && r.href) { holder = el('a', { href: r.href, target: '_blank', rel: 'noopener' }, svg); }
-          text(holder, x0 - 8, y + rh / 2 + 4, trunc(r.label, lw - 14), 'lbl', 'end');
-          text(svg, x0 + w + 6, y + rh / 2 + 4, fmt(r.value), 'val', 'start');
-          var hit = el('rect', { x: 0, y: y, width: W, height: rh, 'class': 'hit' }, svg);
-          hit.addEventListener('pointermove', function (e) { var b = svg.getBoundingClientRect(); focusAt(i, e.clientX - b.left, y + rh / 2); });
-          hit.addEventListener('pointerleave', hide);
-          if (links && r.href) { hit.style.cursor = 'pointer'; hit.addEventListener('click', function () { window.open(r.href, '_blank', 'noopener'); }); }
-        });
-        function focusAt(i, x, y) {
-          if (cur >= 0 && marks[cur]) marks[cur].classList.remove('hot'); cur = i; if (marks[i]) marks[i].classList.add('hot');
-          showTip(plot, tip, x, y, function (t) { h('div', 'day', t).textContent = rows[i].label + (rows[i].sub ? ' · ' + rows[i].sub : ''); row(t, cssVar(fig, marks[i] ? '--' + (marks[i].getAttribute('class').split(' ')[1] === 'gray' ? 'gray' : marks[i].getAttribute('class').split(' ')[1]) : '--s1'), fig.dataset.title, fmt(rows[i].value)); });
-        }
-        function hide() { if (cur >= 0 && marks[cur]) marks[cur].classList.remove('hot'); cur = -1; tip.hidden = true; }
-        plot.addEventListener('focus', function () { focusAt(0, x0 + 20, pT + rh / 2); }); plot.addEventListener('blur', hide);
-        plot.addEventListener('keydown', function (e) { var j = cur < 0 ? 0 : cur; if (e.key === 'ArrowDown') { j = Math.min(rows.length - 1, j + 1); } else if (e.key === 'ArrowUp') { j = Math.max(0, j - 1); } else return; focusAt(j, x0 + 20, pT + j * rh + rh / 2); e.preventDefault(); });
-        return [['Категория', 'Значение']].concat(rows.map(function (r) { return [r.label + (r.sub ? ' · ' + r.sub : ''), fmt(r.value)]; }));
-      }
-
-      var RENDER = { line: lineChart, stack: stackChart, hbar: hbarChart };
-      function tableFor(fig, rows) {
-        var box = fig.querySelector('.viz__table'); box.textContent = '';
-        var t = h('table', '', box), head = h('tr', '', t);
-        rows[0].forEach(function (c, i) { var th = h('th', i ? 'n' : '', head); th.textContent = c; });
-        rows.slice(1).forEach(function (r) { var tr = h('tr', '', t); r.forEach(function (c, i) { var td = h('td', i ? 'n' : '', tr); td.textContent = c; }); });
-      }
-      function draw(fig) { var rows = RENDER[fig.dataset.viz](fig); tableFor(fig, rows); }
-      var figs = Array.prototype.slice.call(document.querySelectorAll('.viz[data-viz]'));
-      figs.forEach(function (fig) {
-        draw(fig);
-        var btn = fig.querySelector('.viz__tbl'), plot = fig.querySelector('.viz__plot'), tbl = fig.querySelector('.viz__table');
-        btn.addEventListener('click', function () { var on = btn.getAttribute('aria-pressed') !== 'true'; btn.setAttribute('aria-pressed', on); plot.hidden = on; tbl.hidden = !on; btn.textContent = on ? 'график' : 'таблица'; });
-      });
-      var t; window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(function () { figs.forEach(draw); }, 120); });
-      // подписи обрезаются по ширине текста, а Golos догружается позже первого рендера — перемеряем после шрифтов
-      if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { figs.forEach(draw); });
-      // смена темы кабинета перерисовывает: цвета легенды и подсказок берутся из CSS-переменных
-      new MutationObserver(function () { figs.forEach(function (f) { var lg = f.querySelector('.viz__legend'); if (lg) lg.remove(); draw(f); }); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-ws-theme'] });
-    })();
-    </script>
 
 
   {% elif tab == 'jobs' %}
@@ -804,5 +638,258 @@
     </p>
     </div>
     <script>document.querySelectorAll('.subtabs button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.subtabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.subpane').forEach(p=>p.hidden=p.dataset.pane!==b.dataset.pane);}));</script>
+  {% elif tab == 'bot' %}
+    <div class="source-head">
+      <div><span class="kicker">Telegram</span><h2>Бот @newjob4you_bot</h2></div>
+      <p class="source-note">Каждое действие в чате — команда, кнопка, запрос, резюме, отклик, переход в кабинет — пишется в bot_events{% if bot.first_chat %} (первый чат — {{ bot.first_chat.strftime('%d.%m.%Y') }}){% endif %}. Сводка, воронка и лента — за выбранный период; «чатов всего» и «подписаны» — на сейчас.{% if not bot_ready %} <b style="color:var(--pink)">Токен бота не задан — бот выключен.</b>{% endif %}</p>
+    </div>
+    <div class="adm-filters">
+      {% set n = bot.chats_active %}
+      {% with count_label = n ~ ' ' ~ ('активный чат' if n % 10 == 1 and n % 100 != 11 else ('активных чата' if n % 10 in [2,3,4] and n % 100 not in [12,13,14] else 'активных чатов')) %}{% include "admin/_period.html" %}{% endwith %}
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="n">{{ bot.chats_total }}</div><div class="l">Чатов всего</div></div>
+      <div class="stat-card"><div class="n">{{ bot.chats_new }}</div><div class="l">Новых чатов</div></div>
+      <div class="stat-card"><div class="n">{{ bot.chats_active }}</div><div class="l">Активных чатов</div></div>
+      <div class="stat-card"><div class="n">{{ bot.presses }}</div><div class="l">Нажатий кнопок</div></div>
+      <div class="stat-card"><div class="n">{{ bot.searches }}</div><div class="l">Поисков текстом</div></div>
+      <div class="stat-card"><div class="n">{{ bot.cv }}</div><div class="l">Прислали резюме</div></div>
+      <div class="stat-card"><div class="n">{{ bot.applies }}</div><div class="l">Откликов из бота</div></div>
+      <div class="stat-card" {% if bot.site %}style="border-color:var(--acid)"{% endif %}><div class="n">{{ bot.site }}</div><div class="l">Переходов на сайт · {{ bot.site_chats }} чат{{ '' if bot.site_chats % 10 == 1 and bot.site_chats % 100 != 11 else ('а' if bot.site_chats % 10 in [2,3,4] and bot.site_chats % 100 not in [12,13,14] else 'ов') }}</div></div>
+      <div class="stat-card"><div class="n">{{ bot.accounts }}</div><div class="l">Аккаунтов заведено</div></div>
+      <div class="stat-card"><div class="n">{{ bot.subscribed }}</div><div class="l">Подписаны на новые</div></div>
+    </div>
+
+    <div class="viz-filters"><span class="note" style="margin-left:0">Графики — по дням за {{ days }} дн. ({{ charts.labels[0][8:] }}.{{ charts.labels[0][5:7] }} — {{ charts.labels[-1][8:] }}.{{ charts.labels[-1][5:7] }}), сутки по UTC{% if period == 'all' %}; за всё время окно — последние 90 дней{% endif %}.</span></div>
+    <div class="viz-grid viz-grid--4">
+      {{ tile('active', 'Активные чаты', 'уникальных за ' ~ days ~ ' дн.') }}
+      {{ tile('presses', 'Нажатия кнопок', 'за ' ~ days ~ ' дн.') }}
+      {{ tile('applies', 'Отклики из бота', 'за ' ~ days ~ ' дн.') }}
+      {{ tile('site', 'Переходы на сайт', 'кнопка «Кабинет на сайте», за ' ~ days ~ ' дн.') }}
+    </div>
+    <div class="viz-grid viz-grid--2">
+      {{ card('stack', 'active', 'Новые и вернувшиеся по дням', 'кто писал боту: впервые в этот день или уже был', 'data-a="new" data-b="returning" data-a-label="новые" data-b-label="вернувшиеся"') }}
+      {{ card('hbar', 'funnel', 'Воронка', 'уникальные чаты за период, от /start до кабинета', 'data-ordinal="1"') }}
+    </div>
+    <div class="viz-grid viz-grid--2">
+      {{ card('hbar', 'buttons', 'Какие кнопки нажимают', bot.presses ~ ' нажатий за период') }}
+      {{ card('hbar', 'sources', 'Откуда пришли', 'метка start= в ссылке на бота у новых чатов, топ-10') }}
+    </div>
+    <div class="viz-grid viz-grid--2">
+      {{ card('hbar', 'interests', 'Что ищут', 'поиск текстом, выбор направления и страны, топ-12') }}
+      {{ card('hbar', 'top_jobs', 'Вакансии, которые открывали', '«Подробнее» и «Откликнуться», топ-10', 'data-links="1"') }}
+    </div>
+    <script type="application/json" id="dash-data">{{ charts|tojson }}</script>
+
+    <div class="source-head"><div><span class="kicker">Кто</span><h2>Чаты</h2></div><p class="source-note">Активные за период и новые, свежие сверху, до 200. Счётчики — за период. Аккаунт на сайте появляется после резюме или отклика.</p></div>
+    <div class="table-wrap"><table class="adm adm--bot">
+      <tr><th>Кто</th><th>Язык</th><th>Метка</th><th>Пришёл</th><th>Был</th><th class="n" title="Команды, кнопки, запросы, резюме, отклики, переходы">Действий</th><th class="n">Кнопок</th><th class="n">Поисков</th><th class="n">CV</th><th class="n">Откл.</th><th class="n">Сайт</th><th>Подписка</th></tr>
+      {% for c in bot_chats %}
+      <tr>
+        <td>{% if c.user_id %}<a href="/admin/user/{{ c.user_id }}" style="color:inherit;font-weight:700;">{% endif %}{% if c.username %}@{{ c.username }}{% else %}{{ c.first_name or c.chat_id }}{% endif %}{% if c.user_id %}</a>{% endif %}{% if c.username and c.first_name %}<br><span style="color:var(--ink-faint);font-size:.75rem;">{{ c.first_name }}</span>{% endif %}</td>
+        <td>{{ c.lang }}</td>
+        <td class="t-src">{{ c.source or '—' }}</td>
+        <td class="nowrap">{{ c.created_at.strftime('%d.%m %H:%M') if c.created_at else '—' }}</td>
+        <td class="nowrap">{{ c.last_seen.strftime('%d.%m %H:%M') if c.last_seen else '—' }}</td>
+        <td class="n">{{ c.actions }}</td>
+        <td class="n">{{ c.presses }}</td>
+        <td class="n">{{ c.searches }}</td>
+        <td class="n">{{ c.cv }}</td>
+        <td class="n">{{ c.applies }}</td>
+        <td class="n">{% if c.site %}<b style="color:var(--acid-deep, var(--acid))">{{ c.site }}</b>{% else %}0{% endif %}</td>
+        <td>{% if c.sub %}<span class="status invited" title="{{ c.sub_query or 'все вакансии' }}">да</span>{% else %}<span style="color:var(--ink-faint)">нет</span>{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="12" style="color:var(--ink-faint)">За период никто боту не писал.</td></tr>
+      {% endfor %}
+    </table></div>
+
+    <div class="source-head"><div><span class="kicker">Что</span><h2>Последние действия</h2></div><p class="source-note">80 последних событий за период, по одному на нажатие. Так видно дорожку конкретного человека: что открыл, где остановился.</p></div>
+    <div class="table-wrap"><table class="adm">
+      <tr><th>Когда</th><th>Кто</th><th>Тип</th><th>Что</th></tr>
+      {% for e in bot_feed %}
+      <tr>
+        <td class="nowrap">{{ e.when.strftime('%d.%m %H:%M') }}</td>
+        <td>{% if e.user_id %}<a href="/admin/user/{{ e.user_id }}" style="color:inherit;">{{ e.who }}</a>{% else %}{{ e.who }}{% endif %}</td>
+        <td><span class="status {% if e.kind in ('apply', 'site') %}invited{% elif e.kind == 'btn' %}viewed{% elif e.kind == 'push' %}rejected{% else %}new{% endif %}">{{ e.kind_label }}</span></td>
+        <td>{{ e.what }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" style="color:var(--ink-faint)">Событий за период нет.</td></tr>
+      {% endfor %}
+    </table></div>
+  {% endif %}
+  {% if tab in ('dash', 'bot') %}
+    <script>
+    (function () {
+      var dataEl = document.getElementById('dash-data');
+      if (!dataEl) return;
+      var D = JSON.parse(dataEl.textContent);
+      var NS = 'http://www.w3.org/2000/svg';
+      var STATUS = { new: 'новый', viewed: 'просмотрен', invited: 'интервью', offer: 'оффер', hired: 'нанят', rejected: 'отказ' };
+      function el(tag, attrs, parent) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+      function text(parent, x, y, s, cls, anchor) { var t = el('text', { x: x, y: y, 'class': cls, 'text-anchor': anchor || 'start' }, parent); t.textContent = s; return t; }
+      function fmt(n) { return (n || 0).toLocaleString('ru-RU'); }
+      function day(iso) { return iso.slice(8, 10) + '.' + iso.slice(5, 7); }
+      function niceTop(m) { if (m <= 1) return 1; if (m <= 2) return 2; var p = Math.pow(10, Math.floor(Math.log10(m))); var f = m / p; var n = [2, 4, 6, 8, 10].filter(function (c) { return c * p >= m; })[0] || 10; return n * p; }
+      function yTicks(top) { return top <= 1 ? [0, 1] : [0, top / 2, top]; }
+      function xStep(n, pw) { // сколько дней между подписями, чтобы они не слипались (~52px на подпись)
+        var maxLabels = Math.max(2, Math.floor(pw / 52)), need = (n - 1) / (maxLabels - 1);
+        return [1, 2, 3, 5, 7, 10, 14, 15, 30, 45, 60, 90].filter(function (s) { return s >= need; })[0] || n;
+      }
+      function h(tag, cls, parent) { var e = document.createElement(tag); if (cls) e.className = cls; if (parent) parent.appendChild(e); return e; }
+      function cssVar(fig, name) { return getComputedStyle(fig).getPropertyValue(name).trim(); }
+
+      function tipFor(plot) {
+        var tip = plot.querySelector('.viz__tip');
+        if (!tip) { tip = h('div', 'viz__tip', plot); tip.hidden = true; }
+        return tip;
+      }
+      function showTip(plot, tip, x, y, build) {
+        tip.textContent = ''; build(tip); tip.hidden = false;
+        var W = plot.clientWidth, tw = tip.offsetWidth;
+        var left = x + 14; if (left + tw > W) left = Math.max(0, x - tw - 14);
+        tip.style.left = left + 'px'; tip.style.top = Math.max(0, Math.min(y - 10, plot.clientHeight - tip.offsetHeight)) + 'px';
+      }
+      function row(tip, color, label, value) {
+        var r = h('div', 'row', tip); var l = h('span', '', r); var i = h('i', '', l); i.style.background = color; l.appendChild(document.createTextNode(label));
+        var b = h('b', '', r); b.textContent = value;
+      }
+
+      // ---------- линия + подложка (малые кратные: просмотры, отклики, вакансии, выручка)
+      function lineChart(fig) {
+        var key = fig.dataset.key, vals = D.series[key], labels = D.labels, plot = fig.querySelector('.viz__plot');
+        var unit = fig.dataset.unit || '', n = vals.length;
+        var W = Math.max(200, plot.clientWidth), H = 136, pL = 36, pR = 14, pT = 24, pB = 22; // pT с запасом под подпись максимума
+        var top = niceTop(Math.max.apply(null, vals)), pw = W - pL - pR, ph = H - pT - pB;
+        var X = function (i) { return pL + (n > 1 ? i * pw / (n - 1) : pw / 2); }, Y = function (v) { return pT + (1 - v / top) * ph; };
+        plot.querySelectorAll('svg').forEach(function (s) { s.remove(); });
+        var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H }, plot);
+        yTicks(top).forEach(function (t) { el('line', { x1: pL, x2: W - pR, y1: Y(t), y2: Y(t), 'class': t === 0 ? 'axis' : 'grid' }, svg); text(svg, pL - 6, Y(t) + 4, fmt(t), 'tick', 'end'); });
+        var step = xStep(n, pw);
+        for (var i = n - 1; i >= 0; i -= step) text(svg, X(i), H - 6, day(labels[i]), 'tick', i === n - 1 ? 'end' : (i === 0 ? 'start' : 'middle'));
+        var d = '', a = 'M' + X(0) + ',' + Y(0);
+        for (i = 0; i < n; i++) { d += (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Y(vals[i]).toFixed(1); a += 'L' + X(i).toFixed(1) + ',' + Y(vals[i]).toFixed(1); }
+        a += 'L' + X(n - 1) + ',' + Y(0) + 'Z';
+        el('path', { d: a, 'class': 'area s1' }, svg);
+        el('path', { d: d, 'class': 'line s1' }, svg);
+        var maxI = vals.indexOf(Math.max.apply(null, vals));
+        if (vals[maxI] > 0) { el('circle', { cx: X(maxI), cy: Y(vals[maxI]), r: 4, 'class': 'dot s1' }, svg); text(svg, Math.min(Math.max(X(maxI), pL + 20), W - pR - 20), Y(vals[maxI]) - 9, fmt(vals[maxI]) + unit, 'val', 'middle'); }
+        var xh = el('line', { x1: 0, x2: 0, y1: pT, y2: pT + ph, 'class': 'xhair', visibility: 'hidden' }, svg);
+        var hd = el('circle', { r: 4, 'class': 'dot s1', visibility: 'hidden' }, svg);
+        var tip = tipFor(plot), cur = -1;
+        function focusAt(i) {
+          cur = i; xh.setAttribute('x1', X(i)); xh.setAttribute('x2', X(i)); xh.setAttribute('visibility', 'visible');
+          hd.setAttribute('cx', X(i)); hd.setAttribute('cy', Y(vals[i])); hd.setAttribute('visibility', 'visible');
+          showTip(plot, tip, X(i), Y(vals[i]), function (t) { h('div', 'day', t).textContent = labels[i]; row(t, cssVar(fig, '--s1'), fig.dataset.title, fmt(vals[i]) + unit); });
+        }
+        function hide() { cur = -1; xh.setAttribute('visibility', 'hidden'); hd.setAttribute('visibility', 'hidden'); tip.hidden = true; }
+        var hit = el('rect', { x: pL, y: 0, width: pw, height: H, 'class': 'hit' }, svg);
+        hit.addEventListener('pointermove', function (e) { var r = svg.getBoundingClientRect(); var i = Math.round((e.clientX - r.left - pL) / (pw / (n - 1 || 1))); focusAt(Math.max(0, Math.min(n - 1, i))); });
+        hit.addEventListener('pointerleave', hide);
+        plot.addEventListener('focus', function () { focusAt(n - 1); }); plot.addEventListener('blur', hide);
+        plot.addEventListener('keydown', function (e) { if (e.key === 'ArrowLeft') { focusAt(Math.max(0, (cur < 0 ? n - 1 : cur) - 1)); e.preventDefault(); } if (e.key === 'ArrowRight') { focusAt(Math.min(n - 1, cur + 1)); e.preventDefault(); } });
+        return [['День', 'Значение']].concat(labels.map(function (l, i) { return [l, fmt(vals[i]) + unit]; }));
+      }
+
+      // ---------- стек колонок: соискатели + работодатели по дням
+      function stackChart(fig) {
+        var ka = fig.dataset.a || 'talents', kb = fig.dataset.b || 'employers', la = fig.dataset.aLabel || 'соискатели', lb = fig.dataset.bLabel || 'работодатели';
+        var A = D.series[ka], B = D.series[kb], labels = D.labels, n = labels.length, plot = fig.querySelector('.viz__plot');
+        var W = Math.max(240, plot.clientWidth), H = 180, pL = 36, pR = 14, pT = 12, pB = 22;
+        var pw = W - pL - pR, ph = H - pT - pB, slot = pw / n, bw = Math.min(24, Math.max(2, slot - 2));
+        var top = niceTop(Math.max.apply(null, A.map(function (v, i) { return v + B[i]; })));
+        var Y = function (v) { return pT + (1 - v / top) * ph; }, X = function (i) { return pL + slot * i + (slot - bw) / 2; };
+        plot.querySelectorAll('svg').forEach(function (s) { s.remove(); });
+        var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H }, plot);
+        yTicks(top).forEach(function (t) { el('line', { x1: pL, x2: W - pR, y1: Y(t), y2: Y(t), 'class': t === 0 ? 'axis' : 'grid' }, svg); text(svg, pL - 6, Y(t) + 4, fmt(t), 'tick', 'end'); });
+        var step = xStep(n, pw);
+        for (var i = n - 1; i >= 0; i -= step) text(svg, X(i) + bw / 2, H - 6, day(labels[i]), 'tick', i === n - 1 ? 'end' : (i === 0 ? 'start' : 'middle'));
+        function col(x, y0, y1, cls, roundTop) { // 4px скругление только у верха стека, у базовой линии — прямой срез
+          var hgt = y0 - y1; if (hgt <= 0) return null; var r = roundTop ? Math.min(4, hgt, bw / 2) : 0;
+          var d = 'M' + x + ',' + y0 + 'V' + (y1 + r) + (r ? 'a' + r + ',' + r + ' 0 0 1 ' + r + ',-' + r : '') + 'H' + (x + bw - r) + (r ? 'a' + r + ',' + r + ' 0 0 1 ' + r + ',' + r : '') + 'V' + y0 + 'Z';
+          return el('path', { d: d, 'class': 'bar ' + cls }, svg);
+        }
+        var bars = [], tip = tipFor(plot), cur = -1;
+        for (i = 0; i < n; i++) {
+          var a = A[i], b = B[i], ya = Y(a), g = (a && b) ? 2 : 0;
+          var pa = col(X(i), Y(0), ya, 's1', !b), pb = b ? col(X(i), ya - g, ya - g - (Y(0) - Y(b)), 's2', true) : null;
+          bars.push([pa, pb]);
+        }
+        function focusAt(i) {
+          if (cur >= 0) bars[cur].forEach(function (p) { p && p.classList.remove('hot'); });
+          cur = i; bars[i].forEach(function (p) { p && p.classList.add('hot'); });
+          showTip(plot, tip, X(i) + bw / 2, Y(A[i] + B[i]), function (t) { h('div', 'day', t).textContent = labels[i]; row(t, cssVar(fig, '--s1'), la, fmt(A[i])); row(t, cssVar(fig, '--s2'), lb, fmt(B[i])); });
+        }
+        function hide() { if (cur >= 0) bars[cur].forEach(function (p) { p && p.classList.remove('hot'); }); cur = -1; tip.hidden = true; }
+        var hit = el('rect', { x: pL, y: 0, width: pw, height: H, 'class': 'hit' }, svg);
+        hit.addEventListener('pointermove', function (e) { var r = svg.getBoundingClientRect(); focusAt(Math.max(0, Math.min(n - 1, Math.floor((e.clientX - r.left - pL) / slot)))); });
+        hit.addEventListener('pointerleave', hide);
+        plot.addEventListener('focus', function () { focusAt(n - 1); }); plot.addEventListener('blur', hide);
+        plot.addEventListener('keydown', function (e) { if (e.key === 'ArrowLeft') { focusAt(Math.max(0, (cur < 0 ? n - 1 : cur) - 1)); e.preventDefault(); } if (e.key === 'ArrowRight') { focusAt(Math.min(n - 1, cur + 1)); e.preventDefault(); } });
+        if (!fig.querySelector('.viz__legend')) {
+          var lg = h('div', 'viz__legend', fig);
+          [['--s1', la], ['--s2', lb]].forEach(function (s) { var sp = h('span', '', lg); var i = h('i', '', sp); i.style.background = cssVar(fig, s[0]); sp.appendChild(document.createTextNode(s[1])); });
+        }
+        return [['День', la, lb, 'Всего']].concat(labels.map(function (l, i) { return [l, fmt(A[i]), fmt(B[i]), fmt(A[i] + B[i])]; }));
+      }
+
+      // ---------- горизонтальные полосы: источники, топ вакансий, статусы откликов
+      function hbarChart(fig) {
+        var src = fig.dataset.src, plot = fig.querySelector('.viz__plot'), ordinal = !!fig.dataset.ordinal, links = !!fig.dataset.links;
+        var rows = (D[src] || []).map(function (r) { return Array.isArray(r) ? { label: ordinal ? (STATUS[r[0]] || r[0]) : r[0], key: r[0], value: r[1] } : { label: r.title, sub: r.company, value: r.views, href: r.href || ('/job/' + r.id) }; });
+        plot.querySelectorAll('svg, .viz__empty').forEach(function (s) { s.remove(); });
+        if (!rows.length || !rows.some(function (r) { return r.value > 0; })) { h('div', 'viz__empty', plot).textContent = 'Нет данных за период'; return [['Категория', 'Значение']]; }
+        var W = Math.max(240, plot.clientWidth), rh = 26, bh = 14, lw = Math.min(190, Math.round(W * 0.36)), vw = 48, pT = 4;
+        var H = pT + rows.length * rh + 4, x0 = lw + 10, pw = W - x0 - vw, max = Math.max.apply(null, rows.map(function (r) { return r.value; })) || 1;
+        var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H }, plot);
+        el('line', { x1: x0, x2: x0, y1: pT, y2: H - 4, 'class': 'axis' }, svg);
+        var tip = tipFor(plot), cur = -1, marks = [];
+        function trunc(s, maxPx) { var t = el('text', { x: 0, y: -100, 'class': 'lbl' }, svg); t.textContent = s; var out = s; while (out.length > 3 && t.getComputedTextLength() > maxPx) { out = out.slice(0, -2); t.textContent = out + '…'; } var res = t.textContent; t.remove(); return res; }
+        rows.forEach(function (r, i) {
+          var y = pT + i * rh, yb = y + (rh - bh) / 2, w = Math.max(0, pw * r.value / max), rr = Math.min(4, w, bh / 2);
+          var cls = 'bar ' + (ordinal ? (r.key === 'rejected' ? 'gray' : 'o' + Math.min(5, i + 1)) : 's1');
+          var d = 'M' + x0 + ',' + yb + 'H' + (x0 + w - rr) + (rr ? 'a' + rr + ',' + rr + ' 0 0 1 ' + rr + ',' + rr : '') + 'V' + (yb + bh - rr) + (rr ? 'a' + rr + ',' + rr + ' 0 0 1 -' + rr + ',' + rr : '') + 'H' + x0 + 'Z';
+          marks.push(w > 0 ? el('path', { d: d, 'class': cls }, svg) : null);
+          var holder = svg;
+          if (links && r.href) { holder = el('a', { href: r.href, target: '_blank', rel: 'noopener' }, svg); }
+          text(holder, x0 - 8, y + rh / 2 + 4, trunc(r.label, lw - 14), 'lbl', 'end');
+          text(svg, x0 + w + 6, y + rh / 2 + 4, fmt(r.value), 'val', 'start');
+          var hit = el('rect', { x: 0, y: y, width: W, height: rh, 'class': 'hit' }, svg);
+          hit.addEventListener('pointermove', function (e) { var b = svg.getBoundingClientRect(); focusAt(i, e.clientX - b.left, y + rh / 2); });
+          hit.addEventListener('pointerleave', hide);
+          if (links && r.href) { hit.style.cursor = 'pointer'; hit.addEventListener('click', function () { window.open(r.href, '_blank', 'noopener'); }); }
+        });
+        function focusAt(i, x, y) {
+          if (cur >= 0 && marks[cur]) marks[cur].classList.remove('hot'); cur = i; if (marks[i]) marks[i].classList.add('hot');
+          showTip(plot, tip, x, y, function (t) { h('div', 'day', t).textContent = rows[i].label + (rows[i].sub ? ' · ' + rows[i].sub : ''); row(t, cssVar(fig, marks[i] ? '--' + (marks[i].getAttribute('class').split(' ')[1] === 'gray' ? 'gray' : marks[i].getAttribute('class').split(' ')[1]) : '--s1'), fig.dataset.title, fmt(rows[i].value)); });
+        }
+        function hide() { if (cur >= 0 && marks[cur]) marks[cur].classList.remove('hot'); cur = -1; tip.hidden = true; }
+        plot.addEventListener('focus', function () { focusAt(0, x0 + 20, pT + rh / 2); }); plot.addEventListener('blur', hide);
+        plot.addEventListener('keydown', function (e) { var j = cur < 0 ? 0 : cur; if (e.key === 'ArrowDown') { j = Math.min(rows.length - 1, j + 1); } else if (e.key === 'ArrowUp') { j = Math.max(0, j - 1); } else return; focusAt(j, x0 + 20, pT + j * rh + rh / 2); e.preventDefault(); });
+        return [['Категория', 'Значение']].concat(rows.map(function (r) { return [r.label + (r.sub ? ' · ' + r.sub : ''), fmt(r.value)]; }));
+      }
+
+      var RENDER = { line: lineChart, stack: stackChart, hbar: hbarChart };
+      function tableFor(fig, rows) {
+        var box = fig.querySelector('.viz__table'); box.textContent = '';
+        var t = h('table', '', box), head = h('tr', '', t);
+        rows[0].forEach(function (c, i) { var th = h('th', i ? 'n' : '', head); th.textContent = c; });
+        rows.slice(1).forEach(function (r) { var tr = h('tr', '', t); r.forEach(function (c, i) { var td = h('td', i ? 'n' : '', tr); td.textContent = c; }); });
+      }
+      function draw(fig) { var rows = RENDER[fig.dataset.viz](fig); tableFor(fig, rows); }
+      var figs = Array.prototype.slice.call(document.querySelectorAll('.viz[data-viz]'));
+      figs.forEach(function (fig) {
+        draw(fig);
+        var btn = fig.querySelector('.viz__tbl'), plot = fig.querySelector('.viz__plot'), tbl = fig.querySelector('.viz__table');
+        btn.addEventListener('click', function () { var on = btn.getAttribute('aria-pressed') !== 'true'; btn.setAttribute('aria-pressed', on); plot.hidden = on; tbl.hidden = !on; btn.textContent = on ? 'график' : 'таблица'; });
+      });
+      var t; window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(function () { figs.forEach(draw); }, 120); });
+      // подписи обрезаются по ширине текста, а Golos догружается позже первого рендера — перемеряем после шрифтов
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { figs.forEach(draw); });
+      // смена темы кабинета перерисовывает: цвета легенды и подсказок берутся из CSS-переменных
+      new MutationObserver(function () { figs.forEach(function (f) { var lg = f.querySelector('.viz__legend'); if (lg) lg.remove(); draw(f); }); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-ws-theme'] });
+    })();
+    </script>
   {% endif %}
 {% endblock %}

@@ -44,7 +44,7 @@ from types import SimpleNamespace
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, func, or_
 from sqlalchemy.orm import Session
 
 from server.app import (APPLY_DAILY_LIMIT, APPLY_EXTRA_COST, APPLY_MIN_INTERVAL,
@@ -110,6 +110,26 @@ class BotLogin(Base):
     user_id = Column(Integer, nullable=False)
     used = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class BotEvent(Base):
+    """Что человек сделал в чате: каждая кнопка, команда, запрос, резюме, отклик, переход.
+
+    Отдельно от analytics_events, потому что там ключ — user_id, а у большинства
+    чатов аккаунта нет: они листают и уходят. Здесь ключ — chat_id, и по нему
+    видно всю дорожку одного человека от /start до кабинета.
+
+    kind — start | cmd | btn | search | cv | apply | site | push
+    name — какая именно кнопка/команда/исход (см. BTN_LABELS), value — деталь:
+    метка /start, запрос, id вакансии, направление или страна.
+    """
+    __tablename__ = "bot_events"
+    id = Column(Integer, primary_key=True)
+    chat_id = Column(String, nullable=False, index=True)
+    kind = Column(String, nullable=False, index=True)
+    name = Column(String, default="")
+    value = Column(String, default="")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 
 # ---------- тексты ----------
@@ -299,6 +319,29 @@ MENU = {
 
 def t(key: str, lang: str, **kw) -> str:
     return T[key].get(lang, T[key]["en"]).format(**kw)
+
+
+# Подписи кнопок и исходов для админки — по-русски, как их видит человек в чате.
+BTN_LABELS = {
+    "cats": MENU["cats"]["ru"], "geos": MENU["geos"]["ru"], "top": MENU["top"]["ru"],
+    "fresh": MENU["fresh"]["ru"], "cv": MENU["cv"]["ru"], "sub_on": MENU["sub_on"]["ru"],
+    "sub_off": MENU["sub_off"]["ru"], "menu": MENU["menu_btn"]["ru"],
+    "apply": "Откликнуться", "details": "Подробнее", "more": "Ещё", "back": "← К списку",
+    "cat": "выбор направления", "geo": "выбор страны",
+}
+KIND_LABELS = {"start": "/start", "cmd": "команда", "btn": "кнопка", "search": "поиск текстом",
+               "cv": "резюме", "apply": "отклик", "site": "переход на сайт", "push": "рассылка"}
+APPLY_LABELS = {"done": "отклик отправлен", "need_cv": "нужно резюме", "dup": "уже откликался",
+                "too_fast": "слишком часто", "limit": "дневной лимит"}
+# Действия самого человека: по ним считаем активность. apply — исход нажатия или резюме,
+# push — наша рассылка; ни то, ни другое активностью не считается.
+ACTIVE_KINDS = ("start", "cmd", "btn", "search", "cv", "site")
+
+
+def log(db: Session, chat: BotChat, kind: str, name: str = "", value=None) -> None:
+    """Записать действие человека в bot_events. Пишем и до аккаунта — по chat_id."""
+    db.add(BotEvent(chat_id=chat.chat_id, kind=kind, name=(name or "")[:40],
+                    value=("" if value is None else str(value))[:120]))
 
 
 # ---------- телеграм ----------
@@ -954,9 +997,11 @@ def do_apply(db: Session, chat: BotChat, job_id: int) -> None:
     if not resume_is_ready(cv):
         chat.state, chat.pending_job = "cv", job_id
         send(chat.chat_id, t("need_cv", lang))
+        log(db, chat, "apply", "need_cv", job_id)
         return
     if db.query(Application).filter_by(job_id=job_id, user_id=user.id).first():
         send(chat.chat_id, t("applied_already", lang))
+        log(db, chat, "apply", "dup", job_id)
         return
     day_ago = datetime.utcnow() - timedelta(hours=24)
     recent = (db.query(Application)
@@ -964,12 +1009,14 @@ def do_apply(db: Session, chat: BotChat, job_id: int) -> None:
               .order_by(Application.created_at.desc()).all())
     if recent and (datetime.utcnow() - recent[0].created_at).total_seconds() < APPLY_MIN_INTERVAL:
         send(chat.chat_id, t("too_fast", lang, n=APPLY_MIN_INTERVAL))
+        log(db, chat, "apply", "too_fast", job_id)
         return
     if len(recent) >= APPLY_DAILY_LIMIT:
         if (user.coins or 0) >= APPLY_EXTRA_COST:
             user.coins = (user.coins or 0) - APPLY_EXTRA_COST
         else:
             send(chat.chat_id, t("limit", lang, n=APPLY_DAILY_LIMIT))
+            log(db, chat, "apply", "limit", job_id)
             return
     application = Application(job_id=job_id, user_id=user.id, cover="")
     db.add(application)
@@ -977,6 +1024,7 @@ def do_apply(db: Session, chat: BotChat, job_id: int) -> None:
     db.add(ApplicationEvent(application_id=application.id, actor_id=user.id,
                             kind="created", body="Отклик из Telegram-бота"))
     track(db, "application_created", user.id, "job", job_id, via="tgbot")
+    log(db, chat, "apply", "done", job_id)
     from server import crm
     crm.note_application(db, job, user, application)
     chat.state, chat.pending_job = "", None
@@ -1150,6 +1198,7 @@ def handle_document(db: Session, chat: BotChat, doc: dict) -> None:
         send(chat.chat_id, t("cv_bad", lang))
         return
     row = save_cv(db, chat, payload=payload, filename=doc.get("file_name") or "cv.pdf")
+    log(db, chat, "cv", "file", name)
     after_cv(db, chat, row)
 
 
@@ -1183,6 +1232,7 @@ def handle_linkedin(db: Session, chat: BotChat, url: str) -> None:
         track(db, "bot_linkedin_fail", chat.user_id, "bot", None)
         return
     row = save_cv(db, chat, fields=fields, linkedin=url)
+    log(db, chat, "cv", "linkedin")
     years = ""
     if row.experience_years:
         years = (f", {row.experience_years} лет опыта" if lang == "ru"
@@ -1208,7 +1258,12 @@ def handle_text(db: Session, chat: BotChat, text: str) -> None:
             chat.source = (payload or chat.source)[:80]
             show_welcome(db, chat)
             track(db, "bot_start", chat.user_id, "bot", None, source=chat.source)
-        elif command in ("/menu", "/help"):
+            log(db, chat, "start", "start", chat.source)
+        elif command in ("/menu", "/help", "/jobs", "/cv", "/stop", "/lang"):
+            log(db, chat, "cmd", command)
+        else:
+            log(db, chat, "cmd", "unknown", command)
+        if command in ("/menu", "/help"):
             show_menu(db, chat)
         elif command == "/jobs":
             show_jobs(db, chat, "fresh", 0)
@@ -1232,18 +1287,46 @@ def handle_text(db: Session, chat: BotChat, text: str) -> None:
         row = db.query(Resume).filter_by(user_id=chat.user_id).first() if chat.user_id else None
         if row:
             row.title = body[:120]
+            log(db, chat, "cv", "title", body[:120])
             after_cv(db, chat, row)
             return
     # Длинный текст — это вставленное резюме, а не поисковый запрос: столько
     # в строку поиска не пишут, а к нам так приходит половина кандидатов.
     if chat.state == "cv" or len(body) >= 400:
         row = save_cv(db, chat, text=body)
+        log(db, chat, "cv", "text")
         after_cv(db, chat, row)
         return
+    log(db, chat, "search", "text", body[:120])
     show_jobs(db, chat, body[:120], 0)
 
 
+def log_callback(db: Session, chat: BotChat, data: str) -> None:
+    """Какую кнопку нажали — человеческим именем, см. BTN_LABELS."""
+    kind, _, value = data.partition(":")
+    if kind == "a" and value.isdigit():
+        log(db, chat, "btn", "apply", value)
+    elif kind == "j" and value.isdigit():
+        log(db, chat, "btn", "details", value)
+    elif kind == "m" and value.isdigit():
+        # «← К списку» из карточки шлёт текущий offset, «Ещё» — следующий
+        log(db, chat, "btn", "back" if int(value) <= (chat.offset or 0) else "more", value)
+    elif kind == "c" and value.isdigit() and int(value) < len(CATEGORIES):
+        log(db, chat, "btn", "cat", CATEGORIES[int(value)])
+    elif kind == "g" and value:
+        log(db, chat, "btn", "geo", value)
+    elif data == "s:0":
+        log(db, chat, "btn", "sub_off")
+    elif kind == "s":
+        log(db, chat, "btn", "sub_on")
+    elif data in BTN_LABELS:
+        log(db, chat, "btn", data)
+    else:
+        log(db, chat, "btn", "unknown", data[:120])
+
+
 def handle_callback(db: Session, chat: BotChat, data: str) -> None:
+    log_callback(db, chat, data)
     kind, _, value = data.partition(":")
     lang = chat.lang
     if kind == "a" and value.isdigit():
@@ -1346,6 +1429,7 @@ def push_pending(db: Session, dry: bool = False) -> dict:
             stats["sent"] += 1
             stats["jobs"] += len(rows[:CARDS])
             track(db, "bot_push", chat.user_id, "bot", None, n=len(rows[:CARDS]))
+            log(db, chat, "push", "sub", len(rows[:CARDS]))
         else:
             # заблокировал бота — молча снимаем с рассылки, иначе долбимся вечно
             chat.sub = 0
@@ -1392,6 +1476,241 @@ def start_scheduler() -> None:
     print(f"[jobbot] бот подбора включён, рассылка {PUSH_FROM}:00–{PUSH_TO}:00 +{TZ_OFFSET}")
 
 
+# ---------- аналитика для админки ----------
+
+def _between(q, column, since_dt, until_dt):
+    if since_dt:
+        q = q.filter(column >= since_dt)
+    if until_dt:
+        q = q.filter(column < until_dt)
+    return q
+
+
+def describe_event(event: BotEvent, jobs: dict) -> str:
+    """Строка для ленты действий: «Откликнуться · Head of BizDev (Betsson)»."""
+    kind, name, value = event.kind, event.name or "", event.value or ""
+    job = jobs.get(value) if value.isdigit() else None
+    job_label = (f"{job[0]} ({job[1]})" if job and job[1] else job[0]) if job else (f"#{value}" if value else "")
+    if kind == "start":
+        return f"/start {value}".strip()
+    if kind == "cmd":
+        return value if name == "unknown" else name
+    if kind == "btn":
+        label = BTN_LABELS.get(name, name)
+        if name in ("apply", "details"):
+            return f"{label} · {job_label}"
+        if name in ("cat", "geo", "unknown"):
+            return f"{label} · {value}"
+        return label
+    if kind == "search":
+        return f"«{value}»"
+    if kind == "cv":
+        return {"file": f"файлом {value}".strip(), "text": "текстом", "linkedin": "по LinkedIn",
+                "title": f"должность: {value}"}.get(name, name)
+    if kind == "apply":
+        return f"{APPLY_LABELS.get(name, name)} · {job_label}"
+    if kind == "site":
+        return "кабинет по ссылке из бота"
+    if kind == "push":
+        return f"{value} вакансий по подписке"
+    return f"{name} {value}".strip()
+
+
+def bot_dashboard(db: Session, since_dt=None, until_dt=None) -> dict:
+    """Кто пришёл, что нажимал и куда дошёл — данные вкладки «Бот» в админке.
+
+    since_dt / until_dt — границы периода из parse_period (until — исключительно,
+    None — без границы). Сводка, воронка, кнопки и лента — за период; графики по
+    дням — на окне периода, для «за всё время» — с первого чата, но не дольше
+    90 дней. «Всего чатов» и «подписаны» — состояние на сейчас.
+    """
+    today = datetime.utcnow().date()
+    acted = BotEvent.kind.in_(ACTIVE_KINDS)
+
+    def ev(q):
+        return _between(q, BotEvent.created_at, since_dt, until_dt)
+
+    def chats_where(*filters):
+        return ev(db.query(func.count(func.distinct(BotEvent.chat_id))).filter(*filters)).scalar() or 0
+
+    def count_where(*filters):
+        return ev(db.query(func.count(BotEvent.id)).filter(*filters)).scalar() or 0
+
+    chats_q = _between(db.query(BotChat), BotChat.created_at, since_dt, until_dt)
+    first_chat = db.query(func.min(BotChat.created_at)).scalar()
+    summary = {
+        "chats_total": db.query(BotChat).count(),
+        "chats_new": chats_q.count(),
+        "chats_active": chats_where(acted),
+        "accounts": _between(db.query(BotChat).join(User, User.id == BotChat.user_id),
+                             User.created_at, since_dt, until_dt).count(),
+        "subscribed": db.query(BotChat).filter(BotChat.sub == 1).count(),
+        "presses": count_where(BotEvent.kind == "btn"),
+        "searches": count_where(BotEvent.kind == "search"),
+        "cv": chats_where(BotEvent.kind == "cv"),
+        "applies": count_where(BotEvent.kind == "apply", BotEvent.name == "done"),
+        "site": count_where(BotEvent.kind == "site"),
+        "site_chats": chats_where(BotEvent.kind == "site"),
+        "pushes": count_where(BotEvent.kind == "push"),
+        "first_chat": first_chat,
+    }
+    funnel = [
+        ["пришли в бот", max(summary["chats_new"], summary["chats_active"])],
+        ["нажали кнопку", chats_where(BotEvent.kind == "btn")],
+        ["нажали «Откликнуться»", chats_where(BotEvent.kind == "btn", BotEvent.name == "apply")],
+        ["прислали резюме", summary["cv"]],
+        ["откликнулись", chats_where(BotEvent.kind == "apply", BotEvent.name == "done")],
+        ["перешли на сайт", summary["site_chats"]],
+    ]
+
+    # --- окно графиков
+    until_day = (until_dt - timedelta(days=1)).date() if until_dt else today
+    if since_dt:
+        since_day = since_dt.date()
+    else:
+        since_day = max((first_chat or datetime.utcnow()).date(), until_day - timedelta(days=89))
+    since_day = min(since_day, until_day)
+    days = (until_day - since_day).days + 1
+    win_from = datetime.combine(since_day, datetime.min.time())
+    win_to = datetime.combine(until_day + timedelta(days=1), datetime.min.time())
+    prev_from = win_from - timedelta(days=days)
+    labels = [(since_day + timedelta(days=i)).isoformat() for i in range(days)]
+
+    def daily(column, *filters):
+        rows = (db.query(func.date(column), func.count())
+                .filter(column >= win_from, column < win_to, *filters)
+                .group_by(func.date(column)).all())
+        by = {day: n for day, n in rows}
+        return [by.get(day, 0) for day in labels]
+
+    active_rows = (db.query(func.date(BotEvent.created_at), BotEvent.chat_id)
+                   .filter(acted, BotEvent.created_at >= win_from, BotEvent.created_at < win_to)
+                   .distinct().all())
+    born = dict(db.query(BotChat.chat_id, func.date(BotChat.created_at))
+                .filter(BotChat.created_at >= win_from, BotChat.created_at < win_to).all())
+    new_by, ret_by = {}, {}
+    for day, chat_id in active_rows:
+        bucket = new_by if born.get(chat_id) == day else ret_by
+        bucket[day] = bucket.get(day, 0) + 1
+    series = {
+        "new": [new_by.get(d, 0) for d in labels],
+        "returning": [ret_by.get(d, 0) for d in labels],
+        "active": [new_by.get(d, 0) + ret_by.get(d, 0) for d in labels],
+        "chats": daily(BotChat.created_at),
+        "presses": daily(BotEvent.created_at, BotEvent.kind == "btn"),
+        "applies": daily(BotEvent.created_at, BotEvent.kind == "apply", BotEvent.name == "done"),
+        "site": daily(BotEvent.created_at, BotEvent.kind == "site"),
+    }
+
+    def window_total(key, a, b):
+        if key == "active":
+            return (db.query(func.count(func.distinct(BotEvent.chat_id)))
+                    .filter(acted, BotEvent.created_at >= a, BotEvent.created_at < b).scalar() or 0)
+        if key == "chats":
+            return db.query(BotChat).filter(BotChat.created_at >= a, BotChat.created_at < b).count()
+        filters = {"presses": [BotEvent.kind == "btn"],
+                   "applies": [BotEvent.kind == "apply", BotEvent.name == "done"],
+                   "site": [BotEvent.kind == "site"]}[key]
+        return (db.query(func.count(BotEvent.id))
+                .filter(BotEvent.created_at >= a, BotEvent.created_at < b, *filters).scalar() or 0)
+
+    comparable = since_dt is not None          # у «за всё время» прошлого периода нет
+    totals = {key: {"cur": window_total(key, win_from, win_to),
+                    "prev": window_total(key, prev_from, win_from) if comparable else None}
+              for key in ("active", "chats", "presses", "applies", "site")}
+
+    # --- полосы: кнопки, источники, интересы, вакансии
+    btn_rows = (ev(db.query(BotEvent.name, func.count(BotEvent.id)).filter(BotEvent.kind == "btn"))
+                .group_by(BotEvent.name).order_by(func.count(BotEvent.id).desc()).all())
+    buttons = [[BTN_LABELS.get(name, name), n] for name, n in btn_rows]
+
+    src_rows = (chats_q.with_entities(BotChat.source, func.count(BotChat.id))
+                .group_by(BotChat.source).order_by(func.count(BotChat.id).desc()).all())
+    sources = [[(src or "без метки (прямой заход)"), n] for src, n in src_rows[:10]]
+    if len(src_rows) > 10:
+        sources.append(["другие метки", sum(n for _, n in src_rows[10:])])
+
+    interest_rows = (ev(db.query(BotEvent.name, func.lower(BotEvent.value), func.count(BotEvent.id))
+                        .filter(or_(BotEvent.kind == "search", BotEvent.name.in_(("cat", "geo")))))
+                     .group_by(BotEvent.name, func.lower(BotEvent.value))
+                     .order_by(func.count(BotEvent.id).desc()).limit(12).all())
+    interests = [[(f"«{value}»" if name == "text" else value), n]
+                 for name, value, n in interest_rows if value]
+
+    job_rows = (ev(db.query(BotEvent.value, func.count(BotEvent.id))
+                   .filter(BotEvent.kind == "btn", BotEvent.name.in_(("details", "apply"))))
+                .group_by(BotEvent.value).order_by(func.count(BotEvent.id).desc()).limit(10).all())
+    job_ids = [int(v) for v, _ in job_rows if v and v.isdigit()]
+    titles = {jid: (title, company) for jid, title, company in
+              db.query(Job.id, Job.title, Job.company_name).filter(Job.id.in_(job_ids)).all()} if job_ids else {}
+    top_jobs = [{"id": int(v), "views": n, "title": titles[int(v)][0], "company": titles[int(v)][1] or ""}
+                for v, n in job_rows if v and v.isdigit() and int(v) in titles]
+
+    # --- чаты: кто, откуда, сколько чего сделал за период
+    per = {}
+    for chat_id, kind, name, n in (ev(db.query(BotEvent.chat_id, BotEvent.kind, BotEvent.name,
+                                                func.count(BotEvent.id)))
+                                   .group_by(BotEvent.chat_id, BotEvent.kind, BotEvent.name).all()):
+        row = per.setdefault(chat_id, {"actions": 0, "presses": 0, "searches": 0, "cv": 0,
+                                       "applies": 0, "site": 0, "pushes": 0})
+        if kind == "btn":
+            row["presses"] += n
+        elif kind == "search":
+            row["searches"] += n
+        elif kind == "cv":
+            row["cv"] += n
+        elif kind == "apply" and name == "done":
+            row["applies"] += n
+        elif kind == "site":
+            row["site"] += n
+        elif kind == "push":
+            row["pushes"] += n
+        if kind in ACTIVE_KINDS:
+            row["actions"] += n
+    chats_list_q = db.query(BotChat)
+    if since_dt:
+        chats_list_q = chats_list_q.filter(BotChat.last_seen >= since_dt)   # last_seen только растёт
+    chats = []
+    for chat in chats_list_q.order_by(BotChat.last_seen.desc()).limit(500).all():
+        created_in = ((not since_dt or (chat.created_at and chat.created_at >= since_dt))
+                      and (not until_dt or (chat.created_at and chat.created_at < until_dt)))
+        if chat.chat_id not in per and not created_in:
+            continue
+        chats.append({"id": chat.id, "chat_id": chat.chat_id, "username": chat.username or "",
+                      "first_name": chat.first_name or "", "lang": chat.lang, "source": chat.source or "",
+                      "created_at": chat.created_at, "last_seen": chat.last_seen, "user_id": chat.user_id,
+                      "sub": bool(chat.sub), "sub_query": chat.sub_query or "",
+                      **per.get(chat.chat_id, {"actions": 0, "presses": 0, "searches": 0, "cv": 0,
+                                               "applies": 0, "site": 0, "pushes": 0})})
+        if len(chats) >= 200:
+            break
+
+    # --- лента последних действий
+    feed_rows = ev(db.query(BotEvent)).order_by(BotEvent.created_at.desc(), BotEvent.id.desc()).limit(80).all()
+    feed_chat_ids = {e.chat_id for e in feed_rows}
+    feed_chats = {c.chat_id: c for c in db.query(BotChat).filter(BotChat.chat_id.in_(feed_chat_ids)).all()} \
+        if feed_chat_ids else {}
+    feed_job_ids = {int(e.value) for e in feed_rows if e.value and e.value.isdigit()
+                    and (e.kind == "apply" or e.name in ("details", "apply"))}
+    feed_jobs = {str(jid): (title, company or "") for jid, title, company in
+                 db.query(Job.id, Job.title, Job.company_name).filter(Job.id.in_(feed_job_ids)).all()} \
+        if feed_job_ids else {}
+    feed = []
+    for e in feed_rows:
+        chat = feed_chats.get(e.chat_id)
+        feed.append({"when": e.created_at, "chat_id": e.chat_id, "kind": e.kind,
+                     "kind_label": KIND_LABELS.get(e.kind, e.kind),
+                     "who": (f"@{chat.username}" if chat and chat.username else
+                             (chat.first_name if chat and chat.first_name else e.chat_id)),
+                     "user_id": chat.user_id if chat else None,
+                     "what": describe_event(e, feed_jobs)})
+
+    return {"bot": summary, "days": days, "bot_chats": chats, "bot_feed": feed,
+            "charts": {"days": days, "labels": labels, "series": series, "totals": totals,
+                       "buttons": buttons, "sources": sources, "interests": interests,
+                       "top_jobs": top_jobs, "funnel": funnel}}
+
+
 # ---------- маршруты ----------
 
 @router.post("/tg/jobbot/{secret}")
@@ -1425,6 +1744,9 @@ def tg_login(token: str, request: Request, db: Session = Depends(db_session)):
     if not user:
         return RedirectResponse("/login?e=expired", status_code=303)
     row.used = True
+    chat = db.query(BotChat).filter_by(user_id=user.id).first()
+    if chat:
+        log(db, chat, "site", "cabinet")     # единственная ссылка из бота на сайт
     db.commit()
     return set_session(RedirectResponse("/profile", status_code=303), user)
 
