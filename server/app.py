@@ -6030,6 +6030,80 @@ def payments_funnel(db: Session, since_dt=None, until_dt=None, exclude_ids=()) -
             "by_plan": sorted(by_plan.items(), key=lambda kv: -kv[1]["revenue"])}
 
 
+HUMAN_VIEWS_SINCE = datetime(2026, 9, 3)   # до этого дня job_view копил заходы краулеров
+
+
+def _daily_counts(db, column, since_dt, filters=(), value=None):
+    """{'YYYY-MM-DD': n} по UTC-суткам одним GROUP BY; value — агрегат вместо count."""
+    agg = value if value is not None else func.count()
+    q = db.query(func.date(column), agg).filter(column >= since_dt)
+    for f in filters:
+        q = q.filter(f)
+    return {day: (n or 0) for day, n in q.group_by(func.date(column)).all()}
+
+
+def dash_charts(db: Session, days: int) -> dict:
+    """Данные для графиков дашборда: ряды по дням за период и за предыдущий такой же,
+    воронка откликов, источники live-вакансий, топ вакансий по просмотрам людьми."""
+    today = datetime.utcnow().date()
+    since = datetime.combine(today - timedelta(days=days - 1), datetime.min.time())
+    prev_since = since - timedelta(days=days)
+    labels = [(since.date() + timedelta(days=i)).isoformat() for i in range(days)]
+    prev_labels = [(prev_since.date() + timedelta(days=i)).isoformat() for i in range(days)]
+    test_ids = test_account_ids(db)
+
+    raw = {
+        "views": _daily_counts(db, AnalyticsEvent.created_at, max(prev_since, HUMAN_VIEWS_SINCE),
+                               [AnalyticsEvent.name == "job_view"]),
+        "apps": _daily_counts(db, Application.created_at, prev_since),
+        "jobs": _daily_counts(db, Job.created_at, prev_since),
+        "talents": _daily_counts(db, User.created_at, prev_since, [User.role == "talent"]),
+        "employers": _daily_counts(db, User.created_at, prev_since, [User.role == "employer"]),
+        "orders": _daily_counts(db, Order.created_at, prev_since,
+                                [Order.status == "paid"] + ([Order.user_id.notin_(test_ids)] if test_ids else [])),
+        "revenue": _daily_counts(db, Order.created_at, prev_since,
+                                 [Order.status == "paid"] + ([Order.user_id.notin_(test_ids)] if test_ids else []),
+                                 value=func.coalesce(func.sum(Order.amount), 0)),
+    }
+    series, totals = {}, {}
+    for key, by_day in raw.items():
+        series[key] = [by_day.get(d, 0) for d in labels]
+        cur = sum(series[key])
+        prev = sum(by_day.get(d, 0) for d in prev_labels)
+        # просмотры до 3.09 не считаем — если прошлый период задевает то время, дельту не показываем
+        comparable = key != "views" or prev_since >= HUMAN_VIEWS_SINCE
+        totals[key] = {"cur": cur, "prev": prev if comparable else None}
+
+    status_rows = dict(db.query(Application.status, func.count(Application.id))
+                       .filter(Application.created_at >= since)
+                       .group_by(Application.status).all())
+    app_status = [[st, status_rows.get(st, 0)] for st in ("new", "viewed", "invited", "offer", "hired", "rejected")]
+
+    src_rows = (db.query(Job.source, func.count(Job.id)).filter(Job.status == "approved")
+                .group_by(Job.source).order_by(func.count(Job.id).desc()).all())
+    sources = [[(src or "ручные / работодатели"), n] for src, n in src_rows[:8]]
+    tail = sum(n for _, n in src_rows[8:])
+    if tail:
+        sources.append(["другие источники", tail])
+
+    top_rows = (db.query(AnalyticsEvent.entity_id, func.count(AnalyticsEvent.id))
+                .filter(AnalyticsEvent.name == "job_view", AnalyticsEvent.entity_type == "job",
+                        AnalyticsEvent.created_at >= max(since, HUMAN_VIEWS_SINCE))
+                .group_by(AnalyticsEvent.entity_id)
+                .order_by(func.count(AnalyticsEvent.id).desc()).limit(10).all())
+    titles = {}
+    ids = [jid for jid, _ in top_rows if jid]
+    if ids:
+        titles = {jid: (title, company) for jid, title, company in
+                  db.query(Job.id, Job.title, Job.company_name).filter(Job.id.in_(ids)).all()}
+    top_jobs = [{"id": jid, "views": n, "title": titles.get(jid, ("(удалена)", ""))[0],
+                 "company": titles.get(jid, ("", ""))[1]} for jid, n in top_rows if jid in titles]
+
+    return {"days": days, "labels": labels, "series": series, "totals": totals,
+            "app_status": app_status, "sources": sources, "top_jobs": top_jobs,
+            "views_since": HUMAN_VIEWS_SINCE.date().isoformat()}
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)):
     need_admin(request, db)
@@ -6085,6 +6159,15 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         pr = parse_period(request)  # регистрация: по умолчанию «сегодня»
         users_q = _in_period(users_q, User.created_at, pr["since_dt"], pr["until_dt"])
         ctx["users"] = users_q.order_by(User.created_at.desc()).all()
+        # сколько вакансий у работодателя (live / всего) и откликов у соискателя — одним GROUP BY
+        uids = [u.id for u in ctx["users"]]
+        ctx["user_jobs"] = dict(db.query(Job.owner_id, func.count(Job.id))
+                                .filter(Job.owner_id.in_(uids)).group_by(Job.owner_id).all()) if uids else {}
+        ctx["user_jobs_live"] = dict(db.query(Job.owner_id, func.count(Job.id))
+                                     .filter(Job.owner_id.in_(uids), Job.status == "approved")
+                                     .group_by(Job.owner_id).all()) if uids else {}
+        ctx["user_apps"] = dict(db.query(Application.user_id, func.count(Application.id))
+                                .filter(Application.user_id.in_(uids)).group_by(Application.user_id).all()) if uids else {}
         ctx["role"] = role
         ctx.update(pr)
     elif tab == "apps":
@@ -6226,6 +6309,12 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         ctx["pending"] = db.query(Job).filter(Job.status == "pending") \
             .order_by(Job.created_at.desc()).limit(10).all()
         ctx["orders_pending"] = db.query(Order).filter(Order.status == "pending").count()
+        try:
+            days = int(request.query_params.get("days") or 30)
+        except ValueError:
+            days = 30
+        ctx["days"] = days if days in (7, 14, 30, 90) else 30
+        ctx["charts"] = dash_charts(db, ctx["days"])
     return render(request, db, "admin.html", **ctx)
 
 

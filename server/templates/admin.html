@@ -86,6 +86,59 @@
   .source-status.ok::before { background:var(--acid); box-shadow:0 0 10px color-mix(in srgb,var(--acid) 65%,transparent); }
   .source-status.warn::before { background:var(--yellow); }
   .source-status.off::before { background:var(--pink); }
+  /* графики дашборда: палитра проверена валидатором dataviz под обе темы кабинета */
+  .viz-filters { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin: var(--sp-5) 0 14px; }
+  .viz-filters .note { margin-left:auto; color:var(--ink-faint); font-size:.78rem; }
+  .viz-grid { display:grid; gap:12px; margin-bottom:12px; }
+  .viz-grid--4 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
+  .viz-grid--2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); }
+  .viz { margin:0; border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:14px 16px 10px; box-shadow:var(--bezel, none); min-width:0;
+         --s1:#038660; --s2:#7457a3; --gray:#a8b0ad; --o1:#53bb93; --o2:#36a27b; --o3:#0d8963; --o4:#00714d; --o5:#005a38; }
+  html[data-ws-theme="dark"] .viz { --s1:#24ab7e; --s2:#9470cd; --gray:#505754; --o1:#56d1a3; --o2:#3bbb8d; --o3:#17a478; --o4:#008f64; --o5:#007950; }
+  .viz__head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:6px; }
+  .viz__title { font-weight:700; font-size:.92rem; color:var(--ink); }
+  .viz__sub { color:var(--ink-faint); font-size:.74rem; margin-top:2px; }
+  .viz__kpi { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; margin-top:4px; }
+  .viz__num { font-family:var(--font-display); font-weight:900; font-size:1.6rem; line-height:1.1; color:var(--ink); white-space:nowrap; }
+  .viz__delta { font-size:.74rem; font-weight:700; color:var(--ink-faint); white-space:nowrap; }
+  .viz__delta small { font-size:.68rem; font-weight:400; color:var(--ink-faint); }
+  .viz__kpi + .viz__sub { margin-bottom:6px; }
+  .viz__delta.up { color:var(--acid-deep, var(--acid)); } .viz__delta.down { color:var(--pink); }
+  .viz__tbl { border:1px solid var(--line); background:transparent; color:var(--ink-faint); border-radius:8px; font:700 .66rem var(--font-body); text-transform:uppercase; letter-spacing:.06em; padding:4px 8px; cursor:pointer; flex:none; }
+  .viz__tbl:hover, .viz__tbl[aria-pressed="true"] { border-color:var(--acid); color:var(--acid-deep, var(--acid)); }
+  .viz__plot { position:relative; outline:none; border-radius:6px; }
+  .viz__plot:focus-visible { box-shadow:0 0 0 2px var(--acid); }
+  .viz__plot svg { display:block; width:100%; height:auto; font-family:var(--font-body); }
+  .viz .grid { stroke:var(--line); stroke-width:1; }
+  .viz .axis { stroke:var(--line-strong); stroke-width:1; }
+  .viz .tick { fill:var(--ink-faint); font-size:11px; font-variant-numeric:tabular-nums; }
+  .viz .lbl { fill:var(--ink-dim); font-size:12px; }
+  .viz .val { fill:var(--ink); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .viz .line { fill:none; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; }
+  .viz .area { opacity:.12; }
+  .viz .dot { stroke:var(--surface); stroke-width:2; }
+  .viz .s1 { fill:var(--s1); } .viz .s2 { fill:var(--s2); } .viz .gray { fill:var(--gray); }
+  .viz .line.s1 { stroke:var(--s1); } .viz .line.s2 { stroke:var(--s2); }
+  .viz .o1{fill:var(--o1)} .viz .o2{fill:var(--o2)} .viz .o3{fill:var(--o3)} .viz .o4{fill:var(--o4)} .viz .o5{fill:var(--o5)}
+  .viz .bar.hot { stroke:var(--ink); stroke-opacity:.45; stroke-width:1; }
+  .viz .xhair { stroke:var(--line-strong); stroke-width:1; pointer-events:none; }
+  .viz .hit { fill:transparent; cursor:crosshair; }
+  .viz a .lbl { fill:var(--ink); text-decoration:underline; text-decoration-color:var(--line-strong); }
+  .viz a:hover .lbl { fill:var(--acid-deep, var(--acid)); }
+  .viz__legend { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:8px; font-size:.74rem; color:var(--ink-dim); }
+  .viz__legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px; }
+  .viz__tip { position:absolute; z-index:5; pointer-events:none; background:var(--surface); border:1px solid var(--line-strong); border-radius:8px; padding:7px 10px; font-size:.76rem; color:var(--ink-dim); box-shadow:var(--shadow-dark); min-width:130px; max-width:260px; }
+  .viz__tip b { color:var(--ink); font-variant-numeric:tabular-nums; }
+  .viz__tip .row { display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
+  .viz__tip .row i { display:inline-block; width:12px; height:2px; vertical-align:middle; margin-right:6px; border-radius:1px; }
+  .viz__tip .day { color:var(--ink-faint); margin-bottom:3px; overflow-wrap:anywhere; }
+  .viz__table { margin-top:4px; max-height:300px; overflow:auto; }
+  .viz__table table { width:100%; border-collapse:collapse; font-size:.78rem; }
+  .viz__table th, .viz__table td { padding:4px 6px; text-align:left; border-bottom:1px solid var(--line); }
+  .viz__table th { color:var(--ink-faint); font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; }
+  .viz__table td.n, .viz__table th.n { text-align:right; font-variant-numeric:tabular-nums; }
+  .viz__empty { color:var(--ink-faint); font-size:.8rem; padding:28px 0; text-align:center; }
+  @media (max-width: 640px) { .viz-filters .note { margin-left:0; width:100%; } }
 {% endblock %}
 {% block content %}
   <nav class="crumbs"><a href="/">Главная</a> / Админка</nav>
@@ -124,6 +177,58 @@
 
     {% if request.query_params.get('crawl') %}<div class="flash">🕷 {{ request.query_params.get('crawl') }}</div>{% endif %}
 
+    {% macro tile(key, title, sub, unit='') %}
+      {% set t = charts.totals[key] %}
+      <figure class="viz" data-viz="line" data-key="{{ key }}" data-title="{{ title }}" data-unit="{{ unit }}">
+        <figcaption>
+          <div class="viz__head"><div class="viz__title">{{ title }}</div><button class="viz__tbl" type="button" aria-pressed="false">таблица</button></div>
+          <div class="viz__kpi">
+            <span class="viz__num">{{ '{:,}'.format(t.cur).replace(',', ' ') }}{{ unit }}</span>
+            {% if t.prev is not none %}
+              {% if t.prev %}{% set pct = ((t.cur - t.prev) * 100 / t.prev)|round|int %}
+                <span class="viz__delta {% if pct > 0 %}up{% elif pct < 0 %}down{% endif %}" title="Прошлые {{ days }} дн.: {{ t.prev }}">{{ '+' if pct > 0 else '' }}{{ pct }}% <small>к прошлым {{ days }} дн.</small></span>
+              {% else %}<span class="viz__delta">прошлые {{ days }} дн.: 0</span>{% endif %}
+            {% endif %}
+          </div>
+          <div class="viz__sub">{{ sub }}</div>
+        </figcaption>
+        <div class="viz__plot" tabindex="0" role="img" aria-label="{{ title }} по дням"></div>
+        <div class="viz__table" hidden></div>
+      </figure>
+    {% endmacro %}
+    {% macro card(kind, src, title, sub, extra='') %}
+      <figure class="viz" data-viz="{{ kind }}" data-src="{{ src }}" data-title="{{ title }}" {{ extra|safe }}>
+        <figcaption class="viz__head">
+          <div><div class="viz__title">{{ title }}</div><div class="viz__sub">{{ sub }}</div></div>
+          <button class="viz__tbl" type="button" aria-pressed="false">таблица</button>
+        </figcaption>
+        <div class="viz__plot" tabindex="0" role="img" aria-label="{{ title }}"></div>
+        <div class="viz__table" hidden></div>
+      </figure>
+    {% endmacro %}
+
+    <div class="viz-filters">
+      {% for d, label in [(7, '7 дней'), (14, '14 дней'), (30, '30 дней'), (90, '90 дней')] %}
+      <a class="tag {% if days == d %}tag-acid{% endif %}" href="/admin?days={{ d }}">{{ label }}</a>
+      {% endfor %}
+      <span class="note">Сутки по UTC · просмотры людьми считаются с {{ charts.views_since[8:] }}.{{ charts.views_since[5:7] }}</span>
+    </div>
+    <div class="viz-grid viz-grid--4">
+      {{ tile('views', 'Просмотры вакансий', 'людьми, за ' ~ days ~ ' дн.') }}
+      {{ tile('apps', 'Отклики', 'за ' ~ days ~ ' дн.') }}
+      {{ tile('jobs', 'Новые вакансии', 'ручные и краулер, за ' ~ days ~ ' дн.') }}
+      {{ tile('revenue', 'Выручка', charts.totals.orders.cur ~ ' оплач. заказ' ~ ('' if charts.totals.orders.cur % 10 == 1 and charts.totals.orders.cur % 100 != 11 else ('а' if charts.totals.orders.cur % 10 in [2,3,4] and charts.totals.orders.cur % 100 not in [12,13,14] else 'ов')) ~ ', без тестовых', ' €') }}
+    </div>
+    <div class="viz-grid viz-grid--2">
+      {{ card('stack', 'signups', 'Регистрации по дням', 'соискатели и работодатели, за ' ~ days ~ ' дн.') }}
+      {{ card('hbar', 'app_status', 'Отклики по статусам', 'созданные за ' ~ days ~ ' дн., по текущему статусу', 'data-ordinal="1"') }}
+    </div>
+    <div class="viz-grid viz-grid--2">
+      {{ card('hbar', 'sources', 'Источники live-вакансий', 'откуда ' ~ stats.jobs_approved ~ ' опубликованных вакансий, топ-8') }}
+      {{ card('hbar', 'top_jobs', 'Топ вакансий по просмотрам', 'людьми, за ' ~ days ~ ' дн.', 'data-links="1"') }}
+    </div>
+    <script type="application/json" id="dash-data">{{ charts|tojson }}</script>
+
     <h2 style="font-size: 1.05rem; color: var(--pink); margin-bottom: 12px;">▮ Очередь модерации</h2>
     {% for j in pending %}
       <div class="card mq">
@@ -142,6 +247,175 @@
     {% else %}
       <p style="color: var(--ink-dim);">Очередь пуста — можно спать спокойно. 🎰</p>
     {% endfor %}
+    <script>
+    (function () {
+      var dataEl = document.getElementById('dash-data');
+      if (!dataEl) return;
+      var D = JSON.parse(dataEl.textContent);
+      var NS = 'http://www.w3.org/2000/svg';
+      var STATUS = { new: 'новый', viewed: 'просмотрен', invited: 'интервью', offer: 'оффер', hired: 'нанят', rejected: 'отказ' };
+      function el(tag, attrs, parent) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+      function text(parent, x, y, s, cls, anchor) { var t = el('text', { x: x, y: y, 'class': cls, 'text-anchor': anchor || 'start' }, parent); t.textContent = s; return t; }
+      function fmt(n) { return (n || 0).toLocaleString('ru-RU'); }
+      function day(iso) { return iso.slice(8, 10) + '.' + iso.slice(5, 7); }
+      function niceTop(m) { if (m <= 1) return 1; if (m <= 2) return 2; var p = Math.pow(10, Math.floor(Math.log10(m))); var f = m / p; var n = [2, 4, 6, 8, 10].filter(function (c) { return c * p >= m; })[0] || 10; return n * p; }
+      function yTicks(top) { return top <= 1 ? [0, 1] : [0, top / 2, top]; }
+      function xStep(n, pw) { // сколько дней между подписями, чтобы они не слипались (~52px на подпись)
+        var maxLabels = Math.max(2, Math.floor(pw / 52)), need = (n - 1) / (maxLabels - 1);
+        return [1, 2, 3, 5, 7, 10, 14, 15, 30, 45, 60, 90].filter(function (s) { return s >= need; })[0] || n;
+      }
+      function h(tag, cls, parent) { var e = document.createElement(tag); if (cls) e.className = cls; if (parent) parent.appendChild(e); return e; }
+      function cssVar(fig, name) { return getComputedStyle(fig).getPropertyValue(name).trim(); }
+
+      function tipFor(plot) {
+        var tip = plot.querySelector('.viz__tip');
+        if (!tip) { tip = h('div', 'viz__tip', plot); tip.hidden = true; }
+        return tip;
+      }
+      function showTip(plot, tip, x, y, build) {
+        tip.textContent = ''; build(tip); tip.hidden = false;
+        var W = plot.clientWidth, tw = tip.offsetWidth;
+        var left = x + 14; if (left + tw > W) left = Math.max(0, x - tw - 14);
+        tip.style.left = left + 'px'; tip.style.top = Math.max(0, Math.min(y - 10, plot.clientHeight - tip.offsetHeight)) + 'px';
+      }
+      function row(tip, color, label, value) {
+        var r = h('div', 'row', tip); var l = h('span', '', r); var i = h('i', '', l); i.style.background = color; l.appendChild(document.createTextNode(label));
+        var b = h('b', '', r); b.textContent = value;
+      }
+
+      // ---------- линия + подложка (малые кратные: просмотры, отклики, вакансии, выручка)
+      function lineChart(fig) {
+        var key = fig.dataset.key, vals = D.series[key], labels = D.labels, plot = fig.querySelector('.viz__plot');
+        var unit = fig.dataset.unit || '', n = vals.length;
+        var W = Math.max(200, plot.clientWidth), H = 136, pL = 36, pR = 14, pT = 24, pB = 22; // pT с запасом под подпись максимума
+        var top = niceTop(Math.max.apply(null, vals)), pw = W - pL - pR, ph = H - pT - pB;
+        var X = function (i) { return pL + (n > 1 ? i * pw / (n - 1) : pw / 2); }, Y = function (v) { return pT + (1 - v / top) * ph; };
+        plot.querySelectorAll('svg').forEach(function (s) { s.remove(); });
+        var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H }, plot);
+        yTicks(top).forEach(function (t) { el('line', { x1: pL, x2: W - pR, y1: Y(t), y2: Y(t), 'class': t === 0 ? 'axis' : 'grid' }, svg); text(svg, pL - 6, Y(t) + 4, fmt(t), 'tick', 'end'); });
+        var step = xStep(n, pw);
+        for (var i = n - 1; i >= 0; i -= step) text(svg, X(i), H - 6, day(labels[i]), 'tick', i === n - 1 ? 'end' : (i === 0 ? 'start' : 'middle'));
+        var d = '', a = 'M' + X(0) + ',' + Y(0);
+        for (i = 0; i < n; i++) { d += (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Y(vals[i]).toFixed(1); a += 'L' + X(i).toFixed(1) + ',' + Y(vals[i]).toFixed(1); }
+        a += 'L' + X(n - 1) + ',' + Y(0) + 'Z';
+        el('path', { d: a, 'class': 'area s1' }, svg);
+        el('path', { d: d, 'class': 'line s1' }, svg);
+        var maxI = vals.indexOf(Math.max.apply(null, vals));
+        if (vals[maxI] > 0) { el('circle', { cx: X(maxI), cy: Y(vals[maxI]), r: 4, 'class': 'dot s1' }, svg); text(svg, Math.min(Math.max(X(maxI), pL + 20), W - pR - 20), Y(vals[maxI]) - 9, fmt(vals[maxI]) + unit, 'val', 'middle'); }
+        var xh = el('line', { x1: 0, x2: 0, y1: pT, y2: pT + ph, 'class': 'xhair', visibility: 'hidden' }, svg);
+        var hd = el('circle', { r: 4, 'class': 'dot s1', visibility: 'hidden' }, svg);
+        var tip = tipFor(plot), cur = -1;
+        function focusAt(i) {
+          cur = i; xh.setAttribute('x1', X(i)); xh.setAttribute('x2', X(i)); xh.setAttribute('visibility', 'visible');
+          hd.setAttribute('cx', X(i)); hd.setAttribute('cy', Y(vals[i])); hd.setAttribute('visibility', 'visible');
+          showTip(plot, tip, X(i), Y(vals[i]), function (t) { h('div', 'day', t).textContent = labels[i]; row(t, cssVar(fig, '--s1'), fig.dataset.title, fmt(vals[i]) + unit); });
+        }
+        function hide() { cur = -1; xh.setAttribute('visibility', 'hidden'); hd.setAttribute('visibility', 'hidden'); tip.hidden = true; }
+        var hit = el('rect', { x: pL, y: 0, width: pw, height: H, 'class': 'hit' }, svg);
+        hit.addEventListener('pointermove', function (e) { var r = svg.getBoundingClientRect(); var i = Math.round((e.clientX - r.left - pL) / (pw / (n - 1 || 1))); focusAt(Math.max(0, Math.min(n - 1, i))); });
+        hit.addEventListener('pointerleave', hide);
+        plot.addEventListener('focus', function () { focusAt(n - 1); }); plot.addEventListener('blur', hide);
+        plot.addEventListener('keydown', function (e) { if (e.key === 'ArrowLeft') { focusAt(Math.max(0, (cur < 0 ? n - 1 : cur) - 1)); e.preventDefault(); } if (e.key === 'ArrowRight') { focusAt(Math.min(n - 1, cur + 1)); e.preventDefault(); } });
+        return [['День', 'Значение']].concat(labels.map(function (l, i) { return [l, fmt(vals[i]) + unit]; }));
+      }
+
+      // ---------- стек колонок: соискатели + работодатели по дням
+      function stackChart(fig) {
+        var A = D.series.talents, B = D.series.employers, labels = D.labels, n = labels.length, plot = fig.querySelector('.viz__plot');
+        var W = Math.max(240, plot.clientWidth), H = 180, pL = 36, pR = 14, pT = 12, pB = 22;
+        var pw = W - pL - pR, ph = H - pT - pB, slot = pw / n, bw = Math.min(24, Math.max(2, slot - 2));
+        var top = niceTop(Math.max.apply(null, A.map(function (v, i) { return v + B[i]; })));
+        var Y = function (v) { return pT + (1 - v / top) * ph; }, X = function (i) { return pL + slot * i + (slot - bw) / 2; };
+        plot.querySelectorAll('svg').forEach(function (s) { s.remove(); });
+        var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H }, plot);
+        yTicks(top).forEach(function (t) { el('line', { x1: pL, x2: W - pR, y1: Y(t), y2: Y(t), 'class': t === 0 ? 'axis' : 'grid' }, svg); text(svg, pL - 6, Y(t) + 4, fmt(t), 'tick', 'end'); });
+        var step = xStep(n, pw);
+        for (var i = n - 1; i >= 0; i -= step) text(svg, X(i) + bw / 2, H - 6, day(labels[i]), 'tick', i === n - 1 ? 'end' : (i === 0 ? 'start' : 'middle'));
+        function col(x, y0, y1, cls, roundTop) { // 4px скругление только у верха стека, у базовой линии — прямой срез
+          var hgt = y0 - y1; if (hgt <= 0) return null; var r = roundTop ? Math.min(4, hgt, bw / 2) : 0;
+          var d = 'M' + x + ',' + y0 + 'V' + (y1 + r) + (r ? 'a' + r + ',' + r + ' 0 0 1 ' + r + ',-' + r : '') + 'H' + (x + bw - r) + (r ? 'a' + r + ',' + r + ' 0 0 1 ' + r + ',' + r : '') + 'V' + y0 + 'Z';
+          return el('path', { d: d, 'class': 'bar ' + cls }, svg);
+        }
+        var bars = [], tip = tipFor(plot), cur = -1;
+        for (i = 0; i < n; i++) {
+          var a = A[i], b = B[i], ya = Y(a), g = (a && b) ? 2 : 0;
+          var pa = col(X(i), Y(0), ya, 's1', !b), pb = b ? col(X(i), ya - g, ya - g - (Y(0) - Y(b)), 's2', true) : null;
+          bars.push([pa, pb]);
+        }
+        function focusAt(i) {
+          if (cur >= 0) bars[cur].forEach(function (p) { p && p.classList.remove('hot'); });
+          cur = i; bars[i].forEach(function (p) { p && p.classList.add('hot'); });
+          showTip(plot, tip, X(i) + bw / 2, Y(A[i] + B[i]), function (t) { h('div', 'day', t).textContent = labels[i]; row(t, cssVar(fig, '--s1'), 'соискатели', fmt(A[i])); row(t, cssVar(fig, '--s2'), 'работодатели', fmt(B[i])); });
+        }
+        function hide() { if (cur >= 0) bars[cur].forEach(function (p) { p && p.classList.remove('hot'); }); cur = -1; tip.hidden = true; }
+        var hit = el('rect', { x: pL, y: 0, width: pw, height: H, 'class': 'hit' }, svg);
+        hit.addEventListener('pointermove', function (e) { var r = svg.getBoundingClientRect(); focusAt(Math.max(0, Math.min(n - 1, Math.floor((e.clientX - r.left - pL) / slot)))); });
+        hit.addEventListener('pointerleave', hide);
+        plot.addEventListener('focus', function () { focusAt(n - 1); }); plot.addEventListener('blur', hide);
+        plot.addEventListener('keydown', function (e) { if (e.key === 'ArrowLeft') { focusAt(Math.max(0, (cur < 0 ? n - 1 : cur) - 1)); e.preventDefault(); } if (e.key === 'ArrowRight') { focusAt(Math.min(n - 1, cur + 1)); e.preventDefault(); } });
+        if (!fig.querySelector('.viz__legend')) {
+          var lg = h('div', 'viz__legend', fig);
+          [['--s1', 'соискатели'], ['--s2', 'работодатели']].forEach(function (s) { var sp = h('span', '', lg); var i = h('i', '', sp); i.style.background = cssVar(fig, s[0]); sp.appendChild(document.createTextNode(s[1])); });
+        }
+        return [['День', 'Соискатели', 'Работодатели', 'Всего']].concat(labels.map(function (l, i) { return [l, fmt(A[i]), fmt(B[i]), fmt(A[i] + B[i])]; }));
+      }
+
+      // ---------- горизонтальные полосы: источники, топ вакансий, статусы откликов
+      function hbarChart(fig) {
+        var src = fig.dataset.src, plot = fig.querySelector('.viz__plot'), ordinal = !!fig.dataset.ordinal, links = !!fig.dataset.links;
+        var rows = (D[src] || []).map(function (r) { return Array.isArray(r) ? { label: ordinal ? (STATUS[r[0]] || r[0]) : r[0], key: r[0], value: r[1] } : { label: r.title, sub: r.company, value: r.views, href: '/job/' + r.id }; });
+        plot.querySelectorAll('svg, .viz__empty').forEach(function (s) { s.remove(); });
+        if (!rows.length || !rows.some(function (r) { return r.value > 0; })) { h('div', 'viz__empty', plot).textContent = 'Нет данных за период'; return [['Категория', 'Значение']]; }
+        var W = Math.max(240, plot.clientWidth), rh = 26, bh = 14, lw = Math.min(190, Math.round(W * 0.36)), vw = 48, pT = 4;
+        var H = pT + rows.length * rh + 4, x0 = lw + 10, pw = W - x0 - vw, max = Math.max.apply(null, rows.map(function (r) { return r.value; })) || 1;
+        var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H }, plot);
+        el('line', { x1: x0, x2: x0, y1: pT, y2: H - 4, 'class': 'axis' }, svg);
+        var tip = tipFor(plot), cur = -1, marks = [];
+        function trunc(s, maxPx) { var t = el('text', { x: 0, y: -100, 'class': 'lbl' }, svg); t.textContent = s; var out = s; while (out.length > 3 && t.getComputedTextLength() > maxPx) { out = out.slice(0, -2); t.textContent = out + '…'; } var res = t.textContent; t.remove(); return res; }
+        rows.forEach(function (r, i) {
+          var y = pT + i * rh, yb = y + (rh - bh) / 2, w = Math.max(0, pw * r.value / max), rr = Math.min(4, w, bh / 2);
+          var cls = 'bar ' + (ordinal ? (r.key === 'rejected' ? 'gray' : 'o' + Math.min(5, i + 1)) : 's1');
+          var d = 'M' + x0 + ',' + yb + 'H' + (x0 + w - rr) + (rr ? 'a' + rr + ',' + rr + ' 0 0 1 ' + rr + ',' + rr : '') + 'V' + (yb + bh - rr) + (rr ? 'a' + rr + ',' + rr + ' 0 0 1 -' + rr + ',' + rr : '') + 'H' + x0 + 'Z';
+          marks.push(w > 0 ? el('path', { d: d, 'class': cls }, svg) : null);
+          var holder = svg;
+          if (links && r.href) { holder = el('a', { href: r.href, target: '_blank', rel: 'noopener' }, svg); }
+          text(holder, x0 - 8, y + rh / 2 + 4, trunc(r.label, lw - 4), 'lbl', 'end');
+          text(svg, x0 + w + 6, y + rh / 2 + 4, fmt(r.value), 'val', 'start');
+          var hit = el('rect', { x: 0, y: y, width: W, height: rh, 'class': 'hit' }, svg);
+          hit.addEventListener('pointermove', function (e) { var b = svg.getBoundingClientRect(); focusAt(i, e.clientX - b.left, y + rh / 2); });
+          hit.addEventListener('pointerleave', hide);
+          if (links && r.href) { hit.style.cursor = 'pointer'; hit.addEventListener('click', function () { window.open(r.href, '_blank', 'noopener'); }); }
+        });
+        function focusAt(i, x, y) {
+          if (cur >= 0 && marks[cur]) marks[cur].classList.remove('hot'); cur = i; if (marks[i]) marks[i].classList.add('hot');
+          showTip(plot, tip, x, y, function (t) { h('div', 'day', t).textContent = rows[i].label + (rows[i].sub ? ' · ' + rows[i].sub : ''); row(t, cssVar(fig, marks[i] ? '--' + (marks[i].getAttribute('class').split(' ')[1] === 'gray' ? 'gray' : marks[i].getAttribute('class').split(' ')[1]) : '--s1'), fig.dataset.title, fmt(rows[i].value)); });
+        }
+        function hide() { if (cur >= 0 && marks[cur]) marks[cur].classList.remove('hot'); cur = -1; tip.hidden = true; }
+        plot.addEventListener('focus', function () { focusAt(0, x0 + 20, pT + rh / 2); }); plot.addEventListener('blur', hide);
+        plot.addEventListener('keydown', function (e) { var j = cur < 0 ? 0 : cur; if (e.key === 'ArrowDown') { j = Math.min(rows.length - 1, j + 1); } else if (e.key === 'ArrowUp') { j = Math.max(0, j - 1); } else return; focusAt(j, x0 + 20, pT + j * rh + rh / 2); e.preventDefault(); });
+        return [['Категория', 'Значение']].concat(rows.map(function (r) { return [r.label + (r.sub ? ' · ' + r.sub : ''), fmt(r.value)]; }));
+      }
+
+      var RENDER = { line: lineChart, stack: stackChart, hbar: hbarChart };
+      function tableFor(fig, rows) {
+        var box = fig.querySelector('.viz__table'); box.textContent = '';
+        var t = h('table', '', box), head = h('tr', '', t);
+        rows[0].forEach(function (c, i) { var th = h('th', i ? 'n' : '', head); th.textContent = c; });
+        rows.slice(1).forEach(function (r) { var tr = h('tr', '', t); r.forEach(function (c, i) { var td = h('td', i ? 'n' : '', tr); td.textContent = c; }); });
+      }
+      function draw(fig) { var rows = RENDER[fig.dataset.viz](fig); tableFor(fig, rows); }
+      var figs = Array.prototype.slice.call(document.querySelectorAll('.viz[data-viz]'));
+      figs.forEach(function (fig) {
+        draw(fig);
+        var btn = fig.querySelector('.viz__tbl'), plot = fig.querySelector('.viz__plot'), tbl = fig.querySelector('.viz__table');
+        btn.addEventListener('click', function () { var on = btn.getAttribute('aria-pressed') !== 'true'; btn.setAttribute('aria-pressed', on); plot.hidden = on; tbl.hidden = !on; btn.textContent = on ? 'график' : 'таблица'; });
+      });
+      var t; window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(function () { figs.forEach(draw); }, 120); });
+      // смена темы кабинета перерисовывает: цвета легенды и подсказок берутся из CSS-переменных
+      new MutationObserver(function () { figs.forEach(function (f) { var lg = f.querySelector('.viz__legend'); if (lg) lg.remove(); draw(f); }); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-ws-theme'] });
+    })();
+    </script>
+
 
   {% elif tab == 'jobs' %}
     <form method="get" action="/admin" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: var(--sp-4);">
@@ -225,13 +499,14 @@
       {% with count_label = n ~ ' ' ~ ('пользователь' if n % 10 == 1 and n % 100 != 11 else ('пользователя' if n % 10 in [2,3,4] and n % 100 not in [12,13,14] else 'пользователей')) %}{% include "admin/_period.html" %}{% endwith %}
     </div>
     <div class="table-wrap"><table class="adm">
-      <tr><th>Email</th><th>Имя</th><th>Роль</th><th>Компания</th><th>С нами</th><th>Действия</th></tr>
+      <tr><th>Email</th><th>Имя</th><th>Роль</th><th>Компания</th><th title="Работодателям — вакансии (live / всего), соискателям — отклики">Вакансий</th><th>С нами</th><th>Действия</th></tr>
       {% for u in users %}
       <tr>
         <td><a href="/admin/user/{{ u.id }}" style="color: inherit; font-weight: 700;">{{ u.email }}</a></td>
         <td><a href="/admin/user/{{ u.id }}" style="color: inherit;">{{ u.name or '—' }}</a>{% if u.headline %}<br><span style="color: var(--ink-faint); font-size: .75rem;">{{ u.headline }}</span>{% endif %}</td>
         <td><span class="status {% if u.role == 'admin' %}invited{% elif u.role == 'employer' %}viewed{% else %}new{% endif %}">{{ u.role }}</span></td>
         <td>{{ u.company_name or '—' }}</td>
+        <td class="nowrap">{% if u.role == 'talent' %}{% set na = user_apps.get(u.id, 0) %}{% if na %}<a href="/admin/user/{{ u.id }}" style="color:inherit;">{{ na }} откл.</a>{% else %}<span style="color:var(--ink-faint);">0 откл.</span>{% endif %}{% else %}{% set nj = user_jobs.get(u.id, 0) %}{% set nl = user_jobs_live.get(u.id, 0) %}{% if nj %}<a href="/admin/user/{{ u.id }}" style="color:inherit;font-weight:700;" title="{{ nl }} live из {{ nj }}">{{ nl }}{% if nj != nl %} <span style="color:var(--ink-faint);font-weight:400;">/ {{ nj }}</span>{% endif %}</a>{% else %}<span style="color:var(--ink-faint);">0</span>{% endif %}{% endif %}</td>
         <td class="nowrap">{{ u.created_at.strftime('%d.%m.%y') }}</td>
         <td style="white-space: nowrap;">
           {% if u.role != 'employer' %}<form method="post" action="/admin/user/{{ u.id }}/employer"><button class="btn btn-ghost">→ employer</button></form>{% endif %}
