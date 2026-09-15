@@ -940,3 +940,18 @@ input[type=file].input::file-selector-button { font: inherit; font-weight: 700; 
   color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 999px; padding: 8px 14px; margin-right: 12px; cursor: pointer;
   transition: border-color .15s, color .15s; }
 input[type=file].input:hover::file-selector-button { border-color: var(--acid); color: var(--acid); }
+
+/* ---------- модалка подтверждения (вместо системного confirm) ---------- */
+#confirm-modal { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.modal--confirm { max-width: 440px; border-radius: var(--radius); }
+.kicker--confirm { color: var(--pink); border-color: color-mix(in oklch, var(--pink) 34%, transparent); background: color-mix(in oklch, var(--pink) 8%, transparent); }
+.confirm__title { font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; line-height: 1.15; margin: 12px 0 8px; text-wrap: balance; }
+.confirm__text { color: var(--ink-dim); font-size: 0.95rem; line-height: 1.5; margin: 0 0 22px; }
+.confirm__text[hidden] { display: none; }
+.confirm__actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.confirm__actions .btn { min-width: 120px; }
+@media (prefers-reduced-motion: no-preference) {
+  .modal-backdrop.open .modal--confirm { animation: confirm-in 0.28s var(--ease-spring); }
+  @keyframes confirm-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+}
+@media (max-width: 480px) { .confirm__actions { flex-direction: column-reverse; } .confirm__actions .btn { width: 100%; } }

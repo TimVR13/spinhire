@@ -282,7 +282,7 @@
           <form method="post" action="/admin/job/{{ j.id }}/archive"><button class="btn btn-ghost">Архив</button></form>{% endif %}
           {% if j.status != 'approved' %}<form method="post" action="/admin/job/{{ j.id }}/reject"><button class="btn btn-ghost">Откл.</button></form>{% endif %}
           <a class="btn btn-ghost" href="/admin/job/{{ j.id }}/edit">✎</a>
-          <form method="post" action="/admin/job/{{ j.id }}/delete" onsubmit="return confirm('Удалить вакансию навсегда?')"><button class="btn btn-ghost" style="color: var(--pink);">✕</button></form>
+          <form method="post" action="/admin/job/{{ j.id }}/delete" data-confirm="Удалить вакансию навсегда?" data-confirm-ok="Удалить" data-confirm-cancel="Не удалять"><button class="btn btn-ghost" style="color: var(--pink);">✕</button></form>
         </td>
       </tr>
       {% endfor %}
@@ -347,8 +347,8 @@
         <td style="white-space: nowrap;">
           {% if u.role != 'employer' %}<form method="post" action="/admin/user/{{ u.id }}/employer"><button class="btn btn-ghost">→ employer</button></form>{% endif %}
           {% if u.role != 'talent' %}<form method="post" action="/admin/user/{{ u.id }}/talent"><button class="btn btn-ghost">→ talent</button></form>{% endif %}
-          {% if u.role != 'admin' %}<form method="post" action="/admin/user/{{ u.id }}/admin" onsubmit="return confirm('Дать права админа?')"><button class="btn btn-ghost" style="color: var(--yellow);">→ admin</button></form>{% endif %}
-          <form method="post" action="/admin/user/{{ u.id }}/delete" onsubmit="return confirm('Удалить пользователя и его отклики?')"><button class="btn btn-ghost" style="color: var(--pink);">✕</button></form>
+          {% if u.role != 'admin' %}<form method="post" action="/admin/user/{{ u.id }}/admin" data-confirm="Дать права админа?" data-confirm-ok="Дать права" data-confirm-cancel="Назад"><button class="btn btn-ghost" style="color: var(--yellow);">→ admin</button></form>{% endif %}
+          <form method="post" action="/admin/user/{{ u.id }}/delete" data-confirm="Удалить пользователя и его отклики?" data-confirm-ok="Удалить" data-confirm-cancel="Не удалять"><button class="btn btn-ghost" style="color: var(--pink);">✕</button></form>
         </td>
       </tr>
       {% endfor %}
@@ -462,7 +462,7 @@
         <td><span class="status {% if e.active %}approved{% else %}archived{% endif %}">{{ 'активно' if e.active else 'скрыто' }}</span></td>
         <td style="white-space: nowrap;">
           <form method="post" action="/admin/event/{{ e.id }}/toggle"><button class="btn btn-ghost">{{ 'Скрыть' if e.active else 'Показать' }}</button></form>
-          <form method="post" action="/admin/event/{{ e.id }}/delete" onsubmit="return confirm('Удалить событие?')"><button class="btn btn-ghost" style="color: var(--pink);">✕</button></form>
+          <form method="post" action="/admin/event/{{ e.id }}/delete" data-confirm="Удалить событие?" data-confirm-ok="Удалить" data-confirm-cancel="Не удалять"><button class="btn btn-ghost" style="color: var(--pink);">✕</button></form>
         </td>
       </tr>
       {% endfor %}

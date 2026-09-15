@@ -77,7 +77,7 @@
 
       {% if not gateways.stripe %}<button class="btn btn-ghost btn-block" disabled style="opacity: 0.6;">Оплата картой — скоро</button>{% endif %}
 
-      <form method="post" action="/checkout/order/{{ order.id }}/cancel" onsubmit="return confirm('Отменить заказ #{{ order.id }} на €{{ order.amount }}? Счёт закроется, деньги списаны не будут.')" style="margin-top: 4px;">
+      <form method="post" action="/checkout/order/{{ order.id }}/cancel" data-confirm="Отменить заказ #{{ order.id }} на €{{ order.amount }}?|Счёт закроется, деньги списаны не будут." data-confirm-ok="Отменить заказ" data-confirm-cancel="Оставить заказ" style="margin-top: 4px;">
         <button class="btn btn-ghost btn-sm" type="submit" style="color: var(--ink-faint);">Отменить заказ</button>
       </form>
     </div>

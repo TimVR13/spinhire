@@ -709,3 +709,59 @@ if (window.matchMedia('(pointer: fine)').matches &&
   });
   crumbs.insertBefore(back, crumbs.firstChild);
 })();
+
+// Подтверждение действий: вместо системного confirm() — модалка в стиле сайта.
+// Форма с data-confirm="Заголовок?|Пояснение" перехватывается; data-confirm-ok / data-confirm-cancel — подписи кнопок.
+(function () {
+  let backdrop = null;
+  function ensure() {
+    if (backdrop) return backdrop;
+    backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop'; backdrop.id = 'confirm-modal';
+    backdrop.innerHTML =
+      '<div class="modal modal--confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-title">' +
+        '<span class="kicker kicker--confirm">Подтверждение</span>' +
+        '<h3 id="confirm-title" class="confirm__title"></h3><p class="confirm__text"></p>' +
+        '<div class="confirm__actions"><button type="button" class="btn btn-ghost" data-act="no"></button>' +
+        '<button type="button" class="btn btn-pink" data-act="yes"></button></div></div>';
+    document.body.appendChild(backdrop);
+    return backdrop;
+  }
+  window.shConfirm = function (opts) {
+    opts = opts || {};
+    return new Promise(function (resolve) {
+      const el = ensure();
+      el.querySelector('.confirm__title').textContent = opts.title || 'Вы уверены?';
+      const text = el.querySelector('.confirm__text');
+      text.textContent = opts.text || ''; text.hidden = !opts.text;
+      const yes = el.querySelector('[data-act="yes"]'), no = el.querySelector('[data-act="no"]');
+      yes.textContent = opts.ok || 'Да'; no.textContent = opts.cancel || 'Назад';
+      const prev = document.activeElement;
+      function done(v) {
+        el.classList.remove('open'); document.removeEventListener('keydown', onKey);
+        el.onclick = yes.onclick = no.onclick = null;
+        if (prev && prev.focus) prev.focus();
+        resolve(v);
+      }
+      function onKey(e) { if (e.key === 'Escape') done(false); }
+      yes.onclick = function () { done(true); };
+      no.onclick = function () { done(false); };
+      el.onclick = function (e) { if (e.target === el) done(false); };
+      document.addEventListener('keydown', onKey);
+      el.classList.add('open'); no.focus();
+    });
+  };
+  document.addEventListener('submit', function (e) {
+    const form = e.target;
+    if (!(form instanceof HTMLFormElement) || !form.hasAttribute('data-confirm') || form.dataset.confirmed === '1') return;
+    e.preventDefault();
+    const parts = form.dataset.confirm.split('|');
+    window.shConfirm({ title: parts[0].trim(), text: parts.slice(1).join('|').trim(),
+                       ok: form.dataset.confirmOk, cancel: form.dataset.confirmCancel })
+      .then(function (ok) {
+        if (!ok) return;
+        form.dataset.confirmed = '1';
+        if (form.requestSubmit) form.requestSubmit(); else form.submit();
+      });
+  }, true);
+})();

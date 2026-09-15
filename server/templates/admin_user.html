@@ -42,8 +42,8 @@
     <div class="au-actions">
       {% if u.role != 'talent' %}<form method="post" action="/admin/user/{{ u.id }}/talent?back=1"><button class="btn btn-ghost btn-sm">→ соискатель</button></form>{% endif %}
       {% if u.role != 'employer' %}<form method="post" action="/admin/user/{{ u.id }}/employer?back=1"><button class="btn btn-ghost btn-sm">→ работодатель</button></form>{% endif %}
-      {% if u.role != 'admin' %}<form method="post" action="/admin/user/{{ u.id }}/admin?back=1" onsubmit="return confirm('Дать права админа?')"><button class="btn btn-ghost btn-sm" style="color: var(--yellow);">→ админ</button></form>{% endif %}
-      <form method="post" action="/admin/user/{{ u.id }}/delete" onsubmit="return confirm('Удалить пользователя, его резюме и отклики? Это необратимо.')"><button class="btn btn-ghost btn-sm" style="color: var(--pink);">Удалить</button></form>
+      {% if u.role != 'admin' %}<form method="post" action="/admin/user/{{ u.id }}/admin?back=1" data-confirm="Дать права админа?" data-confirm-ok="Дать права" data-confirm-cancel="Назад"><button class="btn btn-ghost btn-sm" style="color: var(--yellow);">→ админ</button></form>{% endif %}
+      <form method="post" action="/admin/user/{{ u.id }}/delete" data-confirm="Удалить пользователя, его резюме и отклики?|Это необратимо." data-confirm-ok="Удалить" data-confirm-cancel="Не удалять"><button class="btn btn-ghost btn-sm" style="color: var(--pink);">Удалить</button></form>
     </div>
   </div>
 
