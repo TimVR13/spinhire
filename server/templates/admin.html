@@ -154,7 +154,7 @@
     <a href="/admin?tab=resumes" class="{% if tab == 'resumes' %}on{% endif %}">Резюме {% if stats.resumes_pending %}({{ stats.resumes_pending }}!){% endif %}</a>
     <a href="/admin?tab=users" class="{% if tab == 'users' %}on{% endif %}">Пользователи</a>
     <a href="/admin?tab=apps" class="{% if tab == 'apps' %}on{% endif %}">Отклики</a>
-    <a href="/admin?tab=orders" class="{% if tab == 'orders' %}on{% endif %}">💳 Заказы {% if orders_pending %}({{ orders_pending }}!){% endif %}</a>
+    <a href="/admin?tab=orders" class="{% if tab == 'orders' %}on{% endif %}"><svg class="ico" aria-hidden="true"><use href="#i-card"/></svg> Заказы {% if orders_pending %}({{ orders_pending }}!){% endif %}</a>
     <a href="/admin?tab=events" class="{% if tab == 'events' %}on{% endif %}">📅 События</a>
     <a href="/admin?tab=sources" class="{% if tab == 'sources' %}on{% endif %}">🕷 Источники</a>
     <a href="/admin?tab=analytics" class="{% if tab == 'analytics' %}on{% endif %}">📈 Аналитика и SEO</a>
@@ -249,7 +249,7 @@
         </div>
       </div>
     {% else %}
-      <p style="color: var(--ink-dim);">Очередь пуста — можно спать спокойно. 🎰</p>
+      <p style="color: var(--ink-dim);">Очередь пуста — можно спать спокойно.</p>
     {% endfor %}
 
 

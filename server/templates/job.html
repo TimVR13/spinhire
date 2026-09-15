@@ -106,7 +106,7 @@
           <span>· {{ job.location|place(page_lang) or '—' }} ·</span> {{ job.fmt }}</p>
         <h1 data-no-translate>{{ job.title }}</h1>
         <div class="job-card__tags" style="margin-bottom: var(--sp-4);">
-          {% if job.featured %}<span class="tag tag-hot">⚡ Featured</span>{% endif %}
+          {% if job.featured %}<span class="tag tag-hot"><svg class="ico" aria-hidden="true"><use href="#i-bolt"/></svg> Featured</span>{% endif %}
           {# направление — наш собственный справочник, его переводим;
              теги работодателя оставляем как есть #}
           {% if job.category %}<span class="tag">{{ job.category }}</span>{% endif %}

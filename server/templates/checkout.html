@@ -37,14 +37,14 @@
         <b style="font-family: var(--font-display); text-transform: uppercase; font-size: .9rem;">Оплатить онлайн</b>
         <p style="color: var(--ink-dim); font-size: .88rem; margin: 6px 0 12px;">Мгновенно, услуга активируется сразу после подтверждения платежа.</p>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          {% if gateways.stripe %}<form method="post" action="/checkout/order/{{ order.id }}/stripe"><button class="btn btn-acid btn-lg" type="submit">💳 Картой · €{{ order.amount }}</button></form>{% endif %}
-          {% if gateways.paykilla %}<form method="post" action="/checkout/order/{{ order.id }}/paykilla"><button class="btn {% if gateways.stripe %}btn-ghost{% else %}btn-acid{% endif %} btn-lg" type="submit">₮ Криптой · USDT, BTC, ETH</button></form>{% endif %}
+          {% if gateways.stripe %}<form method="post" action="/checkout/order/{{ order.id }}/stripe"><button class="btn btn-acid btn-lg" type="submit"><svg class="ico" aria-hidden="true"><use href="#i-card"/></svg> Картой · €{{ order.amount }}</button></form>{% endif %}
+          {% if gateways.paykilla %}<form method="post" action="/checkout/order/{{ order.id }}/paykilla"><button class="btn {% if gateways.stripe %}btn-ghost{% else %}btn-acid{% endif %} btn-lg" type="submit"><svg class="ico" aria-hidden="true"><use href="#i-usdt"/></svg> Криптой · USDT, BTC, ETH</button></form>{% endif %}
         </div>
       </div>
       {% endif %}
       {% if crypto.enabled %}
       <div class="card" style="border-color: var(--acid);">
-        <b style="font-family: var(--font-display); text-transform: uppercase; font-size: .9rem;">₮ Оплата в USDT</b>
+        <b style="font-family: var(--font-display); text-transform: uppercase; font-size: .9rem;"><svg class="ico" aria-hidden="true"><use href="#i-usdt"/></svg> Оплата в USDT</b>
         <p style="color: var(--ink-dim); font-size: .88rem; margin: 6px 0 12px;">К оплате <b style="color: var(--ink);">{{ crypto.amount_usdt }} USDT</b> (€{{ order.amount }} по курсу ЕЦБ {{ crypto.rate }}, включён 1% на комиссию сети). Назначение перевода не нужно, мы сверяем по сумме и времени; если сеть позволяет memo, укажите <code>{{ crypto.reference }}</code>.</p>
         {% if not crypto.chosen %}
         <form method="post" action="/checkout/order/{{ order.id }}/crypto" style="display: flex; gap: 8px; flex-wrap: wrap;">

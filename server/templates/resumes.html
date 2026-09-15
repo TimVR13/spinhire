@@ -112,7 +112,7 @@
     <a class="cv-row" href="/resume/{{ cv.id }}">
       <div class="cv-code">{{ cv.public_code }}<span class="cv-fill" title="Заполненность профиля">{{ extras[cv.id].fill }}%</span></div>
       <div>
-        <div class="cv-title">{{ cv.title }}{% if cv.is_boosted %}<span class="cv-top">⚡ В топе</span>{% endif %}</div>
+        <div class="cv-title">{{ cv.title }}{% if cv.is_boosted %}<span class="cv-top"><svg class="ico" aria-hidden="true"><use href="#i-bolt"/></svg> В топе</span>{% endif %}</div>
         <p class="cv-meta">{{ cv.experience_years }} лет опыта · {{ cv.location or 'локация скрыта' }} · {{ cv.desired_format }} · {{ 'активно ищет' if cv.user.job_search_status=='active' else 'открыт предложениям' }}</p>
         <p class="cv-meta"><span class="cv-fresh">{{ extras[cv.id].fresh }}</span>{% if cv.salary_expect %} · хочет <b class="cv-salary">{{ cv.salary_expect }}</b>{% endif %}</p>
       </div>
@@ -127,7 +127,7 @@
     {% endif %}
     </div>
     {% else %}
-    <div class="cv-empty"><b>🃏 {{ 'В избранном пока пусто.' if view=='fav' else ('Скрытых кандидатов нет.' if view=='hidden' else 'По этим параметрам резюме пока нет.') }}</b><p style="margin-top:8px;">{{ 'Отмечайте звёздочкой сильных кандидатов — они соберутся здесь.' if view=='fav' else 'Измените фильтры или добавьте первое CV.' }}</p></div>
+    <div class="cv-empty"><b><svg class="ico" aria-hidden="true"><use href="#i-cards"/></svg> {{ 'В избранном пока пусто.' if view=='fav' else ('Скрытых кандидатов нет.' if view=='hidden' else 'По этим параметрам резюме пока нет.') }}</b><p style="margin-top:8px;">{{ 'Отмечайте звёздочкой сильных кандидатов — они соберутся здесь.' if view=='fav' else 'Измените фильтры или добавьте первое CV.' }}</p></div>
     {% endfor %}
   </div>
 

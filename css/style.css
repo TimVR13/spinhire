@@ -955,3 +955,25 @@ input[type=file].input:hover::file-selector-button { border-color: var(--acid); 
   @keyframes confirm-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
 }
 @media (max-width: 480px) { .confirm__actions { flex-direction: column-reverse; } .confirm__actions .btn { width: 100%; } }
+
+/* ---------- иконки: единый SVG-набор (img/icons.svg инлайном в страницах, класс .ico) ---------- */
+.ico { width: 1em; height: 1em; display: inline-block; vertical-align: -0.16em; flex: 0 0 auto; overflow: visible; }
+.btn .ico, .tag .ico, .cv-top .ico, h2 .ico, h3 .ico, b .ico { width: 1.05em; height: 1.05em; margin-right: 0.1em; vertical-align: -0.18em; }
+.ico-tile { display: inline-grid; place-items: center; flex: 0 0 auto; color: var(--acid); border-radius: 14px;
+  background: color-mix(in oklch, var(--acid) 9%, transparent); border: 1px solid color-mix(in oklch, var(--acid) 22%, transparent); }
+.ico-tile .ico { filter: drop-shadow(0 0 6px color-mix(in oklch, currentColor 55%, transparent)); }
+.ico-tile--56 { width: 56px; height: 56px; }  .ico-tile--56 .ico { width: 28px; height: 28px; }
+.ico-tile--38 { width: 38px; height: 38px; border-radius: 10px; }  .ico-tile--38 .ico { width: 20px; height: 20px; }
+/* слот-символы: неон трёх цветов, свечение снаружи */
+.hp-sym, .sl-sym { color: var(--acid); filter: drop-shadow(0 0 7px color-mix(in oklch, currentColor 60%, transparent)); }
+.hp-sym[data-sym="seven"], .sl-sym[data-sym="seven"], .hp-sym[data-sym="bell"], .sl-sym[data-sym="bell"],
+.hp-sym[data-sym="crown"], .sl-sym[data-sym="crown"] { color: var(--yellow); }
+.hp-sym[data-sym="cherry"], .sl-sym[data-sym="cherry"], .hp-sym[data-sym="bar"], .sl-sym[data-sym="bar"] { color: var(--pink); }
+/* лендинги: вместо 3D-картинки — один крупный неоновый знак */
+.land-art--sym { display: grid; place-items: center; color: var(--acid);
+  background: radial-gradient(55% 55% at 50% 50%, color-mix(in oklch, var(--acid) 14%, transparent), transparent 72%), var(--bg-deep); }
+.land-sym { width: clamp(120px, 32%, 200px); height: auto; aspect-ratio: 1;
+  filter: drop-shadow(0 0 22px color-mix(in oklch, var(--acid) 55%, transparent)) drop-shadow(0 0 2px currentColor); }
+:root[data-theme="light"] .ico-tile { border-color: transparent; background: color-mix(in oklch, var(--acid) 10%, white); }
+:root[data-theme="light"] .ico-tile .ico, :root[data-theme="light"] .land-sym { filter: none; }
+:root[data-theme="light"] .land-art--sym { background: color-mix(in oklch, var(--acid) 6%, white); }

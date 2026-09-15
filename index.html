@@ -54,7 +54,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap"></noscript>
 <script>(function(){try{var t=localStorage.getItem('themeV2');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
-<link rel="stylesheet" href="css/style.css?v=20260909e">
+<link rel="stylesheet" href="css/style.css?v=20260915b">
 <style>
 
   .hero {
@@ -217,9 +217,8 @@
   .hp-reels.win { animation: hpWin .5s ease 3; }
   .hp-cell { width: clamp(68px,7.2vw,94px); aspect-ratio:1; border-radius: 10px; overflow: hidden; background: oklch(0.1 0.006 285); transition:box-shadow .2s,transform .2s; }
   .hp-cell.win-cell { box-shadow:0 0 0 3px var(--pink),0 0 24px var(--pink); transform:scale(.96); }
-  .hp-cell img { transition: filter .1s; }
-  .hp-reels.spin .hp-cell img { filter: blur(1.5px) brightness(1.1); }
-  .hp-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .hp-cell .hp-sym { width: 100%; height: 100%; display: block; padding: 17%; transition: filter .1s; }
+  .hp-reels.spin .hp-cell .hp-sym { filter: blur(1.5px) brightness(1.15); }
   .hp-slot__sc { font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; }
   .hp-slot__sc b { color: var(--acid); }
   .hp-slot__msg { color: var(--ink-dim); margin: 8px 0 14px; min-height: 1.4em; }
@@ -258,7 +257,9 @@
   .facts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
   @media (max-width: 760px) { .facts-grid { grid-template-columns: 1fr; } }
   .fact { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: var(--sp-5); display: flex; align-items: center; gap: 16px; }
-  .fact-ico { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; flex: 0 0 auto; box-shadow: 0 8px 22px oklch(0 0 0 / 0.4); }
+  .fact-ico { width: 56px; height: 56px; border-radius: 14px; }
+  .fact-ico .ico { width: 28px; height: 28px; }
+  .fact:nth-child(2n) .fact-ico { color: var(--pink); background: color-mix(in oklch, var(--pink) 9%, transparent); border-color: color-mix(in oklch, var(--pink) 22%, transparent); }
   .fact b { font-family: var(--font-display); font-weight: 900; font-size: 1.5rem; color: var(--acid); display: block; margin-bottom: 6px; }
   .fact:nth-child(2n) b { color: var(--pink); }
   .fact span { color: var(--ink-dim); font-size: 0.9rem; }
@@ -362,7 +363,8 @@
   :root[data-theme="light"] .sal-bar::after { opacity: 0.22; }   /* на белом размытое свечение читается как грязь */
   :root[data-theme="light"] .salary-tile:hover .sal-bar::after { opacity: 0.45; }
   .mkt-card__head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-  .mkt-ico { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; }
+  .mkt-ico { width: 38px; height: 38px; border-radius: 10px; }
+  .mkt-ico .ico { width: 20px; height: 20px; }
 
   .cta-banner {
     border: 1px solid var(--line-strong);
@@ -537,12 +539,144 @@
 </style>
 </head>
 <body>
+<!-- sh-icons: единый SVG-набор, источник img/icons.svg; обновлять scripts/icons_inline.py -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  
+  <symbol id="i-volume" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 21.5h20"/>
+    <path d="M2.25 21.5v-3a2 2 0 0 1 4 0v3"/>
+    <path d="M10 21.5v-7a2 2 0 0 1 4 0v7"/>
+    <path d="M17.75 21.5v-11a2 2 0 0 1 4 0v11"/>
+    <path d="M17.5 4.75l2.25-2.25 2.25 2.25"/>
+  </symbol>
+  <symbol id="i-multiplier" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.5 12.5l8 8M10.5 12.5l-8 8"/>
+    <path d="M17 21V4.5M12.5 9L17 4.5 21.5 9"/>
+  </symbol>
+  <symbol id="i-hubs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 19.5C12 16 9.5 12.5 9.5 9a5.5 5.5 0 0 1 11 0c0 3.5-2.5 7-5.5 10.5z"/>
+    <circle cx="15" cy="9" r="1.6" fill="currentColor" stroke="none"/>
+    <path d="M3 21C2.75 15.5 3.25 11 6 7.5" stroke-dasharray="1.25 3.75"/>
+  </symbol>
+  <symbol id="i-remote" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9.88 6.88a3 3 0 0 1 4.24 0"/>
+    <path d="M7.23 4.23a6.75 6.75 0 0 1 9.54 0"/>
+    <rect x="4.5" y="10.5" width="15" height="7.5" rx="1.5"/>
+    <path d="M2 21.5h20"/>
+  </symbol>
+  <symbol id="i-usdt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9.5"/>
+    <path d="M8 8h8M12 8v8.75M9.5 12.25h5"/>
+  </symbol>
+  <symbol id="i-english" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4.5 2.5h15a2.25 2.25 0 0 1 2.25 2.25v10a2.25 2.25 0 0 1-2.25 2.25H11.5L7 21.25V17H4.5a2.25 2.25 0 0 1-2.25-2.25v-10A2.25 2.25 0 0 1 4.5 2.5z"/>
+    <path d="M8.25 13.25L12 6.25l3.75 7M9.6 10.75h4.8"/>
+  </symbol>
+  
+  <symbol id="i-stats" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.5 6.5A7 7 0 1 0 17.5 13.5H10.5z"/>
+    <path d="M14.25 2.75A7 7 0 0 1 21.25 9.75h-7z"/>
+  </symbol>
+  <symbol id="i-demand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="10" cy="10" r="7.5"/>
+    <path d="M15.5 15.5L21 21"/>
+    <path d="M7.5 12.5l5-5M9.5 7.5h3v3"/>
+  </symbol>
+  <symbol id="i-salary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2" y="6.5" width="16.25" height="12.5" rx="2"/>
+    <circle cx="10.125" cy="12.75" r="2.5"/>
+    <path d="M5.75 6.5V4.75a2 2 0 0 1 2-2H20a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-1.75"/>
+  </symbol>
+  
+  <symbol id="i-seven" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 3.5h16V8l-7 13H7.5l7-13H8.5v2.75H4z"/>
+  </symbol>
+  <symbol id="i-cherry" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="7" cy="17.75" r="3.5"/>
+    <circle cx="17.25" cy="18.5" r="3"/>
+    <path d="M7 14.25C7 9.5 9 6.5 12.5 4.5M17.25 15.5c0-5-1.75-8.5-4.75-11"/>
+    <path d="M12.5 4.5C14 2 17.25 1.75 20 3.25C18.5 6 15 6.25 12.5 4.5z"/>
+  </symbol>
+  <symbol id="i-diamond" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7.5 4h9l5 5.5L12 21 2.5 9.5z"/>
+    <path d="M2.5 9.5h19"/>
+    <path d="M7.5 4l2.25 5.5L12 4l2.25 5.5L16.5 4"/>
+    <path d="M9.75 9.5L12 21l2.25-11.5"/>
+  </symbol>
+  
+  <symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 2.5L4.5 13.5h6l-1.25 8L19.5 10.5h-6z"/>
+  </symbol>
+  <symbol id="i-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2" y="5.5" width="20" height="13" rx="2.5"/>
+    <rect x="5.75" y="9.25" width="4" height="4" rx="1"/>
+    <path d="M14 15h4.25"/>
+  </symbol>
+  
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.5 4a1.5 1.5 0 0 1 3 0"/>
+    <path d="M6.5 13.5V9.5a5.5 5.5 0 0 1 11 0v4l2.75 3H3.75z"/>
+    <circle cx="12" cy="20.5" r="1.2" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="i-crown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 19L4 7.5 8.5 11 12 4.5 15.5 11 20 7.5 21 19z"/>
+    <path d="M3.35 15h17.3"/>
+  </symbol>
+  <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 2.5L14.47 9.1 21.51 9.41 15.99 13.8 17.88 20.59 12 16.7 6.12 20.59 8.01 13.8 2.49 9.41 9.53 9.1z"/>
+  </symbol>
+  <symbol id="i-bar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.5 5h17L23 7.5v9L20.5 19h-17L1 16.5v-9z"/>
+    <path d="M4.25 15.5v-7h1.25a1.5 1.5 0 0 1 0 3H4.25M5.5 11.5a2 2 0 0 1 0 4H4.25"/>
+    <path d="M9.9 15.5L12 8.5l2.1 7M10.65 13h2.7"/>
+    <path d="M16.75 15.5v-7h1.5a1.625 1.625 0 0 1 0 3.25h-1.5M18.25 11.75l1.625 3.75"/>
+  </symbol>
+  <symbol id="i-horseshoe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5.89 18.78A9.5 9.5 0 1 1 18.11 18.78L14.25 14.18A3.5 3.5 0 1 0 9.75 14.18z"/>
+    <path d="M11.99 5h.02M7.39 6.9h.02M16.59 6.9h.02M5.49 11.5h.02M18.49 11.5h.02"/>
+  </symbol>
+  
+  <symbol id="i-cards" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="10" y="5" width="11" height="15.5" rx="1.5"/>
+    <path d="M15.5 10.75l2 2-2 2-2-2z" fill="currentColor" stroke="none"/>
+    <path d="M6.25 14.93L3.51 7.41A1.5 1.5 0 0 1 4.41 5.49L6.25 4.82"/>
+  </symbol>
+  <symbol id="i-chips" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="10.5" cy="10.5" r="8"/>
+    <circle cx="10.5" cy="10.5" r="3"/>
+    <path d="M18.5 10.5h-1.25M16.16 16.16l-.89-.89M10.5 18.5v-1.25M4.84 16.16l.89-.89M2.5 10.5h1.25M4.84 4.84l.89.89M10.5 2.5v1.25M16.16 4.84l-.89.89"/>
+    <path d="M21.96 13.16A8 8 0 0 1 13.16 21.96"/>
+  </symbol>
+  
+  <symbol id="i-dice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2.5" y="8.5" width="13" height="13" rx="2.5"/>
+    <path d="M5.99 12h.02M11.99 12h.02M8.99 15h.02M5.99 18h.02M11.99 18h.02"/>
+    <path d="M8.5 5A2.5 2.5 0 0 1 11 2.5h8A2.5 2.5 0 0 1 21.5 5v8a2.5 2.5 0 0 1-2.5 2.5"/>
+    <path d="M17.99 6h.02"/>
+  </symbol>
+  <symbol id="i-roulette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9.75"/>
+    <circle cx="12" cy="12" r="4"/>
+    <path d="M16 12L21.75 12M14 15.46L16.88 20.44M10 15.46L7.13 20.44M8 12L2.25 12M10 8.54L7.12 3.56M14 8.54L16.88 3.56"/>
+    <path d="M20.44 16.88L19.14 16.12M12 21.75L12 20.25M3.56 16.88L4.86 16.12M3.56 7.12L4.86 7.87M12 2.25L12 3.75"/>
+    <path d="M11.99 12h.02"/>
+    <circle cx="20.44" cy="7.12" r="1.9" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="i-slot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="1.5" y="3" width="17" height="18" rx="2.5"/>
+    <path d="M1.5 8h17M1.5 13.5h17M7.17 8v5.5M12.83 8v5.5"/>
+    <path d="M8.5 17.25h3"/>
+    <path d="M18.5 13.5h3.75M22.25 13.5V6.5"/>
+    <circle cx="22.25" cy="5" r="1.5" fill="currentColor" stroke="none"/>
+  </symbol>
+</svg>
+<!-- /sh-icons -->
 <a class="skip-link" href="#main">К содержимому</a>
 
 <div class="ticker" aria-hidden="true">
   <div class="ticker__track">
-    <span>⚡ ЖИВЫЕ ВАКАНСИИ КАЖДЫЙ ДЕНЬ</span><span>BETSSON · SOFTSWISS · EVOLUTION · ARISTOCRAT <b>НАНИМАЮТ</b></span><span>ОБНОВЛЯЕМ БАЗУ <b>КАЖДЫЕ 6 ЧАСОВ</b></span><span>35 ПРОФЕССИЙ <b>С ВИЛКАМИ ПО ГРЕЙДАМ</b></span><span>МАЛЬТА · КИПР · ВАРШАВА · ТБИЛИСИ · УДАЛЁНКА</span><span>ИНКОГНИТО-ПРОФИЛЬ: <b>ТЕКУЩИЙ РАБОТОДАТЕЛЬ НЕ УВИДИТ</b></span>
-    <span>⚡ ЖИВЫЕ ВАКАНСИИ КАЖДЫЙ ДЕНЬ</span><span>BETSSON · SOFTSWISS · EVOLUTION · ARISTOCRAT <b>НАНИМАЮТ</b></span><span>ОБНОВЛЯЕМ БАЗУ <b>КАЖДЫЕ 6 ЧАСОВ</b></span><span>35 ПРОФЕССИЙ <b>С ВИЛКАМИ ПО ГРЕЙДАМ</b></span><span>МАЛЬТА · КИПР · ВАРШАВА · ТБИЛИСИ · УДАЛЁНКА</span><span>ИНКОГНИТО-ПРОФИЛЬ: <b>ТЕКУЩИЙ РАБОТОДАТЕЛЬ НЕ УВИДИТ</b></span>
+    <span><svg class="ico" aria-hidden="true"><use href="#i-bolt"/></svg> ЖИВЫЕ ВАКАНСИИ КАЖДЫЙ ДЕНЬ</span><span>BETSSON · SOFTSWISS · EVOLUTION · ARISTOCRAT <b>НАНИМАЮТ</b></span><span>ОБНОВЛЯЕМ БАЗУ <b>КАЖДЫЕ 6 ЧАСОВ</b></span><span>35 ПРОФЕССИЙ <b>С ВИЛКАМИ ПО ГРЕЙДАМ</b></span><span>МАЛЬТА · КИПР · ВАРШАВА · ТБИЛИСИ · УДАЛЁНКА</span><span>ИНКОГНИТО-ПРОФИЛЬ: <b>ТЕКУЩИЙ РАБОТОДАТЕЛЬ НЕ УВИДИТ</b></span>
+    <span><svg class="ico" aria-hidden="true"><use href="#i-bolt"/></svg> ЖИВЫЕ ВАКАНСИИ КАЖДЫЙ ДЕНЬ</span><span>BETSSON · SOFTSWISS · EVOLUTION · ARISTOCRAT <b>НАНИМАЮТ</b></span><span>ОБНОВЛЯЕМ БАЗУ <b>КАЖДЫЕ 6 ЧАСОВ</b></span><span>35 ПРОФЕССИЙ <b>С ВИЛКАМИ ПО ГРЕЙДАМ</b></span><span>МАЛЬТА · КИПР · ВАРШАВА · ТБИЛИСИ · УДАЛЁНКА</span><span>ИНКОГНИТО-ПРОФИЛЬ: <b>ТЕКУЩИЙ РАБОТОДАТЕЛЬ НЕ УВИДИТ</b></span>
   </div>
 </div>
 
@@ -670,9 +804,9 @@
           <div class="hp-machine">
             <div class="hp-jackpot"><span>Джекпот · 9 одинаковых</span><b>30 000 SC</b></div>
             <div class="hp-reels" id="hpReels" role="button" tabindex="0" aria-label="Крутить игровой автомат">
-              <div class="hp-cell"><img src="img/sym-seven.webp" alt="Семёрка"></div><div class="hp-cell"><img src="img/sym-cherry.webp" alt="Вишня"></div><div class="hp-cell"><img src="img/sym-bell.webp" alt="Колокол"></div>
-              <div class="hp-cell"><img src="img/sym-crown.webp" alt="Корона"></div><div class="hp-cell"><img src="img/sym-diamond.webp" alt="Бриллиант"></div><div class="hp-cell"><img src="img/sym-star.webp" alt="Звезда"></div>
-              <div class="hp-cell"><img src="img/sym-bar.webp" alt="BAR"></div><div class="hp-cell"><img src="img/sym-horseshoe.webp" alt="Подкова"></div><div class="hp-cell"><img src="img/sym-seven.webp" alt="Семёрка"></div>
+              <div class="hp-cell"><svg class="ico hp-sym" aria-hidden="true" data-sym="seven"><use href="#i-seven"/></svg></div><div class="hp-cell"><svg class="ico hp-sym" aria-hidden="true" data-sym="cherry"><use href="#i-cherry"/></svg></div><div class="hp-cell"><svg class="ico hp-sym" aria-hidden="true" data-sym="bell"><use href="#i-bell"/></svg></div>
+              <div class="hp-cell"><svg class="ico hp-sym" aria-hidden="true" data-sym="crown"><use href="#i-crown"/></svg></div><div class="hp-cell"><svg class="ico hp-sym" aria-hidden="true" data-sym="diamond"><use href="#i-diamond"/></svg></div><div class="hp-cell"><svg class="ico hp-sym" aria-hidden="true" data-sym="star"><use href="#i-star"/></svg></div>
+              <div class="hp-cell"><svg class="ico hp-sym" aria-hidden="true" data-sym="bar"><use href="#i-bar"/></svg></div><div class="hp-cell"><svg class="ico hp-sym" aria-hidden="true" data-sym="horseshoe"><use href="#i-horseshoe"/></svg></div><div class="hp-cell"><svg class="ico hp-sym" aria-hidden="true" data-sym="seven"><use href="#i-seven"/></svg></div>
             </div>
           </div>
           <button class="hp-lever" id="hpLever" type="button" aria-label="Дёрнуть рычаг и запустить автомат"></button>
@@ -726,12 +860,12 @@
     <div class="container">
       <div class="section-head"><div><span class="kicker">Индустрия в цифрах</span><h2>iGaming — это большие деньги</h2></div></div>
       <div class="facts-grid">
-        <div class="fact"><img class="fact-ico" src="img/asset-chips.webp" alt="" loading="lazy" width="56" height="56"><div><b>$100B+</b><span>объём онлайн-гемблинга к 2027 году</span></div></div>
-        <div class="fact"><img class="fact-ico" src="img/sym-diamond.webp" alt="" loading="lazy" width="56" height="56"><div><b>×2–3</b><span>зарплаты выше обычного IT и маркетинга</span></div></div>
-        <div class="fact"><img class="fact-ico" src="img/asset-cards.webp" alt="" loading="lazy" width="56" height="56"><div><b>Мальта · Кипр · Тбилиси</b><span>главные хабы релокации с визой</span></div></div>
-        <div class="fact"><img class="fact-ico" src="img/asset-dice.webp" alt="" loading="lazy" width="56" height="56"><div><b>40%+</b><span>вакансий — удалёнка или гибрид</span></div></div>
-        <div class="fact"><img class="fact-ico" src="img/sym-seven.webp" alt="" loading="lazy" width="56" height="56"><div><b>₿ USDT</b><span>всё больше компаний платят в крипте</span></div></div>
-        <div class="fact"><img class="fact-ico" src="img/sym-star.webp" alt="" loading="lazy" width="56" height="56"><div><b>Английский B2</b><span>достаточно для старта в большинстве ролей</span></div></div>
+        <div class="fact"><span class="fact-ico ico-tile" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-volume"/></svg></span><div><b>$100B+</b><span>объём онлайн-гемблинга к 2027 году</span></div></div>
+        <div class="fact"><span class="fact-ico ico-tile" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-multiplier"/></svg></span><div><b>×2–3</b><span>зарплаты выше обычного IT и маркетинга</span></div></div>
+        <div class="fact"><span class="fact-ico ico-tile" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-hubs"/></svg></span><div><b>Мальта · Кипр · Тбилиси</b><span>главные хабы релокации с визой</span></div></div>
+        <div class="fact"><span class="fact-ico ico-tile" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-remote"/></svg></span><div><b>40%+</b><span>вакансий — удалёнка или гибрид</span></div></div>
+        <div class="fact"><span class="fact-ico ico-tile" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-usdt"/></svg></span><div><b>₿ USDT</b><span>всё больше компаний платят в крипте</span></div></div>
+        <div class="fact"><span class="fact-ico ico-tile" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-english"/></svg></span><div><b>Английский B2</b><span>достаточно для старта в большинстве ролей</span></div></div>
       </div>
     </div>
   </section>
@@ -757,17 +891,17 @@
 
       <div class="mkt-grid">
         <div class="mkt-card">
-          <div class="mkt-card__head"><img class="mkt-ico" src="img/pricing/p-stats.jpg" alt="" loading="lazy" width="38" height="38"><h3>Направления</h3></div>
+          <div class="mkt-card__head"><span class="mkt-ico ico-tile" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-stats"/></svg></span><h3>Направления</h3></div>
           <p class="mkt-sub">Сколько ролей открыто в каждой вертикали</p>
           <ul class="mkt-bars" data-market="directions"></ul>
         </div>
         <div class="mkt-card">
-          <div class="mkt-card__head"><img class="mkt-ico" src="img/pricing/p-seo.jpg" alt="" loading="lazy" width="38" height="38"><h3>География</h3></div>
+          <div class="mkt-card__head"><span class="mkt-ico ico-tile" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-hubs"/></svg></span><h3>География</h3></div>
           <p class="mkt-sub">Где нанимают прямо сейчас</p>
           <ul class="mkt-chips" data-market="countries"></ul>
         </div>
         <div class="mkt-card">
-          <div class="mkt-card__head"><img class="mkt-ico" src="img/pricing/p-salary.jpg" alt="" loading="lazy" width="38" height="38"><h3>Профессии по спросу</h3></div>
+          <div class="mkt-card__head"><span class="mkt-ico ico-tile" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-demand"/></svg></span><h3>Профессии по спросу</h3></div>
           <p class="mkt-sub">Роль, открытые вакансии и вилка middle на Мальте</p>
           <ul class="mkt-roles" data-market="professions"></ul>
         </div>
@@ -1111,11 +1245,12 @@
 // Играбельный слот на главной
 (function () {
   const box = document.getElementById('hpReels'); if (!box) return;
-  const cells = [...box.querySelectorAll('.hp-cell img')];
+  const cells = [...box.querySelectorAll('.hp-cell use')];
   const scEl = document.getElementById('hpSc'), msg = document.getElementById('hpMsg'), btn = document.getElementById('hpSpin');
   const lever = document.getElementById('hpLever'), betBtns = [...document.querySelectorAll('.hp-bet')];
   const customBet = document.getElementById('hpCustomBet'), setBetBtn = document.getElementById('hpSetBet');
-  const SYMS = ['sym-seven', 'sym-cherry', 'sym-bell', 'sym-crown', 'sym-diamond', 'sym-star', 'sym-bar', 'sym-horseshoe'];
+  const SYMS = ['seven', 'cherry', 'bell', 'crown', 'diamond', 'star', 'bar', 'horseshoe'];
+  const show = (c, s) => { c.setAttribute('href', '#i-' + s); c.parentNode.dataset.sym = s; };
   let sc = parseInt(localStorage.getItem('spinCoins') || '100', 10);
   let bet = parseInt(localStorage.getItem('spinBet') || '10', 10);
   const draw = () => SYMS[Math.floor(Math.random() * SYMS.length)];
@@ -1142,11 +1277,11 @@
     box.querySelectorAll('.win-cell').forEach(c => c.classList.remove('win-cell'));
     let t = 0;
     const iv = setInterval(() => {
-      cells.forEach(c => c.src = 'img/' + draw() + '.jpg');
+      cells.forEach(c => show(c, draw()));
       if (++t > 12) {
         clearInterval(iv); box.classList.remove('spin');
         const r = Array.from({ length: 9 }, draw);
-        cells.forEach((c, i) => c.src = 'img/' + r[i] + '.jpg');
+        cells.forEach((c, i) => show(c, r[i]));
         const rows = [[0,1,2],[3,4,5],[6,7,8]];
         const jackpot = r.every(symbol => symbol === r[0]);
         const wins = rows.filter(row => r[row[0]] === r[row[1]] && r[row[1]] === r[row[2]]);

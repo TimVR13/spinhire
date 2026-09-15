@@ -83,7 +83,7 @@
   {% elif request.query_params.get('invite_error') %}<div class="flash err">Не удалось создать приглашение: проверьте email и членство сотрудника.</div>{% endif %}
   {% if request.query_params.get('settings_ok') %}<div class="flash">Настройки аккаунта сохранены.</div>{% endif %}
   {% if request.query_params.get('settings_error') %}<div class="flash err">{{ request.query_params.get('settings_error') }}</div>{% endif %}
-  {% if request.query_params.get('promo_ok') %}<div class="flash">🎰 Промокод активирован — бесплатные размещения начислены на кабинет.</div>{% endif %}
+  {% if request.query_params.get('promo_ok') %}<div class="flash"><svg class="ico" aria-hidden="true"><use href="#i-slot"/></svg> Промокод активирован — бесплатные размещения начислены на кабинет.</div>{% endif %}
   {% if request.query_params.get('promo_error') %}<div class="flash err">{{ request.query_params.get('promo_error') }}</div>{% endif %}
   <div class="section-head" style="margin-bottom: var(--sp-5);">
     <div>
@@ -92,7 +92,7 @@
       {% if team_role != 'owner' %}<p style="color:var(--ink-faint);margin-top:6px;">Командный доступ · {{ 'рекрутер' if team_role=='recruiter' else 'наблюдатель' }}</p>{% endif %}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      {% if team_role == 'owner' %}<a href="#finance" class="btn btn-acid btn-topup" data-goto="finance">💳 Пополнить</a>{% endif %}
+      {% if team_role == 'owner' %}<a href="#finance" class="btn btn-acid btn-topup" data-goto="finance"><svg class="ico" aria-hidden="true"><use href="#i-card"/></svg> Пополнить</a>{% endif %}
       {% if team_role != 'viewer' %}<a href="#post" class="btn btn-pink">+ Разместить вакансию</a>{% endif %}
     </div>
   </div>
@@ -360,7 +360,7 @@
 
   <div class="cab-pane" data-pane="ats">
   <section style="margin:0 0 var(--sp-6);"><div class="section-head"><div><span class="kicker pink">Мини-ATS</span><h2 style="font-size:1.25rem;margin-top:6px;">Кандидаты · {{ ats_apps|length }}</h2></div><form method="get" action="/employer" style="display:flex;gap:8px;"><select class="input" name="stage"><option value="">Все этапы</option>{% for value,label in [('new','Новые'),('viewed','Просмотрены'),('invited','Интервью'),('offer','Оффер'),('hired','Наняты'),('rejected','Отказ')] %}<option value="{{ value }}" {% if stage==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="btn btn-ghost">Фильтр</button></form></div>
-  <div style="border-top:2px solid var(--line);">{% for a in ats_apps %}<a href="/employer/application/{{ a.id }}" style="display:grid;grid-template-columns:120px minmax(0,1fr) 180px auto;gap:14px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line);text-decoration:none;"><span class="status {{ a.status }}">{{ a.status }}</span><span><b>{% if a.id in locked_apps %}🔒 Кандидат #{{ a.user.id }}{% elif a.user.incognito %}Аноним #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</b><small style="display:block;color:var(--ink-faint);margin-top:4px;">{{ a.job.title }}</small></span><span style="color:var(--ink-dim);font-size:.8rem;">{% if a.interview_at %}Интервью {{ a.interview_at|replace('T',' ') }}{% elif a.next_action_at %}Действие {{ a.next_action_at }}{% else %}План не задан{% endif %}</span><span style="color:var(--pink);">→</span></a>{% else %}<p style="padding:24px 0;color:var(--ink-dim);">🃏 За этим столом пока тихо. Разместите вакансию или поднимите её в топ — отклики придут сами.</p>{% endfor %}</div></section>
+  <div style="border-top:2px solid var(--line);">{% for a in ats_apps %}<a href="/employer/application/{{ a.id }}" style="display:grid;grid-template-columns:120px minmax(0,1fr) 180px auto;gap:14px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line);text-decoration:none;"><span class="status {{ a.status }}">{{ a.status }}</span><span><b>{% if a.id in locked_apps %}🔒 Кандидат #{{ a.user.id }}{% elif a.user.incognito %}Аноним #{{ a.user.id }}{% else %}{{ a.user.name or a.user.email }}{% endif %}</b><small style="display:block;color:var(--ink-faint);margin-top:4px;">{{ a.job.title }}</small></span><span style="color:var(--ink-dim);font-size:.8rem;">{% if a.interview_at %}Интервью {{ a.interview_at|replace('T',' ') }}{% elif a.next_action_at %}Действие {{ a.next_action_at }}{% else %}План не задан{% endif %}</span><span style="color:var(--pink);">→</span></a>{% else %}<p style="padding:24px 0;color:var(--ink-dim);"><svg class="ico" aria-hidden="true"><use href="#i-cards"/></svg> За этим столом пока тихо. Разместите вакансию или поднимите её в топ — отклики придут сами.</p>{% endfor %}</div></section>
 
   </div><!-- /ats -->
 
@@ -369,7 +369,7 @@
   <div class="job-block">
     <h3>
       <span>{{ j.title }} <span class="status {{ j.status }}">{{ {'pending': 'на модерации', 'approved': 'опубликована', 'rejected': 'отклонена', 'archived': 'в архиве'}[j.status] }}</span></span>
-      <span style="color: var(--ink-faint); font-size: 0.8rem; font-weight: 400;">{{ j.views }} просмотров · {{ j.applications|length }} откликов{% if j.featured %} · ⚡ Featured{% endif %}</span>
+      <span style="color: var(--ink-faint); font-size: 0.8rem; font-weight: 400;">{{ j.views }} просмотров · {{ j.applications|length }} откликов{% if j.featured %} · Featured{% endif %}</span>
     </h3>
     <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">{% if team_role != 'viewer' %}<a class="btn btn-ghost btn-sm" href="/employer/job/{{ j.id }}/edit">Редактировать</a>{% endif %}<a class="btn btn-ghost btn-sm" href="/job/{{ j.id }}">Открыть</a>{% if team_role != 'viewer' and j.status != 'archived' %}<form method="post" action="/employer/job/{{ j.id }}/archive" data-confirm="Закрыть вакансию?|Она исчезнет из активного поиска." data-confirm-ok="Закрыть вакансию" data-confirm-cancel="Оставить"><button class="btn btn-ghost btn-sm" type="submit">Закрыть вакансию</button></form>{% endif %}{% if team_role != 'viewer' and j.status == 'archived' %}<form method="post" action="/employer/job/{{ j.id }}/republish"><button class="btn btn-acid btn-sm" type="submit">↻ Опубликовать снова</button></form>{% endif %}</div>
     {% for a in j.applications %}
@@ -404,7 +404,7 @@
     <div style="margin-bottom: var(--sp-4);">
       <span class="kicker pink">Новая вакансия</span>
       <p style="color: var(--ink-dim); margin-top: 8px;">Без зарплатной вилки не публикуем — правила заведения. Тарифы и условия — <a href="/post-job#pricing" style="color: var(--acid);">на странице для работодателей</a>.</p>
-      {% if account.job_credits and account.job_credits > 0 %}<p style="color: var(--acid); font-weight: 700; margin-top: 8px;">🎰 Доступно размещений: {{ account.job_credits }} — эта публикация спишет одно.</p>{% endif %}
+      {% if account.job_credits and account.job_credits > 0 %}<p style="color: var(--acid); font-weight: 700; margin-top: 8px;"><svg class="ico" aria-hidden="true"><use href="#i-slot"/></svg> Доступно размещений: {{ account.job_credits }} — эта публикация спишет одно.</p>{% endif %}
     </div>
     <form method="post" action="/post-job" id="postJobForm" class="card" style="display: flex; flex-direction: column; gap: 18px;">
       <div class="field"><label>Название вакансии *</label><input class="input" name="title" required placeholder="например, Senior VIP-менеджер (немецкий)"></div>

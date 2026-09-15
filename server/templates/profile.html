@@ -49,7 +49,7 @@
   {% elif request.query_params.get('cv_error') == 'name' %}<div class="flash err">Укажите ФИО — работодатель получает его вместе с контактами после оплаченного открытия.</div>
   {% elif request.query_params.get('cv_error') == 'contacts' %}<div class="flash err">Укажите Telegram и email — их получает работодатель после оплаченного открытия.</div>
   {% elif request.query_params.get('cv_error') %}<div class="flash err">Заполните роль и описание резюме.</div>{% endif %}
-  {% if request.query_params.get('boost') == 'ok' %}<div class="flash">⚡ Готово: резюме в топе поиска. Срок — в карточке ниже.</div>
+  {% if request.query_params.get('boost') == 'ok' %}<div class="flash"><svg class="ico" aria-hidden="true"><use href="#i-bolt"/></svg> Готово: резюме в топе поиска. Срок — в карточке ниже.</div>
   {% elif request.query_params.get('boost') == 'nocoins' %}<div class="flash err">Не хватает SpinCoins: нужно {{ boost_cost }} SC. Пригласите друзей или поднимите резюме за €{{ boost_price }}.</div>
   {% elif request.query_params.get('boost') == 'notready' %}<div class="flash err">Поднять можно только опубликованное резюме, прошедшее модерацию.</div>{% endif %}
   {% if request.query_params.get('avatar_error') == 'type' %}<div class="flash err">Аватар принимается только в JPG, PNG или WebP.</div>{% endif %}
@@ -93,7 +93,7 @@
   <!-- Ежедневный фриспин на аккаунте -->
   <div class="card" style="display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-5);">
     <div style="display: flex; align-items: center; gap: var(--sp-4);">
-      <img src="/img/asset-chips.webp" alt="" width="56" height="56" style="border-radius: 10px;">
+      <span class="ico-tile ico-tile--56" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-chips"/></svg></span>
       <div>
         <b style="font-family: var(--font-display); text-transform: uppercase;">{{ user.coins or 0 }} SpinCoins</b>
         <p style="color: var(--ink-dim); font-size: 0.88rem;">Ежедневный фриспин + игры в <a href="/games.html" style="color: var(--acid);">Игровой зоне</a>. Копи на мерч.</p>
@@ -131,8 +131,8 @@
   <div class="card" style="margin-bottom: var(--sp-5);">
     <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap;">
       <div style="min-width: 240px;">
-        <b style="font-family: var(--font-display); text-transform: uppercase;">⚡ Резюме в топе поиска</b>
-        {% if resume.is_boosted %}<b class="cv-top-until">⚡ {{ resume.boosted_until_date }}</b>{% endif %}
+        <b style="font-family: var(--font-display); text-transform: uppercase;"><svg class="ico" aria-hidden="true"><use href="#i-bolt"/></svg> Резюме в топе поиска</b>
+        {% if resume.is_boosted %}<b class="cv-top-until"><svg class="ico" aria-hidden="true"><use href="#i-bolt"/></svg> {{ resume.boosted_until_date }}</b>{% endif %}
         <p style="color: var(--ink-dim); font-size: 0.88rem; margin-top: 4px;">
           {% if resume.is_boosted %}Ваше резюме показывается работодателям первым. Продление складывает срок.
           {% else %}Первое место в выдаче для работодателей на {{ boost_days }} дней. {{ boost_cost }} SC — это {{ boost_cost // ref_bonus }} приглашённых друзей, или €{{ boost_price }} деньгами.{% endif %}
@@ -246,7 +246,7 @@
         <span class="status {{ a.status }}">{{ {'new': 'Отправлен', 'viewed': 'Просмотрен 👁', 'invited': 'Интервью →', 'offer': 'Оффер', 'hired': 'Нанят', 'rejected': 'Не в этот раз'}.get(a.status, a.status) }}</span>
       </div>
       {% else %}
-      <div class="card" style="border-style: dashed; color: var(--ink-dim);">🃏 Пока ни одного отклика — <a href="/jobs" style="color: var(--acid);">вперёд к вакансиям</a>.</div>
+      <div class="card" style="border-style: dashed; color: var(--ink-dim);"><svg class="ico" aria-hidden="true"><use href="#i-cards"/></svg> Пока ни одного отклика — <a href="/jobs" style="color: var(--acid);">вперёд к вакансиям</a>.</div>
       {% endfor %}
     </section>
   </div><!-- /apps -->

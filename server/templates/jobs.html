@@ -92,7 +92,7 @@
         {% if j.logo_url %}<img src="{{ j.logo_url }}" alt="" style="width:34px;height:34px;object-fit:contain" onerror="this.replaceWith(document.createTextNode('{{ j.initials }}'))">{% else %}{{ j.initials }}{% endif %}
       </div>
       <div>
-        <h3 class="job-card__title">{{ j.title }} {% if j.featured %}<span class="tag tag-hot">⚡ Featured</span>{% endif %}</h3>
+        <h3 class="job-card__title">{{ j.title }} {% if j.featured %}<span class="tag tag-hot"><svg class="ico" aria-hidden="true"><use href="#i-bolt"/></svg> Featured</span>{% endif %}</h3>
         <p class="job-card__meta"><b>{{ j.company_name|company(page_lang) }}</b> · {{ j.location|place(page_lang) or '—' }} · {{ j.fmt }}</p>
         <div class="job-card__tags">
           {% if j.category %}<span class="tag">{{ j.category }}</span>{% endif %}
