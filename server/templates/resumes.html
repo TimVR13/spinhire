@@ -33,6 +33,11 @@
   .cv-meta { color:var(--ink-dim); margin-top:7px; }
   .cv-skills { display:flex; flex-wrap:wrap; gap:6px; }
   .cv-skill { border:1px solid var(--line); padding:5px 8px; color:var(--ink-dim); font-size:.75rem; }
+  .cv-skill.hit { border-color:var(--acid); color:var(--acid); }
+  .cv-row mark { background:transparent; color:var(--acid); }
+  .cv-match { color:var(--ink-dim); font-size:.84rem; line-height:1.5; margin-top:8px; }
+  .cv-match__label { display:inline-block; margin-right:8px; color:var(--ink-faint); font-size:.7rem; letter-spacing:.06em; text-transform:uppercase; }
+  .cv-found { color:var(--ink-dim); font-size:.86rem; margin:calc(-1 * var(--sp-5) + 12px) 0 var(--sp-4); }
   .cv-arrow { color:var(--pink); font-size:1.4rem; }
   .cv-empty { padding:60px 0; color:var(--ink-dim); border-bottom:1px solid var(--line); }
   .cv-toolbar { display:flex; justify-content:space-between; align-items:center; gap:var(--sp-4); flex-wrap:wrap; margin-bottom:var(--sp-4); }
@@ -84,13 +89,14 @@
     <select class="input" name="fmt"><option value="">Любой формат</option>{% for f in formats %}<option value="{{ f }}" {% if fmt==f %}selected{% endif %}>{{ f }}</option>{% endfor %}</select>
     <button class="btn btn-acid" type="submit">Найти</button>
   </form>
+  {% if q or location or fmt %}<p class="cv-found">Найдено {{ found_count }} из {{ total }} резюме</p>{% endif %}
 
   {% if is_employer %}
   <div class="cv-toolbar">
     <nav class="cv-tabs" aria-label="Фильтр по пометкам">
-      <a href="/resumes" {% if not view %}class="on"{% endif %}>Все</a>
-      <a href="/resumes?view=fav" {% if view=='fav' %}class="on"{% endif %}>★ Избранные{% if mark_counts.fav %} · {{ mark_counts.fav }}{% endif %}</a>
-      <a href="/resumes?view=hidden" {% if view=='hidden' %}class="on"{% endif %}>Скрытые{% if mark_counts.hidden %} · {{ mark_counts.hidden }}{% endif %}</a>
+      <a href="/resumes{% if filters_qs %}?{{ filters_qs }}{% endif %}" {% if not view %}class="on"{% endif %}>Все</a>
+      <a href="/resumes?view=fav{% if filters_qs %}&amp;{{ filters_qs }}{% endif %}" {% if view=='fav' %}class="on"{% endif %}>★ Избранные{% if mark_counts.fav %} · {{ mark_counts.fav }}{% endif %}</a>
+      <a href="/resumes?view=hidden{% if filters_qs %}&amp;{{ filters_qs }}{% endif %}" {% if view=='hidden' %}class="on"{% endif %}>Скрытые{% if mark_counts.hidden %} · {{ mark_counts.hidden }}{% endif %}</a>
     </nav>
     <div class="cv-saved">
       {% if q or location or fmt %}
@@ -112,11 +118,12 @@
     <a class="cv-row" href="/resume/{{ cv.id }}">
       <div class="cv-code">{{ cv.public_code }}<span class="cv-fill" title="Заполненность профиля">{{ extras[cv.id].fill }}%</span></div>
       <div>
-        <div class="cv-title">{{ cv.title }}{% if cv.is_boosted %}<span class="cv-top"><svg class="ico" aria-hidden="true"><use href="#i-bolt"/></svg> В топе</span>{% endif %}</div>
+        <div class="cv-title">{{ extras[cv.id].title }}{% if cv.is_boosted %}<span class="cv-top"><svg class="ico" aria-hidden="true"><use href="#i-bolt"/></svg> В топе</span>{% endif %}</div>
         <p class="cv-meta">{{ cv.experience_years }} лет опыта · {{ cv.location or 'локация скрыта' }} · {{ cv.desired_format }} · {{ 'активно ищет' if cv.user.job_search_status=='active' else 'открыт предложениям' }}</p>
         <p class="cv-meta"><span class="cv-fresh">{{ extras[cv.id].fresh }}</span>{% if cv.salary_expect %} · хочет <b class="cv-salary">{{ cv.salary_expect }}</b>{% endif %}</p>
+        {% if extras[cv.id].snippet %}<p class="cv-match"><span class="cv-match__label">{{ extras[cv.id].snippet_label }}</span>{{ extras[cv.id].snippet }}</p>{% endif %}
       </div>
-      <div class="cv-skills">{% for skill in cv.skill_list[:4] %}<span class="cv-skill">{{ skill }}</span>{% endfor %}</div>
+      <div class="cv-skills">{% for skill in extras[cv.id].skills[:4] %}<span class="cv-skill{% if skill in extras[cv.id].hit %} hit{% endif %}">{{ skill }}</span>{% endfor %}</div>
       <span class="cv-arrow" aria-hidden="true">→</span>
     </a>
     {% if is_employer %}

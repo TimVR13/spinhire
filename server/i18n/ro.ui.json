@@ -3176,5 +3176,8 @@
  "Пока ни одного отклика —": "Nici un singur răspuns încă -",
  "Доступно размещений: # — эта публикация спишет одно.": "Destinații de plasare disponibile: # - această publicație va anula una.",
  "Промокод активирован — бесплатные размещения начислены на кабинет.": "Codul promoțional este activat - plasamentele gratuite sunt creditate în contul dvs.",
- "Картой · €#": "Cu card · # €"
+ "Картой · €#": "Cu card · # €",
+ "Найдено # из # резюме": "# din # CV-uri găsite",
+ "Совпадение в описании": "Potrivire în descriere",
+ "Совпадение в опыте работы": "Potrivire în experiență"
 }

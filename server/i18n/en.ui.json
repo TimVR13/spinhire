@@ -3176,5 +3176,8 @@
  "Пока ни одного отклика —": "Not a single response yet -",
  "Доступно размещений: # — эта публикация спишет одно.": "Available placements: # - this publication will write off one.",
  "Промокод активирован — бесплатные размещения начислены на кабинет.": "The promotional code is activated - free placements are credited to your account.",
- "Картой · €#": "By card · €#"
+ "Картой · €#": "By card · €#",
+ "Найдено # из # резюме": "Found # of # resumes",
+ "Совпадение в описании": "Match in the summary",
+ "Совпадение в опыте работы": "Match in work experience"
 }

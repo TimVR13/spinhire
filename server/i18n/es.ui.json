@@ -3176,5 +3176,8 @@
  "Пока ни одного отклика —": "Aún no hay una sola respuesta -",
  "Доступно размещений: # — эта публикация спишет одно.": "Ubicaciones disponibles: # - esta publicación cancelará una.",
  "Промокод активирован — бесплатные размещения начислены на кабинет.": "El código promocional está activado: las ubicaciones gratuitas se acreditan en su cuenta.",
- "Картой · €#": "Con tarjeta · €#"
+ "Картой · €#": "Con tarjeta · €#",
+ "Найдено # из # резюме": "# de # currículums encontrados",
+ "Совпадение в описании": "Coincidencia en la descripción",
+ "Совпадение в опыте работы": "Coincidencia en la experiencia"
 }

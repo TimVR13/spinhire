@@ -290,3 +290,91 @@ class EmployerWorkflowTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ResumeSearchTests(unittest.TestCase):
+    """Поиск по резюме: слово с начала, все слова запроса, кириллица, ранжирование, подсветка."""
+
+    PROFILES = (
+        dict(email="search-seo@test.invalid", title="SEO Specialist", skills="Link building, SEO",
+             about="Organic growth for casino brands"),
+        dict(email="search-aff@test.invalid", title="Affiliate Manager", skills="Affiliate, PPC",
+             about="Worked with the SEO team on landing pages and partner deals"),
+        dict(email="search-fe@test.invalid", title="Front-end Engineer", skills="Vue, Nuxt",
+             about="Sprint closeout and release notes"),
+        dict(email="search-crm@test.invalid", title="CRM менеджер", skills="CRM, Customer.io",
+             about="Удержание игроков", location="Варшава"),
+    )
+
+    @classmethod
+    def setUpClass(cls):
+        Base.metadata.create_all(engine)
+        with SessionLocal() as db:
+            migrate(db)
+
+    def setUp(self):
+        self.user_ids, self.resume_ids = [], {}
+        with SessionLocal() as db:
+            for profile in self.PROFILES:
+                user = User(email=profile["email"], password_hash=hash_pw("test"),
+                            name="Candidate", role="talent")
+                db.add(user)
+                db.flush()
+                resume = Resume(user_id=user.id, title=profile["title"], skills=profile["skills"],
+                                about=profile["about"], location=profile.get("location", "Remote"),
+                                experience_years=3, published=True, status="approved",
+                                consent_at="2026-09-01T00:00:00Z")
+                db.add(resume)
+                db.flush()
+                self.user_ids.append(user.id)
+                self.resume_ids[profile["title"]] = resume.id
+            employer = User(email="search-employer@test.invalid", password_hash=hash_pw("test"),
+                            name="Recruiter", role="employer")
+            db.add(employer)
+            db.commit()
+            self.employer_id = employer.id
+
+    def tearDown(self):
+        with SessionLocal() as db:
+            db.query(Resume).filter(Resume.id.in_(list(self.resume_ids.values()))).delete(
+                synchronize_session=False)
+            db.query(User).filter(User.id.in_(self.user_ids + [self.employer_id])).delete(
+                synchronize_session=False)
+            db.commit()
+
+    def test_word_start_match_and_relevance_order(self):
+        with TestClient(app) as client:
+            page = client.get("/resumes", params={"q": "seo"}).text
+        self.assertIn("SEO Specialist", page.replace("<mark>", "").replace("</mark>", ""))
+        self.assertIn("Affiliate Manager", page)
+        self.assertNotIn("Front-end Engineer", page)      # «closeout» — не SEO
+        self.assertNotIn("CRM менеджер", page)
+        self.assertLess(page.index(f"/resume/{self.resume_ids['SEO Specialist']}"),
+                        page.index(f"/resume/{self.resume_ids['Affiliate Manager']}"))
+        # совпадение только в описании — показываем фрагмент с подсветкой
+        self.assertIn("Совпадение в описании", page)
+        self.assertIn("<mark>SEO</mark> team", page)
+        self.assertIn('class="cv-skill hit">SEO<', page)
+        self.assertRegex(page, r"Найдено 2 из \d+ резюме")
+
+    def test_all_words_must_match(self):
+        with TestClient(app) as client:
+            page = client.get("/resumes", params={"q": "SEO specialist"}).text
+            self.assertIn(f"/resume/{self.resume_ids['SEO Specialist']}", page)
+            self.assertNotIn(f"/resume/{self.resume_ids['Affiliate Manager']}", page)
+
+    def test_cyrillic_is_case_insensitive_and_translated(self):
+        with TestClient(app) as client:
+            page = client.get("/resumes", params={"q": "Менеджер"}).text
+            self.assertIn(f"/resume/{self.resume_ids['CRM менеджер']}", page)
+            self.assertIn(f"/resume/{self.resume_ids['Affiliate Manager']}", page)   # менеджер → manager
+            located = client.get("/resumes", params={"location": "варшава"}).text
+            self.assertIn(f"/resume/{self.resume_ids['CRM менеджер']}", located)
+            self.assertNotIn(f"/resume/{self.resume_ids['SEO Specialist']}", located)
+
+    def test_employer_tabs_keep_the_query(self):
+        with TestClient(app) as client:
+            client.cookies.set("sh_session", signer.dumps({"uid": self.employer_id}))
+            page = client.get("/resumes", params={"q": "seo", "location": "Remote"}).text
+        self.assertIn('href="/resumes?view=fav&amp;q=seo&amp;location=Remote"', page)
+        self.assertIn('href="/resumes?view=hidden&amp;q=seo&amp;location=Remote"', page)

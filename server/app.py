@@ -767,6 +767,23 @@ class Event(Base):
     category = Column(String, default="")     # конференция / выставка / аффилейт-встреча
     promo = Column(String, default="")        # промокод или условие скидки на билет
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Своя страница у каждого выпуска (/event/<slug>) и поля, которые ведёт краулер
+    # календаря (server/events_crawler.py); ручные события — source == "".
+    slug = Column(String, default="", index=True)
+    source = Column(String, default="")        # "thegamblest" | "" (добавлено руками)
+    source_url = Column(String, default="")
+    city_en = Column(String, default="")       # Lisbon — для английской версии и фото города
+    country_en = Column(String, default="")    # Portugal
+    country_iso = Column(String, default="")   # PT
+    venue = Column(String, default="")         # адрес площадки для карты
+    organizer = Column(String, default="")
+    organizer_url = Column(String, default="")
+    socials = Column(Text, default="")         # JSON: ссылки на соцсети организатора
+    cover_src = Column(String, default="")     # афиша у источника (для справки в админке)
+    sub_events = Column(Text, default="")      # JSON: сайд-ивенты по дням
+    description_en = Column(Text, default="")  # оригинал описания; description — русский перевод
+    og_image = Column(String, default="")      # /img/events/og/<slug>.jpg — печёт event_covers
+    updated_at = Column(DateTime, default=datetime.utcnow)
 
 
 # Тарифы. Базовая цена одной вакансии выровнена по рынку iGaming-джоб-бордов
@@ -4651,23 +4668,150 @@ def resume_freshness(cv) -> str:
     return f"обновлено {stamp.strftime('%d.%m.%Y')}"
 
 
+# Поиск по резюме идёт в Python, а не в SQL. Причины: SQLite LIKE не сворачивает
+# регистр кириллицы («Менеджер» не находил «менеджер»), подстрока «seo» цеплялась
+# за «closeout», а выдача сортировалась по дате — SEO-специалист стоял ниже
+# фронтендера, у которого «SEO» мелькнуло в описании. Резюме — сотни, не тысячи.
+RESUME_SEARCH_SYNONYMS = {
+    "сео": ("seo",), "seo": ("сео",),
+    "смм": ("smm",), "smm": ("смм",),
+    "ппц": ("ppc",), "ppc": ("ппц", "контекст"),
+    "аффилиат": ("affiliate",), "аффилейт": ("affiliate",),
+    "партнёрка": ("affiliate",), "партнерка": ("affiliate",),
+    "affiliate": ("аффилиат", "аффилейт", "партнёр", "партнер"),
+    "поддержка": ("support",), "саппорт": ("support",), "support": ("поддержк", "саппорт"),
+    "тестировщик": ("qa", "tester", "testing"), "qa": ("тестировщик", "тестирован"),
+    "рекрутер": ("recruiter",), "recruiter": ("рекрутер",),
+    "удержание": ("retention",), "retention": ("удержан", "ретеншн"),
+    "контент": ("content",), "content": ("контент",),
+    "маркетолог": ("marketing", "marketer"), "маркетинг": ("marketing",),
+    "marketing": ("маркетинг", "маркетолог"),
+    "продукт": ("product",), "product": ("продукт",),
+    "платежи": ("payment",), "платёж": ("payment",), "payments": ("платеж", "платёж"),
+    "комплаенс": ("compliance",), "compliance": ("комплаенс",),
+    "английский": ("english",), "english": ("английск", "англійськ"),
+    "фронтенд": ("frontend", "front-end"), "бэкенд": ("backend", "back-end"),
+}
+# Где совпало — столько и весит: слово из заголовка важнее слова из описания.
+RESUME_SEARCH_WEIGHTS = (("title", 100), ("skills", 40), ("languages", 25),
+                         ("employment_history", 12), ("about", 6))
+
+
+def resume_search_groups(q: str) -> list:
+    """«SEO specialist» → [регэксп «seo|сео», регэксп «specialist»].
+
+    Каждое слово запроса обязано найтись (логическое И), но в любом поле и в
+    любой форме с таким началом: «менеджер» находит «менеджера», «affiliate» —
+    «affiliates». Совпадение считается только с начала слова, поэтому «seo»
+    не цепляется за «closeout». Русские слова дополняются английскими
+    эквивалентами и транслитом (SEARCH_EQUIVALENTS, RESUME_SEARCH_SYNONYMS).
+    """
+    words = [w for w in re.split(r"[\s,;/|«»\"']+", q.strip().lower()) if len(w) > 1][:6]
+    groups = []
+    for word in words:
+        variants = {word, *RESUME_SEARCH_SYNONYMS.get(word, ())}
+        for russian, english in SEARCH_EQUIVALENTS.items():
+            if word == russian or word.startswith(russian):
+                variants.update(english)
+        alternation = "|".join(re.escape(v) for v in sorted(variants, key=len, reverse=True))
+        groups.append(re.compile(rf"(?<!\w)(?:{alternation})", re.I))
+    return groups
+
+
+def highlight_search(text: str, groups: list) -> Markup:
+    """Обернуть совпадения в <mark>; текст экранируется, разметка — нет."""
+    text = text or ""
+    if not groups:
+        return Markup(escape(text))
+    spans = []
+    for pattern in groups:
+        spans.extend((m.start(), m.end()) for m in pattern.finditer(text))
+    spans.sort()
+    out, last = [], 0
+    for start, end in spans:
+        if start < last:
+            continue
+        out.append(escape(text[last:start]))
+        out.append(Markup("<mark>") + escape(text[start:end]) + Markup("</mark>"))
+        last = end
+    out.append(escape(text[last:]))
+    return Markup("".join(str(part) for part in out))
+
+
+def search_snippet(text: str, pattern, radius: int = 70) -> Markup:
+    """Кусок текста вокруг первого совпадения — чтобы было видно, за что нашли."""
+    text = anonymize_resume_text(text or "")
+    found = pattern.search(text)
+    if not found:
+        return Markup("")
+    start, end = max(0, found.start() - radius), min(len(text), found.end() + radius)
+    piece = " ".join(text[start:end].split())
+    lead = Markup("…") if start else Markup("")
+    trail = Markup("…") if end < len(text) else Markup("")
+    return lead + highlight_search(piece, [pattern]) + trail
+
+
+def resume_search_score(cv, groups: list) -> dict | None:
+    """Насколько резюме отвечает запросу. None — не отвечает (какое-то слово не нашлось).
+
+    score складывается из весов полей, где нашлось каждое слово; skills — навыки
+    в порядке «совпавшие первыми»; snippet — фрагмент описания или опыта, если
+    слово нашлось только там и работодатель иначе не поймёт, почему резюме в выдаче.
+    """
+    score, snippet, snippet_where = 0, Markup(""), ""
+    for pattern in groups:
+        gained = 0
+        for field, weight in RESUME_SEARCH_WEIGHTS:
+            if pattern.search(getattr(cv, field, "") or ""):
+                gained += weight
+        if not gained:
+            return None
+        score += gained
+        visible = any(pattern.search(getattr(cv, field, "") or "")
+                      for field in ("title", "skills", "languages"))
+        if not visible and not snippet:
+            for field, label in (("employment_history", "Совпадение в опыте работы"),
+                                 ("about", "Совпадение в описании")):
+                snippet = search_snippet(getattr(cv, field, "") or "", pattern)
+                if snippet:
+                    snippet_where = label
+                    break
+    hits = [s for s in cv.skill_list if any(p.search(s) for p in groups)]
+    rest = [s for s in cv.skill_list if s not in hits]
+    return {"score": score, "skills": hits + rest, "hit": set(hits),
+            "snippet": snippet, "snippet_label": snippet_where}
+
+
 @app.get("/resumes", response_class=HTMLResponse)
 def resumes(request: Request, q: str = "", location: str = "", fmt: str = "",
             view: str = "", db: Session = Depends(db_session)):
+    q, location, fmt = q.strip(), location.strip(), fmt.strip()
     query = (db.query(Resume).join(User, User.id == Resume.user_id)
              .filter(Resume.published == True, Resume.status == "approved",  # noqa: E712
                      User.job_search_status != "paused"))
-    if q.strip():
-        needle = f"%{q.strip()}%"
-        query = query.filter(or_(Resume.title.ilike(needle), Resume.skills.ilike(needle),
-                                 Resume.about.ilike(needle), Resume.languages.ilike(needle)))
-    if location.strip():
-        query = query.filter(Resume.location.ilike(f"%{location.strip()}%"))
-    if fmt.strip():
-        query = query.filter(Resume.desired_format == fmt.strip())
+    if fmt:
+        query = query.filter(Resume.desired_format == fmt)
     rows = query.order_by(Resume.updated_at.desc()).all()
-    # оплаченное поднятие — первым, внутри группы прежний порядок по свежести
-    rows.sort(key=lambda cv: not cv.is_boosted)
+    total = len(rows)
+    if location:
+        # регистр кириллицы SQLite не сворачивает — фильтруем в Python;
+        # «Мальта» находит и тех, кто там живёт, и тех, кто готов туда переехать
+        needle = location.lower()
+        rows = [cv for cv in rows if needle in (cv.location or "").lower()
+                or needle in (cv.preferred_locations or "").lower()]
+    groups = resume_search_groups(q) if q else []
+    found = {}
+    if groups:
+        for cv in rows:
+            hit = resume_search_score(cv, groups)
+            if hit:
+                found[cv.id] = hit
+        rows = [cv for cv in rows if cv.id in found]
+        # оплаченное поднятие — первым, дальше по релевантности; внутри равных
+        # прежний порядок по свежести (сортировка устойчивая)
+        rows.sort(key=lambda cv: (not cv.is_boosted, -found[cv.id]["score"]))
+    else:
+        rows.sort(key=lambda cv: not cv.is_boosted)
 
     # пометки и сохранённые поиски — только для работодателей, общие на кабинет
     user = get_user(request, db)
@@ -4685,14 +4829,21 @@ def resumes(request: Request, q: str = "", location: str = "", fmt: str = "",
         rows = [cv for cv in rows if marks.get(cv.id) == "hidden"]
     else:
         rows = [cv for cv in rows if marks.get(cv.id) != "hidden"]
-    extras = {cv.id: {"fill": resume_completeness(cv), "fresh": resume_freshness(cv)}
-              for cv in rows}
+    extras = {}
+    for cv in rows:
+        hit = found.get(cv.id) or {"skills": cv.skill_list, "hit": set(),
+                                   "snippet": Markup(""), "snippet_label": ""}
+        extras[cv.id] = {"fill": resume_completeness(cv), "fresh": resume_freshness(cv),
+                         "title": highlight_search(cv.title, groups), **hit}
     counts = {"fav": sum(1 for k in marks.values() if k == "fav"),
               "hidden": sum(1 for k in marks.values() if k == "hidden")}
+    from urllib.parse import urlencode
+    filters_qs = urlencode({k: v for k, v in (("q", q), ("location", location), ("fmt", fmt)) if v})
     return render(request, db, "resumes.html", resumes=rows, q=q, location=location,
                   fmt=fmt, formats=FORMATS, active="resumes", view=view, marks=marks,
                   extras=extras, mark_counts=counts, saved_searches=saved_searches,
-                  is_employer=is_employer)
+                  is_employer=is_employer, total=total, found_count=len(rows),
+                  filters_qs=filters_qs)
 
 
 @app.post("/resumes/{resume_id}/mark")

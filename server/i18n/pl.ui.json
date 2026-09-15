@@ -3176,5 +3176,8 @@
  "Пока ни одного отклика —": "Nie ma jeszcze ani jednej odpowiedzi -",
  "Доступно размещений: # — эта публикация спишет одно.": "Dostępne miejsca docelowe: # - z tej publikacji skreślone zostanie jedno.",
  "Промокод активирован — бесплатные размещения начислены на кабинет.": "Kod promocyjny został aktywowany – darmowe miejsca trafiają na Twoje konto.",
- "Картой · €#": "Kartą · €#"
+ "Картой · €#": "Kartą · €#",
+ "Найдено # из # резюме": "Znaleziono # z # CV",
+ "Совпадение в описании": "Dopasowanie w opisie",
+ "Совпадение в опыте работы": "Dopasowanie w doświadczeniu"
 }
