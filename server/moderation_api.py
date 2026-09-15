@@ -153,7 +153,7 @@ async def jobs_apply(request: Request, x_publish_key: str = Header(default=""),
             # прохода краулера
             if known is None:
                 known = crawler.known_igaming_companies(db, Job)
-            offtopic = (crawler.job_is_irrelevant(job.title)
+            offtopic = (crawler.job_is_irrelevant(job.title, job.description or "", job.company_name)
                         or crawler.company_is_offtopic(job.company_name, job.title,
                                                        job.description or "")
                         or crawler.generic_job_offtopic(job.source, job.title, job.company_name,

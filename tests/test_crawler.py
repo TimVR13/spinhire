@@ -155,6 +155,35 @@ class RelevanceFilterTests(unittest.TestCase):
             with self.subTest(title=title):
                 self.assertTrue(crawler.job_is_irrelevant(title))
 
+    def test_adult_roles_are_irrelevant_even_from_niche_channels(self):
+        """OnlyFans/Fansly-чаты, вебкам и NSFW-продукты не берём вообще —
+        @betting_job постит их вперемешку с беттингом, djinni — в разделе gambling."""
+        for title, description in (
+                ("Оператор чата OnlyFans / Fansly", ""),
+                ("Оператор чата Fansly", "Удаленно, от $350 до $2000"),
+                ("Chat Operator", "Общаться с подписчиками моделей на платформах OnlyFans и Fansly"),
+                ("Оператор чата", "Общаться с подписчиками моделей в формате 18+, продавать контент"),
+                ("CMO / Head of Performance - AI Companion / Adult AI", ""),
+                ("Head of Growth", "Industry: AI Companion / Adult / NSFW / Subscription Apps"),
+                ("Chatter (night shift)", ""),
+                ("Sexter", ""),
+                ("Менеджер вебкам-студии", ""),
+                ("Media Buyer", "Verticals: dating, adult traffic, nutra")):
+            with self.subTest(title=title):
+                self.assertTrue(crawler.job_is_adult(title, description))
+                self.assertTrue(crawler.job_is_irrelevant(title, description))
+
+    def test_igaming_chat_and_18_plus_wording_survive_the_adult_filter(self):
+        for title, description in (
+                ("Live Chat Support Agent", "Support players in live chat, casino brand, players 18+ only"),
+                ("Customer Support (chat)", "Отвечать игрокам в чате, проверка возраста 18+"),
+                ("Responsible Gaming Specialist", "Adults only, responsible gambling tools"),
+                ("Game Presenter", "On camera, live casino studio"),
+                ("Affiliate Manager", "Gambling vertical, casino and betting brands")):
+            with self.subTest(title=title):
+                self.assertFalse(crawler.job_is_adult(title, description))
+                self.assertFalse(crawler.job_is_irrelevant(title, description))
+
     def test_igaming_roles_survive_the_filter(self):
         for title in ("Table Games Dealer", "WSOP Dealer", "ASSISTANT PIT MANAGER",
                       "Cage Cashier", "Casino Cashier-Full-Time(Bettendorf)",

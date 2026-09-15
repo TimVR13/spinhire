@@ -2205,9 +2205,37 @@ def generic_job_offtopic(source: str, title: str, company: str, description: str
     return not has_igaming_signal(title, company, description)
 
 
-def job_is_irrelevant(title: str) -> bool:
-    """Название говорит, что роль не про iGaming-карьеру."""
+# Adult-индустрия: операторы чата OnlyFans/Fansly, вебкам, секстинг, NSFW-продукты.
+# Решение владельца 15.09.2026 — такие вакансии не берём вообще, даже если
+# пришли с профильного канала (@betting_job постит их вперемешку с беттингом).
+# В заголовке достаточно самого слова, в описании — только явных маркеров:
+# «18+» и «adult» в одиночку встречаются и в гемблинге («players 18+»).
+_ADULT_TITLE_RE = re.compile(
+    r"onlyfans|only\s*fans|fansly|онлифанс|онлифан|\bsext\w*|секстинг|"
+    r"web\s*cam|вебкам|веб-кам|\bchatter\b|\bnsfw\b|\bxxx\b|"
+    r"\badult\b|эротич\w*|erotic|\bporn\w*|порно|"
+    r"ai\s+(?:girlfriend|boyfriend|companion)|эскорт|\bescort\b", re.I)
+_ADULT_TEXT_RE = re.compile(
+    r"onlyfans|only\s*fans|fansly|онлифанс|онлифан|\bsexting|секстинг|"
+    r"web\s*cam\s*(?:model|studio|site|platform)|вебкам|веб-кам|\bnsfw\b|"
+    r"adult\s+(?:content|industry|entertainment|platform|site|traffic|vertical|"
+    r"niche|dating|ai|models?|creators?|webcam)|"
+    r"(?:контент|общени\w*|переписк\w*|формат\w*)\s+18\+|18\+\s*(?:контент|формат)|"
+    r"ai\s+(?:girlfriend|boyfriend)|\bporn\w*|порно|эротич\w*\s+контент", re.I)
+
+
+def job_is_adult(title: str, description: str = "", company: str = "") -> bool:
+    """Роль из adult-индустрии — не публикуем ни при каких маркерах iGaming."""
+    if _ADULT_TITLE_RE.search(f"{title or ''}\n{company or ''}"):
+        return True
+    return bool(_ADULT_TEXT_RE.search(description or ""))
+
+
+def job_is_irrelevant(title: str, description: str = "", company: str = "") -> bool:
+    """Название (и описание — для adult-ролей) говорит, что роль не про iGaming-карьеру."""
     t = title or ""
+    if job_is_adult(t, description, company):
+        return True
     if _RELEVANT_OVERRIDE_RE.search(t):
         return False
     return bool(_IRRELEVANT_TITLE_RE.search(t) or _OFFTOPIC_TITLE_RE.search(t))
@@ -2221,7 +2249,7 @@ def sweep_irrelevant(db, Job, dry: bool = False, samples: list | None = None) ->
     known = known_igaming_companies(db, Job)
     rejected = 0
     for row in rows:
-        if job_is_irrelevant(row.title) or company_is_offtopic(
+        if job_is_irrelevant(row.title, row.description or "", row.company_name) or company_is_offtopic(
                 row.company_name, row.title, row.description or "") or generic_job_offtopic(
                 row.source, row.title, row.company_name, row.description or "", known):
             if samples is not None:
@@ -2271,7 +2299,7 @@ def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
                 row.salary = it["salary"]
             row.posted_at = it.get("posted_at", "") or row.posted_at
             row.deadline = it.get("deadline", "") or row.deadline
-            if job_is_irrelevant(row.title):
+            if job_is_irrelevant(row.title, row.description or "", row.company_name):
                 if row.status == "approved":
                     row.status = "rejected"
                     row.closed_at = datetime.utcnow().date().isoformat()
@@ -2291,7 +2319,8 @@ def upsert(db, Job, guess_category, items, approve=True, complete_sources=None):
                       source_url=it["source_url"], source=it["source"],
                       ext_id=it["ext_id"], category=cat,
                       posted_at=it.get("posted_at", ""), deadline=it.get("deadline", ""),
-                      status="rejected" if (job_is_irrelevant(it["title"])
+                      status="rejected" if (job_is_irrelevant(it["title"], it.get("description", ""),
+                                                              it["company_name"])
                                            or company_is_offtopic(it["company_name"],
                                                                   it["title"],
                                                                   it.get("description", ""))
