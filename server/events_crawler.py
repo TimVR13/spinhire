@@ -296,6 +296,26 @@ def _merge_side_events(ld_subs: list, html_rows: list[dict], start: str) -> list
     return out
 
 
+MAX_SPAN_DAYS = 14
+
+
+def plausible_span(date_from: str, date_to: str) -> bool:
+    try:
+        return 0 <= (date.fromisoformat(date_to) - date.fromisoformat(date_from)).days <= MAX_SPAN_DAYS
+    except (TypeError, ValueError):
+        return False
+
+
+def normalize_dates(db, Event) -> int:
+    """Починить уже сохранённые строки с невозможной длительностью (см. parse_event_page)."""
+    n = 0
+    for ev in db.query(Event).filter(Event.source == SOURCE).all():
+        if ev.date_to and ev.date_from and not plausible_span(ev.date_from, ev.date_to):
+            ev.date_to = ev.date_from
+            n += 1
+    return n
+
+
 def source_slug(source_url: str) -> str:
     return source_url.rstrip("/").rsplit("/", 1)[-1].lower()
 
@@ -376,6 +396,10 @@ def parse_event_page(html_text: str, source_url: str) -> dict | None:
         return None
     if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_to or "") or date_to < date_from:
         date_to = date_from
+    if not plausible_span(date_from, date_to):
+        # у прошедших событий источник вместо даты окончания отдаёт дату генерации страницы
+        # («26 мар 2024 – 18 сен 2026»): конференция дольше двух недель не бывает
+        date_to = date_from
     addr = (ld.get("location") or {}).get("address") or {}
     if not isinstance(addr, dict):
         addr = {}
@@ -455,6 +479,18 @@ def city_photo_url(city_en: str) -> str:
     if path and os.path.exists(path):
         return f"/img/events/city/{os.path.basename(path)}"
     return ""
+
+
+_CITY_EN_BY_RU = {}
+for _en, _ru in CITY_RU.items():
+    _CITY_EN_BY_RU.setdefault(_ru.lower(), _en)
+
+
+def city_photo_url_ru(city_label: str) -> str:
+    """Ручные события хранят город по-русски («🇧🇷 Сан-Паулу, Бразилия») — ищем фото по нему."""
+    label = re.sub(r"^[^\w(]+", "", city_label or "").split(",")[0].strip().lower()
+    en = _CITY_EN_BY_RU.get(label)
+    return city_photo_url(en) if en else ""
 
 
 def ensure_city_photo(city_en: str, country_en: str, status: dict) -> str:
@@ -588,6 +624,19 @@ def upsert(db, Event, data: dict, status: dict, *, translate=translate_ru, make_
     return ev, action
 
 
+def dedupe_slugs(db, Event) -> int:
+    """Одинаковые slug (гонка двух прогонов: воркер и кнопка в админке, локально — dev-сервер с --reload)
+    — оставляем самую раннюю строку, остальные удаляем."""
+    seen, n = set(), 0
+    for ev in db.query(Event).filter(Event.slug != "").order_by(Event.slug, Event.id).all():
+        if ev.slug in seen:
+            db.delete(ev)
+            n += 1
+        else:
+            seen.add(ev.slug)
+    return n
+
+
 def deactivate_past(db, Event, today: date | None = None) -> int:
     """Прошедшие события уходят из календаря (страница остаётся). Скрытые админом не включаем."""
     today = today or date.today()
@@ -610,7 +659,7 @@ def run(SessionLocal, Event, *, force: bool = False, limit: int | None = None, m
     status["errors"] = []
     started = time.monotonic()
     summary = {"seen": 0, "fetched": 0, "created": 0, "updated": 0, "adopted": 0, "skipped": 0,
-               "failed": 0, "deactivated": 0}
+               "failed": 0, "deduped": 0, "deactivated": 0}
     try:
         entries = sitemap_entries(fetch_text(SITEMAP_URL))
     except Exception as exc:  # noqa: BLE001
@@ -656,6 +705,8 @@ def run(SessionLocal, Event, *, force: bool = False, limit: int | None = None, m
             log(f"[events] ошибка {url}: {str(exc)[:120]}")
         time.sleep(REQUEST_PAUSE)
     with SessionLocal() as db:
+        summary["deduped"] = dedupe_slugs(db, Event)
+        summary["normalized"] = normalize_dates(db, Event)
         summary["deactivated"] = deactivate_past(db, Event)
         db.commit()
         summary["active"] = db.query(Event).filter(Event.active == True).count()  # noqa: E712
@@ -665,6 +716,15 @@ def run(SessionLocal, Event, *, force: bool = False, limit: int | None = None, m
     save_status(status)
     log(f"[events] готово за {status['duration_s']} c: {summary}")
     return summary
+
+
+def housekeeping(SessionLocal, Event) -> dict:
+    """Дёшево и без сети: дубли, невозможные даты, прошедшие — на каждом тике планировщика."""
+    with SessionLocal() as db:
+        out = {"deduped": dedupe_slugs(db, Event), "normalized": normalize_dates(db, Event),
+               "deactivated": deactivate_past(db, Event)}
+        db.commit()
+    return out
 
 
 def rebake_covers(SessionLocal, Event, make_og, log=print) -> int:

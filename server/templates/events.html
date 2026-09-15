@@ -110,6 +110,7 @@
       <div class="ev-stat"><div class="num">{{ stats.countries }}</div><div class="lbl">стран</div></div>
       <div class="ev-stat"><div class="num">{{ stats.cities }}</div><div class="lbl">городов</div></div>
     </div>
+    <p style="margin-top:var(--sp-5);"><a class="btn btn-ghost btn-sm" href="/events/submit">+ Добавить событие</a></p>
     {% if updated_at %}<p class="ev-upd">Календарь сверяется с источниками автоматически · обновлено <span data-no-translate>{{ updated_at }}</span></p>{% endif %}
   </section>
 
@@ -148,8 +149,8 @@
             {% set desc = (e.description if content_lang == 'ru' and e.description else (e.description_en or e.description or '')) %}
             {% if desc %}<p class="evc__desc"{% if content_lang != 'ru' %} data-no-translate{% endif %}>{{ desc.split('\n\n')[0] }}</p>{% endif %}
             <div class="evc__actions">
-              {% if e.slug %}<a class="evc__btn evc__btn--primary" href="/event/{{ e.slug }}">Подробнее и программа →</a>{% endif %}
-              {% if e.url %}<a class="evc__btn" href="{{ e.url }}" target="_blank" rel="nofollow noopener">Сайт события ↗</a>{% endif %}
+              {% if e.slug %}<a class="evc__btn evc__btn--primary" href="/event/{{ e.slug }}">Подробнее и программа →</a>
+              {% elif e.url %}<a class="evc__btn" href="{{ e.url }}" target="_blank" rel="nofollow noopener">Сайт события ↗</a>{% endif %}
             </div>
           </div>
         </article>

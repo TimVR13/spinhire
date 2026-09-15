@@ -846,8 +846,8 @@
           <p class="event-hero__who" id="eventHeroWho" hidden></p>
           <p class="event-hero__promo" id="eventHeroPromo" hidden></p>
           <div class="event-hero__actions">
-            <a class="btn btn-acid btn-sm" id="eventHeroLink" href="/events" target="_blank" rel="nofollow noopener external">Сайт события ↗</a>
-            <a class="btn btn-ghost btn-sm" href="/events">Показать календарь →</a>
+            <a class="btn btn-acid btn-sm" id="eventHeroLink" href="/events">Подробнее о событии →</a>
+            <a class="btn btn-ghost btn-sm" href="/events">Весь календарь →</a>
           </div>
         </div>
       </article>
@@ -1152,7 +1152,6 @@
     return null;
   }
   const orgHTML = e => { const o = organizer(e); return o ? `<span class="event-org"><img src="${o.logo}" alt="" width="20" height="20" onerror="this.remove()"><b>${o.name}</b></span>` : ''; };
-  function promoCode(t){ let h=0; for(const c of (t||'')) h=(h*31+c.charCodeAt(0))>>>0; return 'SPINHIRE-'+h.toString(36).toUpperCase().slice(0,5); }
 
   // Ближайшее событие показываем крупно: обложка, описание и кто там будет.
   function renderHero(event) {
@@ -1174,15 +1173,10 @@
       'Профильная встреча индустрии: операторы, провайдеры и аффилейты в одном месте. Лучший способ найти работу в iGaming без резюме — вживую.';
     const who = document.getElementById('eventHeroWho');
     if (event.attendees) { who.hidden = false; who.innerHTML = 'Кто будет: <b>' + event.attendees + '</b>'; }
-    const promo = document.getElementById('eventHeroPromo');
-    const code = event.promo || promoCode(event.t) + ' — −10% на билет';
-    promo.hidden = false; promo.textContent = '🎟 ' + code;
+    // сайт организатора и билеты — на странице события, а не прямо с главной
     const link = document.getElementById('eventHeroLink');
-    if (event.url) { link.href = event.url; } else { link.hidden = true; }
+    link.href = event.href || '/events';
     if (event.href) {
-      // у события есть своя страница — ведём на неё: программа, площадка, билеты
-      const more = hero.querySelector('a[href="/events"]:not(#eventHeroLink)');
-      if (more) { more.href = event.href; more.textContent = 'Программа и площадка →'; }
       const title = document.getElementById('eventHeroTitle');
       if (title && !title.querySelector('a')) title.innerHTML = `<a href="${event.href}" style="color:inherit;text-decoration:none;">${title.textContent}</a>`;
     }
@@ -1202,18 +1196,10 @@
         <h3>${e.href ? `<a href="${e.href}" style="color:inherit;text-decoration:none;">${e.t}</a>` : e.t}</h3>
         <p class="ev-place">${e.city || ''}${e.href ? ` · <a href="${e.href}" style="color:var(--acid);">программа →</a>` : ''}</p>
         <div class="ev-actions">
-          <button class="ev-btn promo-ev" data-i="${i}" style="border-color: var(--acid); color: var(--acid);">🎟 Взять промо</button>
+          <a class="ev-btn" href="${e.href || '/events'}" style="border-color: var(--acid); color: var(--acid);">Подробнее →</a>
           <button class="ev-btn share-ev" data-i="${i}">↗ Поделиться</button>
         </div>
-        <p class="ev-promo" data-p="${i}" hidden style="margin-top:8px;font-size:0.82rem;color:var(--ink-dim);"></p>
       </div>`).join('');
-    grid.querySelectorAll('.promo-ev').forEach(b => b.addEventListener('click', () => {
-      const e = events[+b.dataset.i], code = promoCode(e.t);
-      const p = grid.querySelector(`[data-p="${b.dataset.i}"]`);
-      p.hidden = false; p.innerHTML = `Промокод <b style="color:var(--acid)">${code}</b> — −10% на билет`;
-      try { navigator.clipboard.writeText(code); if (window.toast) toast('Промокод скопирован'); } catch (_) {}
-      b.textContent = '✓ Промо взято';
-    }));
     grid.querySelectorAll('.share-ev').forEach(b => b.addEventListener('click', async () => {
       const e = events[+b.dataset.i];
       const text = `${e.t} — ${e.city}, ${e.d} ${e.mon} ${e.y}. Событие iGaming на SpinHire`;

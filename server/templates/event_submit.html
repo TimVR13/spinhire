@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% set active = 'events' %}
+{% block title %}{% if content_lang == 'en' %}Add an iGaming event to the calendar | SpinHire{% else %}Добавить событие в календарь iGaming | SpinHire{% endif %}{% endblock %}
+{% block desc %}{% if content_lang == 'en' %}Submit a conference, expo, awards or meetup: we review it and publish it in the SpinHire events calendar.{% else %}Конференция, выставка, награды или митап — отправьте заявку, мы проверим и опубликуем в календаре SpinHire.{% endif %}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex,follow"><link rel="canonical" href="https://spinhire.io/events/submit">{% endblock %}
+{% block style %}
+  .evs { max-width: 720px; }
+  .evs__card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: clamp(20px, 3vw, 32px); }
+  .evs h1 { font-size: clamp(1.6rem, 3.4vw, 2.3rem); margin-bottom: 8px; }
+  .evs .lead { color: var(--ink-dim); margin-bottom: var(--sp-5); max-width: 60ch; }
+  .evs__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .evs__grid .wide { grid-column: 1 / -1; }
+  .evs .field label { display: block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); margin-bottom: 6px; }
+  .evs .input, .evs select.input, .evs textarea.input { width: 100%; }
+  .evs__hp { position: absolute; left: -9999px; opacity: 0; height: 0; overflow: hidden; }
+  .evs__ok { border: 1px solid color-mix(in oklch, var(--acid) 60%, var(--line-strong)); background: color-mix(in oklch, var(--acid) 8%, transparent); border-radius: var(--radius); padding: var(--sp-5); }
+  .evs__ok b { color: var(--acid); }
+  .evs__err { border: 1px solid var(--pink); background: color-mix(in oklch, var(--pink) 10%, transparent); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; color: var(--ink); font-size: .9rem; }
+  .evs__note { color: var(--ink-faint); font-size: .8rem; margin-top: 12px; }
+  @media (max-width: 640px) { .evs__grid { grid-template-columns: 1fr; } }
+{% endblock %}
+{% block content %}
+  <nav class="crumbs"><a href="/">Главная</a> / <a href="/events">События iGaming</a> / Добавить событие</nav>
+  <div class="evs">
+    {% if ok %}
+      <div class="evs__ok">
+        <h1>Спасибо, заявка принята</h1>
+        <p>Событие <b>на рассмотрении</b>: проверим даты и площадку и опубликуем в календаре — обычно в течение суток.</p>
+        <p style="margin-top:14px;"><a class="btn btn-acid btn-sm" href="/events">К календарю →</a> <a class="btn btn-ghost btn-sm" href="/events/submit">Добавить ещё</a></p>
+      </div>
+    {% else %}
+      <div class="evs__card">
+        <span class="kicker">Календарь индустрии</span>
+        <h1>Добавить событие</h1>
+        <p class="lead">Конференция, выставка, награды или митап iGaming. Заявка попадает на рассмотрение — после проверки событие появится в календаре со своей страницей.</p>
+        {% if errors %}<div class="evs__err">{% for e in errors %}{{ e }}{% if not loop.last %}<br>{% endif %}{% endfor %}</div>{% endif %}
+        <form method="post" action="/events/submit" class="evs__grid">
+          <div class="field wide"><label for="ev-title">Название *</label><input class="input" id="ev-title" name="title" required minlength="3" maxlength="160" value="{{ form.get('title', '') }}" placeholder="SBC Summit Lisbon 2027"></div>
+          <div class="field"><label for="ev-from">Дата начала *</label><input class="input" id="ev-from" name="date_from" type="date" required value="{{ form.get('date_from', '') }}"></div>
+          <div class="field"><label for="ev-to">Дата окончания</label><input class="input" id="ev-to" name="date_to" type="date" value="{{ form.get('date_to', '') }}"></div>
+          <div class="field"><label for="ev-cat">Тип</label>
+            <select class="input" id="ev-cat" name="category">{% for c in categories %}<option value="{{ c }}" {% if form.get('category') == c %}selected{% endif %}>{{ cat_label(c) }}</option>{% endfor %}</select></div>
+          <div class="field"><label for="ev-city">Город, страна *</label><input class="input" id="ev-city" name="city" required maxlength="120" value="{{ form.get('city', '') }}" placeholder="Лиссабон, Португалия"></div>
+          <div class="field wide"><label for="ev-url">Сайт события</label><input class="input" id="ev-url" name="url" type="url" maxlength="500" value="{{ form.get('url', '') }}" placeholder="https://"></div>
+          <div class="field wide"><label for="ev-desc">Описание</label><textarea class="input" id="ev-desc" name="description" rows="4" maxlength="4000" placeholder="О чём событие, для кого, что будет в программе">{{ form.get('description', '') }}</textarea></div>
+          <div class="field wide"><label for="ev-contact">Ваш контакт (email или Telegram)</label><input class="input" id="ev-contact" name="contact" maxlength="160" value="{{ form.get('contact', '') }}" placeholder="name@company.com"></div>
+          <div class="evs__hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+          <div class="wide"><button class="btn btn-acid" type="submit">Отправить на рассмотрение</button>
+            <p class="evs__note">Публикуем бесплатно. Проверяем даты и площадку по сайту организатора; контакт нужен только для уточнений.</p></div>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

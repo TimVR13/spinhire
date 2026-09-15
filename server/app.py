@@ -787,6 +787,7 @@ class Event(Base):
     description_en = Column(Text, default="")  # оригинал описания; description — русский перевод
     og_image = Column(String, default="")      # /img/events/og/<slug>.jpg — печёт event_covers
     updated_at = Column(DateTime, default=datetime.utcnow)
+    submitted_by = Column(String, default="")  # контакт отправителя заявки (source == "user")
 
 
 # Тарифы. Базовая цена одной вакансии выровнена по рынку iGaming-джоб-бордов
@@ -1319,6 +1320,7 @@ def migrate(db: Session):
         "ALTER TABLE events ADD COLUMN description_en TEXT DEFAULT ''",
         "ALTER TABLE events ADD COLUMN og_image VARCHAR DEFAULT ''",
         "ALTER TABLE events ADD COLUMN updated_at DATETIME",
+        "ALTER TABLE events ADD COLUMN submitted_by VARCHAR DEFAULT ''",
     ):
         col = _sql.split("ADD COLUMN ", 1)[1].split()[0]
         if ecols and col not in ecols:
@@ -2680,8 +2682,10 @@ def _events_scheduler():
     while True:
         try:
             from server import event_covers, events_crawler
-            if events_crawler.crawl_is_due(interval_hours):
-                events_crawler.run(SessionLocal, Event, make_og=event_covers.make_og_for_event)
+            events_crawler.housekeeping(SessionLocal, Event)
+            if events_crawler.crawl_is_due(interval_hours) and not _events_crawl_lock.locked():
+                with _events_crawl_lock:  # не пересекаться с кнопкой «Обновить сейчас» в админке
+                    events_crawler.run(SessionLocal, Event, make_og=event_covers.make_og_for_event)
         except Exception as e:  # noqa: BLE001
             print(f"[events] прогон не удался: {str(e)[:160]}")
         time.sleep(1800)
@@ -3544,8 +3548,6 @@ EVENT_COVERS = (
     (("sigma", "milan"), "/img/events/sigma-central-europe.jpg"),
     (("ice",), "/img/events/ice-barcelona.jpg"),
     (("sigma", "malta"), "/img/events/sigma-europe-malta.jpg"),
-    (("sigma",), "/img/events/sigma-world-rome.jpg"),
-    (("sbc",), "/img/events/sbc-summit-lisbon.jpg"),
 )
 EVENT_COVER_DEFAULT = "/img/events/default.jpg"
 EVENT_CATEGORY_EN = {"Конференция": "Conference", "Выставка": "Expo", "Аффилейт": "Affiliate",
@@ -3561,7 +3563,8 @@ _SOCIAL_HOSTS = (("linkedin.", "LinkedIn"), ("facebook.", "Facebook"), ("instagr
 def event_cover(event) -> str:
     if (event.image or "").strip():
         return event.image.strip()
-    photo = _events_src.city_photo_url(getattr(event, "city_en", "") or "")
+    photo = (_events_src.city_photo_url(getattr(event, "city_en", "") or "")
+             or _events_src.city_photo_url_ru(event.city or ""))
     if photo:
         return photo
     haystack = f"{event.title} {event.city}".lower()
@@ -3687,6 +3690,7 @@ def events_calendar(request: Request, db: Session = Depends(db_session)):
             months.append({"ym": key, "year": key[:4], "items": []})
         months[-1]["items"].append(e)
     past = (db.query(Event).filter(Event.active == False, Event.slug != "",  # noqa: E712
+                                   Event.date_from < today.isoformat(),
                                    Event.date_from >= (today - timedelta(days=400)).isoformat())
             .order_by(Event.date_from.desc()).limit(40).all())
     categories = {}
@@ -3706,6 +3710,66 @@ def events_calendar(request: Request, db: Session = Depends(db_session)):
     return render(request, db, "events.html", months=months, upcoming=upcoming, past=past,
                   categories=categories, stats=stats, today=today.isoformat(), list_ld=list_ld,
                   updated_at=(status.get("last_run") or "")[:10], **_event_ctx(lang))
+
+
+EVENT_SUBMIT_CATEGORIES = ("Конференция", "Выставка", "Аффилейт", "Награды", "Нетворкинг")
+
+
+@app.get("/events/submit", response_class=HTMLResponse)
+def event_submit_form(request: Request, ok: int = 0, db: Session = Depends(db_session)):
+    """Публичная форма «Добавить событие»: заявка уходит в админку на рассмотрение."""
+    lang = request_lang(request)
+    return render(request, db, "event_submit.html", ok=bool(ok), categories=EVENT_SUBMIT_CATEGORIES,
+                  errors=[], form={}, noindex=True, **_event_ctx(lang))
+
+
+@app.post("/events/submit", response_class=HTMLResponse)
+def event_submit(request: Request, title: str = Form(""), date_from: str = Form(""), date_to: str = Form(""),
+                 category: str = Form(""), city: str = Form(""), url: str = Form(""), description: str = Form(""),
+                 contact: str = Form(""), website: str = Form(""), db: Session = Depends(db_session)):
+    lang = request_lang(request)
+    form = {"title": title.strip(), "date_from": date_from.strip(), "date_to": date_to.strip(),
+            "category": category.strip(), "city": city.strip(), "url": url.strip(),
+            "description": description.strip(), "contact": contact.strip()}
+    if website.strip():  # honeypot: поле не видно людям, боты его заполняют
+        return RedirectResponse("/events/submit?ok=1", status_code=303)
+    errors = []
+    if len(form["title"]) < 3:
+        errors.append("Укажите название события")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", form["date_from"]):
+        errors.append("Укажите дату начала")
+    if form["date_to"] and (not re.fullmatch(r"\d{4}-\d{2}-\d{2}", form["date_to"]) or form["date_to"] < form["date_from"]):
+        errors.append("Дата окончания раньше даты начала")
+    if not form["city"]:
+        errors.append("Укажите город")
+    if form["url"] and not re.match(r"^https?://", form["url"]):
+        form["url"] = "https://" + form["url"]
+    if errors:
+        return render(request, db, "event_submit.html", ok=False, categories=EVENT_SUBMIT_CATEGORIES,
+                      errors=errors, form=form, noindex=True, **_event_ctx(lang))
+    base = _events_src.ascii_slug(form["title"]) or "event"
+    slug = _events_src.make_slug(base, form["date_from"])
+    n = 2
+    while db.query(Event).filter(Event.slug == slug).first():
+        slug = f"{_events_src.make_slug(base, form['date_from'])}-{n}"
+        n += 1
+    # город: по-русски или по-английски — подбираем фото и подпись
+    city_key = form["city"].split(",")[0].strip().lower()
+    city_en = city_key.title() if city_key in _events_src.CITY_RU else _events_src._CITY_EN_BY_RU.get(city_key, "").title()
+    ev = Event(title=form["title"][:160], city=form["city"][:120], city_en=city_en, date_from=form["date_from"],
+               date_to=form["date_to"] or form["date_from"], url=form["url"][:500],
+               category=form["category"] if form["category"] in EVENT_SUBMIT_CATEGORIES else "Конференция",
+               description=form["description"][:4000], submitted_by=form["contact"][:160],
+               source="user", active=False, slug=slug, updated_at=datetime.utcnow())
+    db.add(ev)
+    db.commit()
+    try:
+        notify_admins(db, "event", "Новая заявка на событие",
+                      f"{ev.title} — {ev.date_from}, {ev.city}. Проверить и опубликовать.", "/admin?tab=events")
+        db.commit()
+    except Exception:  # noqa: BLE001 — уведомление не важнее заявки
+        db.rollback()
+    return RedirectResponse("/events/submit?ok=1", status_code=303)
 
 
 @app.get("/event/{slug}.ics")
@@ -3742,6 +3806,11 @@ def event_page(slug: str, request: Request, db: Session = Depends(db_session)):
     ev = db.query(Event).filter(Event.slug == slug).first()
     if not ev:
         raise HTTPException(404)
+    if ev.source == "user" and not ev.active:
+        # заявка с формы ждёт проверки: страницу видит только админ
+        viewer = get_user(request, db)
+        if not (viewer and viewer.role == "admin"):
+            raise HTTPException(404)
     lang = request_lang(request)
     content_lang = "ru" if lang == "ru" else "en"
     if not ev.og_image or not os.path.exists(os.path.join(ROOT, ev.og_image.lstrip("/"))):
@@ -6863,6 +6932,7 @@ def admin(request: Request, tab: str = "dash", db: Session = Depends(db_session)
         from server import events_crawler as _ec
         ctx["events_crawler"] = _ec.load_status()
         ctx["events_crawl_running"] = _events_crawl_lock.locked()
+        ctx["events_pending"] = sum(1 for e in ctx["events"] if e.source == "user" and not e.active)
     elif tab == "orders":
         pr = parse_period(request)
         test_ids = test_account_ids(db)

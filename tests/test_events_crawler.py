@@ -85,6 +85,19 @@ class HelpersTests(unittest.TestCase):
         self.assertFalse(ec.same_event("SiGMA Central Europe", "2026-11-23", "SiGMA World Summit 2026", "2026-11-02"))
         self.assertFalse(ec.same_event("iGaming Club Lisbon", "2026-09-28", "SBC Summit Lisbon 2026", "2026-09-29"))
 
+    def test_bogus_end_date_collapses_to_start(self):
+        self.assertTrue(ec.plausible_span("2026-09-29", "2026-10-01"))
+        self.assertFalse(ec.plausible_span("2024-05-06", "2026-09-18"))
+        with open(FIXTURE, encoding="utf-8") as fh:
+            html = fh.read().replace('class="dt-end" datetime="2026-10-01"', 'class="dt-end" datetime="2028-10-01"')
+        self.assertEqual(ec.parse_event_page(html, SOURCE_URL)["date_to"], "2026-09-29")
+
+    def test_city_photo_by_russian_label(self):
+        with unittest.mock.patch.object(ec, "city_photo_url", lambda en: f"/img/events/city/{ec.ascii_slug(en)}.jpg" if en else ""):
+            self.assertEqual(ec.city_photo_url_ru("🇧🇷 Сан-Паулу, Бразилия"), "/img/events/city/sao-paulo.jpg")
+            self.assertEqual(ec.city_photo_url_ru("🇬🇧 Лондон, Великобритания"), "/img/events/city/london.jpg")
+            self.assertEqual(ec.city_photo_url_ru("Неизвестный город"), "")
+
     def test_sitemap_entries(self):
         xml = ('<urlset><url><loc>https://www.thegamblest.com/event/</loc></url>'
                '<url><loc>https://www.thegamblest.com/event/sbc-summit-lisbon/</loc><lastmod>2026-09-07T10:58:00+00:00</lastmod></url>'

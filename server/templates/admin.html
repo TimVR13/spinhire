@@ -476,6 +476,7 @@
           <form method="post" action="/admin/events/crawl"><button class="btn btn-acid btn-sm" {% if events_crawl_running %}disabled{% endif %}>Обновить сейчас</button></form>
           <form method="post" action="/admin/events/crawl"><input type="hidden" name="force" value="1"><button class="btn btn-ghost btn-sm" {% if events_crawl_running %}disabled{% endif %}>Перекачать всё</button></form>
           <a class="btn btn-ghost btn-sm" href="/events" target="_blank">Календарь ↗</a>
+          {% if events_pending %}<span class="status pending" style="align-self:center;">заявок: {{ events_pending }}</span>{% endif %}
         </div>
       </div>
     </div>
@@ -510,9 +511,9 @@
           </form>
           {% if e.og_image %}<a href="{{ e.og_image }}" target="_blank" style="font-size:.7rem;color:var(--ink-faint);">og ↗</a>{% endif %}
         </td>
-        <td><span class="status {% if e.active %}approved{% else %}archived{% endif %}">{{ 'активно' if e.active else 'скрыто' }}</span></td>
+        <td><span class="status {% if e.active %}approved{% elif e.source == 'user' %}pending{% else %}archived{% endif %}">{{ 'активно' if e.active else ('на рассмотрении' if e.source == 'user' else 'скрыто') }}</span>{% if e.submitted_by %}<div style="font-size:.72rem;color:var(--ink-faint);">{{ e.submitted_by }}</div>{% endif %}</td>
         <td style="white-space: nowrap;">
-          <form method="post" action="/admin/event/{{ e.id }}/toggle"><button class="btn btn-ghost">{{ 'Скрыть' if e.active else 'Показать' }}</button></form>
+          <form method="post" action="/admin/event/{{ e.id }}/toggle"><button class="btn {% if not e.active and e.source == 'user' %}btn-acid{% else %}btn-ghost{% endif %}">{{ 'Скрыть' if e.active else ('Опубликовать' if e.source == 'user' else 'Показать') }}</button></form>
           <form method="post" action="/admin/event/{{ e.id }}/delete" data-confirm="Удалить событие?" data-confirm-ok="Удалить" data-confirm-cancel="Не удалять"><button class="btn btn-ghost" style="color: var(--pink);">✕</button></form>
         </td>
       </tr>
